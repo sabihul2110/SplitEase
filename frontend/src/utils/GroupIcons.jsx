@@ -1,23 +1,8 @@
 // frontend/src/utils/GroupIcons.jsx
+// Unchanged from previous version — keyword-based SVG icon mapping.
+// Re-exported here for completeness alongside the updated Groups.jsx.
+// Place at: frontend/src/utils/GroupIcons.jsx
 
-/**
- * GroupIcons.jsx
- *
- * Maps group name keywords → SVG icon + accent color.
- * Groups have no category field in the DB schema, so we infer
- * from the group name string via keyword matching.
- * Falls back to a Users icon for unrecognised names.
- *
- * Usage:
- *   import { getGroupIcon } from "../utils/groupIcons";
- *   const { IconComponent, bg, color } = getGroupIcon("Goa Trip 2025");
- *   <div style={{ background: bg, color }}><IconComponent size={20} /></div>
- */
-
-// ─────────────────────────────────────────────
-//  Inline SVG icon components (zero external deps)
-//  Each accepts a `size` prop.
-// ─────────────────────────────────────────────
 export const Icons = {
   Plane: ({ size = 20 }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
@@ -66,13 +51,10 @@ export const Icons = {
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
       stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/>
-      <line x1="7" y1="2" x2="7" y2="22"/>
-      <line x1="17" y1="2" x2="17" y2="22"/>
+      <line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/>
       <line x1="2" y1="12" x2="22" y2="12"/>
-      <line x1="2" y1="7" x2="7" y2="7"/>
-      <line x1="17" y1="7" x2="22" y2="7"/>
-      <line x1="17" y1="17" x2="22" y2="17"/>
-      <line x1="2" y1="17" x2="7" y2="17"/>
+      <line x1="2" y1="7" x2="7" y2="7"/><line x1="17" y1="7" x2="22" y2="7"/>
+      <line x1="17" y1="17" x2="22" y2="17"/><line x1="2" y1="17" x2="7" y2="17"/>
     </svg>
   ),
   Dumbbell: ({ size = 20 }) => (
@@ -114,10 +96,8 @@ export const Icons = {
   Tent: ({ size = 20 }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
       stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3.5 21 14 3"/>
-      <path d="M20.5 21 10 3"/>
-      <path d="M15.5 21 12 15l-3.5 6"/>
-      <path d="M2 21h20"/>
+      <path d="M3.5 21 14 3"/><path d="M20.5 21 10 3"/>
+      <path d="M15.5 21 12 15l-3.5 6"/><path d="M2 21h20"/>
     </svg>
   ),
   Music: ({ size = 20 }) => (
@@ -130,112 +110,30 @@ export const Icons = {
   ),
 };
 
-// ─────────────────────────────────────────────
-//  Keyword → { icon, bg, color } map
-// ─────────────────────────────────────────────
 const KEYWORD_MAP = [
-  {
-    keywords: ["trip", "travel", "tour", "flight", "vacation", "holiday", "goa", "mumbai", "delhi", "bangalore", "trek", "road", "train"],
-    icon: "Plane",
-    bg: "rgba(59,130,246,0.18)",
-    color: "#60a5fa",
-  },
-  {
-    keywords: ["food", "eat", "lunch", "dinner", "breakfast", "restaurant", "cafe", "coffee", "mess", "canteen", "snack", "meal", "dining", "tiffin"],
-    icon: "Utensils",
-    bg: "rgba(245,158,11,0.18)",
-    color: "#fbbf24",
-  },
-  {
-    keywords: ["home", "house", "flat", "hostel", "pg", "room", "rent", "apartment", "block", "dorm", "accommodation", "accomodation", "wing"],
-    icon: "Home",
-    bg: "rgba(16,185,129,0.18)",
-    color: "#34d399",
-  },
-  {
-    keywords: ["shop", "shopping", "grocery", "groceries", "market", "store", "kirana", "bigbasket", "zepto", "blinkit"],
-    icon: "ShoppingBag",
-    bg: "rgba(139,92,246,0.18)",
-    color: "#a78bfa",
-  },
-  {
-    keywords: ["electricity", "wifi", "internet", "utility", "utilities", "bill", "water", "gas", "phone", "recharge", "broadband"],
-    icon: "Zap",
-    bg: "rgba(234,179,8,0.18)",
-    color: "#facc15",
-  },
-  {
-    keywords: ["cab", "car", "uber", "ola", "fuel", "petrol", "auto", "taxi", "transport", "commute", "bike", "rapido"],
-    icon: "Car",
-    bg: "rgba(20,184,166,0.18)",
-    color: "#2dd4bf",
-  },
-  {
-    keywords: ["movie", "film", "cinema", "show", "concert", "event", "party", "club", "night", "outing", "fest", "festival"],
-    icon: "Film",
-    bg: "rgba(236,72,153,0.18)",
-    color: "#f472b6",
-  },
-  {
-    keywords: ["gym", "sport", "sports", "fitness", "workout", "yoga", "game", "cricket", "football", "badminton", "tennis", "ipl"],
-    icon: "Dumbbell",
-    bg: "rgba(239,68,68,0.18)",
-    color: "#f87171",
-  },
-  {
-    keywords: ["college", "school", "study", "course", "education", "class", "project", "assignment", "tuition", "coaching", "sem", "semester"],
-    icon: "GraduationCap",
-    bg: "rgba(99,102,241,0.18)",
-    color: "#818cf8",
-  },
-  {
-    keywords: ["wedding", "birthday", "anniversary", "gift", "celebration", "surprise"],
-    icon: "Heart",
-    bg: "rgba(244,63,94,0.18)",
-    color: "#fb7185",
-  },
-  {
-    keywords: ["office", "work", "business", "company", "corporate", "meeting", "conference", "internship"],
-    icon: "Building",
-    bg: "rgba(71,85,105,0.22)",
-    color: "#94a3b8",
-  },
-  {
-    keywords: ["camp", "camping", "hiking", "hike", "outdoor", "nature", "forest", "mountain", "trek"],
-    icon: "Tent",
-    bg: "rgba(34,197,94,0.18)",
-    color: "#4ade80",
-  },
-  {
-    keywords: ["music", "band", "playlist", "concert", "festival"],
-    icon: "Music",
-    bg: "rgba(168,85,247,0.18)",
-    color: "#c084fc",
-  },
+  { keywords: ["trip", "travel", "tour", "flight", "vacation", "holiday", "goa", "mumbai", "delhi", "bangalore", "trek", "road", "train"], icon: "Plane", bg: "rgba(59,130,246,0.18)", color: "#60a5fa" },
+  { keywords: ["food", "eat", "lunch", "dinner", "breakfast", "restaurant", "cafe", "coffee", "mess", "canteen", "snack", "meal", "dining", "tiffin"], icon: "Utensils", bg: "rgba(245,158,11,0.18)", color: "#fbbf24" },
+  { keywords: ["home", "house", "flat", "hostel", "pg", "room", "rent", "apartment", "block", "dorm", "accommodation", "accomodation", "wing"], icon: "Home", bg: "rgba(16,185,129,0.18)", color: "#34d399" },
+  { keywords: ["shop", "shopping", "grocery", "groceries", "market", "store", "kirana", "bigbasket", "zepto", "blinkit"], icon: "ShoppingBag", bg: "rgba(139,92,246,0.18)", color: "#a78bfa" },
+  { keywords: ["electricity", "wifi", "internet", "utility", "utilities", "bill", "water", "gas", "phone", "recharge", "broadband"], icon: "Zap", bg: "rgba(234,179,8,0.18)", color: "#facc15" },
+  { keywords: ["cab", "car", "uber", "ola", "fuel", "petrol", "auto", "taxi", "transport", "commute", "bike", "rapido"], icon: "Car", bg: "rgba(20,184,166,0.18)", color: "#2dd4bf" },
+  { keywords: ["movie", "film", "cinema", "show", "concert", "event", "party", "club", "night", "outing", "fest", "festival"], icon: "Film", bg: "rgba(236,72,153,0.18)", color: "#f472b6" },
+  { keywords: ["gym", "sport", "sports", "fitness", "workout", "yoga", "game", "cricket", "football", "badminton", "tennis", "ipl"], icon: "Dumbbell", bg: "rgba(239,68,68,0.18)", color: "#f87171" },
+  { keywords: ["college", "school", "study", "course", "education", "class", "project", "assignment", "tuition", "coaching", "sem", "semester"], icon: "GraduationCap", bg: "rgba(99,102,241,0.18)", color: "#818cf8" },
+  { keywords: ["wedding", "birthday", "anniversary", "gift", "celebration", "surprise"], icon: "Heart", bg: "rgba(244,63,94,0.18)", color: "#fb7185" },
+  { keywords: ["office", "work", "business", "company", "corporate", "meeting", "conference", "internship"], icon: "Building", bg: "rgba(71,85,105,0.22)", color: "#94a3b8" },
+  { keywords: ["camp", "camping", "hiking", "hike", "outdoor", "nature", "forest", "mountain"], icon: "Tent", bg: "rgba(34,197,94,0.18)", color: "#4ade80" },
+  { keywords: ["music", "band", "playlist", "concert", "festival"], icon: "Music", bg: "rgba(168,85,247,0.18)", color: "#c084fc" },
 ];
 
-// Fallback for unrecognised group names
 const DEFAULT = { icon: "Users", bg: "rgba(37,99,235,0.18)", color: "#60a5fa" };
 
-/**
- * Returns { IconComponent, bg, color } for the given group name string.
- * Matching is case-insensitive, checks every keyword.
- * The first matching rule wins.
- */
 export function getGroupIcon(groupName = "") {
   const lower = groupName.toLowerCase();
   for (const entry of KEYWORD_MAP) {
     if (entry.keywords.some(kw => lower.includes(kw))) {
-      return {
-        IconComponent: Icons[entry.icon],
-        bg: entry.bg,
-        color: entry.color,
-      };
+      return { IconComponent: Icons[entry.icon], bg: entry.bg, color: entry.color };
     }
   }
-  return {
-    IconComponent: Icons[DEFAULT.icon],
-    bg: DEFAULT.bg,
-    color: DEFAULT.color,
-  };
+  return { IconComponent: Icons[DEFAULT.icon], bg: DEFAULT.bg, color: DEFAULT.color };
 }

@@ -305,3 +305,15 @@ tbody tr:hover td { background: rgba(255,255,255,0.018); }
 .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; background: var(--surface3); color: var(--text2); border: 1px solid var(--border); }
 
 .settle-amt-positive { color: var(--success); }
+
+[data-theme="light"] {
+  --bg:      #f1f2f6;
+  --surface: #ffffff;
+  --surface2: #f8f9fb;
+  --surface3: #eef0f4;
+  --border:  #e2e4ea;
+  --border2: #d0d3dc;
+  --text:    #0d0e14;
+  --text2:   #5a5f72;
+  --text3:   #9095a8;
+}

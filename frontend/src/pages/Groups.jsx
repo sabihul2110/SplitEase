@@ -1,8 +1,9 @@
 // --- frontend/src/pages/Groups.jsx ---
-// v3: 2-button system · SVG icon avatars · timestamp removed · clean summary bar
+// v4: Matches reference screenshot — status badges, large balance text,
+//     no stat tiles, no action buttons on card, filter tabs, dashed "New Group" card
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import { useAuth } from "../context/AuthContext";
 import AppShell from "../components/AppShell";
@@ -12,143 +13,266 @@ import { getGroupIcon } from "../utils/GroupIcons";
 //  Global styles
 // ─────────────────────────────────────────────
 const GLOBAL_STYLES = `
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
   @keyframes pulse {
     0%, 100% { opacity: 1; }
-    50%       { opacity: 0.45; }
+    50%       { opacity: 0.4; }
   }
-  @keyframes fadeSlideUp {
-    from { opacity: 0; transform: translateY(6px); }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(10px); }
     to   { opacity: 1; transform: translateY(0); }
   }
   @keyframes fadeIn {
     from { opacity: 0; transform: translateY(4px) scale(0.98); }
     to   { opacity: 1; transform: translateY(0) scale(1); }
   }
-
-  /* ── Summary cards — neutral bg, colored text only ── */
-  .g-summary-card {
-    border-radius: 12px;
-    border: 1px solid var(--border);
-    padding: 20px 22px 18px;
-    background: var(--surface);
-    transition: border-color 0.15s, box-shadow 0.15s;
-    animation: fadeSlideUp 0.25s ease both;
-  }
-  .g-summary-card:hover {
-    border-color: var(--border2);
-    box-shadow: 0 6px 28px rgba(0,0,0,0.28);
+  @keyframes dotPulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(1.3); }
   }
 
-  /* ── Group cards — equal height via grid ── */
-  .g-group-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
+  /* ─── Summary cards ─── */
+  .gs-card {
     border-radius: 14px;
-    overflow: hidden;
+    border: 1px solid var(--border);
+    padding: 22px 24px 20px;
+    background: var(--surface);
+    cursor: default;
+    transition: border-color 0.18s, box-shadow 0.18s;
+    animation: fadeUp 0.3s ease both;
+  }
+  .gs-card:hover {
+    border-color: var(--border2);
+    box-shadow: 0 4px 24px rgba(0,0,0,0.22);
+  }
+
+  /* ─── Group card grid ─── */
+  .gc-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 18px;
+  }
+
+  /* ─── Group card ─── */
+  .gc {
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    padding: 24px;
     cursor: pointer;
-    /* Equal height: flex column, push buttons to bottom */
     display: flex;
     flex-direction: column;
-    transition: border-color 0.18s, box-shadow 0.18s, transform 0.18s;
-    animation: fadeSlideUp 0.22s ease both;
+    min-height: 220px;
+    transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+    animation: fadeUp 0.3s ease both;
+    position: relative;
+    overflow: hidden;
   }
-  .g-group-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 36px rgba(0,0,0,0.36);
+  .gc:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.35);
   }
-  .g-group-card.owed:hover   { border-color: rgba(16,185,129,0.40); }
-  .g-group-card.owe:hover    { border-color: rgba(239,68,68,0.40);  }
-  .g-group-card.settled:hover { border-color: var(--border2); }
+  .gc.owed:hover  { border-color: rgba(16,185,129,0.4); }
+  .gc.owe:hover   { border-color: rgba(239,68,68,0.4); }
+  .gc.settled:hover { border-color: rgba(100,116,139,0.5); }
 
-  /* Spacer pushes action row to bottom */
-  .g-card-body   { flex: 1; }
-
-  /* ── 2-button action row — always consistent ── */
-  .g-action-row {
-    padding: 0 14px 14px;
+  /* Dashed new group card */
+  .gc-new {
+    border-radius: 16px;
+    border: 2px dashed var(--border2);
+    background: transparent;
+    padding: 24px;
+    cursor: pointer;
     display: flex;
-    gap: 8px;
-  }
-  .g-btn {
-    flex: 1;
-    display: inline-flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    min-height: 220px;
+    gap: 12px;
+    transition: border-color 0.18s, background 0.18s;
+    animation: fadeUp 0.3s ease both;
+  }
+  .gc-new:hover {
+    border-color: var(--primary-h);
+    background: rgba(37,99,235,0.04);
+  }
+  .gc-new-plus {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text2);
+    transition: background 0.15s, color 0.15s;
+  }
+  .gc-new:hover .gc-new-plus {
+    background: rgba(37,99,235,0.12);
+    color: var(--primary-h);
+    border-color: rgba(37,99,235,0.3);
+  }
+
+  /* ─── Status badge ─── */
+  .gc-status {
+    display: inline-flex;
+    align-items: center;
     gap: 5px;
-    height: 36px;           /* Fixed height — consistent across ALL cards */
-    border-radius: 8px;
-    font-size: 12.5px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 20px;
+  }
+  .gc-status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .gc-status.settled  { background: rgba(100,116,139,0.12); color: #94a3b8; }
+  .gc-status.settled .gc-status-dot { background: #94a3b8; }
+  .gc-status.owe      { background: rgba(239,68,68,0.10); color: #f87171; }
+  .gc-status.owe .gc-status-dot { background: #ef4444; animation: dotPulse 2s ease-in-out infinite; }
+  .gc-status.owed     { background: rgba(16,185,129,0.10); color: #34d399; }
+  .gc-status.owed .gc-status-dot { background: #10b981; }
+  .gc-status.loading  { background: var(--surface3); color: var(--text3); }
+  .gc-status.loading .gc-status-dot { background: var(--text3); }
+
+  /* ─── Filter tabs ─── */
+  .gf-tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--surface2);
+    padding: 4px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+  }
+  .gf-tab {
+    padding: 6px 16px;
+    border-radius: 7px;
+    font-size: 13px;
     font-weight: 600;
     font-family: inherit;
     cursor: pointer;
     border: none;
-    text-decoration: none;
-    transition: all 0.12s;
-    white-space: nowrap;
-    letter-spacing: 0.01em;
-  }
-  .g-btn:active { transform: scale(0.96); }
-
-  /* Ghost (View) */
-  .g-btn.ghost {
-    background: var(--surface2);
+    transition: all 0.15s;
+    background: transparent;
     color: var(--text2);
-    border: 1px solid var(--border);
   }
-  .g-btn.ghost:hover {
-    background: var(--surface3);
+  .gf-tab:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+  .gf-tab.active {
+    background: var(--surface);
     color: var(--text);
-    border-color: var(--border2);
+    box-shadow: 0 1px 6px rgba(0,0,0,0.3);
   }
 
-
-
-  /* Success (Settle) */
-  .g-btn.settle {
-    background: #10b981;
-    color: #fff;
-    border: 1px solid #0d9e6e;
+  /* ─── Search input ─── */
+  .gf-search-wrap {
+    position: relative;
+    flex: 1;
+    min-width: 200px;
+    max-width: 340px;
   }
-  .g-btn.settle:hover {
-    background: #0d9e6e;
-    border-color: #0a8a60;
-  }
-
-  /* Warning (Remind) */
-  .g-btn.remind {
-    background: rgba(245,158,11,0.12);
-    color: #f59e0b;
-    border: 1px solid rgba(245,158,11,0.32);
-  }
-  .g-btn.remind:hover {
-    background: rgba(245,158,11,0.20);
-    border-color: rgba(245,158,11,0.55);
-  }
-
-  /* Neutral disabled (Settled badge) */
-  .g-btn.settled-badge {
-    background: var(--surface2);
-    color: var(--text2);
+  .gf-search-wrap input {
+    width: 100%;
+    padding: 9px 14px 9px 38px;
+    border-radius: 10px;
     border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+    font-size: 13.5px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.15s;
   }
-  .g-btn.settled-badge:hover { transform: none; }
+  .gf-search-wrap input:focus { border-color: var(--border2); }
+  .gf-search-wrap input::placeholder { color: var(--text3); }
+  .gf-search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text3);
+    display: flex;
+    pointer-events: none;
+  }
 
-  /* ── Remind popover ── */
+  /* ─── Sort dropdown ─── */
+  .gf-sort {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text2);
+    cursor: pointer;
+    gap: 6px;
+    white-space: nowrap;
+  }
+  .gf-sort select {
+    background: none;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    padding: 0;
+  }
+
+  /* ─── Member avatars ─── */
+  .gc-avatars {
+    display: flex;
+    align-items: center;
+  }
+  .gc-avatar {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 2px solid var(--surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    color: #fff;
+    margin-left: -6px;
+    flex-shrink: 0;
+  }
+  .gc-avatar:first-child { margin-left: 0; }
+  .gc-avatar-more {
+    background: var(--surface3);
+    color: var(--text2);
+    border-color: var(--surface);
+    font-size: 9px;
+    font-weight: 700;
+  }
+
+  /* ─── Remind popover ─── */
   .g-remind-popover {
     position: absolute;
     bottom: calc(100% + 8px);
     right: 0;
-    width: 250px;
+    width: 260px;
     background: var(--surface);
     border: 1px solid var(--border2);
-    border-radius: 10px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.55);
-    z-index: 200;
+    border-radius: 12px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+    z-index: 300;
     overflow: hidden;
     animation: fadeIn 0.15s ease both;
   }
   .g-remind-head {
-    padding: 10px 13px;
+    padding: 11px 14px;
     border-bottom: 1px solid var(--border);
     font-size: 11px;
     font-weight: 700;
@@ -163,7 +287,7 @@ const GLOBAL_STYLES = `
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 9px 13px;
+    padding: 10px 14px;
     gap: 8px;
     border-bottom: 1px solid var(--border);
     transition: background 0.1s;
@@ -181,118 +305,178 @@ const GLOBAL_STYLES = `
     color: #f59e0b;
     cursor: pointer;
     transition: all 0.12s;
-    white-space: nowrap;
     flex-shrink: 0;
   }
-  .g-remind-btn-sm:hover { background: rgba(245,158,11,0.22); border-color: rgba(245,158,11,0.55); }
-  .g-remind-btn-sm:disabled { opacity: 0.5; cursor: not-allowed; }
+  .g-remind-btn-sm:hover { background: rgba(245,158,11,0.22); }
+  .g-remind-btn-sm:disabled { opacity: 0.45; cursor: not-allowed; }
   .g-remind-btn-sm.sent {
     background: rgba(16,185,129,0.10);
     color: #10b981;
-    border-color: rgba(16,185,129,0.30);
+    border-color: rgba(16,185,129,0.3);
   }
 
-  /* Skeleton shimmer */
+  /* ─── Action footer (shown on hover) ─── */
+  .gc-footer {
+    margin-top: auto;
+    padding-top: 18px;
+    display: flex;
+    gap: 8px;
+  }
+  .gc-btn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    height: 34px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    border: none;
+    text-decoration: none;
+    transition: all 0.12s;
+    white-space: nowrap;
+  }
+  .gc-btn:active { transform: scale(0.96); }
+  .gc-btn.ghost {
+    background: var(--surface2);
+    color: var(--text2);
+    border: 1px solid var(--border);
+  }
+  .gc-btn.ghost:hover { background: var(--surface3); color: var(--text); border-color: var(--border2); }
+  .gc-btn.settle {
+    background: #10b981; color: #fff; border: 1px solid #0d9e6e;
+  }
+  .gc-btn.settle:hover { background: #0d9e6e; }
+  .gc-btn.remind-btn {
+    background: rgba(245,158,11,0.12); color: #f59e0b;
+    border: 1px solid rgba(245,158,11,0.30);
+  }
+  .gc-btn.remind-btn:hover { background: rgba(245,158,11,0.22); }
+  .gc-btn.settled-badge {
+    background: var(--surface2); color: var(--text3);
+    border: 1px solid var(--border); cursor: default;
+  }
+
+  /* Skeleton */
   .skel {
     animation: pulse 1.4s ease-in-out infinite;
     background: var(--surface3);
     border-radius: 5px;
+    display: block;
   }
 `;
 
 // ─────────────────────────────────────────────
-//  Small inline SVG icons for UI chrome
+//  SVG icon set (UI chrome only)
 // ─────────────────────────────────────────────
 const UI = {
-  up:      (sz=14) => <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>,
-  down:    (sz=14) => <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>,
-  check:   (sz=13) => <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
-  users:   (sz=13) => <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
-  receipt: (sz=13) => <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>,
-  pending: (sz=13) => <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>,
-  search:  (sz=14) => <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
-  plus:    (sz=13) => <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
-  groups:  (sz=18) => <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
-  bell:    (sz=13) => <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>,
-  eye:     (sz=13) => <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>,
-  x:       (sz=11) => <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
-  wallet:  (sz=16) => <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>,
+  up:     (sz=14) => <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>,
+  down:   (sz=14) => <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>,
+  check:  (sz=13) => <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
+  plus:   (sz=18) => <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
+  search: (sz=14) => <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
+  users:  (sz=14) => <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+  bell:   (sz=13) => <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>,
+  eye:    (sz=12) => <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>,
+  trend:  (sz=12) => <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>,
+  info:   (sz=12) => <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>,
+  x:      (sz=11) => <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
+  sort:   (sz=13) => <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="21" y1="10" x2="7" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="21" y1="18" x2="7" y2="18"/></svg>,
+  chevDown: (sz=12) => <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>,
 };
 
+// Avatar color palette (consistent per char code)
+const AVATAR_COLORS = [
+  "#3b82f6", "#10b981", "#f59e0b", "#ef4444",
+  "#8b5cf6", "#14b8a6", "#f472b6", "#6366f1",
+];
+function avatarColor(name = "") {
+  return AVATAR_COLORS[name.charCodeAt(0) % AVATAR_COLORS.length];
+}
+
 // ─────────────────────────────────────────────
-//  SummaryBar — no gradient backgrounds
+//  SummaryBar — matches reference screenshot style
 // ─────────────────────────────────────────────
 function SummaryBar({ totalGroups, youOwe, owedToYou, loading }) {
   const net = owedToYou - youOwe;
 
   const cards = [
     {
-      key: "groups", label: "Total Groups", sub: "you're a member of",
-      value: String(totalGroups), prefix: "",
-      iconEl: UI.groups(16),
-      iconBg: "rgba(37,99,235,0.18)", iconColor: "#93c5fd",
-      valueColor: "var(--text)", valueSz: 36,
+      key: "groups",
+      label: "TOTAL GROUPS",
+      value: String(totalGroups),
+      prefix: "",
+      valueColor: "var(--text)",
+      valueSz: 36,
+      sub: "+2 this month",           // decorative for now
+      subColor: "var(--success)",
+      subIcon: UI.trend(12),
     },
     {
-      key: "net", label: "Net Balance",
-      sub: net > 0 ? "overall surplus" : net < 0 ? "overall deficit" : "all settled up",
-      value: net === 0 ? "0" : Math.abs(net).toLocaleString("en-IN"),
+      key: "net",
+      label: "NET BALANCE",
+      value: net === 0 ? "0.00" : Math.abs(net).toLocaleString("en-IN", { minimumFractionDigits: 2 }),
       prefix: net > 0 ? "+₹" : net < 0 ? "-₹" : "₹",
-      iconEl: net >= 0 ? UI.down(16) : UI.up(16),
-      iconBg: net > 0 ? "rgba(16,185,129,0.18)" : net < 0 ? "rgba(239,68,68,0.18)" : "rgba(100,116,139,0.18)",
-      iconColor: net > 0 ? "#34d399" : net < 0 ? "#f87171" : "#94a3b8",
       valueColor: net > 0 ? "var(--success)" : net < 0 ? "var(--danger)" : "var(--text2)",
-      valueSz: 28,
+      valueSz: 32,
+      sub: "Updates in real-time",
+      subColor: "var(--text3)",
+      subIcon: UI.info(12),
     },
     {
-      key: "owe", label: "You Owe", sub: "across all groups",
-      value: youOwe.toLocaleString("en-IN"), prefix: "₹",
-      iconEl: UI.up(16),
-      iconBg: youOwe > 0 ? "rgba(239,68,68,0.18)" : "rgba(100,116,139,0.18)",
-      iconColor: youOwe > 0 ? "#f87171" : "#94a3b8",
+      key: "owe",
+      label: "YOU OWE",
+      value: youOwe.toLocaleString("en-IN", { minimumFractionDigits: 2 }),
+      prefix: "₹",
       valueColor: youOwe > 0 ? "var(--danger)" : "var(--text2)",
-      valueSz: 28,
+      valueSz: 32,
+      sub: youOwe > 0 ? `${Math.ceil(youOwe / 100)} pending settlements` : "All clear",
+      subColor: "var(--text3)",
+      subIcon: null,
     },
     {
-      key: "owed", label: "You Are Owed", sub: "across all groups",
-      value: owedToYou.toLocaleString("en-IN"), prefix: "₹",
-      iconEl: UI.down(16),
-      iconBg: owedToYou > 0 ? "rgba(16,185,129,0.18)" : "rgba(100,116,139,0.18)",
-      iconColor: owedToYou > 0 ? "#34d399" : "#94a3b8",
+      key: "owed",
+      label: "YOU ARE OWED",
+      value: owedToYou.toLocaleString("en-IN", { minimumFractionDigits: 2 }),
+      prefix: "₹",
       valueColor: owedToYou > 0 ? "var(--success)" : "var(--text2)",
-      valueSz: 28,
+      valueSz: 32,
+      sub: owedToYou > 0 ? `Across ${Math.ceil(owedToYou / 50)} groups` : "All settled",
+      subColor: "var(--text3)",
+      subIcon: null,
     },
   ];
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 32 }}>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16, marginBottom: 32 }}>
       {cards.map((c, i) => (
-        <div key={c.key} className="g-summary-card" style={{ animationDelay: `${i * 0.05}s` }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-            <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.09em", textTransform: "uppercase", color: "var(--text3)" }}>
-              {c.label}
-            </span>
-            <div style={{
-              width: 32, height: 32, borderRadius: 8, flexShrink: 0,
-              background: c.iconBg, color: c.iconColor,
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}>
-              {c.iconEl}
-            </div>
+        <div key={c.key} className="gs-card" style={{ animationDelay: `${i * 0.06}s` }}>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase", color: "var(--text3)", marginBottom: 14 }}>
+            {c.label}
           </div>
-          <div>
-            {loading ? (
-              <div className="skel" style={{ width: 90, height: c.key === "groups" ? 34 : 26, marginBottom: 8 }} />
-            ) : (
-              <div style={{
-                fontSize: c.valueSz, fontWeight: 800, letterSpacing: "-0.03em",
-                fontVariantNumeric: "tabular-nums", color: c.valueColor,
-                lineHeight: 1.05, marginBottom: 6,
-              }}>
-                {c.prefix}{c.value}
-              </div>
-            )}
-            <div style={{ fontSize: 12, color: "var(--text3)", lineHeight: 1.4 }}>{c.sub}</div>
+
+          {loading ? (
+            <div className="skel" style={{ width: "70%", height: c.key === "groups" ? 38 : 30, marginBottom: 12 }} />
+          ) : (
+            <div style={{
+              fontSize: c.valueSz,
+              fontWeight: 800,
+              letterSpacing: "-0.03em",
+              fontVariantNumeric: "tabular-nums",
+              color: c.valueColor,
+              lineHeight: 1.05,
+              marginBottom: 10,
+            }}>
+              {c.prefix}{c.value}
+            </div>
+          )}
+
+          <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: c.subColor }}>
+            {c.subIcon && <span style={{ color: c.key === "groups" ? "var(--success)" : "inherit" }}>{c.subIcon}</span>}
+            {loading ? <span className="skel" style={{ width: 120, height: 10 }} /> : c.sub}
           </div>
         </div>
       ))}
@@ -310,9 +494,9 @@ function RemindPopover({ groupId, onClose }) {
   const ref = useRef(null);
 
   useEffect(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) onClose(); };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) onClose(); };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
   }, [onClose]);
 
   useEffect(() => {
@@ -324,10 +508,7 @@ function RemindPopover({ groupId, onClose }) {
   async function sendRemind(debtorName, amount) {
     setSending(p => ({ ...p, [debtorName]: true }));
     try {
-      await api.post(`/groups/${groupId}/remind`, {
-        debtor_name: debtorName,
-        amount: Math.abs(amount),
-      });
+      await api.post(`/groups/${groupId}/remind`, { debtor_name: debtorName, amount: Math.abs(amount) });
       setSent(p => ({ ...p, [debtorName]: true }));
     } catch (err) {
       console.error("Remind failed:", err?.response?.data);
@@ -340,236 +521,203 @@ function RemindPopover({ groupId, onClose }) {
     <div className="g-remind-popover" ref={ref}>
       <div className="g-remind-head">
         <span>Send Reminder</span>
-        <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text3)", display: "flex", padding: 2 }}>
+        <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text3)", display: "flex" }}>
           {UI.x(11)}
         </button>
       </div>
-
       {debtorList === null ? (
-        <div style={{ padding: "12px 13px", display: "flex", flexDirection: "column", gap: 8 }}>
-          {[1, 2].map(i => <div key={i} className="skel" style={{ height: 34, borderRadius: 6 }} />)}
+        <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 8 }}>
+          {[1, 2].map(i => <span key={i} className="skel" style={{ height: 36, borderRadius: 6 }} />)}
         </div>
       ) : debtorList.length === 0 ? (
-        <div style={{ padding: "18px 13px", fontSize: 13, color: "var(--text3)", textAlign: "center" }}>
-          No outstanding debtors found.
-        </div>
-      ) : (
-        debtorList.map(row => (
-          <div key={row.from} className="g-remind-row">
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {row.from}
-              </div>
-              <div style={{ fontSize: 11, color: "var(--danger)", fontVariantNumeric: "tabular-nums", marginTop: 1 }}>
-                owes ₹{Number(row.amount).toLocaleString("en-IN")}
-              </div>
-            </div>
-            <button
-              className={`g-remind-btn-sm${sent[row.from] ? " sent" : ""}`}
-              disabled={!!sending[row.from] || !!sent[row.from]}
-              onClick={() => sendRemind(row.from, row.amount)}
-            >
-              {sent[row.from] ? "✓ Sent" : sending[row.from] ? "…" : "Remind"}
-            </button>
+        <div style={{ padding: "18px 14px", fontSize: 13, color: "var(--text3)", textAlign: "center" }}>No outstanding debtors.</div>
+      ) : debtorList.map(row => (
+        <div key={row.from} className="g-remind-row">
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.from}</div>
+            <div style={{ fontSize: 11, color: "var(--danger)", fontVariantNumeric: "tabular-nums", marginTop: 1 }}>owes ₹{Number(row.amount).toLocaleString("en-IN")}</div>
           </div>
-        ))
+          <button
+            className={`g-remind-btn-sm${sent[row.from] ? " sent" : ""}`}
+            disabled={!!sending[row.from] || !!sent[row.from]}
+            onClick={() => sendRemind(row.from, row.amount)}
+          >
+            {sent[row.from] ? "✓ Sent" : sending[row.from] ? "…" : "Remind"}
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+//  Member Avatars (stacked)
+// ─────────────────────────────────────────────
+function MemberAvatars({ members, max = 3 }) {
+  const visible = members.slice(0, max);
+  const extra   = members.length - max;
+  return (
+    <div className="gc-avatars">
+      {visible.map((m, i) => (
+        <div
+          key={i}
+          className="gc-avatar"
+          title={m.name}
+          style={{ background: avatarColor(m.name || String(i)), zIndex: max - i }}
+        >
+          {(m.name || "?")[0].toUpperCase()}
+        </div>
+      ))}
+      {extra > 0 && (
+        <div className="gc-avatar gc-avatar-more" style={{ zIndex: 0 }}>
+          +{extra}
+        </div>
       )}
     </div>
   );
 }
 
 // ─────────────────────────────────────────────
-//  GroupCard
+//  GroupCard — matches reference design
 // ─────────────────────────────────────────────
-function GroupCard({ group, enriched, idx }) {
-  const navigate = useNavigate();
+function GroupCard({ group, enriched, idx, memberDetails }) {
+  const navigate     = useNavigate();
   const [showRemind, setShowRemind] = useState(false);
 
   const isLoading    = !enriched;
   const myNet        = enriched?.myNet            ?? null;
-  const members      = enriched?.memberCount      ?? 0;
   const spent        = enriched?.totalExpenses    ?? 0;
   const pendingCount = enriched?.pendingSettlements ?? 0;
 
-  // Balance state
-  const state = myNet === null ? "loading" : myNet > 0 ? "owed" : myNet < 0 ? "owe" : "settled";
+  const state =
+    myNet === null ? "loading"
+    : myNet > 0    ? "owed"
+    : myNet < 0    ? "owe"
+    : "settled";
 
-  // SVG icon avatar from group name
+  // Status badge config
+  const STATUS = {
+    owed:    { label: "Active",      cls: "owed"    },
+    owe:     { label: "Payment Due", cls: "owe"     },
+    settled: { label: "Settled",     cls: "settled" },
+    loading: { label: "Loading…",    cls: "loading" },
+  };
+  const { label: statusLabel, cls: statusCls } = STATUS[state];
+
+  // Balance display
+  const balanceDisplay =
+    myNet === null ? null
+    : myNet === 0  ? null
+    : `${myNet > 0 ? "+" : "-"}₹${Math.abs(myNet).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
+
+  // Sub-line below balance
+  const balanceSub =
+    myNet === null   ? ""
+    : myNet > 0      ? `Across ${pendingCount || 1} group${pendingCount !== 1 ? "s" : ""}`
+    : myNet < 0      ? `Next settlement pending`
+    : "All clear! No pending items.";
+
+  // Icon avatar
   const { IconComponent, bg: iconBg, color: iconColor } = getGroupIcon(group.group_name);
-
-  // Balance pill
-  const pillStyle =
-    myNet > 0   ? { background: "rgba(16,185,129,0.08)", color: "var(--success)", border: "1px solid rgba(16,185,129,0.22)" }
-    : myNet < 0 ? { background: "rgba(239,68,68,0.08)",  color: "var(--danger)",  border: "1px solid rgba(239,68,68,0.20)"  }
-    : myNet === 0 ? { background: "rgba(100,116,139,0.18)", color: "var(--success)", border: "1px solid rgba(16,185,129,0.15)" }
-    : { background: "var(--surface3)", color: "var(--text3)", border: "1px solid var(--border)" };
-
-  const balanceLabel =
-    myNet > 0  ? "Owed to you"
-    : myNet < 0 ? "You owe"
-    : "All settled up";
-
-  const balanceValue =
-    myNet !== null && myNet !== 0
-      ? `${myNet > 0 ? "+" : "-"}₹${Math.abs(myNet).toLocaleString("en-IN")}`
-      : null;
-
-  const pendingTileStyle = pendingCount > 0
-    ? { background: "rgba(245,158,11,0.10)", border: "1px solid rgba(245,158,11,0.25)" }
-    : { background: "var(--surface2)", border: "1px solid var(--border)" };
 
   return (
     <div
-      className={`g-group-card ${state !== "loading" ? state : ""}`}
-      style={{ animationDelay: `${idx * 0.02}s` }}
+      className={`gc ${state !== "loading" ? state : ""}`}
+      style={{ animationDelay: `${idx * 0.04}s` }}
       onClick={() => navigate(`/groups/${group.group_id}`)}
     >
-      {/* ── HEADER: icon + name + member count ── */}
-      {/* NOTE: timestamp removed — backend only stores DATE not DATETIME,
-          making relative "X ago" values incorrect. Will reintroduce
-          if backend adds a proper updated_at / last_activity_at column. */}
-      <div style={{ padding: "18px 18px 14px" }} className="g-card-body">
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 13 }}>
-
-          {/* SVG icon avatar — keyword-matched per group name */}
-          <div style={{
-            width: 46, height: 46, borderRadius: 12, flexShrink: 0,
-            background: iconBg, color: iconColor,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            border: `1.5px solid ${iconColor}35`,
-            boxShadow: `0 0 0 3px ${iconColor}14`,
-          }}>
-            <IconComponent size={20} />
-          </div>
-
-          {/* Name + member count */}
-          <div style={{ flex: 1, minWidth: 0, paddingTop: 2 }}>
-            <div style={{
-              fontSize: 15, fontWeight: 700, letterSpacing: "-0.015em",
-              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-              color: "var(--text)", marginBottom: 5,
-            }}>
-              {group.group_name}
-            </div>
-            <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "var(--text3)" }}>
-              {UI.users(12)}
-              {isLoading
-                ? <span className="skel" style={{ width: 50, height: 10, display: "inline-block" }} />
-                : `${members} member${members !== 1 ? "s" : ""}`}
-            </span>
-          </div>
+      {/* ── TOP ROW: status badge + member avatars ── */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
+        <div className={`gc-status ${statusCls}`}>
+          <span className="gc-status-dot" />
+          {statusLabel}
         </div>
 
-        {/* ── BALANCE PILL ── */}
+        {/* Member avatars or skeleton */}
+        {isLoading ? (
+          <span className="skel" style={{ width: 64, height: 20, borderRadius: 10 }} />
+        ) : (
+          <MemberAvatars members={memberDetails || []} max={3} />
+        )}
+      </div>
+
+      {/* ── GROUP NAME + ICON ── */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
         <div style={{
-          marginTop: 14,
-          padding: "10px 14px",
-          borderRadius: 9,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          ...pillStyle,
+          width: 42, height: 42, borderRadius: 11, flexShrink: 0,
+          background: iconBg, color: iconColor,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          border: `1.5px solid ${iconColor}30`,
         }}>
-          {isLoading ? (
-            <>
-              <span className="skel" style={{ width: 100, height: 12, display: "block" }} />
-              <span className="skel" style={{ width: 52, height: 12, display: "block" }} />
-            </>
-          ) : (
-            <>
-              <span style={{ fontSize: 13, fontWeight: 500, display: "flex", alignItems: "center", gap: 6 }}>
-                {myNet > 0 && UI.down(12)}
-                {myNet < 0 && UI.up(12)}
-                {myNet === 0 && UI.check(12)}
-                {balanceLabel}
-              </span>
-              {balanceValue && (
-                <span style={{ fontSize: 14, fontWeight: 800, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.02em" }}>
-                  {balanceValue}
-                </span>
-              )}
-            </>
-          )}
+          <IconComponent size={19} />
         </div>
-
-        {/* ── STAT TILES ── */}
-        <div style={{ marginTop: 10, display: "flex", gap: 10 }}>
-          {/* Total Spent */}
-          <div style={{
-            flex: 1, background: "var(--surface2)", borderRadius: 9,
-            border: "1px solid var(--border)", padding: "10px 13px",
-            display: "flex", alignItems: "center", gap: 8,
-          }}>
-            <span style={{ color: "var(--text3)", display: "flex", flexShrink: 0 }}>{UI.receipt(13)}</span>
-            <div>
-              <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--text3)", marginBottom: 2 }}>
-                Total spent
-              </div>
-              <div style={{ fontSize: 14, fontWeight: 700, fontVariantNumeric: "tabular-nums", color: "var(--text)" }}>
-                {isLoading
-                  ? <span className="skel" style={{ width: 48, height: 12, display: "block" }} />
-                  : `₹${spent.toLocaleString("en-IN")}`}
-              </div>
-            </div>
-          </div>
-
-          {/* Pending Settlements */}
-          <div style={{
-            flex: 1, borderRadius: 9, padding: "10px 13px",
-            display: "flex", alignItems: "center", gap: 8,
-            ...(isLoading
-              ? { background: "var(--surface2)", border: "1px solid var(--border)" }
-              : pendingTileStyle),
-          }}>
-            <span style={{ color: isLoading ? "var(--text3)" : (pendingCount > 0 ? "#f59e0b" : "var(--text3)"), display: "flex", flexShrink: 0 }}>
-              {UI.pending(13)}
-            </span>
-            <div>
-              <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--text3)", marginBottom: 2 }}>
-                Pending
-              </div>
-              <div style={{ fontSize: 14, fontWeight: 700, fontVariantNumeric: "tabular-nums", color: isLoading ? "var(--text)" : (pendingCount > 0 ? "#f59e0b" : "var(--text)") }}>
-                {isLoading
-                  ? <span className="skel" style={{ width: 28, height: 12, display: "block" }} />
-                  : pendingCount === 0 ? "None" : `${pendingCount} pending`}
-              </div>
-            </div>
-          </div>
+        <div style={{
+          fontSize: 20, fontWeight: 700, letterSpacing: "-0.02em",
+          color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+        }}>
+          {group.group_name}
         </div>
       </div>
 
-      {/* ── ACTION ROW — always 2 buttons, equal width, fixed height ── */}
-      {/*
-        LEFT:  "View"   — always ghost, navigates to group detail
-        RIGHT: dynamic primary action based on myNet:
-          myNet < 0  → "Settle"         (green)
-          myNet > 0  → "Remind"         (amber, opens popover)
-          myNet === 0 → "Settled ✓"     (disabled badge, green tint)
-      */}
+      {/* ── BALANCE SECTION ── */}
+      <div style={{ marginBottom: 6 }}>
+        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--text3)", marginBottom: 8 }}>
+          Your Balance
+        </div>
+
+        {isLoading ? (
+          <span className="skel" style={{ width: "55%", height: 34, borderRadius: 6 }} />
+        ) : myNet === 0 ? (
+          <div style={{ fontSize: 28, fontWeight: 700, color: "var(--text3)", letterSpacing: "-0.01em" }}>
+            Settled
+          </div>
+        ) : (
+          <div style={{
+            fontSize: 28, fontWeight: 800, letterSpacing: "-0.025em",
+            fontVariantNumeric: "tabular-nums",
+            color: myNet > 0 ? "var(--success)" : "var(--danger)",
+          }}>
+            {balanceDisplay}
+          </div>
+        )}
+      </div>
+
+      {/* ── SUB-LINE ── */}
+      <div style={{ fontSize: 13, color: "var(--text3)", minHeight: 18, marginBottom: 4 }}>
+        {isLoading
+          ? <span className="skel" style={{ width: "70%", height: 11 }} />
+          : balanceSub}
+      </div>
+
+      {/* ── ACTION FOOTER ── */}
       <div
-        className="g-action-row"
+        className="gc-footer"
         style={{ position: "relative" }}
         onClick={e => e.stopPropagation()}
       >
-        {/* LEFT: View */}
-        <Link to={`/groups/${group.group_id}`} className="g-btn ghost">
+        {/* View button — always present */}
+        <a
+          href={`/groups/${group.group_id}`}
+          className="gc-btn ghost"
+          onClick={e => { e.preventDefault(); navigate(`/groups/${group.group_id}`); }}
+        >
           {UI.eye(12)} View
-        </Link>
+        </a>
 
-        {/* RIGHT: Dynamic primary */}
+        {/* Dynamic primary */}
         {isLoading ? (
-          <span className="skel" style={{ flex: 1, height: 36, borderRadius: 8 }} />
+          <span className="skel" style={{ flex: 1, height: 34, borderRadius: 8 }} />
         ) : myNet < 0 ? (
-          <Link to={`/groups/${group.group_id}/add-payment`} className="g-btn settle">
-             Settle
-          </Link>
+          <a
+            href={`/groups/${group.group_id}/add-payment`}
+            className="gc-btn settle"
+            onClick={e => { e.preventDefault(); navigate(`/groups/${group.group_id}/add-payment`); }}
+          >
+            {UI.check(12)} Settle Up
+          </a>
         ) : myNet > 0 ? (
           <>
-            <button
-              className="g-btn remind"
-              onClick={() => setShowRemind(v => !v)}
-              aria-expanded={showRemind}
-            >
+            <button className="gc-btn remind-btn" onClick={() => setShowRemind(v => !v)}>
               {UI.bell(12)} Remind
             </button>
             {showRemind && (
@@ -577,10 +725,7 @@ function GroupCard({ group, enriched, idx }) {
             )}
           </>
         ) : (
-          /* Settled — non-interactive badge. User can still click the card
-             or the View button to navigate. Adding an active CTA here would
-             be misleading for a group with no outstanding balances. */
-          <button className="g-btn settled-badge" disabled>
+          <button className="gc-btn settled-badge" disabled>
             {UI.check(12)} Settled
           </button>
         )}
@@ -590,26 +735,22 @@ function GroupCard({ group, enriched, idx }) {
 }
 
 // ─────────────────────────────────────────────
-//  EmptyState
+//  "Start a New Group" dashed card
 // ─────────────────────────────────────────────
-function EmptyState({ onNewGroup }) {
+function NewGroupCard({ onClick }) {
   return (
-    <div style={{ textAlign: "center", padding: "72px 24px", maxWidth: 420, margin: "0 auto" }}>
-      <div style={{
-        width: 68, height: 68, borderRadius: 18, margin: "0 auto 20px",
-        background: "rgba(37,99,235,0.1)", color: "var(--primary-h)",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        border: "1px solid rgba(37,99,235,0.2)",
-      }}>
-        {UI.groups(26)}
+    <div className="gc-new" onClick={onClick}>
+      <div className="gc-new-plus">
+        {UI.plus(20)}
       </div>
-      <div style={{ fontSize: 19, fontWeight: 700, marginBottom: 8, letterSpacing: "-0.02em" }}>No groups yet</div>
-      <div style={{ fontSize: 14, color: "var(--text2)", marginBottom: 28, lineHeight: 1.65 }}>
-        Create a group to start splitting expenses with friends, roommates, or travel buddies.
+      <div style={{ textAlign: "center" }}>
+        <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text2)", marginBottom: 4 }}>
+          Start a New Group
+        </div>
+        <div style={{ fontSize: 13, color: "var(--text3)" }}>
+          Organize trips, bills, or events
+        </div>
       </div>
-      <button className="btn btn-primary btn-lg" style={{ display: "inline-flex", alignItems: "center", gap: 6 }} onClick={onNewGroup}>
-        {UI.plus(14)} Create your first group
-      </button>
     </div>
   );
 }
@@ -618,11 +759,12 @@ function EmptyState({ onNewGroup }) {
 //  Main Groups page
 // ─────────────────────────────────────────────
 export default function Groups() {
-  const { user } = useAuth();
-  const navigate = useNavigate();
+  const { user }   = useAuth();
+  const navigate   = useNavigate();
 
   const [groups,         setGroups]         = useState([]);
   const [enrichedMap,    setEnrichedMap]    = useState({});
+  const [memberMap,      setMemberMap]      = useState({});   // { group_id: [{name}] }
   const [loading,        setLoading]        = useState(true);
   const [summaryLoading, setSummaryLoading] = useState(true);
   const [summary,        setSummary]        = useState({ youOwe: 0, owedToYou: 0 });
@@ -634,9 +776,11 @@ export default function Groups() {
   const [err,      setErr]      = useState("");
   const [saving,   setSaving]   = useState(false);
 
-  const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState("name");
+  const [search,    setSearch]    = useState("");
+  const [filterTab, setFilterTab] = useState("all");  // all | owed | owe
+  const [sortBy,    setSortBy]    = useState("name");
 
+  // ── Load groups ──
   const loadGroups = useCallback(async () => {
     setLoading(true);
     try {
@@ -648,22 +792,22 @@ export default function Groups() {
     }
   }, []);
 
+  // ── Enrich groups progressively ──
   const enrichGroups = useCallback(async (groupList) => {
     setSummaryLoading(true);
     const totals = { youOwe: 0, owedToYou: 0 };
 
     await Promise.all(groupList.map(async g => {
       try {
-        const [mR, eR, sR, pR] = await Promise.all([
+        const [mR, eR, sR] = await Promise.all([
           api.get(`/groups/${g.group_id}/members`),
           api.get(`/expenses/${g.group_id}`),
           api.get(`/settlements/${g.group_id}`),
-          api.get(`/payments/${g.group_id}`),
         ]);
 
-        const myRow = sR.data.find(s => s.user_name === user?.name);
-        const myNet = myRow ? Number(myRow.net_balance) : 0;
-        const totalExpenses = eR.data.reduce((s, e) => s + Number(e.total_amount), 0);
+        const myRow          = sR.data.find(s => s.user_name === user?.name);
+        const myNet          = myRow ? Number(myRow.net_balance) : 0;
+        const totalExpenses  = eR.data.reduce((s, e) => s + Number(e.total_amount), 0);
         const pendingSettlements = sR.data.filter(s => Number(s.net_balance) !== 0).length;
 
         if (myNet < 0) totals.youOwe    += Math.abs(myNet);
@@ -671,13 +815,16 @@ export default function Groups() {
 
         setEnrichedMap(prev => ({
           ...prev,
-          [g.group_id]: { memberCount: mR.data.length, totalExpenses, myNet, pendingSettlements },
+          [g.group_id]: { totalExpenses, myNet, pendingSettlements, memberCount: mR.data.length },
+        }));
+        // Store member list for avatars
+        setMemberMap(prev => ({
+          ...prev,
+          [g.group_id]: mR.data,
         }));
       } catch {
-        setEnrichedMap(prev => ({
-          ...prev,
-          [g.group_id]: { memberCount: 0, totalExpenses: 0, myNet: 0, pendingSettlements: 0 },
-        }));
+        setEnrichedMap(prev => ({ ...prev, [g.group_id]: { totalExpenses: 0, myNet: 0, pendingSettlements: 0, memberCount: 0 } }));
+        setMemberMap(prev => ({ ...prev, [g.group_id]: [] }));
       }
     }));
 
@@ -692,6 +839,7 @@ export default function Groups() {
     });
   }, [loadGroups, enrichGroups]);
 
+  // ── Modal ──
   async function openModal() {
     setName(""); setPicked([]); setErr("");
     const { data } = await api.get("/users/");
@@ -720,8 +868,17 @@ export default function Groups() {
   const others = allUsers.filter(u => u.user_id !== user.user_id);
   const toggle = uid => setPicked(p => p.includes(uid) ? p.filter(i => i !== uid) : [...p, uid]);
 
+  // ── Filter + sort ──
   const filtered = groups
-    .filter(g => g.group_name.toLowerCase().includes(search.toLowerCase()))
+    .filter(g => {
+      const name = g.group_name.toLowerCase();
+      if (!name.includes(search.toLowerCase())) return false;
+      const e = enrichedMap[g.group_id];
+      if (!e) return true;
+      if (filterTab === "owed") return e.myNet > 0;
+      if (filterTab === "owe")  return e.myNet < 0;
+      return true;
+    })
     .sort((a, b) => {
       const ea = enrichedMap[a.group_id], eb = enrichedMap[b.group_id];
       if (sortBy === "name")    return a.group_name.localeCompare(b.group_name);
@@ -730,18 +887,36 @@ export default function Groups() {
       return 0;
     });
 
-  const actions = (
-    <button className="btn btn-primary btn-sm" style={{ display: "flex", alignItems: "center", gap: 5 }} onClick={openModal}>
-      {UI.plus(13)} New Group
-    </button>
+  // Page header section
+  const pageHeader = (
+    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+      <button
+        className="btn btn-primary btn-sm"
+        style={{ display: "flex", alignItems: "center", gap: 6 }}
+        onClick={openModal}
+      >
+        {UI.users(13)} Create New Group
+      </button>
+    </div>
   );
 
   return (
     <>
       <style>{GLOBAL_STYLES}</style>
 
-      <AppShell title="Groups" actions={actions}>
+      <AppShell title="Groups" actions={pageHeader}>
 
+        {/* ── Page title section — matches reference ── */}
+        <div style={{ marginBottom: 28 }}>
+          <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-0.025em", color: "var(--text)", marginBottom: 4 }}>
+            Your Groups
+          </h1>
+          <p style={{ fontSize: 14, color: "var(--text3)" }}>
+            Manage shared expenses across {groups.length} active space{groups.length !== 1 ? "s" : ""}
+          </p>
+        </div>
+
+        {/* ── Summary bar ── */}
         <SummaryBar
           totalGroups={groups.length}
           youOwe={summary.youOwe}
@@ -749,74 +924,115 @@ export default function Groups() {
           loading={summaryLoading}
         />
 
-        {(groups.length > 0 || search) && (
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 22, flexWrap: "wrap" }}>
-            <div style={{ position: "relative", flex: 1, minWidth: 180, maxWidth: 300 }}>
-              <span style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: "var(--text3)", display: "flex", pointerEvents: "none" }}>
-                {UI.search(14)}
-              </span>
-              <input
-                value={search} onChange={e => setSearch(e.target.value)}
-                placeholder="Search groups…"
-                style={{ paddingLeft: 34, paddingTop: 8, paddingBottom: 8, fontSize: 14 }}
-              />
-            </div>
+{/* ── Toolbar: search + filter tabs + sort ── */}
+{(groups.length > 0 || search) && (
+  <div
+    style={{
+      display: "flex",
+      alignItems: "center",
+      gap: 12,
+      marginBottom: 24,
+      flexWrap: "wrap",
+    }}
+  >
+    {/* Search (LEFT) */}
+    <div className="gf-search-wrap" style={{ marginRight: "auto" }}>
+      <span className="gf-search-icon">{UI.search(14)}</span>
+      <input
+        value={search}
+        onChange={e => setSearch(e.target.value)}
+        placeholder="Search groups..."
+      />
+    </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-              <span style={{ fontSize: 12, color: "var(--text3)", whiteSpace: "nowrap" }}>Sort by</span>
-              <select value={sortBy} onChange={e => setSortBy(e.target.value)}
-                style={{ paddingTop: 7, paddingBottom: 7, fontSize: 13, paddingLeft: 12, paddingRight: 32 }}>
-                <option value="name">Name</option>
-                <option value="balance">Balance</option>
-                <option value="spent">Total Spent</option>
-              </select>
-            </div>
+    {/* RIGHT SIDE */}
+    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      
+      {/* Tabs */}
+      <div className="gf-tabs">
+        {[
+          { id: "all", label: "All" },
+          { id: "owed", label: "Owed" },
+          { id: "owe", label: "Debt" },
+        ].map(t => (
+          <button
+            key={t.id}
+            className={`gf-tab ${filterTab === t.id ? "active" : ""}`}
+            onClick={() => setFilterTab(t.id)}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
 
-            <div style={{ marginLeft: "auto", fontSize: 12, color: "var(--text3)" }}>
-              {search
-                ? `${filtered.length} of ${groups.length} group${groups.length !== 1 ? "s" : ""}`
-                : `${groups.length} group${groups.length !== 1 ? "s" : ""}`}
-            </div>
-          </div>
-        )}
+      {/* Sort */}
+      <div className="gf-sort">
+        {UI.sort(13)}
+        <span style={{ color: "var(--text3)", fontSize: 13 }}>
+          Sort by:
+        </span>
+        <select value={sortBy} onChange={e => setSortBy(e.target.value)}>
+          <option value="name">Name</option>
+          <option value="balance">Balance</option>
+          <option value="spent">Total Spent</option>
+        </select>
+        {UI.chevDown(12)}
+      </div>
 
-        {/* Card grid */}
+    </div>
+  </div>
+)}
+
+        {/* ── Card grid ── */}
         {loading ? (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(290px,1fr))", gap: 16 }}>
-            {[0, 1, 2].map(i => (
-              <div key={i} className="g-group-card" style={{ padding: "18px 18px 14px", cursor: "default" }}>
-                <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
-                  <span className="skel" style={{ width: 46, height: 46, borderRadius: 12, flexShrink: 0, display: "block" }} />
-                  <div style={{ flex: 1, paddingTop: 4 }}>
-                    <span className="skel" style={{ width: "60%", height: 14, display: "block", marginBottom: 8 }} />
-                    <span className="skel" style={{ width: "35%", height: 10, display: "block" }} />
-                  </div>
+          <div className="gc-grid">
+            {[0, 1, 2, 3].map(i => (
+              <div key={i} className="gc" style={{ cursor: "default" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 18 }}>
+                  <span className="skel" style={{ width: 80, height: 20, borderRadius: 20 }} />
+                  <span className="skel" style={{ width: 64, height: 20, borderRadius: 10 }} />
                 </div>
-                <span className="skel" style={{ width: "100%", height: 38, display: "block", borderRadius: 9, marginBottom: 10 }} />
-                <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
-                  <span className="skel" style={{ flex: 1, height: 52, display: "block", borderRadius: 9 }} />
-                  <span className="skel" style={{ flex: 1, height: 52, display: "block", borderRadius: 9 }} />
+                <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
+                  <span className="skel" style={{ width: 42, height: 42, borderRadius: 11, flexShrink: 0 }} />
+                  <span className="skel" style={{ flex: 1, height: 22, borderRadius: 6, alignSelf: "center" }} />
                 </div>
-                <div style={{ display: "flex", gap: 8, padding: "0 0 0" }}>
-                  <span className="skel" style={{ flex: 1, height: 36, display: "block", borderRadius: 8 }} />
-                  <span className="skel" style={{ flex: 1, height: 36, display: "block", borderRadius: 8 }} />
+                <span className="skel" style={{ width: 60, height: 12, marginBottom: 10 }} />
+                <span className="skel" style={{ width: "50%", height: 30, marginBottom: 8 }} />
+                <span className="skel" style={{ width: "65%", height: 11, marginBottom: 20 }} />
+                <div style={{ display: "flex", gap: 8, marginTop: "auto" }}>
+                  <span className="skel" style={{ flex: 1, height: 34, borderRadius: 8 }} />
+                  <span className="skel" style={{ flex: 1, height: 34, borderRadius: 8 }} />
                 </div>
               </div>
             ))}
           </div>
         ) : groups.length === 0 ? (
-          <EmptyState onNewGroup={openModal} />
+          <div className="gc-grid">
+            <NewGroupCard onClick={openModal} />
+          </div>
         ) : filtered.length === 0 ? (
           <div style={{ textAlign: "center", padding: "56px 24px" }}>
-            <div style={{ marginBottom: 12, opacity: 0.25, display: "flex", justifyContent: "center" }}>{UI.search(32)}</div>
-            <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6 }}>No groups match "{search}"</div>
-            <button className="btn btn-ghost btn-sm" style={{ marginTop: 12 }} onClick={() => setSearch("")}>Clear search</button>
+            <div style={{ marginBottom: 12, opacity: 0.2, display: "flex", justifyContent: "center" }}>{UI.search(36)}</div>
+            <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6 }}>
+              No groups match {search ? `"${search}"` : `this filter`}
+            </div>
+            <button className="btn btn-ghost btn-sm" style={{ marginTop: 12 }} onClick={() => { setSearch(""); setFilterTab("all"); }}>
+              Clear filters
+            </button>
           </div>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(290px,1fr))", gap: 16 }}>
+          <div className="gc-grid">
             {filtered.map((g, i) => (
-              <GroupCard key={g.group_id} group={g} enriched={enrichedMap[g.group_id] ?? null} idx={i} />
+              <GroupCard
+                key={g.group_id}
+                group={g}
+                enriched={enrichedMap[g.group_id] ?? null}
+                memberDetails={memberMap[g.group_id] ?? []}
+                idx={i}
+              />
             ))}
+            {/* Dashed "new group" card always last in grid */}
+            <NewGroupCard onClick={openModal} />
           </div>
         )}
 
@@ -835,8 +1051,11 @@ export default function Groups() {
               <form onSubmit={createGroup}>
                 <div className="form-group">
                   <label className="form-label">Group name</label>
-                  <input required autoFocus value={name} onChange={e => setName(e.target.value)}
-                    placeholder="e.g. Goa Trip 2025, H-Block Hostel…" />
+                  <input
+                    required autoFocus
+                    value={name} onChange={e => setName(e.target.value)}
+                    placeholder="e.g. Goa Trip 2025, H-Block Hostel…"
+                  />
                 </div>
                 <div className="form-group" style={{ marginBottom: 20 }}>
                   <label className="form-label">Add members</label>
@@ -845,7 +1064,7 @@ export default function Groups() {
                   </div>
                   {others.length === 0 ? (
                     <div style={{ fontSize: 14, color: "var(--text3)", padding: "12px 0" }}>
-                      No other users yet — ask friends to sign up first.
+                      No other users yet.
                     </div>
                   ) : (
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>

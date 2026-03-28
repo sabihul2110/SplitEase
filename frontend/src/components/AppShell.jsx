@@ -63,6 +63,25 @@ const Icons = {
       <line x1="21" y1="12" x2="9" y2="12"/>
     </svg>
   ),
+  // settings: (
+  // <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+  //   stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  //   <circle cx="12" cy="12" r="3"/>
+  //   <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
+  // </svg>
+  // ),
+
+  settings: (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="16"
+    height="16"
+    viewBox="0 0 16 16"
+    fill="currentColor"
+  >
+    <path d="M7.068.727c.243-.97 1.62-.97 1.864 0l.071.286a.96.96 0 0 0 1.622.434l.205-.211c.695-.719 1.888-.03 1.613.931l-.08.284a.96.96 0 0 0 1.187 1.187l.283-.081c.96-.275 1.65.918.931 1.613l-.211.205a.96.96 0 0 0 .434 1.622l.286.071c.97.243.97 1.62 0 1.864l-.286.071a.96.96 0 0 0-.434 1.622l.211.205c.719.695.03 1.888-.931 1.613l-.284-.08a.96.96 0 0 0-1.187 1.187l.081.283c.275.96-.918 1.65-1.613.931l-.205-.211a.96.96 0 0 0-1.622.434l-.071.286c-.243.97-1.62.97-1.864 0l-.071-.286a.96.96 0 0 0-1.622-.434l-.205.211c-.695.719-1.888.03-1.613-.931l.08-.284a.96.96 0 0 0-1.186-1.187l-.284.081c-.96.275-1.65-.918-.931-1.613l.211-.205a.96.96 0 0 0-.434-1.622l-.286-.071c-.97-.243-.97-1.62 0-1.864l.286-.071a.96.96 0 0 0 .434-1.622l-.211-.205c-.719-.695-.30-1.888.931-1.613l.284.08a.96.96 0 0 0 1.187-1.186l-.081-.284c-.275-.96.918-1.65 1.613-.931l.205.211a.96.96 0 0 0 1.622-.434zM12.973 8.5H8.25l-2.834 3.779A4.998 4.998 0 0 0 12.973 8.5m0-1a4.998 4.998 0 0 0-7.557-3.779l2.834 3.78zM5.048 3.967l-.087.065zm-.431.355A4.98 4.98 0 0 0 3.002 8c0 1.455.622 2.765 1.615 3.678L7.375 8zm.344 7.646.087.065z"/>
+  </svg>
+),
   user: (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
@@ -94,6 +113,7 @@ const Icons = {
 function ProfileDropdown({ user, onLogout }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const close = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
@@ -106,16 +126,19 @@ function ProfileDropdown({ user, onLogout }) {
 
   // Menu items — action is a placeholder for future /profile routes
   const MENU = [
-    { icon: "user",  label: "View Profile",   note: "coming soon" },
-    { icon: "edit",  label: "Edit Details",    note: "coming soon" },
-    { icon: "lock",  label: "Change Password", note: "coming soon" },
+    { icon: "user",  label: "View Profile",   route: "/profile" },
+    { icon: "edit",  label: "Edit Details",    route: "/profile" },
+    { icon: "lock",  label: "Change Password", route: "/profile" },
   ];
 
   return (
     <div ref={ref} style={{ position: "relative" }}>
       {/* Trigger */}
       <button
-        onClick={() => setOpen(v => !v)}
+        onClick={() => {
+          console.log("clicked");
+          setOpen(v => !v);
+        }}
         style={{
           display: "flex", alignItems: "center", gap: 8,
           background: open ? "var(--surface2)" : "transparent",
@@ -167,7 +190,10 @@ function ProfileDropdown({ user, onLogout }) {
             {MENU.map(item => (
               <button
                 key={item.label}
-                onClick={() => setOpen(false)}
+                onClick={() => {
+                  navigate(item.route);
+                  setOpen(false);
+                }}
                 style={{
                   display: "flex", alignItems: "center", gap: 10,
                   width: "100%", padding: "8px 10px", borderRadius: 6,
@@ -180,9 +206,6 @@ function ProfileDropdown({ user, onLogout }) {
               >
                 <span style={{ color: "var(--text3)", display: "flex", flexShrink: 0 }}>{Icons[item.icon]}</span>
                 <span style={{ flex: 1 }}>{item.label}</span>
-                <span style={{ fontSize: 10, color: "var(--text3)", background: "var(--surface3)", padding: "2px 6px", borderRadius: 4 }}>
-                  {item.note}
-                </span>
               </button>
             ))}
           </div>
@@ -232,7 +255,8 @@ export default function AppShell({ children, title, actions }) {
             { to: "/dashboard",   label: "Dashboard",  icon: "dashboard"   },
             { to: "/groups",      label: "Groups",      icon: "groups"      },
             { to: "/settlements", label: "Settlements", icon: "settlements" },
-            { to: "/activity",    label: "Activity",    icon: "activity"    },
+            { to: "/activity", label: "Activity", icon: "activity" },
+            { to: "/settings",    label: "Settings",    icon: "settings"    },
           ].map(item => (
             <NavLink
               key={item.to}

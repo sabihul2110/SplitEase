@@ -13,7 +13,9 @@ import AddExpense   from "./pages/AddExpense";
 import AddPayment   from "./pages/AddPayment";
 import Settlements  from "./pages/Settlements";
 import Activity     from "./pages/Activity";
-import JoinGroup    from "./pages/JoinGroup";
+import JoinGroup from "./pages/JoinGroup";
+import Profile  from "./pages/Profile";
+import Settings from "./pages/Settings";
 
 // Admin
 import AdminLayout       from "./components/AdminLayout";
@@ -50,7 +52,9 @@ export default function App() {
       <Route path="/groups/:id/add-expense" element={<UserRoute><AddExpense /></UserRoute>} />
       <Route path="/groups/:id/add-payment" element={<UserRoute><AddPayment /></UserRoute>} />
       <Route path="/settlements"            element={<UserRoute><Settlements /></UserRoute>} />
-      <Route path="/activity"               element={<UserRoute><Activity /></UserRoute>} />
+      <Route path="/activity" element={<UserRoute><Activity /></UserRoute>} />
+      <Route path="/profile"  element={<UserRoute><Profile /></UserRoute>} />
+      <Route path="/settings" element={<UserRoute><Settings /></UserRoute>} />
 
       {/* Admin — separate layout, nested admin routes */}
       <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
