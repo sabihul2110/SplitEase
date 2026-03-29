@@ -1,19 +1,12 @@
 // --- frontend/src/components/AppShell.jsx ---
 
-/**
- * AppShell.jsx — User app layout
- * - Sidebar nav uses proper SVG icons (stroke-based, Lucide style)
- * - Bell uses SVG icon (no emoji)
- * - Profile button in topbar opens a dropdown with menu items
- */
-
 import { useState, useRef, useEffect } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import NotificationBell from "./NotificationBell";
 
 // ─────────────────────────────────────────────
-//  SVG Icon Set  (16px, stroke-based)
+//  SVG Icons — every item DISTINCT
 // ─────────────────────────────────────────────
 const Icons = {
   dashboard: (
@@ -22,38 +15,59 @@ const Icons = {
       <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
     </svg>
   ),
+  // Expenses — receipt / document with lines
+  expenses: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+      <polyline points="14 2 14 8 20 8"/>
+      <line x1="9" y1="13" x2="15" y2="13"/>
+      <line x1="9" y1="17" x2="13" y2="17"/>
+    </svg>
+  ),
+  // Loans — two people with arrow between (money flow between 2)
+  loans: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="5" cy="8" r="3"/>
+      <circle cx="19" cy="8" r="3"/>
+      <path d="M9 20H5a2 2 0 0 1-2-2v-1a4 4 0 0 1 4-4h1"/>
+      <path d="M15 20h4a2 2 0 0 0 2-2v-1a4 4 0 0 0-4-4h-1"/>
+      <path d="M12 12v6m-2-2 2 2 2-2"/>
+    </svg>
+  ),
+  // Groups — three people (distinct from Loans which is 2)
   groups: (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-      <circle cx="9" cy="7" r="4"/>
-      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-      <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+      <circle cx="9" cy="7" r="3"/>
+      <path d="M3 20v-1a6 6 0 0 1 6-6"/>
+      <circle cx="17" cy="7" r="3"/>
+      <path d="M21 20v-1a6 6 0 0 0-6-6H9a6 6 0 0 0-6 6v1"/>
     </svg>
   ),
+  // Settlements — two arrows opposite directions
   settlements: (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+      <path d="M7 16V4m0 0L3 8m4-4 4 4"/>
+      <path d="M17 8v12m0 0 4-4m-4 4-4-4"/>
     </svg>
   ),
+  // Activity — pulse waveform
   activity: (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="12" cy="12" r="10" />
-      <polyline points="12 6 12 12 16 14" />
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
     </svg>
   ),
-  admin: (
+  // Settings — gear
+  settings: (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="3"/>
-      <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+    </svg>
+  ),
+  // Admin — shield with checkmark
+  admin: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      <polyline points="9 12 11 14 15 10"/>
     </svg>
   ),
   signout: (
@@ -63,25 +77,6 @@ const Icons = {
       <line x1="21" y1="12" x2="9" y2="12"/>
     </svg>
   ),
-  // settings: (
-  // <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-  //   stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-  //   <circle cx="12" cy="12" r="3"/>
-  //   <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
-  // </svg>
-  // ),
-
-  settings: (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="16"
-    height="16"
-    viewBox="0 0 16 16"
-    fill="currentColor"
-  >
-    <path d="M7.068.727c.243-.97 1.62-.97 1.864 0l.071.286a.96.96 0 0 0 1.622.434l.205-.211c.695-.719 1.888-.03 1.613.931l-.08.284a.96.96 0 0 0 1.187 1.187l.283-.081c.96-.275 1.65.918.931 1.613l-.211.205a.96.96 0 0 0 .434 1.622l.286.071c.97.243.97 1.62 0 1.864l-.286.071a.96.96 0 0 0-.434 1.622l.211.205c.719.695.03 1.888-.931 1.613l-.284-.08a.96.96 0 0 0-1.187 1.187l.081.283c.275.96-.918 1.65-1.613.931l-.205-.211a.96.96 0 0 0-1.622.434l-.071.286c-.243.97-1.62.97-1.864 0l-.071-.286a.96.96 0 0 0-1.622-.434l-.205.211c-.695.719-1.888.03-1.613-.931l.08-.284a.96.96 0 0 0-1.186-1.187l-.284.081c-.96.275-1.65-.918-.931-1.613l.211-.205a.96.96 0 0 0-.434-1.622l-.286-.071c-.97-.243-.97-1.62 0-1.864l.286-.071a.96.96 0 0 0 .434-1.622l-.211-.205c-.719-.695-.30-1.888.931-1.613l.284.08a.96.96 0 0 0 1.187-1.186l-.081-.284c-.275-.96.918-1.65 1.613-.931l.205.211a.96.96 0 0 0 1.622-.434zM12.973 8.5H8.25l-2.834 3.779A4.998 4.998 0 0 0 12.973 8.5m0-1a4.998 4.998 0 0 0-7.557-3.779l2.834 3.78zM5.048 3.967l-.087.065zm-.431.355A4.98 4.98 0 0 0 3.002 8c0 1.455.622 2.765 1.615 3.678L7.375 8zm.344 7.646.087.065z"/>
-  </svg>
-),
   user: (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
@@ -107,8 +102,18 @@ const Icons = {
   ),
 };
 
+const NAV_ITEMS = [
+  { to: "/dashboard",   label: "Dashboard",   icon: "dashboard"   },
+  { to: "/expenses",    label: "Expenses",     icon: "expenses"    },
+  { to: "/loans",       label: "Loans",        icon: "loans"       },
+  { to: "/groups",      label: "Groups",       icon: "groups"      },
+  { to: "/settlements", label: "Settlements",  icon: "settlements" },
+  { to: "/activity",    label: "Activity",     icon: "activity"    },
+  { to: "/settings",    label: "Settings",     icon: "settings"    },
+];
+
 // ─────────────────────────────────────────────
-//  Profile dropdown component
+//  Profile dropdown
 // ─────────────────────────────────────────────
 function ProfileDropdown({ user, onLogout }) {
   const [open, setOpen] = useState(false);
@@ -124,21 +129,16 @@ function ProfileDropdown({ user, onLogout }) {
   const initials = (user?.name || "?")
     .split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
 
-  // Menu items — action is a placeholder for future /profile routes
   const MENU = [
-    { icon: "user",  label: "View Profile",   route: "/profile" },
-    { icon: "edit",  label: "Edit Details",    route: "/profile" },
-    { icon: "lock",  label: "Change Password", route: "/profile" },
+    { icon: "user", label: "View Profile",   route: "/profile" },
+    { icon: "edit", label: "Edit Details",    route: "/profile" },
+    { icon: "lock", label: "Change Password", route: "/profile?action=password" },
   ];
 
   return (
     <div ref={ref} style={{ position: "relative" }}>
-      {/* Trigger */}
       <button
-        onClick={() => {
-          console.log("clicked");
-          setOpen(v => !v);
-        }}
+        onClick={() => setOpen(v => !v)}
         style={{
           display: "flex", alignItems: "center", gap: 8,
           background: open ? "var(--surface2)" : "transparent",
@@ -153,8 +153,7 @@ function ProfileDropdown({ user, onLogout }) {
           width: 30, height: 30, borderRadius: "50%",
           background: "var(--primary)", border: "2px solid rgba(37,99,235,0.4)",
           display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 11, fontWeight: 700, color: "#fff",
-          letterSpacing: "0.02em", flexShrink: 0,
+          fontSize: 11, fontWeight: 700, color: "#fff", flexShrink: 0,
         }}>
           {initials}
         </div>
@@ -171,7 +170,6 @@ function ProfileDropdown({ user, onLogout }) {
         </span>
       </button>
 
-      {/* Dropdown */}
       {open && (
         <div style={{
           position: "absolute", top: "calc(100% + 8px)", right: 0,
@@ -179,28 +177,14 @@ function ProfileDropdown({ user, onLogout }) {
           border: "1px solid var(--border2)", borderRadius: 10,
           boxShadow: "0 8px 32px rgba(0,0,0,0.5)", zIndex: 500, overflow: "hidden",
         }}>
-          {/* Header */}
           <div style={{ padding: "14px 16px", borderBottom: "1px solid var(--border)" }}>
             <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text)" }}>{user?.name}</div>
             <div style={{ fontSize: 12, color: "var(--text3)", marginTop: 2 }}>{user?.email}</div>
           </div>
-
-          {/* Items */}
           <div style={{ padding: "6px" }}>
             {MENU.map(item => (
-              <button
-                key={item.label}
-                onClick={() => {
-                  navigate(item.route);
-                  setOpen(false);
-                }}
-                style={{
-                  display: "flex", alignItems: "center", gap: 10,
-                  width: "100%", padding: "8px 10px", borderRadius: 6,
-                  background: "none", border: "none", cursor: "pointer",
-                  color: "var(--text2)", fontSize: 13, fontWeight: 500,
-                  fontFamily: "inherit", textAlign: "left", transition: "all 0.1s",
-                }}
+              <button key={item.label} onClick={() => { navigate(item.route); setOpen(false); }}
+                style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "8px 10px", borderRadius: 6, background: "none", border: "none", cursor: "pointer", color: "var(--text2)", fontSize: 13, fontWeight: 500, fontFamily: "inherit", textAlign: "left", transition: "all 0.1s" }}
                 onMouseEnter={e => { e.currentTarget.style.background = "var(--surface2)"; e.currentTarget.style.color = "var(--text)"; }}
                 onMouseLeave={e => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "var(--text2)"; }}
               >
@@ -209,18 +193,9 @@ function ProfileDropdown({ user, onLogout }) {
               </button>
             ))}
           </div>
-
-          {/* Sign out */}
           <div style={{ padding: "6px", borderTop: "1px solid var(--border)" }}>
-            <button
-              onClick={() => { onLogout(); setOpen(false); }}
-              style={{
-                display: "flex", alignItems: "center", gap: 10,
-                width: "100%", padding: "8px 10px", borderRadius: 6,
-                background: "none", border: "none", cursor: "pointer",
-                color: "var(--danger)", fontSize: 13, fontWeight: 500,
-                fontFamily: "inherit", textAlign: "left", transition: "background 0.1s",
-              }}
+            <button onClick={() => { onLogout(); setOpen(false); }}
+              style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "8px 10px", borderRadius: 6, background: "none", border: "none", cursor: "pointer", color: "var(--danger)", fontSize: 13, fontWeight: 500, fontFamily: "inherit", textAlign: "left", transition: "background 0.1s" }}
               onMouseEnter={e => e.currentTarget.style.background = "rgba(239,68,68,0.08)"}
               onMouseLeave={e => e.currentTarget.style.background = "none"}
             >
@@ -243,7 +218,6 @@ export default function AppShell({ children, title, actions }) {
 
   return (
     <div className="shell">
-      {/* Sidebar */}
       <aside className="sidebar">
         <div className="sb-logo">
           <div className="sb-logo-mark">S</div>
@@ -251,13 +225,7 @@ export default function AppShell({ children, title, actions }) {
         </div>
 
         <nav className="sb-nav">
-          {[
-            { to: "/dashboard",   label: "Dashboard",  icon: "dashboard"   },
-            { to: "/groups",      label: "Groups",      icon: "groups"      },
-            { to: "/settlements", label: "Settlements", icon: "settlements" },
-            { to: "/activity", label: "Activity", icon: "activity" },
-            { to: "/settings",    label: "Settings",    icon: "settings"    },
-          ].map(item => (
+          {NAV_ITEMS.map(item => (
             <NavLink
               key={item.to}
               to={item.to}
@@ -287,7 +255,6 @@ export default function AppShell({ children, title, actions }) {
         </div>
       </aside>
 
-      {/* Main */}
       <div className="shell-main">
         <header className="topbar">
           <span className="topbar-title">{title}</span>
@@ -298,10 +265,7 @@ export default function AppShell({ children, title, actions }) {
               </div>
             )}
             <NotificationBell />
-            <ProfileDropdown
-              user={user}
-              onLogout={() => { logout(); navigate("/login"); }}
-            />
+            <ProfileDropdown user={user} onLogout={() => { logout(); navigate("/login"); }} />
           </div>
         </header>
 

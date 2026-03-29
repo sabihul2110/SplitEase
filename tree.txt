@@ -17,18 +17,26 @@
 │   │   │   ├── auth_router.cpython-314.pyc
 │   │   │   ├── expenses.cpython-314.pyc
 │   │   │   ├── groups.cpython-314.pyc
+│   │   │   ├── income.cpython-314.pyc
 │   │   │   ├── invites.cpython-314.pyc
+│   │   │   ├── loans.cpython-314.pyc
 │   │   │   ├── notifications.cpython-314.pyc
 │   │   │   ├── payments.cpython-314.pyc
+│   │   │   ├── personal_expenses.cpython-314.pyc
 │   │   │   ├── settlements.cpython-314.pyc
+│   │   │   ├── timeline.cpython-314.pyc
 │   │   │   └── users.cpython-314.pyc
 │   │   ├── auth_router.py
 │   │   ├── expenses.py
 │   │   ├── groups.py
+│   │   ├── income.py
 │   │   ├── invites.py
+│   │   ├── loans.py
 │   │   ├── notifications.py
 │   │   ├── payments.py
+│   │   ├── personal_expenses.py
 │   │   ├── settlements.py
+│   │   ├── timeline.py
 │   │   └── users.py
 │   └── venv
 │       ├── bin
@@ -9109,34 +9117,42 @@
 │   │   │   └── axios.js
 │   │   ├── App.jsx
 │   │   ├── components
+│   │   │   ├──  Sidebar_updated.jsx
+│   │   │   ├── AddEntryModal.jsx
 │   │   │   ├── AdminLayout.jsx
 │   │   │   ├── AppShell.jsx
-│   │   │   ├── NotificationBell.jsx
-│   │   │   └── Sidebar.jsx
+│   │   │   └── NotificationBell.jsx
 │   │   ├── context
 │   │   │   └── AuthContext.jsx
 │   │   ├── index.css
 │   │   ├── main.jsx
-│   │   └── pages
-│   │       ├── Activity.jsx
-│   │       ├── AddExpense.jsx
-│   │       ├── AddPayment.jsx
-│   │       ├── admin
-│   │       │   ├── AdminGroups.jsx
-│   │       │   ├── AdminOverview.jsx
-│   │       │   ├── AdminTransactions.jsx
-│   │       │   └── AdminUsers.jsx
-│   │       ├── Dashboard.jsx
-│   │       ├── GroupDetail.jsx
-│   │       ├── Groups.jsx
-│   │       ├── JoinGroup.jsx
-│   │       ├── Login.jsx
-│   │       ├── Settlements.jsx
-│   │       └── Signup.jsx
+│   │   ├── pages
+│   │   │   ├── Activity.jsx
+│   │   │   ├── AddExpense.jsx
+│   │   │   ├── AddPayment.jsx
+│   │   │   ├── admin
+│   │   │   │   ├── AdminGroups.jsx
+│   │   │   │   ├── AdminOverview.jsx
+│   │   │   │   ├── AdminTransactions.jsx
+│   │   │   │   └── AdminUsers.jsx
+│   │   │   ├── Dashboard.jsx
+│   │   │   ├── GroupDetail.jsx
+│   │   │   ├── Groups.jsx
+│   │   │   ├── JoinGroup.jsx
+│   │   │   ├── Lending.jsx
+│   │   │   ├── Login.jsx
+│   │   │   ├── MyExpenses.jsx
+│   │   │   ├── Profile.jsx
+│   │   │   ├── Settings.jsx
+│   │   │   ├── Settlements.jsx
+│   │   │   └── Signup.jsx
+│   │   └── utils
+│   │       └── GroupIcons.jsx
 │   └── vite.config.js
 ├── PROJECT_CONTEXT.md
 ├── sql
-│   └── schema_v2.sql
+│   ├── schema_v2.sql
+│   └── seedusers.sql
 └── tree.txt
 
-1008 directories, 8132 files
+1009 directories, 8147 files

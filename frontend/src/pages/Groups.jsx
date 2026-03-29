@@ -400,7 +400,7 @@ function avatarColor(name = "") {
 // ─────────────────────────────────────────────
 //  SummaryBar — matches reference screenshot style
 // ─────────────────────────────────────────────
-function SummaryBar({ totalGroups, youOwe, owedToYou, loading }) {
+function SummaryBar({ totalGroups, youOwe, owedToYou, loading, thisMonth }) {
   const net = owedToYou - youOwe;
 
   const cards = [
@@ -411,9 +411,11 @@ function SummaryBar({ totalGroups, youOwe, owedToYou, loading }) {
       prefix: "",
       valueColor: "var(--text)",
       valueSz: 36,
-      sub: "+2 this month",           // decorative for now
-      subColor: "var(--success)",
-      subIcon: UI.trend(12),
+      sub: thisMonth > 0
+        ? `+${thisMonth} created this month`
+        : "No new groups",
+      subColor: thisMonth > 0 ? "var(--success)" : "var(--text3)",
+      subIcon: thisMonth > 0 ? UI.trend(12) : null,
     },
     {
       key: "net",
@@ -474,7 +476,7 @@ function SummaryBar({ totalGroups, youOwe, owedToYou, loading }) {
             </div>
           )}
 
-          <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: c.subColor }}>
+          <div style={{ display: "flex", alignItems: "center", gap: c.subIcon ? 5 : 0, fontSize: 12, color: c.subColor }}>
             {c.subIcon && <span style={{ color: c.key === "groups" ? "var(--success)" : "inherit" }}>{c.subIcon}</span>}
             {loading ? <span className="skel" style={{ width: 120, height: 10 }} /> : c.sub}
           </div>
@@ -886,6 +888,18 @@ export default function Groups() {
       if (sortBy === "spent")   return (eb?.totalExpenses ?? 0) - (ea?.totalExpenses ?? 0);
       return 0;
     });
+  
+    const groupsThisMonth = groups.filter(g => {
+    if (!g.created_at) return false;
+
+    const created = new Date(g.created_at);
+    const now = new Date();
+
+    return (
+      created.getMonth() === now.getMonth() &&
+      created.getFullYear() === now.getFullYear()
+    );
+  }).length;
 
   // Page header section
   const pageHeader = (
@@ -922,6 +936,7 @@ export default function Groups() {
           youOwe={summary.youOwe}
           owedToYou={summary.owedToYou}
           loading={summaryLoading}
+          thisMonth={groupsThisMonth}
         />
 
 {/* ── Toolbar: search + filter tabs + sort ── */}

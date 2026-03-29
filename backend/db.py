@@ -563,3 +563,704 @@ def simplify_debts(rows: list[dict]) -> list[dict]:
         if creditors[j][1] == 0: j += 1
 
     return settlements
+
+
+
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  db_additions.py
+#
+#  INSTRUCTIONS:
+#  Paste everything below this comment block at the END of your existing db.py.
+#  These functions follow the exact same pattern as the rest of db.py:
+#    - own get_connection() / close per function
+#    - dictionary=True cursors for SELECT
+#    - explicit transaction blocks for INSERT / UPDATE / DELETE
+#    - no ORM — raw SQL only
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+# ─────────────────────────────────────────────
+#  PERSONAL EXPENSES
+# ─────────────────────────────────────────────
+
+def fetch_personal_expenses(user_id: int) -> list[dict]:
+    """All personal expenses for a user, newest first."""
+    conn = get_connection()
+    cur  = conn.cursor(dictionary=True)
+    cur.execute(
+        """
+        SELECT expense_id, amount, category, note, expense_date, created_at
+        FROM   Personal_Expenses
+        WHERE  user_id = %s
+        ORDER  BY expense_date DESC, expense_id DESC
+        """,
+        (user_id,),
+    )
+    rows = cur.fetchall()
+    cur.close(); conn.close()
+    # Normalise date objects to strings so JSON serialisation never breaks
+    for r in rows:
+        if r.get("expense_date"):
+            r["expense_date"] = str(r["expense_date"])
+        if r.get("created_at"):
+            r["created_at"] = str(r["created_at"])
+    return rows
+
+
+def insert_personal_expense(
+    user_id: int,
+    amount: float,
+    category: str,
+    note: str | None,
+    expense_date: str,
+) -> int:
+    conn = get_connection()
+    cur  = conn.cursor()
+    try:
+        conn.start_transaction()
+        cur.execute(
+            """
+            INSERT INTO Personal_Expenses (user_id, amount, category, note, expense_date)
+            VALUES (%s, %s, %s, %s, %s)
+            """,
+            (user_id, round(float(amount), 2), category.strip(), note or None, expense_date),
+        )
+        new_id = cur.lastrowid
+        conn.commit()
+        return new_id
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close(); conn.close()
+
+
+def delete_personal_expense(expense_id: int, user_id: int) -> None:
+    """Delete only if the requesting user owns the expense."""
+    conn = get_connection()
+    cur  = conn.cursor()
+    try:
+        conn.start_transaction()
+        cur.execute(
+            "DELETE FROM Personal_Expenses WHERE expense_id = %s AND user_id = %s",
+            (expense_id, user_id),
+        )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close(); conn.close()
+
+
+# ─────────────────────────────────────────────
+#  INCOME
+# ─────────────────────────────────────────────
+
+VALID_SOURCE_TYPES = {"salary", "pocket_money", "stipend", "other"}
+
+
+def fetch_income(user_id: int) -> list[dict]:
+    """All income entries for a user, newest first."""
+    conn = get_connection()
+    cur  = conn.cursor(dictionary=True)
+    cur.execute(
+        """
+        SELECT income_id, amount, source_type, note, income_date, created_at
+        FROM   Income
+        WHERE  user_id = %s
+        ORDER  BY income_date DESC, income_id DESC
+        """,
+        (user_id,),
+    )
+    rows = cur.fetchall()
+    cur.close(); conn.close()
+    for r in rows:
+        if r.get("income_date"):
+            r["income_date"] = str(r["income_date"])
+        if r.get("created_at"):
+            r["created_at"] = str(r["created_at"])
+    return rows
+
+
+def insert_income(
+    user_id: int,
+    amount: float,
+    source_type: str,
+    note: str | None,
+    income_date: str,
+) -> int:
+    if source_type not in VALID_SOURCE_TYPES:
+        raise ValueError(f"source_type must be one of {VALID_SOURCE_TYPES}")
+    conn = get_connection()
+    cur  = conn.cursor()
+    try:
+        conn.start_transaction()
+        cur.execute(
+            """
+            INSERT INTO Income (user_id, amount, source_type, note, income_date)
+            VALUES (%s, %s, %s, %s, %s)
+            """,
+            (user_id, round(float(amount), 2), source_type, note or None, income_date),
+        )
+        new_id = cur.lastrowid
+        conn.commit()
+        return new_id
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close(); conn.close()
+
+
+def delete_income(income_id: int, user_id: int) -> None:
+    conn = get_connection()
+    cur  = conn.cursor()
+    try:
+        conn.start_transaction()
+        cur.execute(
+            "DELETE FROM Income WHERE income_id = %s AND user_id = %s",
+            (income_id, user_id),
+        )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close(); conn.close()
+
+
+# ─────────────────────────────────────────────
+#  LOANS
+# ─────────────────────────────────────────────
+
+def fetch_loans(user_id: int) -> list[dict]:
+    """All loans lent by a user, newest first."""
+    conn = get_connection()
+    cur  = conn.cursor(dictionary=True)
+    cur.execute(
+        """
+        SELECT loan_id, borrower_name, amount, remaining_amount,
+               note, loan_date, status, created_at
+        FROM   Loans
+        WHERE  lender_user_id = %s
+        ORDER  BY loan_date DESC, loan_id DESC
+        """,
+        (user_id,),
+    )
+    rows = cur.fetchall()
+    cur.close(); conn.close()
+    for r in rows:
+        if r.get("loan_date"):
+            r["loan_date"] = str(r["loan_date"])
+        if r.get("created_at"):
+            r["created_at"] = str(r["created_at"])
+        # Ensure Decimal → float for JSON
+        r["amount"]           = float(r["amount"])
+        r["remaining_amount"] = float(r["remaining_amount"])
+    return rows
+
+
+def insert_loan(
+    lender_user_id: int,
+    borrower_name: str,
+    amount: float,
+    note: str | None,
+    loan_date: str,
+) -> int:
+    conn = get_connection()
+    cur  = conn.cursor()
+    try:
+        conn.start_transaction()
+        cur.execute(
+            """
+            INSERT INTO Loans
+                (lender_user_id, borrower_name, amount, remaining_amount, note, loan_date, status)
+            VALUES (%s, %s, %s, %s, %s, %s, 'active')
+            """,
+            (
+                lender_user_id,
+                borrower_name.strip(),
+                round(float(amount), 2),
+                round(float(amount), 2),   # remaining starts equal to amount
+                note or None,
+                loan_date,
+            ),
+        )
+        new_id = cur.lastrowid
+        conn.commit()
+        return new_id
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close(); conn.close()
+
+
+def record_loan_repayment(loan_id: int, user_id: int, repayment_amount: float) -> dict:
+    """
+    Reduce remaining_amount by repayment_amount.
+    Marks loan as 'repaid' when remaining reaches 0.
+    Returns the updated loan row.
+    Raises ValueError if repayment > remaining or loan doesn't belong to user.
+    """
+    conn = get_connection()
+    cur  = conn.cursor(dictionary=True)
+    try:
+        conn.start_transaction()
+
+        # Lock the row and verify ownership
+        cur.execute(
+            """
+            SELECT loan_id, remaining_amount, status
+            FROM   Loans
+            WHERE  loan_id = %s AND lender_user_id = %s
+            FOR UPDATE
+            """,
+            (loan_id, user_id),
+        )
+        row = cur.fetchone()
+        if row is None:
+            raise ValueError("Loan not found or not owned by user.")
+        if row["status"] == "repaid":
+            raise ValueError("Loan is already fully repaid.")
+
+        remaining = float(row["remaining_amount"])
+        repay     = round(float(repayment_amount), 2)
+
+        if repay <= 0:
+            raise ValueError("Repayment amount must be positive.")
+        if repay > remaining:
+            raise ValueError(f"Repayment ₹{repay} exceeds remaining ₹{remaining}.")
+
+        new_remaining = round(remaining - repay, 2)
+        new_status    = "repaid" if new_remaining == 0 else "active"
+
+        cur.execute(
+            """
+            UPDATE Loans
+            SET    remaining_amount = %s, status = %s
+            WHERE  loan_id = %s
+            """,
+            (new_remaining, new_status, loan_id),
+        )
+        conn.commit()
+
+        return {
+            "loan_id":          loan_id,
+            "remaining_amount": new_remaining,
+            "status":           new_status,
+        }
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close(); conn.close()
+
+
+def delete_loan(loan_id: int, user_id: int) -> None:
+    conn = get_connection()
+    cur  = conn.cursor()
+    try:
+        conn.start_transaction()
+        cur.execute(
+            "DELETE FROM Loans WHERE loan_id = %s AND lender_user_id = %s",
+            (loan_id, user_id),
+        )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close(); conn.close()
+
+
+# ─────────────────────────────────────────────
+#  UNIFIED TIMELINE
+#  Used by the My Expenses page to build a single
+#  chronological feed across all entry types.
+# ─────────────────────────────────────────────
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  db_timeline_fix.py
+#
+#  INSTRUCTIONS:
+#  1. In your db.py, FIND the function fetch_unified_timeline() and
+#     REPLACE IT ENTIRELY with the version below.
+#
+#  2. Also ADD the two new functions at the bottom:
+#     - insert_borrow()
+#     - fetch_borrows()
+#     - record_borrow_repayment()
+#     - delete_borrow()
+#
+#  These are the ONLY changes needed in db.py.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+# ─────────────────────────────────────────────
+#  REPLACE fetch_unified_timeline with this
+# ─────────────────────────────────────────────
+
+def fetch_unified_timeline(user_id: int, limit: int = 100) -> list[dict]:
+    """
+    Returns a unified list of financial events for a user.
+
+    KEY FIX: Group expenses now return BOTH the total paid AND the user's
+    own share (from Expense_Splits). The frontend shows only my_share as
+    the actual expense cost.
+
+    Shape of each row:
+    {
+        "type":        str,
+        "date":        str,   # YYYY-MM-DD
+        "amount":      float, # what was PAID (total) for group, actual for others
+        "my_share":    float | None,   # only for group_expense
+        "receivable":  float | None,   # amount - my_share, only for group_expense
+        "label":       str,
+        "sub":         str,
+        "ref_id":      int,
+        "group_id":    int | None,
+        "group_name":  str | None,
+    }
+    """
+    conn = get_connection()
+    cur  = conn.cursor(dictionary=True)
+
+    # ── 1. Personal expenses ──────────────────────────────────────────────────
+    cur.execute(
+        """
+        SELECT
+            'personal_expense'              AS type,
+            expense_date                    AS date,
+            amount,
+            NULL                            AS my_share,
+            NULL                            AS receivable,
+            CONCAT('Spent on ', category)   AS label,
+            IFNULL(note, category)          AS sub,
+            expense_id                      AS ref_id,
+            NULL                            AS group_id,
+            NULL                            AS group_name,
+            created_at
+        FROM Personal_Expenses
+        WHERE user_id = %s
+        """,
+        (user_id,),
+    )
+    rows = cur.fetchall()
+
+    # ── 2. Group expenses where this user is the PAYER ────────────────────────
+    # Also fetch user's own split amount so frontend can show correct share.
+    # If user is payer but NOT in splits (they fronted for others only),
+    # my_share = 0 and receivable = total_amount.
+    cur.execute(
+        """
+        SELECT
+            'group_expense'                          AS type,
+            e.expense_date                           AS date,
+            e.total_amount                           AS amount,
+            IFNULL(es.amount_owed, 0)                AS my_share,
+            (e.total_amount - IFNULL(es.amount_owed, 0))  AS receivable,
+            CONCAT('Paid in ', g.group_name)         AS label,
+            e.description                            AS sub,
+            e.expense_id                             AS ref_id,
+            e.group_id                               AS group_id,
+            g.group_name                             AS group_name,
+            e.created_at
+        FROM   Expenses e
+        JOIN   `Groups` g ON g.group_id = e.group_id
+        LEFT JOIN Expense_Splits es
+               ON es.expense_id = e.expense_id AND es.user_id = %s
+        WHERE  e.payer_id = %s
+          AND  e.group_id IN (
+                   SELECT group_id FROM Group_Members WHERE user_id = %s
+               )
+        """,
+        (user_id, user_id, user_id),
+    )
+    rows += cur.fetchall()
+
+    # ── 3. Group expenses where user is a PARTICIPANT but NOT the payer ───────
+    # These show as "You owe" entries — negative for user.
+    cur.execute(
+        """
+        SELECT
+            'group_expense_owed'                     AS type,
+            e.expense_date                           AS date,
+            es.amount_owed                           AS amount,
+            es.amount_owed                           AS my_share,
+            0                                        AS receivable,
+            CONCAT('Share in ', g.group_name)        AS label,
+            e.description                            AS sub,
+            e.expense_id                             AS ref_id,
+            e.group_id                               AS group_id,
+            g.group_name                             AS group_name,
+            e.created_at
+        FROM   Expense_Splits es
+        JOIN   Expenses e ON e.expense_id = es.expense_id
+        JOIN   `Groups` g ON g.group_id  = e.group_id
+        WHERE  es.user_id = %s
+          AND  e.payer_id <> %s
+        """,
+        (user_id, user_id),
+    )
+    rows += cur.fetchall()
+
+    # ── 4. Income ─────────────────────────────────────────────────────────────
+    cur.execute(
+        """
+        SELECT
+            'income'                                           AS type,
+            income_date                                        AS date,
+            amount,
+            NULL                                               AS my_share,
+            NULL                                               AS receivable,
+            CONCAT('Received — ',
+                   REPLACE(source_type, '_', ' '))             AS label,
+            IFNULL(note, source_type)                         AS sub,
+            income_id                                          AS ref_id,
+            NULL                                               AS group_id,
+            NULL                                               AS group_name,
+            created_at
+        FROM Income
+        WHERE user_id = %s
+        """,
+        (user_id,),
+    )
+    rows += cur.fetchall()
+
+    # ── 5. Loans GIVEN ────────────────────────────────────────────────────────
+    cur.execute(
+        """
+        SELECT
+            'loan_given'                                AS type,
+            loan_date                                   AS date,
+            amount,
+            NULL                                        AS my_share,
+            remaining_amount                            AS receivable,
+            CONCAT('Lent to ', borrower_name)           AS label,
+            IFNULL(note,
+                   CONCAT('₹', CAST(amount AS CHAR), ' lent')) AS sub,
+            loan_id                                     AS ref_id,
+            NULL                                        AS group_id,
+            NULL                                        AS group_name,
+            created_at
+        FROM Loans
+        WHERE lender_user_id = %s
+        """,
+        (user_id,),
+    )
+    rows += cur.fetchall()
+
+    # ── 6. Money BORROWED ─────────────────────────────────────────────────────
+    cur.execute(
+        """
+        SELECT
+            'loan_taken'                                AS type,
+            borrow_date                                 AS date,
+            amount,
+            NULL                                        AS my_share,
+            remaining_amount                            AS receivable,
+            CONCAT('Borrowed from ', lender_name)       AS label,
+            IFNULL(note,
+                   CONCAT('₹', CAST(amount AS CHAR), ' borrowed')) AS sub,
+            borrow_id                                   AS ref_id,
+            NULL                                        AS group_id,
+            NULL                                        AS group_name,
+            created_at
+        FROM Borrows
+        WHERE borrower_user_id = %s
+        """,
+        (user_id,),
+    )
+    rows += cur.fetchall()
+
+    # ── 7. Settlement payments RECEIVED ───────────────────────────────────────
+    cur.execute(
+        """
+        SELECT
+            'settlement_received'                       AS type,
+            p.payment_date                              AS date,
+            p.amount,
+            NULL                                        AS my_share,
+            NULL                                        AS receivable,
+            CONCAT('Received from ', u.name)            AS label,
+            CONCAT('Settlement — ', g.group_name)       AS sub,
+            p.payment_id                                AS ref_id,
+            p.group_id                                  AS group_id,
+            g.group_name                                AS group_name,
+            p.created_at
+        FROM   Payments p
+        JOIN   Users u    ON u.user_id   = p.payer_id
+        JOIN   `Groups` g ON g.group_id  = p.group_id
+        WHERE  p.payee_id = %s
+        """,
+        (user_id,),
+    )
+    rows += cur.fetchall()
+
+    # ── 8. Settlement payments SENT ───────────────────────────────────────────
+    cur.execute(
+        """
+        SELECT
+            'settlement_sent'                           AS type,
+            p.payment_date                              AS date,
+            p.amount,
+            NULL                                        AS my_share,
+            NULL                                        AS receivable,
+            CONCAT('Paid to ', u.name)                  AS label,
+            CONCAT('Settlement — ', g.group_name)       AS sub,
+            p.payment_id                                AS ref_id,
+            p.group_id                                  AS group_id,
+            g.group_name                                AS group_name,
+            p.created_at
+        FROM   Payments p
+        JOIN   Users u    ON u.user_id   = p.payee_id
+        JOIN   `Groups` g ON g.group_id  = p.group_id
+        WHERE  p.payer_id = %s
+        """,
+        (user_id,),
+    )
+    rows += cur.fetchall()
+
+    cur.close(); conn.close()
+
+    # Normalise types
+    for r in rows:
+        r["date"]       = str(r["date"])       if r.get("date")       else ""
+        r["created_at"] = str(r["created_at"]) if r.get("created_at") else ""
+        r["amount"]     = float(r.get("amount") or 0)
+        if r.get("my_share")   is not None: r["my_share"]   = float(r["my_share"])
+        if r.get("receivable") is not None: r["receivable"] = float(r["receivable"])
+
+    # Sort newest first
+    rows.sort(key=lambda r: (r["date"], r.get("created_at", "")), reverse=True)
+    return rows[:limit]
+
+
+# ─────────────────────────────────────────────
+#  NEW: Borrows — money the user BORROWED
+#  ADD these functions at the end of db.py
+# ─────────────────────────────────────────────
+
+def fetch_borrows(user_id: int) -> list[dict]:
+    """All borrows taken by a user, newest first."""
+    conn = get_connection()
+    cur  = conn.cursor(dictionary=True)
+    cur.execute(
+        """
+        SELECT borrow_id, lender_name, amount, remaining_amount,
+               note, borrow_date, status, created_at
+        FROM   Borrows
+        WHERE  borrower_user_id = %s
+        ORDER  BY borrow_date DESC, borrow_id DESC
+        """,
+        (user_id,),
+    )
+    rows = cur.fetchall()
+    cur.close(); conn.close()
+    for r in rows:
+        r["borrow_date"] = str(r["borrow_date"]) if r.get("borrow_date") else ""
+        r["created_at"]  = str(r["created_at"])  if r.get("created_at")  else ""
+        r["amount"]           = float(r["amount"])
+        r["remaining_amount"] = float(r["remaining_amount"])
+    return rows
+
+
+def insert_borrow(
+    borrower_user_id: int,
+    lender_name: str,
+    amount: float,
+    note: str | None,
+    borrow_date: str,
+) -> int:
+    conn = get_connection()
+    cur  = conn.cursor()
+    try:
+        conn.start_transaction()
+        cur.execute(
+            """
+            INSERT INTO Borrows
+                (borrower_user_id, lender_name, amount, remaining_amount, note, borrow_date, status)
+            VALUES (%s, %s, %s, %s, %s, %s, 'active')
+            """,
+            (
+                borrower_user_id,
+                lender_name.strip(),
+                round(float(amount), 2),
+                round(float(amount), 2),
+                note or None,
+                borrow_date,
+            ),
+        )
+        new_id = cur.lastrowid
+        conn.commit()
+        return new_id
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close(); conn.close()
+
+
+def record_borrow_repayment(borrow_id: int, user_id: int, repayment_amount: float) -> dict:
+    """Record a repayment on money the user borrowed."""
+    conn = get_connection()
+    cur  = conn.cursor(dictionary=True)
+    try:
+        conn.start_transaction()
+        cur.execute(
+            """
+            SELECT borrow_id, remaining_amount, status
+            FROM   Borrows
+            WHERE  borrow_id = %s AND borrower_user_id = %s
+            FOR UPDATE
+            """,
+            (borrow_id, user_id),
+        )
+        row = cur.fetchone()
+        if not row:
+            raise ValueError("Borrow not found or not owned by user.")
+        if row["status"] == "repaid":
+            raise ValueError("Borrow is already fully repaid.")
+
+        remaining = float(row["remaining_amount"])
+        repay     = round(float(repayment_amount), 2)
+        if repay <= 0:
+            raise ValueError("Repayment must be positive.")
+        if repay > remaining:
+            raise ValueError(f"Repayment ₹{repay} exceeds remaining ₹{remaining}.")
+
+        new_remaining = round(remaining - repay, 2)
+        new_status    = "repaid" if new_remaining == 0 else "active"
+
+        cur.execute(
+            "UPDATE Borrows SET remaining_amount = %s, status = %s WHERE borrow_id = %s",
+            (new_remaining, new_status, borrow_id),
+        )
+        conn.commit()
+        return {"borrow_id": borrow_id, "remaining_amount": new_remaining, "status": new_status}
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close(); conn.close()
+
+
+def delete_borrow(borrow_id: int, user_id: int) -> None:
+    conn = get_connection()
+    cur  = conn.cursor()
+    try:
+        conn.start_transaction()
+        cur.execute(
+            "DELETE FROM Borrows WHERE borrow_id = %s AND borrower_user_id = %s",
+            (borrow_id, user_id),
+        )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close(); conn.close()

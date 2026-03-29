@@ -8,7 +8,7 @@ Run: uvicorn main:app --reload --loop asyncio
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routers import auth_router, users, groups, expenses, payments, settlements, invites, notifications
+from routers import auth_router, users, groups, expenses, payments, settlements, invites, notifications, personal_expenses, income, loans, timeline, borrows
 
 app = FastAPI(title="College Expense Splitter API", version="2.1.0")
 
@@ -28,6 +28,11 @@ app.include_router(payments.router,      prefix="/payments",    tags=["Payments"
 app.include_router(settlements.router,   prefix="/settlements", tags=["Settlements"])
 app.include_router(invites.router,       tags=["Invites"])
 app.include_router(notifications.router, tags=["Notifications"])
+app.include_router(personal_expenses.router)
+app.include_router(income.router)
+app.include_router(loans.router)
+app.include_router(timeline.router)
+app.include_router(borrows.router)
 
 @app.get("/health", tags=["Health"])
 def health():

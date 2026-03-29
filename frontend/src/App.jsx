@@ -16,6 +16,8 @@ import Activity     from "./pages/Activity";
 import JoinGroup from "./pages/JoinGroup";
 import Profile  from "./pages/Profile";
 import Settings from "./pages/Settings";
+import Expenses from "./pages/Expenses";
+import Loans    from "./pages/Loans";
 
 // Admin
 import AdminLayout       from "./components/AdminLayout";
@@ -55,6 +57,8 @@ export default function App() {
       <Route path="/activity" element={<UserRoute><Activity /></UserRoute>} />
       <Route path="/profile"  element={<UserRoute><Profile /></UserRoute>} />
       <Route path="/settings" element={<UserRoute><Settings /></UserRoute>} />
+     <Route path="/expenses" element={<UserRoute><Expenses /></UserRoute>} />
+     <Route path="/loans"     element={<UserRoute><Loans /></UserRoute>} />
 
       {/* Admin — separate layout, nested admin routes */}
       <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>

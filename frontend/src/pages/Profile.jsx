@@ -18,7 +18,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { useNavigate }         from "react-router-dom";
+import { useNavigate, useLocation }         from "react-router-dom";
 import api                     from "../api/axios";
 import { useAuth }             from "../context/AuthContext";
 import AppShell                from "../components/AppShell";
@@ -314,7 +314,8 @@ function ChangePasswordModal({ onClose }) {
 // ─────────────────────────────────────────────
 export default function Profile() {
   const { user, login } = useAuth();
-  const navigate        = useNavigate();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   // Live stats
   const [groups,      setGroups]      = useState([]);
@@ -323,7 +324,19 @@ export default function Profile() {
 
   // Modal state
   const [showEdit, setShowEdit]   = useState(false);
-  const [showPwd,  setShowPwd]    = useState(false);
+  const [showPwd, setShowPwd] = useState(false);
+  
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const action = params.get("action");
+
+    if (action === "password") {
+      setShowPwd(true);
+    }
+    if (action === "edit") {
+      setShowEdit(true);
+    }
+  }, [location]);
 
   // Derive initials from current user name
   const initials = (user?.name || "?")

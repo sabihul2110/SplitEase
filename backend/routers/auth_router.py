@@ -16,7 +16,7 @@ from auth import (
     get_current_user,
 )
 
-router = APIRouter()
+router = APIRouter(tags=["Auth"])
 
 
 # ── Pydantic models ────────────────────────────────────────────────────────
@@ -148,7 +148,7 @@ def change_password(
     try:
         cur.execute(
             "UPDATE Users SET password_hash = %s WHERE user_id = %s",
-            (new_hash, current_user["user_id"]),
+            (new_hash, current_user["user_id"]),  
         )
         conn.commit()
     except Exception:
