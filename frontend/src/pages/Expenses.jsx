@@ -1,6 +1,6 @@
 // --- frontend/src/pages/Expenses.jsx ---
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import AppShell from "../components/AppShell";
@@ -15,6 +15,10 @@ const STYLES = `
   @keyframes meFadeUp {
     from { opacity:0; transform:translateY(8px); }
     to   { opacity:1; transform:translateY(0); }
+  }
+  @keyframes meSlideIn {
+    from { opacity:0; transform:translateX(-6px); }
+    to   { opacity:1; transform:translateX(0); }
   }
 
   .me-summary {
@@ -69,12 +73,71 @@ const STYLES = `
     display: flex; pointer-events: none;
   }
 
+  /* ── Month Navigator ── */
+  .me-month-nav {
+    display: flex; align-items: center; gap: 0;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; overflow: hidden;
+    height: 34px;
+  }
+  .me-month-nav-btn {
+    width: 32px; height: 34px; display: flex; align-items: center; justify-content: center;
+    background: none; border: none; color: var(--text2);
+    cursor: pointer; font-family: inherit; transition: all 0.12s;
+    flex-shrink: 0;
+  }
+  .me-month-nav-btn:hover:not(:disabled) { background: var(--surface3); color: var(--text); }
+  .me-month-nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .me-month-nav-label {
+    padding: 0 10px; font-size: 12.5px; font-weight: 600;
+    color: var(--text); white-space: nowrap; min-width: 108px; text-align: center;
+    border-left: 1px solid var(--border); border-right: 1px solid var(--border);
+    height: 34px; display: flex; align-items: center; justify-content: center;
+    cursor: default; user-select: none;
+  }
+  .me-month-nav-label.is-current { color: var(--primary-h); }
+
+  /* "Back to current month" reset chip */
+  .me-month-reset {
+    padding: 4px 10px; border-radius: 20px;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
+    background: rgba(37,99,235,0.12); color: var(--primary-h);
+    border: 1px solid rgba(37,99,235,0.25);
+    cursor: pointer; font-family: inherit; transition: all 0.12s;
+    animation: meFadeUp 0.15s ease both;
+    white-space: nowrap;
+  }
+  .me-month-reset:hover { background: rgba(37,99,235,0.2); }
+
+  /* ── Month section header ── */
+  .me-month-section {
+    margin-top: 32px;
+    animation: meSlideIn 0.2s ease both;
+  }
+  .me-month-section:first-child { margin-top: 0; }
+  .me-month-heading {
+    font-size: 13px; font-weight: 800; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--text2);
+    padding: 0 0 10px 0;
+    border-bottom: 2px solid var(--border);
+    margin-bottom: 0;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .me-month-heading-sum {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.02em;
+    text-transform: none; color: var(--text3);
+  }
+
+  /* ── Day sub-header ── */
   .me-date-header {
-    font-size: 11.5px; font-weight: 700; letter-spacing: 0.07em;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
     text-transform: uppercase; color: var(--text3);
-    padding: 10px 0 8px; margin-top: 4px;
+    padding: 12px 0 7px; margin-top: 0;
     border-bottom: 1px solid var(--border);
     margin-bottom: 0;
+  }
+  .me-date-header.is-today {
+    color: var(--primary-h);
   }
 
   .me-entry {
@@ -168,24 +231,13 @@ const STYLES = `
     cursor: pointer; font-family: inherit; text-decoration: underline;
   }
 
-  .me-empty { text-align: center; padding: 64px 24px; color: var(--text3); }
+  .me-empty {
+    text-align: center; padding: 64px 24px; color: var(--text3);
+    animation: meFadeUp 0.25s ease both;
+  }
   .me-empty-icon { font-size: 40px; margin-bottom: 14px; opacity: 0.35; }
 
   .me-skel { animation: mePulse 1.4s ease-in-out infinite; background: var(--surface3); border-radius: 5px; display: block; }
-
-  .me-month-select {
-    padding: 5px 28px 5px 11px; border-radius: 7px;
-    border: 1px solid var(--border); background: var(--surface2);
-    color: var(--text); font-size: 12.5px; font-family: inherit;
-    font-weight: 600; outline: none; cursor: pointer; appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 9px center;
-    transition: border-color 0.13s;
-    height: 34px;
-  }
-  .me-month-select:focus { border-color: var(--border2); }
-  .me-month-select.active { border-color: rgba(37,99,235,0.45); background: rgba(37,99,235,0.1); color: var(--primary-h); }
 `;
 
 // ─────────────────────────────────────────────
@@ -202,7 +254,6 @@ const TYPE_ICONS = {
   loan_taken:          { icon: Icons.borrowMoney,     bg: "rgba(99,102,241,0.12)",  color: "#818cf8"        },
 };
 
-// Keep separate from icon config — sign and bucket logic
 const TYPE_CFG = {
   personal_expense:    { sign: "-", bucket: "spent"    },
   group_expense:       { sign: "-", bucket: "spent"    },
@@ -231,23 +282,107 @@ const TAB_TO_MODAL = {
 // ─────────────────────────────────────────────
 //  Helpers
 // ─────────────────────────────────────────────
-function fmtDate(s) {
+
+/** Returns today's "YYYY-MM-DD" string */
+function todayStr() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+/** Returns current month as "YYYY-MM" */
+function currentMonth() {
+  return new Date().toISOString().slice(0, 7);
+}
+
+/** Advance a "YYYY-MM" string by +1 or -1 month */
+function shiftMonth(ym, delta) {
+  const [y, m] = ym.split("-").map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+/** Format "YYYY-MM" → "April 2026" */
+function fmtMonthLabel(ym) {
+  const [y, m] = ym.split("-").map(Number);
+  return new Date(y, m - 1, 1).toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+}
+
+/** Format a date string for the day sub-header */
+function fmtDayHeader(s) {
   if (!s) return "";
-  const d    = new Date(s + "T00:00:00");
-  const now  = new Date(); now.setHours(0,0,0,0);
-  const yest = new Date(now); yest.setDate(now.getDate() - 1);
-  if (d.getTime() === now.getTime())  return "Today";
-  if (d.getTime() === yest.getTime()) return "Yesterday";
+  const today = todayStr();
+  if (s === today) return "Today";
+  const d = new Date(s + "T00:00:00");
   return d.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
 }
 
-function groupByDate(arr) {
-  const m = {};
-  for (const e of arr) {
-    const k = e.date || "Unknown";
-    (m[k] = m[k] || []).push(e);
+/**
+ * Filter entries to a specific month "YYYY-MM".
+ * Pass null / "all" to return all entries.
+ */
+function filterByMonth(entries, ym) {
+  if (!ym || ym === "all") return entries;
+  return entries.filter(e => e.date && e.date.slice(0, 7) === ym);
+}
+
+/** Compute summary totals from a list of entries */
+function computeSummary(entries) {
+  let spent = 0, received = 0, net = 0;
+  for (const e of entries) {
+    const cfg = TYPE_CFG[e.type];
+    if (!cfg) continue;
+    const disp = displayAmount(e);
+    if (cfg.bucket === "spent")    spent    += disp;
+    if (cfg.bucket === "received") received += disp;
+    if (e.type === "group_expense")      net += (e.receivable ?? 0);
+    if (e.type === "group_expense_owed") net -= (e.amount ?? 0);
+    if (e.type === "loan_given")         net += (e.receivable ?? 0);
+    if (e.type === "loan_taken")         net -= (e.receivable ?? 0);
   }
-  return m;
+  return {
+    spent,
+    received,
+    lent:     net > 0 ? net : 0,
+    borrowed: net < 0 ? Math.abs(net) : 0,
+  };
+}
+
+/**
+ * Groups entries into a two-level structure:
+ * [
+ *   { monthKey: "2026-04", monthLabel: "April 2026", days: [
+ *       { dateKey: "2026-04-01", dayLabel: "Today" | "1 April 2026", entries: [...] },
+ *       ...
+ *   ]},
+ *   ...
+ * ]
+ * Sorted newest-first at both levels.
+ */
+function groupByMonthAndDay(entries) {
+  const monthMap = {};
+  for (const e of entries) {
+    const mk = e.date ? e.date.slice(0, 7) : "unknown";
+    const dk = e.date || "unknown";
+    if (!monthMap[mk]) monthMap[mk] = {};
+    if (!monthMap[mk][dk]) monthMap[mk][dk] = [];
+    monthMap[mk][dk].push(e);
+  }
+
+  return Object.keys(monthMap)
+    .sort()
+    .reverse()
+    .map(mk => ({
+      monthKey:   mk,
+      monthLabel: mk === "unknown" ? "Unknown" : fmtMonthLabel(mk),
+      days: Object.keys(monthMap[mk])
+        .sort()
+        .reverse()
+        .map(dk => ({
+          dateKey:  dk,
+          dayLabel: fmtDayHeader(dk),
+          isToday:  dk === todayStr(),
+          entries:  monthMap[mk][dk],
+        })),
+    }));
 }
 
 function displayAmount(entry) {
@@ -255,6 +390,9 @@ function displayAmount(entry) {
   return entry.amount;
 }
 
+// ─────────────────────────────────────────────
+//  SVG primitives
+// ─────────────────────────────────────────────
 const SVG_SEARCH = (
   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
@@ -268,18 +406,75 @@ const SVG_TRASH = (
   </svg>
 );
 
+const SVG_ARROW_LEFT = (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="15 18 9 12 15 6"/>
+  </svg>
+);
+
+const SVG_ARROW_RIGHT = (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="9 18 15 12 9 6"/>
+  </svg>
+);
+
 // ─────────────────────────────────────────────
-//  Inline repayment widget (shown on loan_given entries)
+//  Month Navigator component
+// ─────────────────────────────────────────────
+function MonthNavigator({ value, onChange, availableMonths }) {
+  const cur = currentMonth();
+  const isCurrentMonth = value === cur;
+
+  // Determine bounds from available data
+  const oldest = availableMonths.length ? availableMonths[0] : value;
+  const canGoBack    = value > oldest;
+  const canGoForward = value < cur || availableMonths.some(m => m > value);
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <div className="me-month-nav">
+        <button
+          className="me-month-nav-btn"
+          onClick={() => onChange(shiftMonth(value, -1))}
+          disabled={!canGoBack}
+          title="Previous month"
+        >
+          {SVG_ARROW_LEFT}
+        </button>
+
+        <div className={`me-month-nav-label ${isCurrentMonth ? "is-current" : ""}`}>
+          {fmtMonthLabel(value)}
+        </div>
+
+        <button
+          className="me-month-nav-btn"
+          onClick={() => onChange(shiftMonth(value, 1))}
+          disabled={!canGoForward}
+          title="Next month"
+        >
+          {SVG_ARROW_RIGHT}
+        </button>
+      </div>
+
+      {!isCurrentMonth && (
+        <button className="me-month-reset" onClick={() => onChange(cur)}>
+          Back to {fmtMonthLabel(cur).split(" ")[0]}
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+//  Inline repayment widget
 // ─────────────────────────────────────────────
 function InlineRepay({ entry, onSuccess }) {
-  const [amt,     setAmt]     = useState("");
-  const [saving,  setSaving]  = useState(false);
-  const [err,     setErr]     = useState("");
+  const [amt,    setAmt]    = useState("");
+  const [saving, setSaving] = useState(false);
+  const [err,    setErr]    = useState("");
 
   const remaining = entry.receivable ?? 0;
-  const isFullyRepaid = remaining <= 0;
-
-  if (isFullyRepaid) {
+  if (remaining <= 0) {
     return (
       <div className="me-settled-badge">
         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -338,6 +533,104 @@ function InlineRepay({ entry, onSuccess }) {
 }
 
 // ─────────────────────────────────────────────
+//  Single entry row
+// ─────────────────────────────────────────────
+function EntryRow({ entry, idx, deleting, onDelete, navigate }) {
+  const cfg     = TYPE_CFG[entry.type];
+  const iconCfg = TYPE_ICONS[entry.type];
+  if (!cfg || !iconCfg) return null;
+
+  const disp        = displayAmount(entry);
+  const isGrp       = entry.type === "group_expense";
+  const isLoanGiven = entry.type === "loan_given";
+  const isLoanTaken = entry.type === "loan_taken";
+
+  const isDeletable = ["personal_expense", "income", "loan_given", "loan_taken"].includes(entry.type);
+
+  return (
+    <div
+      className="me-entry"
+      style={{ animationDelay: `${idx * 0.025}s` }}
+    >
+      <div className="me-entry-icon" style={{ background: iconCfg.bg, color: iconCfg.color }}>
+        {iconCfg.icon}
+      </div>
+
+      <div className="me-entry-body">
+        <div className="me-entry-label">{entry.label}</div>
+        <div className="me-entry-sub">{entry.sub}</div>
+
+        {isGrp && (
+          <div className="me-breakdown">
+            <div className="me-breakdown-row">
+              <span>You paid</span>
+              <span style={{ color: "var(--text)", fontWeight: 600 }}>
+                ₹{Number(entry.amount).toLocaleString("en-IN")}
+              </span>
+            </div>
+            <div className="me-breakdown-row">
+              <span>Your share</span>
+              <span style={{ color: "#f87171", fontWeight: 600 }}>
+                ₹{Number(entry.my_share ?? 0).toLocaleString("en-IN")}
+              </span>
+            </div>
+            <div className="me-breakdown-row">
+              <span>You are owed</span>
+              <span style={{ color: "#34d399", fontWeight: 600 }}>
+                ₹{Number(entry.receivable ?? 0).toLocaleString("en-IN")}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {isLoanGiven && <InlineRepay entry={entry} onSuccess={() => {}} />}
+
+        {isLoanTaken && (() => {
+          const rem = entry.receivable ?? 0;
+          return rem <= 0 ? (
+            <div className="me-settled-badge">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              Repaid
+            </div>
+          ) : (
+            <div style={{ marginTop: 5, fontSize: 12, color: "var(--text3)" }}>
+              Still to repay:{" "}
+              <span style={{ color: "#818cf8", fontWeight: 600 }}>
+                ₹{rem.toLocaleString("en-IN")}
+              </span>
+            </div>
+          );
+        })()}
+
+        {entry.group_id && (
+          <button className="me-group-link" onClick={() => navigate(`/groups/${entry.group_id}`)}>
+            → {entry.group_name}
+          </button>
+        )}
+      </div>
+
+      <div className="me-entry-right">
+        <div className="me-entry-amount" style={{ color: iconCfg.color }}>
+          {cfg.sign}₹{disp.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+        </div>
+        {isDeletable && (
+          <button
+            className="me-del"
+            title="Delete"
+            disabled={deleting === entry.ref_id}
+            onClick={() => onDelete(entry)}
+          >
+            {deleting === entry.ref_id ? "…" : SVG_TRASH}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
 //  Main component
 // ─────────────────────────────────────────────
 export default function Expenses() {
@@ -348,7 +641,9 @@ export default function Expenses() {
   const [filter,   setFilter]   = useState("all");
   const [search,   setSearch]   = useState("");
   const [deleting, setDeleting] = useState(null);
-  const [selMonth, setSelMonth] = useState("all"); // "all" or "YYYY-MM"
+
+  // Default to current month instead of "all"
+  const [selMonth, setSelMonth] = useState(currentMonth);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -364,47 +659,33 @@ export default function Expenses() {
 
   useEffect(() => { load(); }, [load]);
 
-  // ── Summary ──
-  const summary = (() => {
-    let spent = 0, received = 0, net = 0;
-    for (const e of entries) {
-      const cfg = TYPE_CFG[e.type];
-      if (!cfg) continue;
-      const disp = displayAmount(e);
-      if (cfg.bucket === "spent")    spent    += disp;
-      if (cfg.bucket === "received") received += disp;
-      if (e.type === "group_expense")      net += (e.receivable ?? 0);
-      if (e.type === "group_expense_owed") net -= (e.amount ?? 0);
-      if (e.type === "loan_given")         net += (e.receivable ?? 0);
-      if (e.type === "loan_taken")         net -= (e.receivable ?? 0);
-    }
-    return { spent, received, lent: net > 0 ? net : 0, borrowed: net < 0 ? Math.abs(net) : 0 };
-  })();
-
-  // ── Available months derived from entries ──
-  const monthOptions = (() => {
+  // ── All months present in data (for nav bounds) ──
+  const availableMonths = useMemo(() => {
     const seen = new Set();
     for (const e of entries) {
-      if (e.date && e.date.length >= 7) seen.add(e.date.slice(0, 7)); // "YYYY-MM"
+      if (e.date?.length >= 7) seen.add(e.date.slice(0, 7));
     }
-    return Array.from(seen).sort().reverse(); // newest first
-  })();
+    return Array.from(seen).sort(); // oldest first
+  }, [entries]);
 
-  // ── Filter ──
-  const visible = entries.filter(e => {
+  // ── Monthly-filtered entries → summary ──
+  const monthEntries = useMemo(() => filterByMonth(entries, selMonth), [entries, selMonth]);
+  const summary      = useMemo(() => computeSummary(monthEntries), [monthEntries]);
+
+  // ── Tab + search filter ──
+  const visible = useMemo(() => monthEntries.filter(e => {
     const cfg = TYPE_CFG[e.type];
     if (!cfg) return false;
     if (filter !== "all" && cfg.bucket !== filter) return false;
-    if (selMonth !== "all" && (!e.date || e.date.slice(0, 7) !== selMonth)) return false;
     if (search) {
       const q = search.toLowerCase();
       if (!`${e.label} ${e.sub} ${e.group_name || ""}`.toLowerCase().includes(q)) return false;
     }
     return true;
-  });
+  }), [monthEntries, filter, search]);
 
-  const grouped  = groupByDate(visible);
-  const dateKeys = Object.keys(grouped).sort().reverse();
+  // ── Hierarchical grouping ──
+  const grouped = useMemo(() => groupByMonthAndDay(visible), [visible]);
 
   // ── Delete ──
   async function handleDelete(entry) {
@@ -419,8 +700,6 @@ export default function Expenses() {
     finally { setDeleting(null); }
   }
 
-  const isDeletable = t => ["personal_expense", "income", "loan_given", "loan_taken"].includes(t);
-
   const sumCards = [
     { label: "Total Spent",    value: summary.spent,    color: "var(--danger)",  sub: "personal + your group share" },
     { label: "Money Received", value: summary.received, color: "var(--success)", sub: "income + settlements in"     },
@@ -431,20 +710,26 @@ export default function Expenses() {
   const modalDefaultTab = TAB_TO_MODAL[filter] || "personal";
   const actions = <AddEntryModal onSuccess={load} defaultTab={modalDefaultTab} />;
 
+  // Month label for the subtitle
+  const monthDisplayLabel = fmtMonthLabel(selMonth);
+
   return (
     <>
       <style>{STYLES}</style>
 
       <AppShell title="Expenses" actions={actions}>
 
-        <div style={{ marginBottom: 28 }}>
+        {/* Page header */}
+        <div style={{ marginBottom: 24 }}>
           <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-0.025em", color: "var(--text)", marginBottom: 4 }}>
             Expenses
           </h1>
-          <p style={{ fontSize: 14, color: "var(--text3)" }}>Your complete financial timeline</p>
+          <p style={{ fontSize: 14, color: "var(--text3)" }}>
+            Financial summary for <span style={{ color: "var(--text2)", fontWeight: 600 }}>{monthDisplayLabel}</span>
+          </p>
         </div>
 
-        {/* Summary cards */}
+        {/* Summary cards — monthly */}
         <div className="me-summary">
           {sumCards.map((c, i) => (
             <div key={c.label} className="me-sum-card" style={{ animationDelay: `${i * 0.05}s` }}>
@@ -459,10 +744,10 @@ export default function Expenses() {
           ))}
         </div>
 
-        {/* Toolbar — matches Groups page layout */}
+        {/* Toolbar */}
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24, flexWrap: "wrap" }}>
 
-          {/* Search — LEFT, pushes everything else right */}
+          {/* Search — left */}
           <div className="me-search-wrap" style={{ marginRight: "auto" }}>
             <span className="me-search-icon">{SVG_SEARCH}</span>
             <input
@@ -472,10 +757,9 @@ export default function Expenses() {
             />
           </div>
 
-          {/* RIGHT side: type tabs + month dropdown + count */}
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {/* Right side: tabs + month nav + count */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
 
-            {/* Type filter tabs */}
             <div className="me-tabs">
               {TABS.map(t => (
                 <button
@@ -488,19 +772,11 @@ export default function Expenses() {
               ))}
             </div>
 
-            {/* Month / year dropdown */}
-            <select
-              className={`me-month-select ${selMonth !== "all" ? "active" : ""}`}
+            <MonthNavigator
               value={selMonth}
-              onChange={e => setSelMonth(e.target.value)}
-            >
-              <option value="all">All time</option>
-              {monthOptions.map(m => {
-                const [yr, mo] = m.split("-");
-                const label = new Date(+yr, +mo - 1, 1).toLocaleDateString("en-IN", { month: "long", year: "numeric" });
-                return <option key={m} value={m}>{label}</option>;
-              })}
-            </select>
+              onChange={setSelMonth}
+              availableMonths={availableMonths}
+            />
 
             <div style={{ fontSize: 12, color: "var(--text3)", whiteSpace: "nowrap" }}>
               {visible.length} entr{visible.length !== 1 ? "ies" : "y"}
@@ -522,134 +798,71 @@ export default function Expenses() {
               </div>
             ))}
           </div>
+
         ) : visible.length === 0 ? (
           <div className="me-empty">
             <div className="me-empty-icon">📭</div>
             <div style={{ fontSize: 16, fontWeight: 600, color: "var(--text2)", marginBottom: 5 }}>
-              {search ? `No results for "${search}"` : filter !== "all" ? `No ${filter} entries` : "No entries yet"}
+              {search
+                ? `No results for "${search}"`
+                : filter !== "all"
+                  ? `No ${filter} entries in ${monthDisplayLabel}`
+                  : `No entries for ${monthDisplayLabel}`}
             </div>
-            <div style={{ fontSize: 13 }}>
-              {!search && filter === "all" && 'Use "+ Add Entry" to record your first transaction.'}
+            <div style={{ fontSize: 13, marginTop: 6 }}>
+              {!search && filter === "all" && (
+                <>
+                  Use "+ Add Entry" to record a transaction,
+                  <br/>or navigate to another month using the arrows above.
+                </>
+              )}
             </div>
           </div>
+
         ) : (
           <div>
-            {dateKeys.map(dateKey => (
-              <div key={dateKey}>
-                <div className="me-date-header">{fmtDate(dateKey)}</div>
+            {grouped.map(({ monthKey, monthLabel, days }) => {
+              // Compute net spend for this month section (for the header annotation)
+              const sectionEntries = days.flatMap(d => d.entries);
+              const sectionSpent   = sectionEntries.reduce((acc, e) => {
+                const cfg = TYPE_CFG[e.type];
+                if (!cfg || cfg.bucket !== "spent") return acc;
+                return acc + displayAmount(e);
+              }, 0);
 
-                {grouped[dateKey].map((entry, idx) => {
-                  const cfg     = TYPE_CFG[entry.type];
-                  const iconCfg = TYPE_ICONS[entry.type];
-                  if (!cfg || !iconCfg) return null;
+              return (
+                <div key={monthKey} className="me-month-section">
+                  {/* Month heading */}
+                  <div className="me-month-heading">
+                    <span>{monthLabel}</span>
+                    {sectionSpent > 0 && (
+                      <span className="me-month-heading-sum">
+                        spent ₹{sectionSpent.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                      </span>
+                    )}
+                  </div>
 
-                  const disp  = displayAmount(entry);
-                  const isGrp = entry.type === "group_expense";
-                  const isLoanGiven = entry.type === "loan_given";
-                  const isLoanTaken = entry.type === "loan_taken";
-
-                  return (
-                    <div
-                      key={`${entry.type}-${entry.ref_id}-${idx}`}
-                      className="me-entry"
-                      style={{ animationDelay: `${idx * 0.025}s` }}
-                    >
-                      {/* Icon — SVG, no emoji */}
-                      <div
-                        className="me-entry-icon"
-                        style={{ background: iconCfg.bg, color: iconCfg.color }}
-                      >
-                        {iconCfg.icon}
+                  {/* Days within month */}
+                  {days.map(({ dateKey, dayLabel, isToday, entries: dayEntries }) => (
+                    <div key={dateKey}>
+                      <div className={`me-date-header ${isToday ? "is-today" : ""}`}>
+                        {dayLabel}
                       </div>
-
-                      {/* Body */}
-                      <div className="me-entry-body">
-                        <div className="me-entry-label">{entry.label}</div>
-                        <div className="me-entry-sub">{entry.sub}</div>
-
-                        {/* Group expense breakdown */}
-                        {isGrp && (
-                          <div className="me-breakdown">
-                            <div className="me-breakdown-row">
-                              <span>You paid</span>
-                              <span style={{ color: "var(--text)", fontWeight: 600 }}>
-                                ₹{Number(entry.amount).toLocaleString("en-IN")}
-                              </span>
-                            </div>
-                            <div className="me-breakdown-row">
-                              <span>Your share</span>
-                              <span style={{ color: "#f87171", fontWeight: 600 }}>
-                                ₹{Number(entry.my_share ?? 0).toLocaleString("en-IN")}
-                              </span>
-                            </div>
-                            <div className="me-breakdown-row">
-                              <span>You are owed</span>
-                              <span style={{ color: "#34d399", fontWeight: 600 }}>
-                                ₹{Number(entry.receivable ?? 0).toLocaleString("en-IN")}
-                              </span>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Loan given — inline repayment */}
-                        {isLoanGiven && (
-                          <InlineRepay entry={entry} onSuccess={load} />
-                        )}
-
-                        {/* Loan taken — show remaining to repay */}
-                        {isLoanTaken && (
-                          (() => {
-                            const rem = entry.receivable ?? 0;
-                            return rem <= 0 ? (
-                              <div className="me-settled-badge">
-                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                  <polyline points="20 6 9 17 4 12"/>
-                                </svg>
-                                Repaid
-                              </div>
-                            ) : (
-                              <div style={{ marginTop: 5, fontSize: 12, color: "var(--text3)" }}>
-                                Still to repay:{" "}
-                                <span style={{ color: "#818cf8", fontWeight: 600 }}>
-                                  ₹{rem.toLocaleString("en-IN")}
-                                </span>
-                              </div>
-                            );
-                          })()
-                        )}
-
-                        {/* Group link */}
-                        {entry.group_id && (
-                          <button
-                            className="me-group-link"
-                            onClick={() => navigate(`/groups/${entry.group_id}`)}
-                          >
-                            → {entry.group_name}
-                          </button>
-                        )}
-                      </div>
-
-                      {/* Right: amount + delete */}
-                      <div className="me-entry-right">
-                        <div className="me-entry-amount" style={{ color: iconCfg.color }}>
-                          {cfg.sign}₹{disp.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                        </div>
-                        {isDeletable(entry.type) && (
-                          <button
-                            className="me-del"
-                            title="Delete"
-                            disabled={deleting === entry.ref_id}
-                            onClick={() => handleDelete(entry)}
-                          >
-                            {deleting === entry.ref_id ? "…" : SVG_TRASH}
-                          </button>
-                        )}
-                      </div>
+                      {dayEntries.map((entry, idx) => (
+                        <EntryRow
+                          key={`${entry.type}-${entry.ref_id}-${idx}`}
+                          entry={entry}
+                          idx={idx}
+                          deleting={deleting}
+                          onDelete={handleDelete}
+                          navigate={navigate}
+                        />
+                      ))}
                     </div>
-                  );
-                })}
-              </div>
-            ))}
+                  ))}
+                </div>
+              );
+            })}
           </div>
         )}
 

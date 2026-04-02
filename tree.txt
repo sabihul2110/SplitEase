@@ -15,6 +15,7 @@
 │   │   ├── __pycache__
 │   │   │   ├── __init__.cpython-314.pyc
 │   │   │   ├── auth_router.cpython-314.pyc
+│   │   │   ├── borrows.cpython-314.pyc
 │   │   │   ├── expenses.cpython-314.pyc
 │   │   │   ├── groups.cpython-314.pyc
 │   │   │   ├── income.cpython-314.pyc
@@ -27,6 +28,7 @@
 │   │   │   ├── timeline.cpython-314.pyc
 │   │   │   └── users.cpython-314.pyc
 │   │   ├── auth_router.py
+│   │   ├── borrows.py
 │   │   ├── expenses.py
 │   │   ├── groups.py
 │   │   ├── income.py
@@ -9117,7 +9119,7 @@
 │   │   │   └── axios.js
 │   │   ├── App.jsx
 │   │   ├── components
-│   │   │   ├──  Sidebar_updated.jsx
+│   │   │   ├──  Sidebar.jsx
 │   │   │   ├── AddEntryModal.jsx
 │   │   │   ├── AdminLayout.jsx
 │   │   │   ├── AppShell.jsx
@@ -9136,18 +9138,19 @@
 │   │   │   │   ├── AdminTransactions.jsx
 │   │   │   │   └── AdminUsers.jsx
 │   │   │   ├── Dashboard.jsx
+│   │   │   ├── Expenses.jsx
 │   │   │   ├── GroupDetail.jsx
 │   │   │   ├── Groups.jsx
 │   │   │   ├── JoinGroup.jsx
-│   │   │   ├── Lending.jsx
+│   │   │   ├── Loans.jsx
 │   │   │   ├── Login.jsx
-│   │   │   ├── MyExpenses.jsx
 │   │   │   ├── Profile.jsx
 │   │   │   ├── Settings.jsx
 │   │   │   ├── Settlements.jsx
 │   │   │   └── Signup.jsx
 │   │   └── utils
-│   │       └── GroupIcons.jsx
+│   │       ├── GroupIcons.jsx
+│   │       └── Icons.jsx
 │   └── vite.config.js
 ├── PROJECT_CONTEXT.md
 ├── sql
@@ -9155,4 +9158,4 @@
 │   └── seedusers.sql
 └── tree.txt
 
-1009 directories, 8147 files
+1009 directories, 8150 files
