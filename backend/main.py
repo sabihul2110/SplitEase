@@ -8,7 +8,7 @@ Run: uvicorn main:app --reload --loop asyncio
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routers import auth_router, users, groups, expenses, payments, settlements, invites, notifications, personal_expenses, income, loans, timeline, borrows
+from routers import auth_router, users, groups, expenses, payments, settlements, invites, notifications, personal_expenses, income, loans, timeline, borrows, ai_agent
 
 app = FastAPI(title="College Expense Splitter API", version="2.1.0")
 
@@ -33,6 +33,7 @@ app.include_router(income.router)
 app.include_router(loans.router)
 app.include_router(timeline.router)
 app.include_router(borrows.router)
+app.include_router(ai_agent.router)     # AI Receipt Scanner — prefix="/ai" defined in router
 
 @app.get("/health", tags=["Health"])
 def health():

@@ -24,6 +24,8 @@ class PersonalExpenseIn(BaseModel):
     category:     str  = "General"
     note:         str | None = None
     expense_date: str        # YYYY-MM-DD
+    subcategory_id: int | None = None
+    merchant_name:  str | None = None
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────
@@ -33,6 +35,22 @@ def list_personal_expenses(current_user: dict = Depends(get_current_user)):
     return db.fetch_personal_expenses(current_user["user_id"])
 
 
+# @router.post("/personal-expenses/", status_code=status.HTTP_201_CREATED)
+# def add_personal_expense(
+#     body: PersonalExpenseIn,
+#     current_user: dict = Depends(get_current_user),
+# ):
+#     if body.amount <= 0:
+#         raise HTTPException(status_code=422, detail="Amount must be positive.")
+#     new_id = db.insert_personal_expense(
+#         user_id      = current_user["user_id"],
+#         amount       = body.amount,
+#         category     = body.category,
+#         note         = body.note,
+#         expense_date = body.expense_date,
+#     )
+#     return {"expense_id": new_id, "message": "Personal expense added."}
+
 @router.post("/personal-expenses/", status_code=status.HTTP_201_CREATED)
 def add_personal_expense(
     body: PersonalExpenseIn,
@@ -41,11 +59,13 @@ def add_personal_expense(
     if body.amount <= 0:
         raise HTTPException(status_code=422, detail="Amount must be positive.")
     new_id = db.insert_personal_expense(
-        user_id      = current_user["user_id"],
-        amount       = body.amount,
-        category     = body.category,
-        note         = body.note,
-        expense_date = body.expense_date,
+        user_id        = current_user["user_id"],
+        amount         = body.amount,
+        category       = body.category,
+        note           = body.note,
+        expense_date   = body.expense_date,
+        subcategory_id = body.subcategory_id,
+        merchant_name  = body.merchant_name,
     )
     return {"expense_id": new_id, "message": "Personal expense added."}
 

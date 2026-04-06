@@ -22,3 +22,6 @@ DB_CONFIG = {
 JWT_SECRET          = os.getenv("JWT_SECRET",          "dev_secret_change_me")
 JWT_ALGORITHM       = os.getenv("JWT_ALGORITHM",       "HS256")
 JWT_EXPIRE_MINUTES  = int(os.getenv("JWT_EXPIRE_MINUTES", 60))
+
+# ── AI / Gemini ────────────────────────────────
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")

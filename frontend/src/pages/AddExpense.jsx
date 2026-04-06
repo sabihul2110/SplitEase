@@ -5,6 +5,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import { useAuth } from "../context/AuthContext";
 import AppShell from "../components/AppShell";
+import ReceiptScanner from "../components/ReceiptScanner";
 
 export default function AddExpense() {
   const { id }  = useParams();
@@ -71,6 +72,20 @@ export default function AddExpense() {
   const set = (k, v) => setForm(f => ({...f, [k]: v}));
   const payerName = members.find(m => m.user_id === parseInt(form.payer_id))?.name || "You";
 
+  async function handleScanResult(data) {
+    if (data.amount)       set("total_amount",  String(data.amount));
+    if (data.description)  set("description",   data.description);
+    if (data.expense_date) set("expense_date",  data.expense_date);
+    if (data.category_id) {
+      set("category_id", String(data.category_id));
+      try {
+        const res = await api.get(`/groups/subcategories/${data.category_id}`);
+        setSubcats(res.data);
+      } catch {}
+    }
+    if (data.subcategory_id) set("subcategory_id", String(data.subcategory_id));
+  }
+
   return (
     <AppShell title="Add Expense">
       <button className="back-btn mb-4" onClick={() => navigate(`/groups/${id}`)}>
@@ -96,6 +111,10 @@ export default function AddExpense() {
                 onChange={e => set("total_amount", e.target.value)}
                 style={{ flex: 1 }}
               />
+            </div>
+            {/* THE NEW SCANNER BUTTON BLOCK */}
+            <div style={{ marginTop: 12 }}>
+              <ReceiptScanner onResult={handleScanResult} />
             </div>
             <div style={{ marginTop: 16 }}>
               <div className="form-label mb-2">What was this for?</div>

@@ -589,12 +589,25 @@ def fetch_personal_expenses(user_id: int) -> list[dict]:
     """All personal expenses for a user, newest first."""
     conn = get_connection()
     cur  = conn.cursor(dictionary=True)
+    # cur.execute(
+    #     """
+    #     SELECT expense_id, amount, category, note, expense_date, created_at
+    #     FROM   Personal_Expenses
+    #     WHERE  user_id = %s
+    #     ORDER  BY expense_date DESC, expense_id DESC
+    #     """,
+    #     (user_id,),
+    # )
     cur.execute(
         """
-        SELECT expense_id, amount, category, note, expense_date, created_at
-        FROM   Personal_Expenses
-        WHERE  user_id = %s
-        ORDER  BY expense_date DESC, expense_id DESC
+        SELECT pe.expense_id, pe.amount, pe.category, pe.note,
+               pe.expense_date, pe.created_at,
+               pe.merchant_name,
+               sc.subcategory_name
+        FROM   Personal_Expenses pe
+        LEFT JOIN Subcategories sc ON sc.subcategory_id = pe.subcategory_id
+        WHERE  pe.user_id = %s
+        ORDER  BY pe.expense_date DESC, pe.expense_id DESC
         """,
         (user_id,),
     )
@@ -609,12 +622,42 @@ def fetch_personal_expenses(user_id: int) -> list[dict]:
     return rows
 
 
+# def insert_personal_expense(
+#     user_id: int,
+#     amount: float,
+#     category: str,
+#     note: str | None,
+#     expense_date: str,
+# ) -> int:
+#     conn = get_connection()
+#     cur  = conn.cursor()
+#     try:
+#         conn.start_transaction()
+#         cur.execute(
+#             """
+#             INSERT INTO Personal_Expenses (user_id, amount, category, note, expense_date)
+#             VALUES (%s, %s, %s, %s, %s)
+#             """,
+#             (user_id, round(float(amount), 2), category.strip(), note or None, expense_date),
+#         )
+#         new_id = cur.lastrowid
+#         conn.commit()
+#         return new_id
+#     except Exception:
+#         conn.rollback()
+#         raise
+#     finally:
+#         cur.close(); conn.close()
+
+
 def insert_personal_expense(
     user_id: int,
     amount: float,
     category: str,
     note: str | None,
     expense_date: str,
+    subcategory_id: int | None = None,
+    merchant_name: str | None = None,
 ) -> int:
     conn = get_connection()
     cur  = conn.cursor()
@@ -622,10 +665,13 @@ def insert_personal_expense(
         conn.start_transaction()
         cur.execute(
             """
-            INSERT INTO Personal_Expenses (user_id, amount, category, note, expense_date)
-            VALUES (%s, %s, %s, %s, %s)
+            INSERT INTO Personal_Expenses
+                (user_id, amount, category, note, expense_date, subcategory_id, merchant_name)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
             """,
-            (user_id, round(float(amount), 2), category.strip(), note or None, expense_date),
+            (user_id, round(float(amount), 2), category.strip(),
+             note or None, expense_date, subcategory_id or None,
+             merchant_name.strip() if merchant_name else None),
         )
         new_id = cur.lastrowid
         conn.commit()
