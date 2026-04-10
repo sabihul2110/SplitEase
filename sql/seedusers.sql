@@ -1,5 +1,3 @@
-USE expense_splitter_react;
-
 -- ============================================================
 --  College Expense Splitter — seed_data.sql
 --  Scope : Users table only
@@ -22,7 +20,7 @@ USE expense_splitter_react;
 --  Generated : 2026-03-27
 -- ============================================================
 
-USE expense_splitter_react;
+USE splitease_db;
 
 -- ─────────────────────────────────────────────
 --  USERS

@@ -1,16 +1,9 @@
 -- ============================================================
---  College Expense Splitter — expense_splitter_react
---  Unified Schema (v5 — schema drift corrected)
---
---  FIX #19: Personal_Expenses table now includes subcategory_id
---           and merchant_name columns which exist in the live DB
---           (added via ALTER TABLE) but were missing from this file.
---
---  FIX #9:  Calculate_Settlements now returns user_id and upi_id
---           (matches the updated stored procedure from migration_batch4.sql)
+--  SplitEase - Complete Group & Personal Expense Manager 
+
 --
 --  Tables
---    1.  Users             (+ token_version from migration_batch2)
+--    1.  Users
 --    2.  Groups
 --    3.  Group_Members
 --    4.  Categories
@@ -20,21 +13,21 @@
 --    8.  Payments
 --    9.  Invites
 --    10. Notifications
---    11. Personal_Expenses  ← FIXED: subcategory_id + merchant_name added
+--    11. Personal_Expenses
 --    12. Income
 --    13. Loans
 --    14. Borrows
 --
 --  Stored Procedures
---    SP1. Calculate_Settlements  ← FIXED: returns user_id + upi_id
+--    SP1. Calculate_Settlements
 --
 --  Seed Data
 --    Categories, Subcategories
 -- ============================================================
 
-DROP DATABASE IF EXISTS expense_splitter_react;
-CREATE DATABASE expense_splitter_react;
-USE expense_splitter_react;
+DROP DATABASE IF EXISTS splitease_db;
+CREATE DATABASE splitease_db;
+USE splitease_db;
 
 
 -- ─────────────────────────────────────────────
