@@ -356,7 +356,7 @@ export default function Loans() {
             onClick={() => { setPageTab("lent"); setFilterTab("all"); }}
           >
             <span style={{ display: "flex", alignItems: "center", gap: 7 }}>
-              {Icons.moneyLent} Money I Lent
+              {Icons.moneyLent} Money Lent
             </span>
           </button>
           <button
@@ -364,7 +364,7 @@ export default function Loans() {
             onClick={() => { setPageTab("borrowed"); setFilterTab("all"); }}
           >
             <span style={{ display: "flex", alignItems: "center", gap: 7 }}>
-              {Icons.moneyBorrowed} Money I Borrowed
+              {Icons.moneyBorrowed} Money Borrowed
             </span>
           </button>
         </div>

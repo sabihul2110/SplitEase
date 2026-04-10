@@ -7,11 +7,26 @@ Ported from Streamlit version to FastAPI (no logic changes, same queries).
 """
 
 import mysql.connector
-from config import DB_CONFIG
-
-
+from mysql.connector import pooling
+from config import DB_CONFIG, VALID_SOURCE_TYPES
+ 
+# ── Connection pool (created once at module import time) ───────────────────
+_pool = pooling.MySQLConnectionPool(
+    pool_name    = "splitease_pool",
+    pool_size    = 10,
+    pool_reset_session = True,   # reset session state between borrows
+    **DB_CONFIG,
+)
+ 
+ 
 def get_connection():
-    return mysql.connector.connect(**DB_CONFIG)
+    """
+    Borrow a connection from the pool.
+    Callers MUST call conn.close() when done — this returns it to the pool,
+    it does NOT close the underlying TCP connection.
+    The existing pattern `cur.close(); conn.close()` is correct and unchanged.
+    """
+    return _pool.get_connection()
 
 
 # ─────────────────────────────────────────────
@@ -48,8 +63,26 @@ def fetch_user_by_email(email: str) -> dict | None:
     conn = get_connection()
     cur  = conn.cursor(dictionary=True)
     cur.execute(
-        "SELECT user_id, name, email, password_hash, role FROM Users WHERE email = %s",
+        "SELECT user_id, name, email, password_hash, role, token_version FROM Users WHERE email = %s",
         (email.strip().lower(),),
+    )
+    row = cur.fetchone()
+    cur.close(); conn.close()
+    return row
+
+
+def fetch_user_by_id(user_id: int) -> dict | None:
+    """
+    Return a user row (user_id, name, email, role) by primary key,
+    or None if not found.  Used by the admin DELETE endpoint to check
+    the target's role before deletion.
+    NOTE: does NOT return password_hash — safe to inspect in route logic.
+    """
+    conn = get_connection()
+    cur  = conn.cursor(dictionary=True)
+    cur.execute(
+        "SELECT user_id, name, email, role FROM Users WHERE user_id = %s",
+        (user_id,),
     )
     row = cur.fetchone()
     cur.close(); conn.close()
@@ -61,6 +94,18 @@ def count_users() -> int:
     conn = get_connection()
     cur  = conn.cursor()
     cur.execute("SELECT COUNT(*) FROM Users")
+    count = cur.fetchone()[0]
+    cur.close(); conn.close()
+    return count
+
+def count_admins() -> int:
+    """
+    Return the total number of users with role = 'admin'.
+    Used to prevent deleting the last admin account.
+    """
+    conn = get_connection()
+    cur  = conn.cursor()
+    cur.execute("SELECT COUNT(*) FROM Users WHERE role = 'admin'")
     count = cur.fetchone()[0]
     cur.close(); conn.close()
     return count
@@ -348,6 +393,40 @@ def fetch_group_expenses(group_id: int, user_id: int) -> list[dict]:
     return rows
 
 
+def fetch_group_expenses_admin(group_id: int) -> list[dict]:
+    """
+    FIX #10: Admin-only variant of fetch_group_expenses.
+    No membership check — returns all expenses for a group regardless
+    of whether the calling admin is a member.
+    Only called from expenses.py when current_user["role"] == "admin".
+    """
+    conn = get_connection()
+    cur  = conn.cursor(dictionary=True)
+    cur.execute(
+        """
+        SELECT
+            e.expense_id,
+            e.description,
+            e.total_amount,
+            e.split_type,
+            e.expense_date,
+            u.name             AS payer_name,
+            c.category_name,
+            sc.subcategory_name
+        FROM   Expenses e
+        JOIN   Users u              ON u.user_id         = e.payer_id
+        JOIN   Categories c         ON c.category_id     = e.category_id
+        LEFT JOIN Subcategories sc  ON sc.subcategory_id = e.subcategory_id
+        WHERE  e.group_id = %s
+        ORDER  BY e.expense_date DESC, e.expense_id DESC
+        """,
+        (group_id,),
+    )
+    rows = cur.fetchall()
+    cur.close(); conn.close()
+    return rows
+
+
 def fetch_expense_splits(expense_id: int) -> list[dict]:
     conn = get_connection()
     cur  = conn.cursor(dictionary=True)
@@ -423,6 +502,23 @@ def delete_expense(expense_id: int) -> None:
         raise
     finally:
         cur.close(); conn.close()
+
+
+def fetch_expense_group_id(expense_id: int) -> int | None:
+    """
+    Return the group_id for a given expense, or None if the expense
+    doesn't exist.  Used by the DELETE endpoint to authorise the caller
+    before touching the record.
+    """
+    conn = get_connection()
+    cur  = conn.cursor()
+    cur.execute(
+        "SELECT group_id FROM Expenses WHERE expense_id = %s",
+        (expense_id,),
+    )
+    row = cur.fetchone()
+    cur.close(); conn.close()
+    return row[0] if row else None
 
 
 # ─────────────────────────────────────────────
@@ -504,6 +600,23 @@ def delete_payment(payment_id: int) -> None:
         cur.close(); conn.close()
 
 
+def fetch_payment_group_id(payment_id: int) -> int | None:
+    """
+    Return the group_id for a given payment, or None if the payment
+    doesn't exist.  Used by the DELETE endpoint to authorise the caller
+    before touching the record.
+    """
+    conn = get_connection()
+    cur  = conn.cursor()
+    cur.execute(
+        "SELECT group_id FROM Payments WHERE payment_id = %s",
+        (payment_id,),
+    )
+    row = cur.fetchone()
+    cur.close(); conn.close()
+    return row[0] if row else None
+
+
 # ─────────────────────────────────────────────
 #  SETTLEMENTS
 # ─────────────────────────────────────────────
@@ -534,34 +647,52 @@ def calculate_settlements(group_id: int, user_id: int) -> list[dict]:
 
 def simplify_debts(rows: list[dict]) -> list[dict]:
     """
-    Converts raw net_balance rows into minimal payment transactions.
-    Positive net_balance → should receive money (creditor).
-    Negative net_balance → owes money (debtor).
+    FIX #9: Converts raw net_balance rows into minimal payment transactions.
+    Now carries user_id and upi_id for both parties so the frontend can
+    build UPI deep-links without a secondary name-based lookup.
+ 
+    Positive net_balance → creditor (should receive money).
+    Negative net_balance → debtor (owes money).
     """
     creditors = []
     debtors   = []
-
+ 
     for r in rows:
-        name    = r["user_name"]
         balance = float(r.get("net_balance", 0))
+        entry = {
+            "user_id":  r["user_id"],
+            "name":     r["user_name"],
+            "upi_id":   r.get("upi_id"),
+        }
         if balance > 0:
-            creditors.append([name, balance])
+            creditors.append([entry, balance])
         elif balance < 0:
-            debtors.append([name, -balance])
-
+            debtors.append([entry, -balance])
+ 
     settlements = []
     i = j = 0
-
+ 
     while i < len(debtors) and j < len(creditors):
         debtor,   debt   = debtors[i]
         creditor, credit = creditors[j]
         amount = min(debt, credit)
-        settlements.append({"from": debtor, "to": creditor, "amount": round(amount, 2)})
+ 
+        settlements.append({
+            # Debtor info
+            "from":         debtor["name"],
+            "from_user_id": debtor["user_id"],
+            # Creditor info
+            "to":           creditor["name"],
+            "to_user_id":   creditor["user_id"],
+            "to_upi_id":    creditor["upi_id"],   # ready for UPI link
+            "amount":       round(amount, 2),
+        })
+ 
         debtors[i][1]   -= amount
         creditors[j][1] -= amount
-        if debtors[i][1] == 0: i += 1
+        if debtors[i][1]   == 0: i += 1
         if creditors[j][1] == 0: j += 1
-
+ 
     return settlements
 
 
@@ -705,7 +836,6 @@ def delete_personal_expense(expense_id: int, user_id: int) -> None:
 #  INCOME
 # ─────────────────────────────────────────────
 
-VALID_SOURCE_TYPES = {"salary", "pocket_money", "stipend", "other"}
 
 
 def fetch_income(user_id: int) -> list[dict]:
@@ -950,7 +1080,7 @@ def delete_loan(loan_id: int, user_id: int) -> None:
 #  REPLACE fetch_unified_timeline with this
 # ─────────────────────────────────────────────
 
-def fetch_unified_timeline(user_id: int, limit: int = 100) -> list[dict]:
+def fetch_unified_timeline(user_id: int, limit: int = 100, offset: int = 0) -> list[dict]:
     """
     Returns a unified list of financial events for a user.
 
@@ -1183,7 +1313,7 @@ def fetch_unified_timeline(user_id: int, limit: int = 100) -> list[dict]:
 
     # Sort newest first
     rows.sort(key=lambda r: (r["date"], r.get("created_at", "")), reverse=True)
-    return rows[:limit]
+    return rows[offset : offset + limit]
 
 
 # ─────────────────────────────────────────────
@@ -1310,3 +1440,205 @@ def delete_borrow(borrow_id: int, user_id: int) -> None:
         raise
     finally:
         cur.close(); conn.close()
+
+
+def fetch_settlements_for_groups(group_ids: list[int]) -> dict[int, list[dict]]:
+    """
+    FIX #15: Compute net balances for ALL supplied groups in a single query.
+    Returns {group_id: [settlement_rows]}.
+    Replaces N individual CALL Calculate_Settlements round-trips.
+    """
+    if not group_ids:
+        return {}
+ 
+    placeholders = ", ".join(["%s"] * len(group_ids))
+ 
+    conn = get_connection()
+    cur  = conn.cursor(dictionary=True)
+    cur.execute(
+        f"""
+        SELECT
+            gm.group_id,
+            u.user_id,
+            u.name                                          AS user_name,
+            u.upi_id,
+            IFNULL(paid.total_paid,        0.00)            AS total_paid,
+            IFNULL(owed.total_owed,        0.00)            AS total_owed,
+            IFNULL(psent.payments_sent,    0.00)            AS payments_sent,
+            IFNULL(prec.payments_received, 0.00)            AS payments_received,
+            (
+                  IFNULL(paid.total_paid,        0.00)
+                - IFNULL(owed.total_owed,        0.00)
+                + IFNULL(psent.payments_sent,    0.00)
+                - IFNULL(prec.payments_received, 0.00)
+            )                                               AS net_balance
+        FROM Group_Members gm
+        JOIN Users u ON u.user_id = gm.user_id
+ 
+        LEFT JOIN (
+            SELECT group_id, payer_id, SUM(total_amount) AS total_paid
+            FROM   Expenses
+            WHERE  group_id IN ({placeholders})
+            GROUP  BY group_id, payer_id
+        ) paid ON paid.group_id = gm.group_id AND paid.payer_id = u.user_id
+ 
+        LEFT JOIN (
+            SELECT e.group_id, es.user_id, SUM(es.amount_owed) AS total_owed
+            FROM   Expense_Splits es
+            JOIN   Expenses e ON e.expense_id = es.expense_id
+            WHERE  e.group_id IN ({placeholders})
+            GROUP  BY e.group_id, es.user_id
+        ) owed ON owed.group_id = gm.group_id AND owed.user_id = u.user_id
+ 
+        LEFT JOIN (
+            SELECT group_id, payer_id, SUM(amount) AS payments_sent
+            FROM   Payments
+            WHERE  group_id IN ({placeholders})
+            GROUP  BY group_id, payer_id
+        ) psent ON psent.group_id = gm.group_id AND psent.payer_id = u.user_id
+ 
+        LEFT JOIN (
+            SELECT group_id, payee_id, SUM(amount) AS payments_received
+            FROM   Payments
+            WHERE  group_id IN ({placeholders})
+            GROUP  BY group_id, payee_id
+        ) prec ON prec.group_id = gm.group_id AND prec.payee_id = u.user_id
+ 
+        WHERE gm.group_id IN ({placeholders})
+        ORDER BY gm.group_id, net_balance DESC
+        """,
+        group_ids * 5,   # 5 IN clauses
+    )
+    rows = cur.fetchall()
+    cur.close(); conn.close()
+ 
+    result: dict[int, list[dict]] = {gid: [] for gid in group_ids}
+    for r in rows:
+        gid = r.pop("group_id")
+        r["net_balance"]       = float(r["net_balance"])
+        r["total_paid"]        = float(r["total_paid"])
+        r["total_owed"]        = float(r["total_owed"])
+        r["payments_sent"]     = float(r["payments_sent"])
+        r["payments_received"] = float(r["payments_received"])
+        result[gid].append(r)
+    return result
+ 
+ 
+def fetch_group_members_bulk(group_ids: list[int]) -> dict[int, list[dict]]:
+    """
+    FIX #15: Fetch members for ALL supplied groups in one query.
+    Returns {group_id: [member_rows]}.
+    """
+    if not group_ids:
+        return {}
+ 
+    placeholders = ", ".join(["%s"] * len(group_ids))
+    conn = get_connection()
+    cur  = conn.cursor(dictionary=True)
+    cur.execute(
+        f"""
+        SELECT gm.group_id, u.user_id, u.name, u.upi_id
+        FROM   Group_Members gm
+        JOIN   Users u ON u.user_id = gm.user_id
+        WHERE  gm.group_id IN ({placeholders})
+        ORDER  BY gm.group_id, u.user_id ASC
+        """,
+        group_ids,
+    )
+    rows = cur.fetchall()
+    cur.close(); conn.close()
+ 
+    result: dict[int, list[dict]] = {gid: [] for gid in group_ids}
+    for r in rows:
+        gid = r.pop("group_id")
+        result[gid].append(r)
+    return result
+ 
+ 
+def fetch_expenses_bulk(group_ids: list[int]) -> dict[int, list[dict]]:
+    """
+    FIX #15: Fetch expenses for ALL supplied groups in one query.
+    Returns {group_id: [expense_rows]}.
+    Used by AdminTransactions to avoid N individual /expenses/{id} calls.
+    """
+    if not group_ids:
+        return {}
+ 
+    placeholders = ", ".join(["%s"] * len(group_ids))
+    conn = get_connection()
+    cur  = conn.cursor(dictionary=True)
+    cur.execute(
+        f"""
+        SELECT
+            e.group_id,
+            e.expense_id,
+            e.description,
+            e.total_amount,
+            e.split_type,
+            e.expense_date,
+            u.name              AS payer_name,
+            c.category_name,
+            sc.subcategory_name
+        FROM   Expenses e
+        JOIN   Users u             ON u.user_id         = e.payer_id
+        JOIN   Categories c        ON c.category_id     = e.category_id
+        LEFT JOIN Subcategories sc ON sc.subcategory_id = e.subcategory_id
+        WHERE  e.group_id IN ({placeholders})
+        ORDER  BY e.expense_date DESC, e.expense_id DESC
+        """,
+        group_ids,
+    )
+    rows = cur.fetchall()
+    cur.close(); conn.close()
+ 
+    result: dict[int, list[dict]] = {gid: [] for gid in group_ids}
+    for r in rows:
+        gid = r.pop("group_id")
+        result[gid].append(r)
+    return result
+
+
+# --- backend/db.py  (ADD this function at the end) ---
+#
+# Paste this at the bottom of db.py.
+# This is the only new DB function needed.
+
+def fetch_groups_has_expenses(group_ids: list[int]) -> dict[int, bool]:
+    """
+    For each group_id, returns True if the group has at least one expense,
+    False otherwise.
+
+    This is the correct way to detect 'empty' groups — checking
+    fetch_settlements_for_groups rows is WRONG because that query always
+    returns rows (one per member from Group_Members JOIN), even when
+    there are zero expenses. All balances are 0 in that case, but the
+    row count is non-zero, so sRows.length === 0 is never true.
+
+    Returns: { group_id: bool }
+    """
+    if not group_ids:
+        return {}
+
+    placeholders = ", ".join(["%s"] * len(group_ids))
+    conn = get_connection()
+    cur  = conn.cursor(dictionary=True)
+    cur.execute(
+        f"""
+        SELECT group_id, COUNT(*) AS expense_count
+        FROM   Expenses
+        WHERE  group_id IN ({placeholders})
+        GROUP  BY group_id
+        """,
+        group_ids,
+    )
+    rows = cur.fetchall()
+    cur.close(); conn.close()
+
+    # Build result — default False for groups with no expenses at all
+    # (those won't appear in the query result since COUNT filters them out)
+    result = {gid: False for gid in group_ids}
+    for r in rows:
+        if r["expense_count"] > 0:
+            result[r["group_id"]] = True
+
+    return result

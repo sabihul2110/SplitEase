@@ -1,4 +1,8 @@
 -- ============================================================
+
+ -- schema_v2.sql
+
+
 --  College Expense Splitter — expense_splitter_react
 --  Unified Schema (v1 → v4)
 --
@@ -369,6 +373,8 @@ END$$
 
 DELIMITER ;
 
+ALTER TABLE Users
+    ADD COLUMN token_version INT NOT NULL DEFAULT 0; -- 'Incremented on every password change to invalidate old JWTs';
 
 -- ─────────────────────────────────────────────
 --  SEED DATA — Categories
@@ -391,3 +397,6 @@ INSERT INTO Subcategories (category_id, subcategory_name) VALUES
     (3, 'Restaurant'), (3, 'Street Food'), (3, 'Cafe'),
     (4, 'Water Sports'), (4, 'Sightseeing'), (4, 'Adventure'),
     (5, 'Electricity'), (5, 'Internet'), (5, 'Water'), (5, 'Rent');
+    
+    
+    

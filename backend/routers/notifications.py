@@ -1,20 +1,22 @@
 # --- backend/routers/notifications.py ---
-
 """
 routers/notifications.py
-
-BUG FIX: current_user from JWT only has {user_id, email, role}.
-         It does NOT have 'name'. We fetch the sender's name from
-         the DB before building the notification message.
 
 GET  /notifications/              → get my notifications (latest 50)
 GET  /notifications/unread-count  → lightweight count for bell badge
 POST /notifications/read/{id}     → mark one notification as read
 POST /notifications/read-all      → mark all as read
 POST /groups/{group_id}/remind    → send reminder to a debtor (creditor only)
+
+FIX #13: get_user_by_name_in_group replaced with get_user_by_id_in_group.
+          The remind endpoint now accepts debtor_user_id (integer) instead of
+          debtor_name (string). Matching by name is unreliable when two group
+          members share a display name — the wrong person could receive the
+          reminder. The frontend (Groups.jsx) already has each member's
+          user_id from the settlements result and passes it in.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from pydantic import BaseModel
 
 import db
@@ -57,8 +59,12 @@ def create_notification(
         cur.close(); conn.close()
 
 
-def get_user_by_name_in_group(name: str, group_id: int) -> dict | None:
-    """Find a group member by their display name."""
+def get_user_by_id_in_group(user_id: int, group_id: int) -> dict | None:
+    """
+    FIX #13: Look up a group member by user_id (not name).
+    Returns the member row or None if the user isn't in this group.
+    This is unambiguous even when two members share the same display name.
+    """
     conn = db.get_connection()
     cur  = conn.cursor(dictionary=True)
     cur.execute(
@@ -66,9 +72,9 @@ def get_user_by_name_in_group(name: str, group_id: int) -> dict | None:
         SELECT u.user_id, u.name, u.email
         FROM   Group_Members gm
         JOIN   Users u ON u.user_id = gm.user_id
-        WHERE  gm.group_id = %s AND u.name = %s
+        WHERE  gm.group_id = %s AND gm.user_id = %s
         """,
-        (group_id, name),
+        (group_id, user_id),
     )
     row = cur.fetchone()
     cur.close(); conn.close()
@@ -91,22 +97,25 @@ def unread_count(current_user: dict = Depends(get_current_user)):
 
 
 @router.get("/notifications/")
-def get_notifications(current_user: dict = Depends(get_current_user)):
+def get_notifications(
+    limit:  int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0,  ge=0),
+    current_user: dict = Depends(get_current_user),
+):
     conn = db.get_connection()
     cur  = conn.cursor(dictionary=True)
     cur.execute(
         """
-        SELECT
-            n.notification_id, n.type, n.message,
-            n.is_read, n.group_id, n.created_at,
-            u.name AS from_name
+        SELECT n.notification_id, n.type, n.message,
+                n.is_read, n.group_id, n.created_at,
+                u.name AS from_name
         FROM   Notifications n
         LEFT JOIN Users u ON u.user_id = n.from_user_id
         WHERE  n.user_id = %s
         ORDER  BY n.created_at DESC
-        LIMIT  50
+        LIMIT  %s OFFSET %s
         """,
-        (current_user["user_id"],),
+        (current_user["user_id"], limit, offset),
     )
     rows = cur.fetchall()
     cur.close(); conn.close()
@@ -142,11 +151,11 @@ def mark_all_read(current_user: dict = Depends(get_current_user)):
     return {"message": "All marked as read."}
 
 
-# ── Send Reminder ──────────────────────────────────────────────────────────────
+# ── Send Reminder ─────────────────────────────────────────────────────────────
 
 class ReminderRequest(BaseModel):
-    debtor_name: str
-    amount:      float
+    debtor_user_id: int    # FIX #13: was debtor_name (string) — now integer ID
+    amount:         float
 
 
 @router.post("/groups/{group_id}/remind", status_code=status.HTTP_201_CREATED)
@@ -156,25 +165,28 @@ def send_reminder(
     current_user: dict = Depends(get_current_user),
 ):
     """
-    Creditor sends a reminder to a debtor.
-    FIX: sender name is fetched from DB — not from JWT (which doesn't have name).
+    Creditor sends a payment reminder to a debtor.
+
+    FIX #13: debtor is now identified by user_id, not display name.
+    get_user_by_id_in_group() verifies the debtor is actually a member
+    of this group before sending — prevents reminders being sent to
+    arbitrary user IDs outside the group.
     """
     sender_id = current_user["user_id"]
 
-    # Must be a group member to send reminders
     if not db.is_group_member(group_id, sender_id):
         raise HTTPException(status_code=403, detail="Not a member of this group.")
 
-    # ✅ FIX: fetch sender name from DB, not from current_user dict
+    if body.debtor_user_id == sender_id:
+        raise HTTPException(status_code=400, detail="Cannot send a reminder to yourself.")
+
+    # Fetch sender name from DB (JWT has no name field)
     sender_name = get_user_name(sender_id)
 
-    # Find the debtor in this group
-    debtor = get_user_by_name_in_group(body.debtor_name, group_id)
+    # FIX #13: look up debtor by user_id, not name
+    debtor = get_user_by_id_in_group(body.debtor_user_id, group_id)
     if not debtor:
         raise HTTPException(status_code=404, detail="Member not found in this group.")
-
-    if debtor["user_id"] == sender_id:
-        raise HTTPException(status_code=400, detail="Cannot remind yourself.")
 
     message = (
         f"{sender_name} sent you a reminder: "

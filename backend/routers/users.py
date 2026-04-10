@@ -1,13 +1,18 @@
 # --- backend/routers/users.py ---
+
 """
 routers/users.py
 
 GET    /users/          → all users (name + upi_id, for dropdowns)
 GET    /users/all       → full user list, admin only
-PUT    /users/me        → update own name / email / upi_id       ← NEW
+PUT    /users/me        → update own name / email / upi_id
 PUT    /users/{user_id} → update any user (admin or self)
 DELETE /users/{user_id} → delete user, admin only
+
+FIX S5: DELETE now prevents an admin from deleting themselves if they are
+        the last admin in the system. Orphaning all admin access is blocked.
 """
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, EmailStr
 import mysql.connector
@@ -23,7 +28,7 @@ class UpdateUserRequest(BaseModel):
     upi_id: str | None = None
 
 
-# ── NEW: self-update endpoint ──────────────────────────────────────────────
+# ── Self-update ────────────────────────────────────────────────────────────
 @router.put("/me")
 def update_me(
     body:         UpdateUserRequest,
@@ -58,8 +63,7 @@ def update_me(
     return user
 
 
-# ── Existing routes (unchanged) ────────────────────────────────────────────
-
+# ── List routes ────────────────────────────────────────────────────────────
 @router.get("/")
 def list_users(current_user: dict = Depends(get_current_user)):
     """Public (any logged-in user) — returns user_id, name, upi_id for dropdowns."""
@@ -72,6 +76,7 @@ def list_all_users(current_user: dict = Depends(require_admin)):
     return db.fetch_all_users()
 
 
+# ── Update ─────────────────────────────────────────────────────────────────
 @router.put("/{user_id}")
 def update_user(
     user_id: int,
@@ -88,8 +93,38 @@ def update_user(
     return {"message": "User updated."}
 
 
+# ── Delete ─────────────────────────────────────────────────────────────────
 @router.delete("/{user_id}")
 def delete_user(user_id: int, current_user: dict = Depends(require_admin)):
-    """Admin only."""
+    """
+    Admin only.
+
+    FIX S5: Block deletion if the target is the last admin in the system.
+    This prevents the admin panel becoming permanently inaccessible.
+
+    Rules:
+      - Admins cannot delete themselves at all (use account management for that).
+      - If the target user is an admin and is the only admin, block deletion.
+    """
+    # Prevent self-deletion — avoids accidental lockout
+    if current_user["user_id"] == user_id:
+        raise HTTPException(
+            status_code=400,
+            detail="You cannot delete your own account. Ask another admin or use account settings.",
+        )
+
+    # If the target is an admin, ensure at least one admin will remain
+    target = db.fetch_user_by_id(user_id)
+    if target is None:
+        raise HTTPException(status_code=404, detail="User not found.")
+
+    if target.get("role") == "admin":
+        admin_count = db.count_admins()
+        if admin_count <= 1:
+            raise HTTPException(
+                status_code=400,
+                detail="Cannot delete the last admin account. Promote another user first.",
+            )
+
     db.delete_user(user_id)
     return {"message": "User deleted."}

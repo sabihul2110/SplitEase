@@ -107,7 +107,7 @@ export default function Settlements() {
                         <span className="settle-amt">₹{Number(s.amount).toLocaleString("en-IN")}</span>
                         {(() => {
                           const m = raw.find(r => r.user_name === s.to);
-                          return m?.upi_id ? (
+                          return s.to_upi_id ? (
                             <a
                               href={`upi://pay?pa=${m.upi_id}&am=${s.amount}&cu=INR&tn=SplitEase`}
                               className="upi-btn" target="_blank" rel="noreferrer"

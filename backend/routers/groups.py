@@ -87,3 +87,73 @@ def update_members(group_id: int, body: UpdateMembersRequest, current_user: dict
 def delete_group(group_id: int, current_user: dict = Depends(require_admin)):
     db.delete_group(group_id)
     return {"message": "Group deleted."}
+
+# --- backend/routers/groups.py  (ADD these two endpoints) ---
+#
+# The frontend calls POST /groups/members-bulk but this route never existed.
+# Add it alongside the existing groups routes.
+#
+# Also adds POST /groups/has-expenses-bulk which the frontend uses to
+# correctly determine isEmpty (whether a group has any expenses at all).
+#
+# Paste both routes into your existing routers/groups.py
+
+
+class BulkGroupIdsRequest(BaseModel):
+    group_ids: list[int]
+
+
+@router.post("/members-bulk")
+def members_bulk(
+    body: BulkGroupIdsRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Return members for multiple groups in one DB call.
+    Only returns data for groups the user belongs to.
+    Returns: { group_id: [member_rows], ... }
+    """
+    if not body.group_ids:
+        return {}
+
+    is_admin = current_user.get("role") == "admin"
+    if is_admin:
+        allowed_ids = body.group_ids
+    else:
+        allowed_ids = [
+            gid for gid in body.group_ids
+            if db.is_group_member(gid, current_user["user_id"])
+        ]
+
+    if not allowed_ids:
+        return {}
+
+    return db.fetch_group_members_bulk(allowed_ids)
+
+
+@router.post("/has-expenses-bulk")
+def has_expenses_bulk(
+    body: BulkGroupIdsRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Returns a dict of { group_id: bool } indicating whether each group
+    has at least one expense. Used by the frontend to distinguish
+    'new/empty group' from 'settled group'.
+    """
+    if not body.group_ids:
+        return {}
+
+    is_admin = current_user.get("role") == "admin"
+    if is_admin:
+        allowed_ids = body.group_ids
+    else:
+        allowed_ids = [
+            gid for gid in body.group_ids
+            if db.is_group_member(gid, current_user["user_id"])
+        ]
+
+    if not allowed_ids:
+        return {}
+
+    return db.fetch_groups_has_expenses(allowed_ids)

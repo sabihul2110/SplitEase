@@ -5,11 +5,14 @@
  * Uses a proper SVG bell icon (no emoji).
  * Polls unread count every 30s.
  * Click opens dropdown with notification list.
+ * Paginated: fetches 20 at a time, "Load more" appends next batch.
  */
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
+
+const LIMIT = 20;
 
 // SVG bell icon
 const BellIcon = ({ size = 17 }) => (
@@ -29,10 +32,13 @@ const BellIcon = ({ size = 17 }) => (
 
 export default function NotificationBell() {
   const navigate  = useNavigate();
-  const [count,   setCount]   = useState(0);
-  const [notifs,  setNotifs]  = useState([]);
-  const [open,    setOpen]    = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [count,       setCount]       = useState(0);
+  const [notifs,      setNotifs]      = useState([]);
+  const [open,        setOpen]        = useState(false);
+  const [loading,     setLoading]     = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [offset,      setOffset]      = useState(0);
+  const [hasMore,     setHasMore]     = useState(false);
   const ref = useRef(null);
 
   const fetchCount = useCallback(async () => {
@@ -57,11 +63,28 @@ export default function NotificationBell() {
 
   async function openPanel() {
     if (open) { setOpen(false); return; }
-    setOpen(true); setLoading(true);
+    setOpen(true);
+    setLoading(true);
+    // Reset pagination state every time the panel is opened
+    setOffset(0);
+    setHasMore(true); // assume more until proven otherwise — avoids button flicker
     try {
-      const { data } = await api.get("/notifications/");
+      const { data } = await api.get(`/notifications/?limit=${LIMIT}&offset=0`);
       setNotifs(data);
+      setHasMore(data.length === LIMIT); // if we got a full page, there might be more
+      setOffset(LIMIT);
     } catch {} finally { setLoading(false); }
+  }
+
+  async function loadMore() {
+    if (loadingMore) return; // prevent duplicate calls
+    setLoadingMore(true);
+    try {
+      const { data } = await api.get(`/notifications/?limit=${LIMIT}&offset=${offset}`);
+      setNotifs(prev => [...prev, ...data]);         // append to existing list
+      setHasMore(data.length === LIMIT);
+      setOffset(prev => prev + LIMIT);
+    } catch {} finally { setLoadingMore(false); }
   }
 
   async function markAllRead() {
@@ -161,43 +184,67 @@ export default function NotificationBell() {
                 <div style={{ fontSize: 14, color: "var(--text3)" }}>No notifications yet</div>
               </div>
             ) : (
-              notifs.map(n => (
-                <div
-                  key={n.notification_id}
-                  onClick={() => handleNotifClick(n)}
-                  style={{
-                    padding: "12px 16px",
-                    cursor: n.group_id ? "pointer" : "default",
-                    background: n.is_read ? "transparent" : "rgba(37,99,235,0.05)",
-                    borderBottom: "1px solid var(--border)",
-                    display: "flex", gap: 10,
-                    transition: "background 0.1s",
-                  }}
-                  onMouseEnter={e => n.group_id && (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
-                  onMouseLeave={e => (e.currentTarget.style.background = n.is_read ? "transparent" : "rgba(37,99,235,0.05)")}
-                >
-                  <div style={{
-                    width: 30, height: 30, borderRadius: 8, flexShrink: 0,
-                    background: n.type === "reminder" ? "rgba(245,158,11,0.12)" : "rgba(37,99,235,0.12)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    marginTop: 2, color: n.type === "reminder" ? "var(--warning)" : "var(--primary-h)",
-                  }}>
-                    {n.type === "reminder"
-                      ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                      : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                    }
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, lineHeight: 1.45, color: "var(--text)" }}>{n.message}</div>
-                    <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 4, display: "flex", alignItems: "center", gap: 6 }}>
-                      {timeAgo(n.created_at)}
-                      {!n.is_read && (
-                        <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--primary)", display: "inline-block" }} />
-                      )}
+              <>
+                {notifs.map(n => (
+                  <div
+                    key={n.notification_id}
+                    onClick={() => handleNotifClick(n)}
+                    style={{
+                      padding: "12px 16px",
+                      cursor: n.group_id ? "pointer" : "default",
+                      background: n.is_read ? "transparent" : "rgba(37,99,235,0.05)",
+                      borderBottom: "1px solid var(--border)",
+                      display: "flex", gap: 10,
+                      transition: "background 0.1s",
+                    }}
+                    onMouseEnter={e => n.group_id && (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
+                    onMouseLeave={e => (e.currentTarget.style.background = n.is_read ? "transparent" : "rgba(37,99,235,0.05)")}
+                  >
+                    <div style={{
+                      width: 30, height: 30, borderRadius: 8, flexShrink: 0,
+                      background: n.type === "reminder" ? "rgba(245,158,11,0.12)" : "rgba(37,99,235,0.12)",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      marginTop: 2, color: n.type === "reminder" ? "var(--warning)" : "var(--primary-h)",
+                    }}>
+                      {n.type === "reminder"
+                        ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                        : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      }
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, lineHeight: 1.45, color: "var(--text)" }}>{n.message}</div>
+                      <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 4, display: "flex", alignItems: "center", gap: 6 }}>
+                        {timeAgo(n.created_at)}
+                        {!n.is_read && (
+                          <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--primary)", display: "inline-block" }} />
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))
+                ))}
+
+                {/* Load more button */}
+                {hasMore && (
+                  <div style={{ padding: "10px 16px", borderTop: "1px solid var(--border)" }}>
+                    <button
+                      onClick={loadMore}
+                      disabled={loadingMore}
+                      style={{
+                        width: "100%", padding: "7px 0",
+                        background: "transparent",
+                        border: "1px solid var(--border2)",
+                        borderRadius: 7, cursor: loadingMore ? "default" : "pointer",
+                        fontSize: 12, color: loadingMore ? "var(--text3)" : "var(--text2)",
+                        fontFamily: "inherit", transition: "all 0.12s",
+                      }}
+                      onMouseEnter={e => { if (!loadingMore) { e.currentTarget.style.background = "var(--surface2)"; e.currentTarget.style.color = "var(--text)"; }}}
+                      onMouseLeave={e => { if (!loadingMore) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text2)"; }}}
+                    >
+                      {loadingMore ? "Loading…" : "Load more"}
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>

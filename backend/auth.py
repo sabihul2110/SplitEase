@@ -1,8 +1,12 @@
 # --- backend/auth.py ---
-
 """
 auth.py — password hashing and JWT utilities.
-Nothing here touches the DB directly — it's pure crypto logic.
+Nothing here touches the DB directly — it's pure crypto logic,
+except get_current_user which now validates token_version.
+
+FIX S3b: get_current_user fetches token_version from the DB and compares
+         it to the version embedded in the JWT. A mismatch means the
+         password was changed after this token was issued → reject with 401.
 """
 
 from datetime import datetime, timedelta, timezone
@@ -14,8 +18,7 @@ from fastapi.security import OAuth2PasswordBearer
 
 from config import JWT_SECRET, JWT_ALGORITHM, JWT_EXPIRE_MINUTES
 
-# ── Password hashing ───────────────────────────────
-# bcrypt is the industry standard — slow on purpose to resist brute force.
+# ── Password hashing ───────────────────────────────────────────────────────
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def hash_password(plain: str) -> str:
@@ -25,14 +28,14 @@ def verify_password(plain: str, hashed: str) -> bool:
     return pwd_context.verify(plain, hashed)
 
 
-# ── JWT ────────────────────────────────────────────
-# tokenUrl tells FastAPI's auto-docs where to get a token.
+# ── JWT ────────────────────────────────────────────────────────────────────
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 def create_access_token(data: dict) -> str:
     """
     Sign a JWT containing `data`.
     Adds an `exp` (expiry) claim automatically.
+    Callers should include token_version in data for invalidation support.
     """
     payload = data.copy()
     expire  = datetime.now(timezone.utc) + timedelta(minutes=JWT_EXPIRE_MINUTES)
@@ -55,15 +58,51 @@ def decode_token(token: str) -> dict:
         )
 
 
-# ── Dependency injected into protected routes ──────
+# ── Dependency injected into protected routes ──────────────────────────────
 def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
     """
     FastAPI dependency. Add `current_user: dict = Depends(get_current_user)`
     to any route that requires login.
+
+    FIX S3b: After decoding the JWT, fetch token_version from the DB.
+    If the value in the token is less than the current DB value, the token
+    predates a password change and is no longer valid.
+
     Returns the decoded token payload:
-        { "user_id": int, "email": str, "role": str }
+        { "user_id": int, "email": str, "role": str, "token_version": int }
     """
-    return decode_token(token)
+    payload = decode_token(token)
+
+    # Validate token_version against current DB value.
+    # Import here to avoid circular import (auth ← db ← config ← auth).
+    import db as _db
+    conn = _db.get_connection()
+    cur  = conn.cursor()
+    cur.execute(
+        "SELECT token_version FROM Users WHERE user_id = %s",
+        (payload.get("user_id"),),
+    )
+    row = cur.fetchone()
+    cur.close(); conn.close()
+
+    if row is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User no longer exists.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    db_version    = row[0]
+    token_version = payload.get("token_version", 0)
+
+    if token_version < db_version:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session expired. Please log in again.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    return payload
 
 
 def require_admin(current_user: dict = Depends(get_current_user)) -> dict:
@@ -74,6 +113,6 @@ def require_admin(current_user: dict = Depends(get_current_user)) -> dict:
     if current_user.get("role") != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin access required",
+            detail="Admin access required.",
         )
     return current_user

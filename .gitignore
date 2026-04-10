@@ -1,6 +1,55 @@
+# =========================
+# ENV / SECRETS
+# =========================
 .env
 .env.*
 backend/.env
+frontend/.env
+frontend/.env.production
+
+# =========================
+# PYTHON
+# =========================
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.Python
+.venv/
+venv/
+env/
+
+# =========================
+# NODE
+# =========================
+node_modules/
+frontend/node_modules/
+
+# build output
+dist/
+frontend/dist/
+build/
+
+# =========================
+# OS FILES
+# =========================
 .DS_Store
+Thumbs.db
+
+# =========================
+# IDE
+# =========================
+.vscode/
+.idea/
+
+# =========================
+# LOGS
+# =========================
+*.log
+
+# =========================
+# TEST / CACHE
+# =========================
+.pytest_cache/
+.mypy_cache/
+coverage/

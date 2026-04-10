@@ -9,13 +9,14 @@ DELETE /income/{id}    → delete (owner only)
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
+from config import VALID_SOURCE_TYPES
 
 import db
 from auth import get_current_user
 
 router = APIRouter()
 
-VALID_SOURCE_TYPES = {"salary", "pocket_money", "stipend", "other"}
+
 
 
 class IncomeIn(BaseModel):

@@ -1,25 +1,31 @@
 # --- backend/requirements.txt ---
+# FIX #16: Added google-genai (was missing despite being used by ai_agent.py)
+# FIX #18: No change here — VALID_SOURCE_TYPES is a Python constant, not a package
 
 annotated-doc==0.0.4
 annotated-types==0.7.0
 anyio==4.12.1
-bcrypt==5.0.0
+bcrypt<4.0
 cffi==2.0.0
 click==8.3.1
 cryptography==46.0.5
 ecdsa==0.19.1
 fastapi==0.135.1
+google-genai==1.16.0
 h11==0.16.0
 httptools==0.7.1
+httpx==0.28.1
 idna==3.11
 mysql-connector-python==9.6.0
 passlib==1.7.4
 pyasn1==0.6.3
 pycparser==3.0
 pydantic==2.12.5
+pydantic[email]==2.12.5
 pydantic_core==2.41.5
 python-dotenv==1.2.2
 python-jose==3.5.0
+python-multipart==0.0.9
 PyYAML==6.0.3
 rsa==4.9.1
 six==1.17.0
@@ -29,4 +35,4 @@ typing_extensions==4.15.0
 uvicorn==0.42.0
 uvloop==0.22.1
 watchfiles==1.1.1
-websockets==16.0
+websockets==15.0

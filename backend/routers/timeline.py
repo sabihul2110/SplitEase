@@ -19,7 +19,12 @@ router = APIRouter()
 
 @router.get("/timeline/")
 def get_timeline(
-    limit: int = Query(default=100, ge=1, le=200),
+    limit:  int = Query(default=50,  ge=1,  le=200),
+    offset: int = Query(default=0,   ge=0),
     current_user: dict = Depends(get_current_user),
 ):
-    return db.fetch_unified_timeline(current_user["user_id"], limit=limit)
+    return db.fetch_unified_timeline(
+        current_user["user_id"],
+        limit=limit,
+        offset=offset,
+    )
