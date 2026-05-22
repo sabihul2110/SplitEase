@@ -1,6 +1,6 @@
 // --- frontend/src/pages/Profile.jsx ---
 /**
- * Profile page — /profile
+ * Profile page — /profile 
  *
  * FIX #15: loadStats() now uses POST /settlements/bulk instead of
  *          N individual GET /settlements/{id} calls.
