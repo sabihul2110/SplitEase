@@ -13,8 +13,8 @@ from config import DB_CONFIG, VALID_SOURCE_TYPES
 # ── Connection pool (created once at module import time) ───────────────────
 _pool = pooling.MySQLConnectionPool(
     pool_name    = "splitease_pool",
-    pool_size    = 10,
-    pool_reset_session = True,   # reset session state between borrows
+    pool_size    = 5,
+    pool_reset_session = True,
     **DB_CONFIG,
 )
  

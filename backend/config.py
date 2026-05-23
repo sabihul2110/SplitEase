@@ -22,6 +22,7 @@ DB_CONFIG = {
     "password": os.getenv("DB_PASSWORD", ""),
     "database": os.getenv("DB_NAME",     "expense_splitter_react"),
     "ssl_disabled": os.getenv("DB_SSL_DISABLED", "false").lower() == "true",
+    "connection_timeout": 30,
 }
 
 # ── JWT ────────────────────────────────────────────────────────────────────
