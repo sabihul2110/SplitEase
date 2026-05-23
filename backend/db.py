@@ -7,26 +7,14 @@ Ported from Streamlit version to FastAPI (no logic changes, same queries).
 """
 
 import mysql.connector
-from mysql.connector import pooling
 from config import DB_CONFIG, VALID_SOURCE_TYPES
  
 # ── Connection pool (created once at module import time) ───────────────────
-_pool = pooling.MySQLConnectionPool(
-    pool_name    = "splitease_pool",
-    pool_size    = 5,
-    pool_reset_session = True,
-    **DB_CONFIG,
-)
+
  
  
 def get_connection():
-    """
-    Borrow a connection from the pool.
-    Callers MUST call conn.close() when done — this returns it to the pool,
-    it does NOT close the underlying TCP connection.
-    The existing pattern `cur.close(); conn.close()` is correct and unchanged.
-    """
-    return _pool.get_connection()
+    return mysql.connector.connect(**DB_CONFIG)
 
 
 # ─────────────────────────────────────────────
