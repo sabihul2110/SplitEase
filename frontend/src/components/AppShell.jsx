@@ -212,13 +212,92 @@ function ProfileDropdown({ user, onLogout }) {
 // ─────────────────────────────────────────────
 //  AppShell
 // ─────────────────────────────────────────────
+// export default function AppShell({ children, title, actions }) {
+//   const { user, logout } = useAuth();
+//   const navigate = useNavigate();
+
+//   return (
+//     <div className="shell">
+//       <aside className="sidebar">
+//         <div className="sb-logo">
+//           <div className="sb-logo-mark">S</div>
+//           <span className="sb-logo-text">Split<em>Ease</em></span>
+//         </div>
+
+//         <nav className="sb-nav">
+//           {NAV_ITEMS.map(item => (
+//             <NavLink
+//               key={item.to}
+//               to={item.to}
+//               className={({ isActive }) => `sb-item ${isActive ? "active" : ""}`}
+//             >
+//               <span className="sb-icon" style={{ display: "flex" }}>{Icons[item.icon]}</span>
+//               {item.label}
+//             </NavLink>
+//           ))}
+
+//           {user?.role === "admin" && (
+//             <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid var(--border)" }}>
+//               <span className="sb-label">System</span>
+//               <NavLink to="/admin" className={({ isActive }) => `sb-item ${isActive ? "active" : ""}`}>
+//                 <span className="sb-icon" style={{ display: "flex" }}>{Icons.admin}</span>
+//                 Admin Panel
+//               </NavLink>
+//             </div>
+//           )}
+//         </nav>
+
+//         <div className="sb-footer">
+//           <button className="sb-signout" onClick={() => { logout(); navigate("/login"); }}>
+//             <span style={{ display: "flex" }}>{Icons.signout}</span>
+//             Sign out
+//           </button>
+//         </div>
+//       </aside>
+
+//       <div className="shell-main">
+//         <header className="topbar">
+//           <span className="topbar-title">{title}</span>
+//           <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: "auto" }}>
+//             {actions && (
+//               <div style={{ display: "flex", gap: 8, alignItems: "center", marginRight: 4 }}>
+//                 {actions}
+//               </div>
+//             )}
+//             <NotificationBell />
+//             <ProfileDropdown user={user} onLogout={() => { logout(); navigate("/login"); }} />
+//           </div>
+//         </header>
+
+//         <main className="page-area">
+//           <div className="page-inner fade-up">{children}</div>
+//         </main>
+//       </div>
+//     </div>
+//   );
+// }
+
+
+
+
+
+
 export default function AppShell({ children, title, actions }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
     <div className="shell">
-      <aside className="sidebar">
+      {/* Mobile overlay */}
+      {sidebarOpen && (
+        <div onClick={() => setSidebarOpen(false)}
+          className="mobile-overlay"
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 99 }}
+        />
+      )}
+
+      <aside className={`sidebar ${sidebarOpen ? "open" : ""}`}>
         <div className="sb-logo">
           <div className="sb-logo-mark">S</div>
           <span className="sb-logo-text">Split<em>Ease</em></span>
@@ -230,6 +309,7 @@ export default function AppShell({ children, title, actions }) {
               key={item.to}
               to={item.to}
               className={({ isActive }) => `sb-item ${isActive ? "active" : ""}`}
+              onClick={() => setSidebarOpen(false)}
             >
               <span className="sb-icon" style={{ display: "flex" }}>{Icons[item.icon]}</span>
               {item.label}
@@ -239,7 +319,8 @@ export default function AppShell({ children, title, actions }) {
           {user?.role === "admin" && (
             <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid var(--border)" }}>
               <span className="sb-label">System</span>
-              <NavLink to="/admin" className={({ isActive }) => `sb-item ${isActive ? "active" : ""}`}>
+              <NavLink to="/admin" className={({ isActive }) => `sb-item ${isActive ? "active" : ""}`}
+                onClick={() => setSidebarOpen(false)}>
                 <span className="sb-icon" style={{ display: "flex" }}>{Icons.admin}</span>
                 Admin Panel
               </NavLink>
@@ -257,6 +338,13 @@ export default function AppShell({ children, title, actions }) {
 
       <div className="shell-main">
         <header className="topbar">
+          <button className="hamburger" onClick={() => setSidebarOpen(v => !v)}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="3" y1="6" x2="21" y2="6"/>
+              <line x1="3" y1="12" x2="21" y2="12"/>
+              <line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+          </button>
           <span className="topbar-title">{title}</span>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: "auto" }}>
             {actions && (
