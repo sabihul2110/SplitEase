@@ -22,6 +22,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link }   from "react-router-dom";
 import { useAuth }             from "../context/AuthContext";
 import AppShell                from "../components/AppShell";
+import api from "../api/axios";
 
 // ─────────────────────────────────────────────
 //  Theme utilities
@@ -156,6 +157,140 @@ function ThemeSelector({ current, onChange }) {
   );
 }
 
+function DangerZone() {
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+  const [step, setStep] = useState("idle"); // idle | checking | pending | confirm | force_confirm | done | error
+  const [pending, setPending] = useState([]);
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleReset() {
+    setLoading(true);
+    setError("");
+    try {
+      const r = await api.post("/users/reset-my-data");
+      if (r.data.status === "pending_settlements") {
+        setPending(r.data.pending);
+        setStep("pending");
+      } else {
+        setResult(r.data.deleted);
+        setStep("done");
+      }
+    } catch (e) {
+      setError(e.response?.data?.detail || "Something went wrong.");
+      setStep("error");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleForceReset() {
+    setLoading(true);
+    setError("");
+    try {
+      const r = await api.post("/users/reset-my-data/force");
+      setResult(r.data.deleted);
+      setStep("done");
+    } catch (e) {
+      setError(e.response?.data?.detail || "Something went wrong.");
+      setStep("error");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const TrashIcon = () => (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+    </svg>
+  );
+
+  if (step === "done") return (
+    <div className="card card-p" style={{ borderColor: "rgba(16,185,129,0.3)" }}>
+      <div style={{ fontSize: 14, fontWeight: 600, color: "var(--success)", marginBottom: 6 }}>✓ Data reset complete</div>
+      <div style={{ fontSize: 13, color: "var(--text3)", marginBottom: 14 }}>
+        Deleted: {result?.personal_expenses} personal expenses, {result?.income} income entries,
+        {result?.loans} loans, {result?.borrows} borrows, {result?.group_expenses} group expenses.
+      </div>
+      <button className="btn btn-ghost btn-sm" onClick={() => { logout(); navigate("/login"); }}>
+        Sign out now
+      </button>
+    </div>
+  );
+
+  if (step === "pending") return (
+    <div className="card card-p" style={{ borderColor: "rgba(245,158,11,0.3)" }}>
+      <div style={{ fontSize: 14, fontWeight: 600, color: "var(--warning)", marginBottom: 6 }}>
+        ⚠ You have unsettled balances
+      </div>
+      <div style={{ fontSize: 13, color: "var(--text3)", marginBottom: 12 }}>
+        Resetting will remove your data from these groups:
+      </div>
+      {pending.map(g => (
+        <div key={g.group_id} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, padding: "6px 0", borderBottom: "1px solid var(--border)" }}>
+          <span>{g.group_name}</span>
+          <span style={{ color: g.net_balance > 0 ? "var(--success)" : "var(--danger)", fontWeight: 600 }}>
+            {g.net_balance > 0 ? "+" : ""}₹{Math.abs(g.net_balance).toFixed(2)}
+          </span>
+        </div>
+      ))}
+      <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+        <button className="btn btn-ghost btn-sm" onClick={() => setStep("idle")}>Cancel</button>
+        <button className="btn btn-danger btn-sm" onClick={() => setStep("force_confirm")} disabled={loading}>
+          Reset anyway
+        </button>
+      </div>
+    </div>
+  );
+
+  if (step === "force_confirm") return (
+    <div className="card card-p" style={{ borderColor: "rgba(239,68,68,0.3)" }}>
+      <div style={{ fontSize: 14, fontWeight: 600, color: "var(--danger)", marginBottom: 8 }}>
+        This cannot be undone. Are you sure?
+      </div>
+      <div style={{ display: "flex", gap: 8 }}>
+        <button className="btn btn-ghost btn-sm" onClick={() => setStep("idle")}>Cancel</button>
+        <button className="btn btn-danger btn-sm" onClick={handleForceReset} disabled={loading}>
+          {loading ? "Resetting…" : "Yes, wipe my data"}
+        </button>
+      </div>
+    </div>
+  );
+
+  if (step === "confirm") return (
+    <div className="card card-p" style={{ borderColor: "rgba(239,68,68,0.3)" }}>
+      <div style={{ fontSize: 14, fontWeight: 600, color: "var(--danger)", marginBottom: 6 }}>
+        Reset all your data?
+      </div>
+      <div style={{ fontSize: 13, color: "var(--text3)", marginBottom: 14 }}>
+        This will permanently delete all your expenses, income, loans, borrows, and remove you from all groups. Your account stays active.
+      </div>
+      {error && <div className="alert alert-error" style={{ marginBottom: 12 }}>{error}</div>}
+      <div style={{ display: "flex", gap: 8 }}>
+        <button className="btn btn-ghost btn-sm" onClick={() => setStep("idle")}>Cancel</button>
+        <button className="btn btn-danger btn-sm" onClick={handleReset} disabled={loading}>
+          {loading ? "Checking…" : <><TrashIcon /> Reset my data</>}
+        </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="card" style={{ marginBottom: 4, borderColor: "rgba(239,68,68,0.15)" }}>
+      <SettingRow
+        icon={<TrashIcon />}
+        label="Reset My Data"
+        sub="Delete all your expenses, income, loans and group data"
+        onClick={() => setStep("confirm")}
+        danger
+        last
+      />
+    </div>
+  );
+}
+
 // ─────────────────────────────────────────────
 //  Settings page
 // ─────────────────────────────────────────────
@@ -188,23 +323,57 @@ export default function Settings() {
       </button>
 
       {/* ── PROFILE SUMMARY ── */}
-      <div className="card card-p" style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 4 }}>
-        <div style={{
-          width: 52, height: 52, borderRadius: 14, flexShrink: 0,
-          background: "var(--primary)", display: "flex", alignItems: "center",
-          justifyContent: "center", fontSize: 18, fontWeight: 800, color: "#fff",
-          letterSpacing: "0.02em",
-        }}>
+      <div
+        className="card card-p"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 16,
+          marginBottom: 4,
+        }}
+      >
+        <div
+          style={{
+            width: 52,
+            height: 52,
+            borderRadius: 14,
+            flexShrink: 0,
+            background: "var(--primary)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 18,
+            fontWeight: 800,
+            color: "#fff",
+            letterSpacing: "0.02em",
+          }}
+        >
           {initials}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 16, fontWeight: 700, letterSpacing: "-0.015em", marginBottom: 3 }}>{user?.name}</div>
-          <div style={{ fontSize: 13, color: "var(--text3)" }}>{user?.email}</div>
+          <div
+            style={{
+              fontSize: 16,
+              fontWeight: 700,
+              letterSpacing: "-0.015em",
+              marginBottom: 3,
+            }}
+          >
+            {user?.name}
+          </div>
+          <div style={{ fontSize: 13, color: "var(--text3)" }}>
+            {user?.email}
+          </div>
         </div>
         <Link
           to="/profile"
           className="btn btn-ghost btn-sm"
-          style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 5,
+            flexShrink: 0,
+          }}
         >
           {Icon.user(13)} View Profile
         </Link>
@@ -214,21 +383,31 @@ export default function Settings() {
       <SectionHeader title="Appearance" />
       <div className="card" style={{ marginBottom: 4 }}>
         <div style={{ padding: "16px 20px" }}>
-          <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 4 }}>Theme</div>
-          <div style={{ fontSize: 12, color: "var(--text3)", marginBottom: 14 }}>
+          <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 4 }}>
+            Theme
+          </div>
+          <div
+            style={{ fontSize: 12, color: "var(--text3)", marginBottom: 14 }}
+          >
             Choose how SplitEase looks. Stored locally on your device.
           </div>
           <ThemeSelector current={theme} onChange={handleThemeChange} />
 
           {/* Note about light mode */}
           {theme === "light" && (
-            <div className="alert" style={{
-              marginTop: 14, marginBottom: 0,
-              background: "rgba(245,158,11,0.08)",
-              border: "1px solid rgba(245,158,11,0.2)",
-              color: "var(--warning)", fontSize: 13,
-            }}>
-              Light mode requires light-mode CSS variables in index.css. See integration notes.
+            <div
+              className="alert"
+              style={{
+                marginTop: 14,
+                marginBottom: 0,
+                background: "rgba(245,158,11,0.08)",
+                border: "1px solid rgba(245,158,11,0.2)",
+                color: "var(--warning)",
+                fontSize: 13,
+              }}
+            >
+              Light mode requires light-mode CSS variables in index.css. See
+              integration notes.
             </div>
           )}
         </div>
@@ -266,20 +445,29 @@ export default function Settings() {
           />
         ) : (
           <div style={{ padding: "16px 20px" }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: "var(--danger)", marginBottom: 8 }}>
+            <div
+              style={{
+                fontSize: 14,
+                fontWeight: 600,
+                color: "var(--danger)",
+                marginBottom: 8,
+              }}
+            >
               Confirm sign out?
             </div>
-            <div style={{ fontSize: 13, color: "var(--text3)", marginBottom: 14 }}>
+            <div
+              style={{ fontSize: 13, color: "var(--text3)", marginBottom: 14 }}
+            >
               You'll need to log in again to access your account.
             </div>
             <div style={{ display: "flex", gap: 8 }}>
-              <button className="btn btn-ghost btn-sm" onClick={() => setLogoutConfirm(false)}>
+              <button
+                className="btn btn-ghost btn-sm"
+                onClick={() => setLogoutConfirm(false)}
+              >
                 Cancel
               </button>
-              <button
-                className="btn btn-danger btn-sm"
-                onClick={handleLogout}
-              >
+              <button className="btn btn-danger btn-sm" onClick={handleLogout}>
                 {Icon.logout(13)} Sign Out
               </button>
             </div>
@@ -287,18 +475,31 @@ export default function Settings() {
         )}
       </div>
 
+      {/* ── DANGER ZONE ── */}
+      <SectionHeader title="Danger Zone" />
+      <DangerZone />
+
       {/* ── ABOUT ── */}
       <SectionHeader title="About" />
       <div className="card card-p" style={{ marginBottom: 24 }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {[
-            { label: "App",     value: "SplitEase" },
+            { label: "App", value: "SplitEase" },
             { label: "Version", value: "2.1.0" },
-            { label: "Stack",   value: "React + FastAPI + MySQL" },
-          ].map(row => (
-            <div key={row.label} style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+            { label: "Stack", value: "React + FastAPI + MySQL" },
+          ].map((row) => (
+            <div
+              key={row.label}
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                fontSize: 13,
+              }}
+            >
               <span style={{ color: "var(--text3)" }}>{row.label}</span>
-              <span style={{ color: "var(--text2)", fontWeight: 500 }}>{row.value}</span>
+              <span style={{ color: "var(--text2)", fontWeight: 500 }}>
+                {row.value}
+              </span>
             </div>
           ))}
         </div>

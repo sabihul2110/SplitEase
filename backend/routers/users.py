@@ -128,3 +128,31 @@ def delete_user(user_id: int, current_user: dict = Depends(require_admin)):
 
     db.delete_user(user_id)
     return {"message": "User deleted."}
+
+
+
+@router.post("/reset-my-data")
+def reset_my_data(current_user: dict = Depends(get_current_user)):
+    user_id = current_user["user_id"]
+    pending = db.get_user_pending_settlements(user_id)
+    if pending:
+        return {
+            "status": "pending_settlements",
+            "message": "You have unsettled balances.",
+            "pending": pending
+        }
+    result = db.reset_user_data(user_id)
+    return {"status": "ok", "deleted": result}
+
+
+@router.post("/reset-my-data/force")
+def reset_my_data_force(current_user: dict = Depends(get_current_user)):
+    """Reset even with pending settlements."""
+    result = db.reset_user_data(current_user["user_id"])
+    return {"status": "ok", "deleted": result}
+
+
+@router.post("/admin-wipe")
+def admin_wipe(current_user: dict = Depends(require_admin)):
+    result = db.admin_wipe_app(current_user["user_id"])
+    return result
