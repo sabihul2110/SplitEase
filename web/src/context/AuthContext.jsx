@@ -1,4 +1,4 @@
-// --- frontend/src/context/AuthContext.jsx ---
+// --- web/src/context/AuthContext.jsx ---
 
 /**
  * AuthContext.jsx

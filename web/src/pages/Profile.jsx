@@ -1,4 +1,4 @@
-// --- frontend/src/pages/Profile.jsx ---
+// --- web/src/pages/Profile.jsx ---
 /**
  * Profile page — /profile 
  *

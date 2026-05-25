@@ -1,4 +1,4 @@
-// --- frontend/src/pages/Dashboard.jsx ---
+// --- web/src/pages/Dashboard.jsx ---
 // FIX #15: Replaced N individual GET /settlements/{id} calls with a single
 //           POST /settlements/bulk call. For a user in 10 groups this reduces
 //           page-load API calls from 11 to 2 (GET /groups + POST /settlements/bulk).

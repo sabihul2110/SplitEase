@@ -1,4 +1,4 @@
-// --- frontend/src/pages/JoinGroup.jsx ---
+// --- web/src/pages/JoinGroup.jsx ---
 
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";

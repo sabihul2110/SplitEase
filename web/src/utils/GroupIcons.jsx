@@ -1,7 +1,6 @@
-// frontend/src/utils/GroupIcons.jsx
+// web/src/utils/GroupIcons.jsx
 // Unchanged from previous version — keyword-based SVG icon mapping.
 // Re-exported here for completeness alongside the updated Groups.jsx.
-// Place at: frontend/src/utils/GroupIcons.jsx
 
 export const Icons = {
   Plane: ({ size = 20 }) => (

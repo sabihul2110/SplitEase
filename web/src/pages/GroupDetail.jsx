@@ -1,4 +1,4 @@
-// --- frontend/src/pages/GroupDetail.jsx ---
+// --- web/src/pages/GroupDetail.jsx ---
 
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";

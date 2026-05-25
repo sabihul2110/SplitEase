@@ -1,8 +1,8 @@
-// --- frontend/src/pages/Activity.jsx ---
+// --- web/src/pages/Activity.jsx ---
 // FIX #11: Replaced the hand-rolled N+1 fan-out (GET /groups + N×GET /expenses
 //          + N×GET /payments = 2N+1 calls) with a single GET /timeline/ call.
 //          The backend already does this aggregation efficiently in Python
-//          across 8 event types. The frontend was re-doing a subset of that
+//          across 8 event types. The web (frontend) was re-doing a subset of that
 //          work with far more round-trips.
 //
 // BEHAVIOUR CHANGES vs original:

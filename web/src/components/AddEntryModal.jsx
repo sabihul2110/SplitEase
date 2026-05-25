@@ -1,4 +1,4 @@
-// --- frontend/src/components/AddEntryModal.jsx ---
+// --- web/src/components/AddEntryModal.jsx ---
 // FIXED:
 //  1. navigate() called BEFORE close (was unmounting component first)
 //  2. All API paths end with trailing slash to match FastAPI routes

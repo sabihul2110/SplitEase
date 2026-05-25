@@ -1,4 +1,4 @@
-// --- frontend/src/pages/admin/AdminUsers.jsx ---
+// --- web/src/pages/admin/AdminUsers.jsx ---
 
 import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";

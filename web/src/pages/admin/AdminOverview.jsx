@@ -1,4 +1,4 @@
-// --- frontend/src/pages/admin/AdminOverview.jsx ---
+// --- web/src/pages/admin/AdminOverview.jsx ---
 
 import { useState, useEffect } from "react";
 import api from "../../api/axios";

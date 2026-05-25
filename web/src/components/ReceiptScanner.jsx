@@ -1,4 +1,4 @@
-// frontend/src/components/ReceiptScanner.jsx
+// web/src/components/ReceiptScanner.jsx
 /**
  * ReceiptScanner — reusable AI receipt scan button + modal.
  *

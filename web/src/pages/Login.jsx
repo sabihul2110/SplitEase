@@ -1,4 +1,4 @@
-// --- frontend/src/pages/Login.jsx ---
+// --- web/src/pages/Login.jsx ---
 
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";

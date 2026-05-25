@@ -1,4 +1,4 @@
-// --- frontend/src/pages/Loans.jsx ---
+// --- web/src/pages/Loans.jsx ---
 // UPDATED: Two sections — "Money I Lent" and "Money I Borrowed"
 // Each with their own summary, filter tabs, and card grid.
 

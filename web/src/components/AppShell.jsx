@@ -1,4 +1,4 @@
-// --- frontend/src/components/AppShell.jsx ---
+// --- web/src/components/AppShell.jsx ---
 
 import { useState, useRef, useEffect } from "react";
 import { NavLink, useNavigate } from "react-router-dom";

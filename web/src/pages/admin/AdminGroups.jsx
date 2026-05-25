@@ -1,4 +1,4 @@
-// --- frontend/src/pages/admin/AdminGroups.jsx ---
+// --- web/src/pages/admin/AdminGroups.jsx ---
 
 import { useState, useEffect } from "react";
 import api from "../../api/axios";

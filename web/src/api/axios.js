@@ -1,4 +1,4 @@
-// --- frontend/src/api/axios.js ---
+// --- web/src/api/axios.js ---
 
 /**
  * api/axios.js

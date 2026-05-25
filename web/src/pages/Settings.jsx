@@ -1,4 +1,4 @@
-// --- frontend/src/pages/Settings.jsx ---
+// --- web/src/pages/Settings.jsx ---
 /**
  * Settings page — /settings
  *

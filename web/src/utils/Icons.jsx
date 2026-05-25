@@ -1,4 +1,4 @@
-// frontend/src/utils/icons.jsx
+// web/src/utils/icons.jsx
 
 export const Icons = {
 

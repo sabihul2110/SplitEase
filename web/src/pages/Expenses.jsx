@@ -1,4 +1,4 @@
-// --- frontend/src/pages/Expenses.jsx ---
+// --- web/src/pages/Expenses.jsx ---
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";

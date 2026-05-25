@@ -1,4 +1,4 @@
-// --- frontend/src/pages/AddPayment.jsx ---
+// --- web/src/pages/AddPayment.jsx ---
 
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";

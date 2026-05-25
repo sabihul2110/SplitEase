@@ -1,4 +1,4 @@
-// --- frontend/src/pages/Signup.jsx ---
+// --- web/src/pages/Signup.jsx ---
 // FIX S9: Removed "First signup becomes admin" subtitle.
 //         Disclosing this behaviour publicly tells any attacker that
 //         the very first registered account gets elevated privileges —

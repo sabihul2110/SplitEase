@@ -153,7 +153,7 @@ def login(body: LoginRequest, request: Request):
 def get_me(current_user: dict = Depends(get_current_user)):
     """
     Validate the current token and return fresh user info.
-    Called by frontend on every app load to verify token is still valid.
+    Called by web app on every app load to verify token is still valid.
 
     FIX S3b: get_current_user now validates token_version (see auth.py).
     If the password was changed after this token was issued, this returns 401.

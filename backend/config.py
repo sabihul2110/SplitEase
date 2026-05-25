@@ -44,7 +44,7 @@ if JWT_SECRET == _INSECURE_DEFAULT and os.getenv("TESTING") != "1":
     sys.exit(1)
 
 # ── CORS ───────────────────────────────────────────────────────────────────
-# Comma-separated list of allowed frontend origins.
+# Comma-separated list of allowed web app origins.
 # Example .env entry:
 #   ALLOWED_ORIGINS=https://splitease.yourdomain.com,https://www.splitease.yourdomain.com
 # Defaults to localhost for local development only.

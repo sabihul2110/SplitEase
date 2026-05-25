@@ -1,4 +1,4 @@
-// --- frontend/src/pages/Settlements.jsx ---
+// --- web/src/pages/Settlements.jsx ---
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";

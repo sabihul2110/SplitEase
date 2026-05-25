@@ -1,4 +1,4 @@
-// --- frontend/src/components/NotificationBell.jsx ---
+// --- web/src/components/NotificationBell.jsx ---
 
 /**
  * NotificationBell.jsx

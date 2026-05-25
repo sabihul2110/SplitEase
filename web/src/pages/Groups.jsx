@@ -1,4 +1,4 @@
-// --- frontend/src/pages/Groups.jsx ---
+// --- web/src/pages/Groups.jsx ---
 // v7: Fix isEmpty (wrong sRows check), fix members-bulk 404, fix memberCount=0
 
 import { useState, useEffect, useCallback, useRef } from "react";

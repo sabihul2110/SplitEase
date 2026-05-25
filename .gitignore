@@ -6,6 +6,7 @@
 backend/.env
 web/.env
 web/.env.production
+web/.env.local
 
 # =========================
 # PYTHON
@@ -31,6 +32,11 @@ web/dist/
 build/
 
 # =========================
+# CAPACITOR / ANDROID
+# =========================
+web/android/
+
+# =========================
 # OS FILES
 # =========================
 .DS_Store
@@ -52,7 +58,10 @@ Thumbs.db
 # =========================
 .pytest_cache/
 .mypy_cache/
-coverage/web/android/
-__pycache__/
-*.pyc
+coverage/
+
+# =========================
+# MISC
+# =========================
 tree.txt
+structure.txt
