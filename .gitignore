@@ -53,3 +53,6 @@ Thumbs.db
 .pytest_cache/
 .mypy_cache/
 coverage/frontend/android/
+__pycache__/
+*.pyc
+tree.txt
