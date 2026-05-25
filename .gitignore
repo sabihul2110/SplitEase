@@ -4,8 +4,8 @@
 .env
 .env.*
 backend/.env
-frontend/.env
-frontend/.env.production
+web/.env
+web/.env.production
 
 # =========================
 # PYTHON
@@ -23,11 +23,11 @@ env/
 # NODE
 # =========================
 node_modules/
-frontend/node_modules/
+web/node_modules/
 
 # build output
 dist/
-frontend/dist/
+web/dist/
 build/
 
 # =========================
@@ -52,7 +52,7 @@ Thumbs.db
 # =========================
 .pytest_cache/
 .mypy_cache/
-coverage/frontend/android/
+coverage/web/android/
 __pycache__/
 *.pyc
 tree.txt
