@@ -5,7 +5,7 @@
  * Central API config. Matches the real backend exactly.
  */
 
-export const BASE_URL    = 'https://splitease-kfda.onrender.com';
+export const BASE_URL    = 'https://splitease-4hcc.onrender.com';
 export const STORAGE_KEY = 'splitease_user';
 
 export const ENDPOINTS = {

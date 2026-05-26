@@ -28,6 +28,7 @@ import SettlementsScreen   from '../screens/settlements/SettlementsScreen';
 import NotificationsScreen from '../screens/notifications/NotificationsScreen';
 import SettingsScreen      from '../screens/settings/SettingsScreen';
 import ProfileScreen       from '../screens/settings/ProfileScreen';
+import MoreScreen from '../screens/more/MoreScreen';
 
 // ── Tab icon labels → unicode symbols ─────────────────────────────────────
 const TAB_ICONS = {
@@ -97,6 +98,7 @@ const MoreStack = createNativeStackNavigator();
 function MoreTabStack() {
   return (
     <MoreStack.Navigator screenOptions={{ headerShown: false }}>
+      <MoreStack.Screen name="MoreHome"      component={MoreScreen} />
       <MoreStack.Screen name="Notifications" component={NotificationsScreen} />
       <MoreStack.Screen name="Settlements"   component={SettlementsScreen} />
       <MoreStack.Screen name="Settings"      component={SettingsScreen} />
