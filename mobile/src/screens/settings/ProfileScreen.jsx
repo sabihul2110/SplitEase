@@ -25,6 +25,7 @@ import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS } from '../../constants
 import Input  from '../../components/common/Input';
 import Button from '../../components/common/Button';
 import ScreenHeader from '../../components/layout/ScreenHeader';
+import { Icons } from '../../constants/icons';
 
 function fmt(n) {
   return Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
@@ -155,10 +156,25 @@ function ChangePasswordModal({ visible, onClose }) {
 }
 
 // ── Detail row ─────────────────────────────────────────────────────────────
-function DetailRow({ label, value, last }) {
+// function DetailRow({ label, value, last }) {
+//   return (
+//     <View style={[styles.detailRow, !last && styles.detailRowBorder]}>
+//       <Text style={styles.detailLabel}>{label}</Text>
+//       <Text style={[styles.detailValue, !value && { color: COLORS.text3, fontStyle: 'italic' }]}>
+//         {value || 'Not set'}
+//       </Text>
+//     </View>
+//   );
+// }
+
+// ── Detail row ─────────────────────────────────────────────────────────────
+function DetailRow({ label, value, last, icon: IconComp }) {
   return (
     <View style={[styles.detailRow, !last && styles.detailRowBorder]}>
-      <Text style={styles.detailLabel}>{label}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        {IconComp && <IconComp size={16} color={COLORS.text3} />}
+        <Text style={styles.detailLabel}>{label}</Text>
+      </View>
       <Text style={[styles.detailValue, !value && { color: COLORS.text3, fontStyle: 'italic' }]}>
         {value || 'Not set'}
       </Text>
@@ -249,7 +265,7 @@ export default function ProfileScreen() {
         </View>
 
         {/* Stats */}
-        <View style={styles.statsRow}>
+        {/* <View style={styles.statsRow}>
           <View style={styles.statCard}>
             <Text style={styles.statVal}>{groups.length}</Text>
             <Text style={styles.statLbl}>Groups</Text>
@@ -258,15 +274,42 @@ export default function ProfileScreen() {
             <Text style={[styles.statVal, { color: netColor }]}>{netLabel}</Text>
             <Text style={styles.statLbl}>Net Balance</Text>
           </View>
+        </View> */}
+
+        {/* Stats */}
+        <View style={styles.statsRow}>
+          <View style={styles.statCard}>
+            <Text style={styles.statVal}>{groups.length}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Icons.users size={12} color={COLORS.text3} />
+              <Text style={styles.statLbl}>Groups</Text>
+            </View>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={[styles.statVal, { color: netColor }]}>{netLabel}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Icons.wallet size={12} color={COLORS.text3} />
+              <Text style={styles.statLbl}>Net Balance</Text>
+            </View>
+          </View>
         </View>
 
         {/* Account details */}
-        <View style={styles.detailCard}>
+        {/* <View style={styles.detailCard}>
           <Text style={styles.detailCardTitle}>Account Details</Text>
           <DetailRow label="Display Name" value={user?.name} />
           <DetailRow label="Email"        value={user?.email} />
           <DetailRow label="UPI ID"       value={user?.upi_id} />
           <DetailRow label="Role"         value={user?.role} last />
+        </View> */}
+
+        {/* Account details */}
+        <View style={styles.detailCard}>
+          <Text style={styles.detailCardTitle}>Account Details</Text>
+          <DetailRow label="Display Name" value={user?.name}   icon={Icons.edit} />
+          <DetailRow label="Email"        value={user?.email}  icon={Icons.mail} />
+          <DetailRow label="UPI ID"       value={user?.upi_id} icon={Icons.upi} />
+          <DetailRow label="Role"         value={user?.role}   icon={Icons.check} last />
         </View>
 
       </ScrollView>

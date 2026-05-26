@@ -6,12 +6,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS } from '../../constants/theme';
 import ScreenHeader from '../../components/layout/ScreenHeader';
+import { Icons } from '../../constants/icons';
 
 const ITEMS = [
-  { icon: '✅', label: 'Settle Up',     sub: 'View and settle balances',        screen: 'Settlements'   },
-  { icon: '🔔', label: 'Notifications', sub: 'Reminders and activity alerts',   screen: 'Notifications' },
-  { icon: '⚙️', label: 'Settings',      sub: 'Preferences and account options', screen: 'Settings'      },
-  { icon: '👤', label: 'Profile',       sub: 'Edit your profile and password',  screen: 'Profile'       },
+  { icon: Icons.expenses,    label: 'Expenses',      sub: 'View all your transactions',      screen: 'Expenses'      },
+  { icon: Icons.settlements, label: 'Settle Up',     sub: 'View and settle balances',        screen: 'Settlements'   },
+  { icon: Icons.bell,        label: 'Notifications', sub: 'Reminders and activity alerts',   screen: 'Notifications' },
+  { icon: Icons.settings,    label: 'Settings',      sub: 'Preferences and account options', screen: 'Settings'      },
+  { icon: Icons.users,       label: 'Profile',       sub: 'Edit your profile and password',  screen: 'Profile'       },
 ];
 
 export default function MoreScreen() {
@@ -28,7 +30,7 @@ export default function MoreScreen() {
             activeOpacity={0.7}
           >
             <View style={styles.iconBox}>
-              <Text style={{ fontSize: 18 }}>{item.icon}</Text>
+              <item.icon size={20} color={COLORS.primary} />
             </View>
             <View style={styles.info}>
               <Text style={styles.label}>{item.label}</Text>

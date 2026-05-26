@@ -17,9 +17,11 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { COLORS } from '../constants/theme';
 
 // Screens
+import { Icons } from '../constants/icons';
 import DashboardScreen     from '../screens/main/DashboardScreen';
 import GroupsScreen        from '../screens/groups/GroupsScreen';
 import GroupDetailScreen   from '../screens/groups/GroupDetailScreen';
+import ExpensesScreen from '../screens/expenses/ExpensesScreen';
 import AddExpenseScreen    from '../screens/expenses/AddExpenseScreen';
 import AddPaymentScreen    from '../screens/expenses/AddPaymentScreen';
 import LoansScreen         from '../screens/loans/LoansScreen';
@@ -30,27 +32,27 @@ import SettingsScreen      from '../screens/settings/SettingsScreen';
 import ProfileScreen       from '../screens/settings/ProfileScreen';
 import MoreScreen from '../screens/more/MoreScreen';
 
-// ── Tab icon labels → unicode symbols ─────────────────────────────────────
-const TAB_ICONS = {
-  Dashboard: { active: '⬡', inactive: '⬡' },
-  Groups:    { active: '◫', inactive: '◫' },
-  Loans:     { active: '⇄', inactive: '⇄' },
-  Activity:  { active: '◎', inactive: '◎' },
-  More:      { active: '···', inactive: '···' },
-};
+// ── Tab Icons ──────────────────────────────────────────────────────────────
 
 function TabIcon({ name, focused }) {
-  const icons = TAB_ICONS[name] || { active: '○', inactive: '○' };
-  return (
-    <Text style={{
-      fontSize:   name === 'More' ? 10 : 18,
-      color:      focused ? COLORS.primary : COLORS.text3,
-      fontWeight: focused ? '700' : '400',
-      lineHeight: 22,
-    }}>
-      {focused ? icons.active : icons.inactive}
-    </Text>
-  );
+  // Map the capitalized route names to your lowercased icon components
+  const iconMap = {
+    Dashboard: Icons.dashboard,
+    Groups:    Icons.groups,
+    Loans:     Icons.loans,
+    Activity:  Icons.activity,
+    More:      Icons.more, 
+  };
+
+  const IconComponent = iconMap[name];
+  const color = focused ? COLORS.primary : COLORS.text3;
+
+  // Fallback just in case an icon isn't found
+  if (!IconComponent) {
+    return <View style={{ width: 24, height: 24, backgroundColor: color, borderRadius: 12 }} />;
+  }
+
+  return <IconComponent size={24} color={color} />;
 }
 
 // ── Individual stacks ──────────────────────────────────────────────────────
@@ -60,6 +62,7 @@ function DashboardStack() {
   return (
     <DashStack.Navigator screenOptions={{ headerShown: false }}>
       <DashStack.Screen name="DashboardHome" component={DashboardScreen} />
+      <DashStack.Screen name="Expenses" component={ExpensesScreen} />
     </DashStack.Navigator>
   );
 }
@@ -99,6 +102,7 @@ function MoreTabStack() {
   return (
     <MoreStack.Navigator screenOptions={{ headerShown: false }}>
       <MoreStack.Screen name="MoreHome"      component={MoreScreen} />
+      <MoreStack.Screen name="Expenses"      component={ExpensesScreen} />
       <MoreStack.Screen name="Notifications" component={NotificationsScreen} />
       <MoreStack.Screen name="Settlements"   component={SettlementsScreen} />
       <MoreStack.Screen name="Settings"      component={SettingsScreen} />
