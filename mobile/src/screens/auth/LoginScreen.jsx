@@ -2,14 +2,16 @@
 
 /**
  * LoginScreen.jsx
- * Email + password login. On success calls AuthContext.login() which
- * persists the token and flips RootNavigator to MainNavigator.
+ *
+ * JWT login. On success → stores user in AsyncStorage via AuthContext.login()
+ * Navigation to Main happens automatically because RootNavigator
+ * watches user state and swaps Auth ↔ Main stacks.
  */
 
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity,
-  KeyboardAvoidingView, Platform, ScrollView, Alert,
+  View, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView,
+  Platform, ScrollView, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import client from '../../api/client';
@@ -20,7 +22,7 @@ import Input  from '../../components/common/Input';
 import Button from '../../components/common/Button';
 
 export default function LoginScreen({ navigation }) {
-  const { login } = useAuth();
+  const { login }  = useAuth();
   const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
   const [loading,  setLoading]  = useState(false);
@@ -28,9 +30,9 @@ export default function LoginScreen({ navigation }) {
 
   function validate() {
     const e = {};
-    if (!email.trim())                       e.email    = 'Email is required';
-    if (!/\S+@\S+\.\S+/.test(email.trim())) e.email    = 'Enter a valid email';
-    if (!password)                           e.password = 'Password is required';
+    if (!email.trim())    e.email    = 'Email is required';
+    if (!password)        e.password = 'Password is required';
+    if (email && !/\S+@\S+\.\S+/.test(email)) e.email = 'Enter a valid email';
     setErrors(e);
     return Object.keys(e).length === 0;
   }
@@ -43,6 +45,8 @@ export default function LoginScreen({ navigation }) {
         email:    email.trim().toLowerCase(),
         password,
       });
+
+      // Backend returns: { access_token, token_type, user_id, name, email, role }
       await login({
         access_token: data.access_token,
         user_id:      data.user_id,
@@ -50,8 +54,9 @@ export default function LoginScreen({ navigation }) {
         email:        data.email,
         role:         data.role,
       });
+      // Navigation happens automatically via RootNavigator
     } catch (err) {
-      const msg = err.response?.data?.detail || 'Login failed. Please try again.';
+      const msg = err.response?.data?.detail || 'Login failed. Please check your credentials.';
       Alert.alert('Login Failed', msg);
     } finally {
       setLoading(false);
@@ -75,6 +80,7 @@ export default function LoginScreen({ navigation }) {
               <Text style={styles.logoText}>S</Text>
             </View>
             <Text style={styles.appName}>SplitEase</Text>
+            <Text style={styles.tagline}>Split expenses, not friendships.</Text>
           </View>
 
           {/* Form card */}
@@ -89,8 +95,8 @@ export default function LoginScreen({ navigation }) {
                 onChangeText={v => { setEmail(v); setErrors(e => ({ ...e, email: null })); }}
                 placeholder="you@example.com"
                 keyboardType="email-address"
-                autoCapitalize="none"
                 error={errors.email}
+                autoCapitalize="none"
               />
               <Input
                 label="Password"
@@ -126,29 +132,82 @@ export default function LoginScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  safe:   { flex: 1, backgroundColor: COLORS.bg },
-  kav:    { flex: 1 },
+  safe: {
+    flex:            1,
+    backgroundColor: COLORS.bg,
+  },
+  kav: {
+    flex: 1,
+  },
   scroll: {
-    flexGrow: 1, justifyContent: 'center',
-    padding: SPACING.base, gap: SPACING.xl,
-    paddingVertical: SPACING['2xl'],
+    flexGrow:       1,
+    justifyContent: 'center',
+    padding:        SPACING.base,
+    gap:            SPACING.xl,
   },
-  logoWrap: { alignItems: 'center', gap: SPACING.sm },
-  logoBox:  {
-    width: 56, height: 56, backgroundColor: COLORS.primary,
-    borderRadius: 16, alignItems: 'center', justifyContent: 'center',
+  logoWrap: {
+    alignItems: 'center',
+    gap:         SPACING.sm,
   },
-  logoText:   { fontSize: 28, fontWeight: FONT_WEIGHT.extrabold, color: COLORS.white },
-  appName:    { fontSize: FONT_SIZE.xl, fontWeight: FONT_WEIGHT.extrabold, color: COLORS.text },
-  card:       {
-    backgroundColor: COLORS.surface, borderRadius: RADIUS.xl,
-    borderWidth: 1, borderColor: COLORS.border, padding: SPACING.xl, gap: SPACING.base,
+  logoBox: {
+    width:           64,
+    height:          64,
+    backgroundColor: COLORS.primary,
+    borderRadius:    18,
+    alignItems:      'center',
+    justifyContent:  'center',
   },
-  heading:    { fontSize: FONT_SIZE.xl, fontWeight: FONT_WEIGHT.bold, color: COLORS.text },
-  subheading: { fontSize: FONT_SIZE.base, color: COLORS.text2, marginBottom: SPACING.sm },
-  fields:     { gap: SPACING.base },
-  submitBtn:  { marginTop: SPACING.sm },
-  footer:     { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
-  footerText: { fontSize: FONT_SIZE.base, color: COLORS.text2 },
-  footerLink: { fontSize: FONT_SIZE.base, color: COLORS.primary, fontWeight: FONT_WEIGHT.semibold },
+  logoText: {
+    fontSize:   32,
+    fontWeight: FONT_WEIGHT.extrabold,
+    color:      COLORS.white,
+  },
+  appName: {
+    fontSize:   FONT_SIZE['2xl'],
+    fontWeight: FONT_WEIGHT.extrabold,
+    color:      COLORS.text,
+    letterSpacing: 0.5,
+  },
+  tagline: {
+    fontSize: FONT_SIZE.base,
+    color:    COLORS.text3,
+  },
+  card: {
+    backgroundColor: COLORS.surface,
+    borderRadius:    RADIUS.xl,
+    borderWidth:     1,
+    borderColor:     COLORS.border,
+    padding:         SPACING.xl,
+    gap:             SPACING.base,
+  },
+  heading: {
+    fontSize:   FONT_SIZE.xl,
+    fontWeight: FONT_WEIGHT.bold,
+    color:      COLORS.text,
+  },
+  subheading: {
+    fontSize:    FONT_SIZE.base,
+    color:       COLORS.text2,
+    marginBottom: SPACING.sm,
+  },
+  fields: {
+    gap: SPACING.base,
+  },
+  submitBtn: {
+    marginTop: SPACING.sm,
+  },
+  footer: {
+    flexDirection:  'row',
+    justifyContent: 'center',
+    alignItems:     'center',
+  },
+  footerText: {
+    fontSize: FONT_SIZE.base,
+    color:    COLORS.text2,
+  },
+  footerLink: {
+    fontSize:   FONT_SIZE.base,
+    color:      COLORS.primary,
+    fontWeight: FONT_WEIGHT.semibold,
+  },
 });
