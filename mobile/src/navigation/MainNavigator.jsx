@@ -38,9 +38,9 @@ function TabIcon({ name, focused }) {
   // Map the capitalized route names to your lowercased icon components
   const iconMap = {
     Dashboard: Icons.dashboard,
+    Expenses:  Icons.expenses, // New
     Groups:    Icons.groups,
     Loans:     Icons.loans,
-    Activity:  Icons.activity,
     More:      Icons.more, 
   };
 
@@ -64,6 +64,15 @@ function DashboardStack() {
       <DashStack.Screen name="DashboardHome" component={DashboardScreen} />
       <DashStack.Screen name="Expenses" component={ExpensesScreen} />
     </DashStack.Navigator>
+  );
+}
+
+const ExpensesTabStack = createNativeStackNavigator();
+function ExpensesStack() {
+  return (
+    <ExpensesTabStack.Navigator screenOptions={{ headerShown: false }}>
+      <ExpensesTabStack.Screen name="ExpensesHome" component={ExpensesScreen} />
+    </ExpensesTabStack.Navigator>
   );
 }
 
@@ -102,7 +111,7 @@ function MoreTabStack() {
   return (
     <MoreStack.Navigator screenOptions={{ headerShown: false }}>
       <MoreStack.Screen name="MoreHome"      component={MoreScreen} />
-      <MoreStack.Screen name="Expenses"      component={ExpensesScreen} />
+      <MoreStack.Screen name="Activity"      component={ActivityScreen} />
       <MoreStack.Screen name="Notifications" component={NotificationsScreen} />
       <MoreStack.Screen name="Settlements"   component={SettlementsScreen} />
       <MoreStack.Screen name="Settings"      component={SettingsScreen} />
@@ -140,9 +149,9 @@ export default function MainNavigator() {
       })}
     >
       <Tab.Screen name="Dashboard" component={DashboardStack}  />
+      <Tab.Screen name="Expenses"  component={ExpensesStack} />
       <Tab.Screen name="Groups"    component={GroupsStack}     />
       <Tab.Screen name="Loans"     component={LoansStack}      />
-      <Tab.Screen name="Activity"  component={ActivityTabStack}/>
       <Tab.Screen name="More"      component={MoreTabStack}    />
     </Tab.Navigator>
   );
