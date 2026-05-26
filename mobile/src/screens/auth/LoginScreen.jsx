@@ -1,213 +1,428 @@
 // SplitEase/mobile/src/screens/auth/LoginScreen.jsx
 
 /**
- * LoginScreen.jsx
+ * LoansScreen.jsx
  *
- * JWT login. On success → stores user in AsyncStorage via AuthContext.login()
- * Navigation to Main happens automatically because RootNavigator
- * watches user state and swaps Auth ↔ Main stacks.
+ * Matches web Loans.jsx exactly:
+ * - Two page tabs: "Money Lent" | "Money Borrowed"
+ * - Summary cards: Total / Outstanding / Recovered
+ * - Filter tabs: All | Active | Settled
+ * - Card grid with progress bar + inline repayment
+ * - Delete
  */
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView,
-  Platform, ScrollView, Alert,
+  View, Text, StyleSheet, FlatList, TouchableOpacity,
+  Alert, RefreshControl, TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import client from '../../api/client';
 import { ENDPOINTS } from '../../constants/api';
-import { useAuth } from '../../context/AuthContext';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS } from '../../constants/theme';
-import Input  from '../../components/common/Input';
-import Button from '../../components/common/Button';
+import { EmptyState, LoadingState } from '../../components/common/ui';
+import ScreenHeader from '../../components/layout/ScreenHeader';
 
-export default function LoginScreen({ navigation }) {
-  const { login }  = useAuth();
-  const [email,    setEmail]    = useState('');
-  const [password, setPassword] = useState('');
-  const [loading,  setLoading]  = useState(false);
-  const [errors,   setErrors]   = useState({});
+function fmt(n) {
+  return Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+}
 
-  function validate() {
-    const e = {};
-    if (!email.trim())    e.email    = 'Email is required';
-    if (!password)        e.password = 'Password is required';
-    if (email && !/\S+@\S+\.\S+/.test(email)) e.email = 'Enter a valid email';
-    setErrors(e);
-    return Object.keys(e).length === 0;
-  }
+// ── Summary card (3 across) ────────────────────────────────────────────────
+function SumCard({ label, value, color, sub }) {
+  return (
+    <View style={styles.sumCard}>
+      <Text style={styles.sumLabel}>{label}</Text>
+      <Text style={[styles.sumVal, { color }]}>₹{fmt(value)}</Text>
+      <Text style={styles.sumSub}>{sub}</Text>
+    </View>
+  );
+}
 
-  async function handleLogin() {
-    if (!validate()) return;
-    setLoading(true);
+// ── Status badge ───────────────────────────────────────────────────────────
+function StatusBadge({ status }) {
+  const isActive = status === 'active';
+  return (
+    <View style={[styles.badge, isActive ? styles.badgeActive : styles.badgeRepaid]}>
+      <View style={[styles.badgeDot, { backgroundColor: isActive ? '#f59e0b' : '#10b981' }]} />
+      <Text style={[styles.badgeText, { color: isActive ? '#f59e0b' : '#10b981' }]}>
+        {isActive ? 'Active' : 'Settled'}
+      </Text>
+    </View>
+  );
+}
+
+// ── Progress bar ───────────────────────────────────────────────────────────
+function ProgressBar({ pct, color }) {
+  return (
+    <View style={styles.progressWrap}>
+      <View style={[styles.progressBar, { width: `${Math.min(pct, 100)}%`, backgroundColor: color }]} />
+    </View>
+  );
+}
+
+// ── Loan card ──────────────────────────────────────────────────────────────
+function LoanCard({ item, isLent, onRefresh, idx }) {
+  const [repayAmt, setRepayAmt] = useState('');
+  const [repayErr, setRepayErr] = useState('');
+  const [saving,   setSaving]   = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const accentColor = isLent ? '#f59e0b' : '#818cf8';
+  const btnColor    = isLent ? COLORS.success : '#6366f1';
+
+  const personLabel = isLent ? item.borrower_name : item.lender_name;
+  const dateField   = isLent ? item.loan_date     : item.borrow_date;
+  const idField     = isLent ? item.loan_id       : item.borrow_id;
+  const repayEndpt  = isLent ? ENDPOINTS.loanRepay(idField)  : ENDPOINTS.borrowRepay(idField);
+  const deleteEndpt = isLent ? ENDPOINTS.delLoan(idField)    : ENDPOINTS.delBorrow(idField);
+  const dirLabel    = isLent ? 'Lent to'    : 'Borrowed from';
+  const dateLbl     = isLent ? 'Lent on'    : 'Borrowed on';
+  const amtLabel    = isLent ? 'Amount Lent' : 'Amount Borrowed';
+
+  const pct = item.amount > 0
+    ? Math.round(((item.amount - item.remaining_amount) / item.amount) * 100)
+    : 100;
+
+  const dateStr = dateField
+    ? new Date(dateField + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+    : '—';
+
+  async function handleRepay() {
+    setRepayErr('');
+    const amt = parseFloat(repayAmt);
+    if (isNaN(amt) || amt <= 0) { setRepayErr('Enter a valid amount'); return; }
+    if (amt > item.remaining_amount) {
+      setRepayErr(`Max ₹${item.remaining_amount.toLocaleString('en-IN')}`);
+      return;
+    }
+    setSaving(true);
     try {
-      const { data } = await client.post(ENDPOINTS.login, {
-        email:    email.trim().toLowerCase(),
-        password,
-      });
-
-      // Backend returns: { access_token, token_type, user_id, name, email, role }
-      await login({
-        access_token: data.access_token,
-        user_id:      data.user_id,
-        name:         data.name,
-        email:        data.email,
-        role:         data.role,
-      });
-      // Navigation happens automatically via RootNavigator
-    } catch (err) {
-      const msg = err.response?.data?.detail || 'Login failed. Please check your credentials.';
-      Alert.alert('Login Failed', msg);
+      await client.post(repayEndpt, { repayment_amount: amt });
+      setRepayAmt('');
+      onRefresh();
+    } catch (ex) {
+      setRepayErr(ex?.response?.data?.detail || 'Failed');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   }
 
+  async function handleDelete() {
+    Alert.alert('Delete record?', 'This cannot be undone.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete', style: 'destructive',
+        onPress: async () => {
+          setDeleting(true);
+          try { await client.delete(deleteEndpt); onRefresh(); }
+          catch { setDeleting(false); }
+        },
+      },
+    ]);
+  }
+
   return (
-    <SafeAreaView style={styles.safe}>
-      <KeyboardAvoidingView
-        style={styles.kav}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scroll}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Logo */}
-          <View style={styles.logoWrap}>
-            <View style={styles.logoBox}>
-              <Text style={styles.logoText}>S</Text>
-            </View>
-            <Text style={styles.appName}>SplitEase</Text>
-            <Text style={styles.tagline}>Split expenses, not friendships.</Text>
+    <View style={[styles.card, { animationDelay: `${idx * 0.04}s` }]}>
+      {/* Header */}
+      <View style={styles.cardHead}>
+        <View>
+          <Text style={styles.cardDir}>{dirLabel}</Text>
+          <Text style={styles.cardPerson}>{personLabel}</Text>
+          <View style={{ marginTop: 6 }}>
+            <StatusBadge status={item.status} />
           </View>
+        </View>
+        <View style={{ alignItems: 'flex-end' }}>
+          <Text style={styles.cardAmtLabel}>{amtLabel}</Text>
+          <Text style={[styles.cardAmt, { color: accentColor }]}>₹{fmt(item.amount)}</Text>
+        </View>
+      </View>
 
-          {/* Form card */}
-          <View style={styles.card}>
-            <Text style={styles.heading}>Welcome back</Text>
-            <Text style={styles.subheading}>Sign in to your account</Text>
+      {item.note && <Text style={styles.cardNote}>{item.note}</Text>}
 
-            <View style={styles.fields}>
-              <Input
-                label="Email"
-                value={email}
-                onChangeText={v => { setEmail(v); setErrors(e => ({ ...e, email: null })); }}
-                placeholder="you@example.com"
-                keyboardType="email-address"
-                error={errors.email}
-                autoCapitalize="none"
-              />
-              <Input
-                label="Password"
-                value={password}
-                onChangeText={v => { setPassword(v); setErrors(e => ({ ...e, password: null })); }}
-                placeholder="Your password"
-                secureTextEntry
-                error={errors.password}
-              />
-            </View>
+      {/* Progress */}
+      <View>
+        <View style={styles.progressHead}>
+          <Text style={styles.progressLabel}>
+            {item.status === 'repaid' ? 'Fully settled' : `${pct}% recovered`}
+          </Text>
+          <Text style={[styles.progressRight, { color: item.status === 'repaid' ? COLORS.success : accentColor }]}>
+            {item.status === 'repaid' ? 'Done' : `₹${item.remaining_amount.toLocaleString('en-IN')} left`}
+          </Text>
+        </View>
+        <ProgressBar pct={pct} color={item.status === 'repaid' ? COLORS.success : accentColor} />
+      </View>
 
-            <Button
-              title={loading ? 'Signing in…' : 'Sign In'}
-              onPress={handleLogin}
-              loading={loading}
-              fullWidth
-              size="lg"
-              style={styles.submitBtn}
+      <Text style={styles.cardDate}>{dateLbl} {dateStr}</Text>
+
+      {/* Repay input */}
+      {item.status === 'active' && (
+        <View style={styles.repaySection}>
+          <View style={styles.repayRow}>
+            <TextInput
+              style={styles.repayInput}
+              value={repayAmt}
+              onChangeText={v => { setRepayAmt(v); setRepayErr(''); }}
+              placeholder={`Max ₹${item.remaining_amount.toLocaleString('en-IN')}`}
+              placeholderTextColor={COLORS.text3}
+              keyboardType="decimal-pad"
             />
-          </View>
-
-          {/* Footer */}
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>Don't have an account? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
-              <Text style={styles.footerLink}>Sign up</Text>
+            <TouchableOpacity
+              style={[styles.repayBtn, { backgroundColor: btnColor, opacity: (saving || !repayAmt) ? 0.5 : 1 }]}
+              onPress={handleRepay}
+              disabled={saving || !repayAmt}
+            >
+              <Text style={styles.repayBtnText}>{saving ? '…' : isLent ? 'Record' : 'Repay'}</Text>
             </TouchableOpacity>
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+          {repayErr ? <Text style={styles.repayErr}>{repayErr}</Text> : null}
+        </View>
+      )}
+
+      {/* Delete */}
+      <View style={{ alignItems: 'flex-end' }}>
+        <TouchableOpacity style={styles.delBtn} onPress={handleDelete} disabled={deleting}>
+          <Text style={styles.delText}>{deleting ? 'Deleting…' : 'Delete'}</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+// ── Main screen ────────────────────────────────────────────────────────────
+export default function LoansScreen() {
+  const [loans,     setLoans]     = useState([]);
+  const [borrows,   setBorrows]   = useState([]);
+  const [loading,   setLoading]   = useState(true);
+  const [refreshing,setRefreshing]= useState(false);
+  const [pageTab,   setPageTab]   = useState('lent');   // lent | borrowed
+  const [filterTab, setFilterTab] = useState('all');    // all | active | repaid
+
+  const load = useCallback(async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    else           setLoading(true);
+    try {
+      const [lR, bR] = await Promise.all([
+        client.get(ENDPOINTS.loans),
+        client.get(ENDPOINTS.borrows),
+      ]);
+      setLoans(lR.data   || []);
+      setBorrows(bR.data || []);
+    } catch {
+      setLoans([]); setBorrows([]);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  const items   = pageTab === 'lent' ? loans : borrows;
+  const isLent  = pageTab === 'lent';
+
+  const visible = items.filter(i =>
+    filterTab === 'all'    ? true
+    : filterTab === 'active' ? i.status === 'active'
+    : i.status === 'repaid'
+  );
+
+  // Summary numbers — matches web
+  const totalLent        = loans.reduce((s, l) => s + l.amount, 0);
+  const outstandingLent  = loans.filter(l => l.status === 'active').reduce((s, l) => s + l.remaining_amount, 0);
+  const recoveredLent    = totalLent - loans.reduce((s, l) => s + l.remaining_amount, 0);
+
+  const totalBorrow      = borrows.reduce((s, b) => s + b.amount, 0);
+  const outstandingBorrow= borrows.filter(b => b.status === 'active').reduce((s, b) => s + b.remaining_amount, 0);
+  const repaidBorrow     = totalBorrow - borrows.reduce((s, b) => s + b.remaining_amount, 0);
+
+  const sumCards = isLent
+    ? [
+        { label: 'TOTAL LENT',   value: totalLent,       color: '#f59e0b', sub: `${loans.length} loan${loans.length !== 1 ? 's' : ''}` },
+        { label: 'OUTSTANDING',  value: outstandingLent, color: COLORS.danger, sub: `${loans.filter(l => l.status === 'active').length} active` },
+        { label: 'RECOVERED',    value: recoveredLent,   color: COLORS.success, sub: `${loans.filter(l => l.status === 'repaid').length} fully repaid` },
+      ]
+    : [
+        { label: 'TOTAL BORROWED', value: totalBorrow,       color: '#818cf8', sub: `${borrows.length} borrow${borrows.length !== 1 ? 's' : ''}` },
+        { label: 'STILL TO REPAY', value: outstandingBorrow, color: COLORS.danger, sub: `${borrows.filter(b => b.status === 'active').length} active` },
+        { label: 'ALREADY REPAID', value: repaidBorrow,      color: COLORS.success, sub: `${borrows.filter(b => b.status === 'repaid').length} fully repaid` },
+      ];
+
+  const filterCounts = {
+    all:    items.length,
+    active: items.filter(i => i.status === 'active').length,
+    repaid: items.filter(i => i.status === 'repaid').length,
+  };
+
+  return (
+    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+      <ScreenHeader title="Loans" />
+
+      {/* Page tabs: Lent | Borrowed */}
+      <View style={styles.pageTabs}>
+        {[
+          { id: 'lent',     label: '↑ Money Lent' },
+          { id: 'borrowed', label: '↓ Money Borrowed' },
+        ].map(t => (
+          <TouchableOpacity
+            key={t.id}
+            style={[styles.pageTab, pageTab === t.id && styles.pageTabActive]}
+            onPress={() => { setPageTab(t.id); setFilterTab('all'); }}
+          >
+            <Text style={[styles.pageTabText, pageTab === t.id && styles.pageTabTextActive]}>
+              {t.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      <FlatList
+        data={loading ? [] : visible}
+        keyExtractor={item => String(isLent ? item.loan_id : item.borrow_id)}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => load(true)}
+            tintColor={COLORS.primary}
+            colors={[COLORS.primary]}
+          />
+        }
+        ListHeaderComponent={() => (
+          <View style={styles.listHeader}>
+            {/* Summary cards */}
+            <View style={styles.sumRow}>
+              {sumCards.map(c => (
+                <SumCard key={c.label} {...c} />
+              ))}
+            </View>
+
+            {/* Filter tabs */}
+            <View style={styles.filterTabs}>
+              {[
+                { id: 'all',    label: `All (${filterCounts.all})` },
+                { id: 'active', label: `Active (${filterCounts.active})` },
+                { id: 'repaid', label: `Settled (${filterCounts.repaid})` },
+              ].map(t => (
+                <TouchableOpacity
+                  key={t.id}
+                  style={[styles.filterTab, filterTab === t.id && styles.filterTabActive]}
+                  onPress={() => setFilterTab(t.id)}
+                >
+                  <Text style={[styles.filterTabText, filterTab === t.id && styles.filterTabTextActive]}>
+                    {t.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
+        ListEmptyComponent={() =>
+          loading ? <LoadingState label={`Loading ${isLent ? 'loans' : 'borrows'}…`} /> : (
+            <EmptyState
+              icon={isLent ? '🤝' : '🏦'}
+              title={filterTab === 'all' ? `No ${isLent ? 'loans' : 'borrows'} yet` : `No ${filterTab} entries`}
+              subtitle={filterTab === 'all' ? `Use the web app's "+ Add Entry" to record one.` : ''}
+            />
+          )
+        }
+        renderItem={({ item, index }) => (
+          <LoanCard
+            item={item}
+            isLent={isLent}
+            onRefresh={load}
+            idx={index}
+          />
+        )}
+        contentContainerStyle={styles.list}
+      />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: {
-    flex:            1,
-    backgroundColor: COLORS.bg,
+  safe: { flex: 1, backgroundColor: COLORS.bg },
+  list: { padding: SPACING.base, gap: SPACING.md, paddingBottom: SPACING['2xl'] },
+
+  pageTabs: {
+    flexDirection: 'row',
+    borderBottomWidth: 2,
+    borderBottomColor: COLORS.border,
   },
-  kav: {
-    flex: 1,
+  pageTab: {
+    flex: 1, paddingVertical: SPACING.md,
+    alignItems: 'center', borderBottomWidth: 2,
+    borderBottomColor: COLORS.transparent, marginBottom: -2,
   },
-  scroll: {
-    flexGrow:       1,
-    justifyContent: 'center',
-    padding:        SPACING.base,
-    gap:            SPACING.xl,
+  pageTabActive:     { borderBottomColor: COLORS.primary },
+  pageTabText:       { fontSize: FONT_SIZE.base, color: COLORS.text2, fontWeight: FONT_WEIGHT.medium },
+  pageTabTextActive: { color: COLORS.text, fontWeight: FONT_WEIGHT.semibold },
+
+  listHeader: { gap: SPACING.base },
+
+  sumRow: { flexDirection: 'row', gap: SPACING.sm },
+  sumCard: {
+    flex: 1, backgroundColor: COLORS.surface, borderRadius: RADIUS.lg,
+    borderWidth: 1, borderColor: COLORS.border, padding: SPACING.md, gap: 4,
   },
-  logoWrap: {
-    alignItems: 'center',
-    gap:         SPACING.sm,
+  sumLabel: { fontSize: 9, fontWeight: FONT_WEIGHT.bold, color: COLORS.text3, letterSpacing: 0.9, textTransform: 'uppercase' },
+  sumVal:   { fontSize: FONT_SIZE.xl, fontWeight: FONT_WEIGHT.extrabold },
+  sumSub:   { fontSize: FONT_SIZE.xs, color: COLORS.text3 },
+
+  filterTabs: {
+    flexDirection: 'row', gap: 4,
+    backgroundColor: COLORS.surface2, padding: 4,
+    borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border,
+    alignSelf: 'flex-start',
   },
-  logoBox: {
-    width:           64,
-    height:          64,
-    backgroundColor: COLORS.primary,
-    borderRadius:    18,
-    alignItems:      'center',
-    justifyContent:  'center',
-  },
-  logoText: {
-    fontSize:   32,
-    fontWeight: FONT_WEIGHT.extrabold,
-    color:      COLORS.white,
-  },
-  appName: {
-    fontSize:   FONT_SIZE['2xl'],
-    fontWeight: FONT_WEIGHT.extrabold,
-    color:      COLORS.text,
-    letterSpacing: 0.5,
-  },
-  tagline: {
-    fontSize: FONT_SIZE.base,
-    color:    COLORS.text3,
-  },
+  filterTab:         { paddingVertical: 5, paddingHorizontal: 14, borderRadius: RADIUS.sm },
+  filterTabActive:   { backgroundColor: COLORS.surface },
+  filterTabText:     { fontSize: FONT_SIZE.sm, color: COLORS.text2, fontWeight: FONT_WEIGHT.semibold },
+  filterTabTextActive:{ color: COLORS.text },
+
   card: {
-    backgroundColor: COLORS.surface,
-    borderRadius:    RADIUS.xl,
-    borderWidth:     1,
-    borderColor:     COLORS.border,
-    padding:         SPACING.xl,
-    gap:             SPACING.base,
+    backgroundColor: COLORS.surface, borderRadius: RADIUS.xl,
+    borderWidth: 1, borderColor: COLORS.border, padding: SPACING.base, gap: SPACING.md,
   },
-  heading: {
-    fontSize:   FONT_SIZE.xl,
-    fontWeight: FONT_WEIGHT.bold,
-    color:      COLORS.text,
+  cardHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  cardDir:  { fontSize: FONT_SIZE.xs, color: COLORS.text3, marginBottom: 3 },
+  cardPerson: { fontSize: FONT_SIZE.lg, fontWeight: FONT_WEIGHT.bold, color: COLORS.text },
+  cardAmtLabel: { fontSize: 10, color: COLORS.text3, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 3 },
+  cardAmt:      { fontSize: FONT_SIZE.lg, fontWeight: FONT_WEIGHT.extrabold },
+  cardNote:     { fontSize: FONT_SIZE.sm, color: COLORS.text3 },
+  cardDate:     { fontSize: FONT_SIZE.sm, color: COLORS.text3 },
+
+  badge: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 8, paddingVertical: 3, borderRadius: RADIUS.full, alignSelf: 'flex-start',
   },
-  subheading: {
-    fontSize:    FONT_SIZE.base,
-    color:       COLORS.text2,
-    marginBottom: SPACING.sm,
+  badgeActive: { backgroundColor: 'rgba(245,158,11,0.12)' },
+  badgeRepaid: { backgroundColor: 'rgba(16,185,129,0.10)' },
+  badgeDot:    { width: 6, height: 6, borderRadius: 3 },
+  badgeText:   { fontSize: 10, fontWeight: FONT_WEIGHT.bold, letterSpacing: 0.8, textTransform: 'uppercase' },
+
+  progressHead:  { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
+  progressLabel: { fontSize: FONT_SIZE.xs, color: COLORS.text3, fontWeight: FONT_WEIGHT.semibold },
+  progressRight: { fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.bold },
+  progressWrap:  { height: 5, borderRadius: 3, backgroundColor: COLORS.surface3, overflow: 'hidden' },
+  progressBar:   { height: '100%', borderRadius: 3 },
+
+  repaySection: { gap: 5 },
+  repayRow:     { flexDirection: 'row', gap: SPACING.sm, alignItems: 'center' },
+  repayInput: {
+    flex: 1, paddingVertical: 7, paddingHorizontal: 10,
+    borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border,
+    backgroundColor: COLORS.surface2, color: COLORS.text,
+    fontSize: FONT_SIZE.sm, fontFamily: undefined,
   },
-  fields: {
-    gap: SPACING.base,
+  repayBtn:     { paddingVertical: 7, paddingHorizontal: 14, borderRadius: RADIUS.md },
+  repayBtnText: { color: COLORS.white, fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.bold },
+  repayErr:     { fontSize: FONT_SIZE.xs, color: COLORS.danger },
+
+  delBtn: {
+    paddingVertical: 5, paddingHorizontal: 10,
+    borderRadius: RADIUS.sm, borderWidth: 1, borderColor: COLORS.border,
   },
-  submitBtn: {
-    marginTop: SPACING.sm,
-  },
-  footer: {
-    flexDirection:  'row',
-    justifyContent: 'center',
-    alignItems:     'center',
-  },
-  footerText: {
-    fontSize: FONT_SIZE.base,
-    color:    COLORS.text2,
-  },
-  footerLink: {
-    fontSize:   FONT_SIZE.base,
-    color:      COLORS.primary,
-    fontWeight: FONT_WEIGHT.semibold,
-  },
+  delText: { fontSize: FONT_SIZE.xs, color: COLORS.text3 },
 });

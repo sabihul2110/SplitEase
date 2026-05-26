@@ -2,14 +2,19 @@
 
 /**
  * SettingsScreen.jsx
- * Profile info, notifications shortcut, data reset, logout.
- * Admin sees additional admin-only options.
+ *
+ * Matches web Settings.jsx:
+ * - Profile summary card with "View Profile" link
+ * - Appearance section (dark only on mobile — no CSS vars to toggle)
+ * - Account: Edit Profile, Change Password → navigate to ProfileScreen
+ * - Session: Sign Out with confirm
+ * - Danger Zone: Reset My Data with backend flow
+ * - About section
  */
 
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Alert, Switch,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -17,201 +22,281 @@ import client from '../../api/client';
 import { ENDPOINTS } from '../../constants/api';
 import { useAuth } from '../../context/AuthContext';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS } from '../../constants/theme';
-import { Avatar, Card, Divider } from '../../components/common/ui';
 import ScreenHeader from '../../components/layout/ScreenHeader';
 
+// ── Section header ────────────────────────────────────────────────────────
+function SectionHeader({ title }) {
+  return (
+    <Text style={styles.sectionTitle}>{title}</Text>
+  );
+}
+
 // ── Setting row ────────────────────────────────────────────────────────────
-function SettingRow({ icon, label, sublabel, onPress, color, rightElement, showChevron = true }) {
-  const textColor = color || COLORS.text;
-  const Wrapper   = onPress ? TouchableOpacity : View;
+function SettingRow({ icon, label, sub, onPress, danger, last, rightElement }) {
+  const Wrapper = onPress ? TouchableOpacity : View;
   return (
     <Wrapper
-      style={styles.row}
+      style={[styles.row, last && styles.rowLast]}
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <View style={[styles.rowIcon, { backgroundColor: (color || COLORS.primary) + '22' }]}>
-        <Text style={{ fontSize: 18 }}>{icon}</Text>
+      <View style={[styles.rowIcon, danger && styles.rowIconDanger]}>
+        <Text style={{ fontSize: 16 }}>{icon}</Text>
       </View>
       <View style={styles.rowContent}>
-        <Text style={[styles.rowLabel, { color: textColor }]}>{label}</Text>
-        {sublabel && <Text style={styles.rowSub}>{sublabel}</Text>}
+        <Text style={[styles.rowLabel, danger && { color: COLORS.danger }]}>{label}</Text>
+        {sub && <Text style={styles.rowSub}>{sub}</Text>}
       </View>
-      {rightElement || (showChevron && onPress && (
+      {rightElement || (onPress && !rightElement && (
         <Text style={styles.chevron}>›</Text>
       ))}
     </Wrapper>
   );
 }
 
-// ── Section wrapper ────────────────────────────────────────────────────────
-function Section({ title, children }) {
-  return (
-    <View style={styles.section}>
-      {title && <Text style={styles.sectionTitle}>{title}</Text>}
-      <View style={styles.sectionCard}>
-        {React.Children.map(children, (child, i) => (
-          <>
-            {child}
-            {i < React.Children.count(children) - 1 && (
-              <View style={styles.rowDivider} />
-            )}
-          </>
-        ))}
+// ── Danger zone with reset flow (matches web DangerZone component) ─────────
+function DangerZone() {
+  const { logout } = useAuth();
+  const navigation = useNavigation();
+  const [step,    setStep]    = useState('idle'); // idle | confirm | pending | force_confirm | done
+  const [pending, setPending] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  async function handleReset() {
+    setLoading(true);
+    try {
+      const r = await client.post(ENDPOINTS.resetData);
+      if (r.data.status === 'pending_settlements') {
+        setPending(r.data.pending || []);
+        setStep('pending');
+      } else {
+        setStep('done');
+      }
+    } catch (e) {
+      Alert.alert('Error', e.response?.data?.detail || 'Something went wrong.');
+      setStep('idle');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleForceReset() {
+    setLoading(true);
+    try {
+      await client.post(ENDPOINTS.resetData + '/force');
+      setStep('done');
+    } catch (e) {
+      Alert.alert('Error', e.response?.data?.detail || 'Something went wrong.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (step === 'done') return (
+    <View style={[styles.card, { borderColor: COLORS.success + '50' }]}>
+      <Text style={[styles.rowLabel, { color: COLORS.success }]}>✓ Data reset complete</Text>
+      <Text style={[styles.rowSub, { marginTop: 4 }]}>Your financial data has been cleared.</Text>
+      <TouchableOpacity
+        style={[styles.textBtn, { marginTop: SPACING.md }]}
+        onPress={() => { logout(); }}
+      >
+        <Text style={{ color: COLORS.primary, fontWeight: FONT_WEIGHT.semibold }}>Sign out now</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  if (step === 'pending') return (
+    <View style={[styles.card, { borderColor: COLORS.warning + '50' }]}>
+      <Text style={[styles.rowLabel, { color: COLORS.warning }]}>⚠ Unsettled balances</Text>
+      <Text style={[styles.rowSub, { marginTop: 4, marginBottom: SPACING.sm }]}>
+        Resetting will remove your data from these groups:
+      </Text>
+      {pending.map(g => (
+        <View key={g.group_id} style={styles.pendingRow}>
+          <Text style={styles.rowSub}>{g.group_name}</Text>
+          <Text style={{ color: g.net_balance > 0 ? COLORS.success : COLORS.danger, fontWeight: FONT_WEIGHT.bold }}>
+            {g.net_balance > 0 ? '+' : ''}₹{Math.abs(g.net_balance).toFixed(2)}
+          </Text>
+        </View>
+      ))}
+      <View style={styles.dangerActions}>
+        <TouchableOpacity style={styles.ghostBtn} onPress={() => setStep('idle')}>
+          <Text style={styles.ghostBtnText}>Cancel</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.dangerBtn}
+          onPress={() => setStep('force_confirm')}
+        >
+          <Text style={styles.dangerBtnText}>Reset anyway</Text>
+        </TouchableOpacity>
       </View>
+    </View>
+  );
+
+  if (step === 'force_confirm') return (
+    <View style={[styles.card, { borderColor: COLORS.danger + '50' }]}>
+      <Text style={[styles.rowLabel, { color: COLORS.danger }]}>This cannot be undone. Are you sure?</Text>
+      <View style={[styles.dangerActions, { marginTop: SPACING.md }]}>
+        <TouchableOpacity style={styles.ghostBtn} onPress={() => setStep('idle')}>
+          <Text style={styles.ghostBtnText}>Cancel</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.dangerBtn} onPress={handleForceReset} disabled={loading}>
+          <Text style={styles.dangerBtnText}>{loading ? 'Resetting…' : 'Yes, wipe my data'}</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  if (step === 'confirm') return (
+    <View style={[styles.card, { borderColor: COLORS.danger + '50' }]}>
+      <Text style={[styles.rowLabel, { color: COLORS.danger }]}>Reset all your data?</Text>
+      <Text style={[styles.rowSub, { marginTop: 4, marginBottom: SPACING.md }]}>
+        This permanently deletes all your expenses, income, loans, and borrows. Your account stays active.
+      </Text>
+      <View style={styles.dangerActions}>
+        <TouchableOpacity style={styles.ghostBtn} onPress={() => setStep('idle')}>
+          <Text style={styles.ghostBtnText}>Cancel</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.dangerBtn} onPress={handleReset} disabled={loading}>
+          <Text style={styles.dangerBtnText}>{loading ? 'Checking…' : '🗑️ Reset my data'}</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  return (
+    <View style={[styles.card, { borderColor: COLORS.danger + '22' }]}>
+      <SettingRow
+        icon="🗑️"
+        label="Reset My Data"
+        sub="Delete all your expenses, income, loans and group data"
+        onPress={() => setStep('confirm')}
+        danger
+        last
+      />
     </View>
   );
 }
 
+// ── Main screen ────────────────────────────────────────────────────────────
 export default function SettingsScreen() {
   const { user, logout } = useAuth();
   const navigation       = useNavigation();
-  const [resetting,      setResetting] = useState(false);
-  const [wiping,         setWiping]    = useState(false);
-  const isAdmin          = user?.role === 'admin';
+  const [logoutConfirm, setLogoutConfirm] = useState(false);
 
-  async function handleLogout() {
-    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Sign Out',
-        style: 'destructive',
-        onPress: async () => { await logout(); },
-      },
-    ]);
-  }
+  const initials = (user?.name || '?')
+    .split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
 
-  async function handleResetData() {
-    Alert.alert(
-      'Reset My Data',
-      'This will delete all your expenses and payment history. Groups you created will remain. This cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Reset',
-          style: 'destructive',
-          onPress: async () => {
-            setResetting(true);
-            try {
-              await client.post(ENDPOINTS.resetData);
-              Alert.alert('Done', 'Your data has been reset.');
-            } catch (err) {
-              Alert.alert('Error', err.response?.data?.detail || 'Failed to reset data');
-            } finally {
-              setResetting(false);
-            }
-          },
-        },
-      ]
-    );
-  }
-
-  async function handleAdminWipe() {
-    Alert.alert(
-      '⚠️ Admin Wipe',
-      'This will delete ALL data across ALL users. This is irreversible.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Wipe Everything',
-          style: 'destructive',
-          onPress: async () => {
-            setWiping(true);
-            try {
-              await client.post(ENDPOINTS.adminWipe);
-              Alert.alert('Done', 'All data has been wiped.');
-            } catch (err) {
-              Alert.alert('Error', err.response?.data?.detail || 'Failed to wipe data');
-            } finally {
-              setWiping(false);
-            }
-          },
-        },
-      ]
-    );
+  function handleLogout() {
+    logout();
   }
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       <ScreenHeader title="Settings" />
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scroll}
-      >
-        {/* Profile card */}
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+
+        {/* Profile summary — matches web Settings profile card */}
         <View style={styles.profileCard}>
-          <Avatar name={user?.name} size={60} />
+          <View style={styles.profileAvatar}>
+            <Text style={styles.profileAvatarText}>{initials}</Text>
+          </View>
           <View style={styles.profileInfo}>
             <Text style={styles.profileName}>{user?.name}</Text>
             <Text style={styles.profileEmail}>{user?.email}</Text>
-            {user?.upi_id && (
-              <Text style={styles.profileUpi}>{user.upi_id}</Text>
-            )}
-            {isAdmin && (
-              <View style={styles.adminBadge}>
-                <Text style={styles.adminBadgeText}>Admin</Text>
-              </View>
-            )}
+          </View>
+          <TouchableOpacity
+            style={styles.viewProfileBtn}
+            onPress={() => navigation.navigate('Profile')}
+          >
+            <Text style={styles.viewProfileText}>👤 View Profile</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Appearance */}
+        <SectionHeader title="APPEARANCE" />
+        <View style={styles.card}>
+          <View style={styles.row}>
+            <View style={styles.rowIcon}><Text style={{ fontSize: 16 }}>🌙</Text></View>
+            <View style={styles.rowContent}>
+              <Text style={styles.rowLabel}>Theme</Text>
+              <Text style={styles.rowSub}>Dark mode (mobile always uses dark)</Text>
+            </View>
+            <View style={[styles.themeBadge]}>
+              <Text style={styles.themeBadgeText}>Dark</Text>
+            </View>
           </View>
         </View>
 
-        {/* Notifications */}
-        <Section title="NOTIFICATIONS">
-          <SettingRow
-            icon="🔔"
-            label="Notifications"
-            sublabel="View all your alerts"
-            onPress={() => navigation.navigate('Notifications')}
-            color={COLORS.primary}
-          />
-        </Section>
-
         {/* Account */}
-        <Section title="ACCOUNT">
+        <SectionHeader title="ACCOUNT" />
+        <View style={styles.card}>
           <SettingRow
-            icon="ℹ️"
-            label="App Version"
-            sublabel="1.0.0"
-            showChevron={false}
-            color={COLORS.text3}
+            icon="👤" label="Edit Profile"     sub="Update name, email, UPI ID"
+            onPress={() => navigation.navigate('Profile')}
           />
           <SettingRow
-            icon="🌐"
-            label="Backend"
-            sublabel="splitease-kfda.onrender.com"
-            showChevron={false}
-            color={COLORS.text3}
+            icon="🔒" label="Change Password"  sub="Update your login credentials"
+            onPress={() => navigation.navigate('Profile')}
+            last
           />
-        </Section>
+        </View>
+
+        {/* Notifications shortcut */}
+        <SectionHeader title="NOTIFICATIONS" />
+        <View style={styles.card}>
+          <SettingRow
+            icon="🔔" label="Notifications" sub="View all your alerts"
+            onPress={() => navigation.navigate('Notifications')}
+            last
+          />
+        </View>
+
+        {/* Session */}
+        <SectionHeader title="SESSION" />
+        <View style={styles.card}>
+          {!logoutConfirm ? (
+            <SettingRow
+              icon="🚪" label="Sign Out" sub="Sign out of this device"
+              onPress={() => setLogoutConfirm(true)} danger last
+            />
+          ) : (
+            <View style={[styles.row, styles.rowLast]}>
+              <View style={styles.rowContent}>
+                <Text style={[styles.rowLabel, { color: COLORS.danger }]}>Confirm sign out?</Text>
+                <Text style={styles.rowSub}>You'll need to log in again.</Text>
+                <View style={[styles.dangerActions, { marginTop: SPACING.md }]}>
+                  <TouchableOpacity style={styles.ghostBtn} onPress={() => setLogoutConfirm(false)}>
+                    <Text style={styles.ghostBtnText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.dangerBtn} onPress={handleLogout}>
+                    <Text style={styles.dangerBtnText}>Sign Out</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          )}
+        </View>
 
         {/* Danger zone */}
-        <Section title="DANGER ZONE">
-          <SettingRow
-            icon="🗑️"
-            label={resetting ? 'Resetting…' : 'Reset My Data'}
-            sublabel="Delete your expenses & payment history"
-            onPress={resetting ? null : handleResetData}
-            color={COLORS.warning}
-          />
-          {isAdmin && (
-            <SettingRow
-              icon="☢️"
-              label={wiping ? 'Wiping…' : 'Admin: Wipe All Data'}
-              sublabel="Delete everything for all users"
-              onPress={wiping ? null : handleAdminWipe}
-              color={COLORS.danger}
-            />
-          )}
-        </Section>
+        <SectionHeader title="DANGER ZONE" />
+        <DangerZone />
 
-        {/* Logout */}
-        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.75}>
-          <Text style={styles.logoutText}>Sign Out</Text>
-        </TouchableOpacity>
+        {/* About */}
+        <SectionHeader title="ABOUT" />
+        <View style={styles.card}>
+          {[
+            { label: 'App',     value: 'SplitEase' },
+            { label: 'Version', value: '2.1.0' },
+            { label: 'Stack',   value: 'React Native + Expo' },
+          ].map((row, i, arr) => (
+            <View key={row.label} style={[styles.aboutRow, i < arr.length - 1 && styles.aboutRowBorder]}>
+              <Text style={styles.rowSub}>{row.label}</Text>
+              <Text style={styles.rowLabel}>{row.value}</Text>
+            </View>
+          ))}
+        </View>
 
-        <Text style={styles.footer}>
-          SplitEase · Built with React Native + Expo
-        </Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -219,29 +304,36 @@ export default function SettingsScreen() {
 
 const styles = StyleSheet.create({
   safe:   { flex: 1, backgroundColor: COLORS.bg },
-  scroll: { padding: SPACING.base, gap: SPACING.lg, paddingBottom: SPACING['3xl'] },
+  scroll: { padding: SPACING.base, gap: SPACING.sm, paddingBottom: SPACING['3xl'] },
+
+  sectionTitle: {
+    fontSize: FONT_SIZE.xs, fontWeight: FONT_WEIGHT.bold, letterSpacing: 0.9,
+    textTransform: 'uppercase', color: COLORS.text3,
+    paddingTop: SPACING.base, paddingBottom: SPACING.sm, paddingHorizontal: SPACING.xs,
+  },
 
   profileCard: {
     backgroundColor: COLORS.surface, borderRadius: RADIUS.xl,
     borderWidth: 1, borderColor: COLORS.border,
-    padding: SPACING.xl, flexDirection: 'row', alignItems: 'center', gap: SPACING.base,
+    padding: SPACING.base, flexDirection: 'row',
+    alignItems: 'center', gap: SPACING.md,
   },
-  profileInfo:  { flex: 1, gap: 3 },
-  profileName:  { fontSize: FONT_SIZE.xl, fontWeight: FONT_WEIGHT.bold, color: COLORS.text },
-  profileEmail: { fontSize: FONT_SIZE.sm, color: COLORS.text2 },
-  profileUpi:   { fontSize: FONT_SIZE.xs, color: COLORS.text3 },
-  adminBadge: {
-    backgroundColor: '#1d3a7a', borderRadius: RADIUS.full,
-    paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'flex-start', marginTop: 4,
+  profileAvatar: {
+    width: 52, height: 52, borderRadius: 14, backgroundColor: COLORS.primary,
+    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
-  adminBadgeText: { color: COLORS.primaryH, fontSize: FONT_SIZE.xs, fontWeight: FONT_WEIGHT.bold },
+  profileAvatarText: { fontSize: 18, fontWeight: FONT_WEIGHT.extrabold, color: COLORS.white },
+  profileInfo:       { flex: 1 },
+  profileName:       { fontSize: FONT_SIZE.md, fontWeight: FONT_WEIGHT.bold, color: COLORS.text },
+  profileEmail:      { fontSize: FONT_SIZE.xs, color: COLORS.text3, marginTop: 2 },
+  viewProfileBtn: {
+    paddingHorizontal: SPACING.sm, paddingVertical: 6,
+    borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border,
+    backgroundColor: COLORS.surface2,
+  },
+  viewProfileText: { fontSize: FONT_SIZE.xs, color: COLORS.text2, fontWeight: FONT_WEIGHT.medium },
 
-  section:      { gap: SPACING.sm },
-  sectionTitle: {
-    fontSize: FONT_SIZE.xs, fontWeight: FONT_WEIGHT.semibold,
-    color: COLORS.text3, letterSpacing: 1, paddingHorizontal: SPACING.xs,
-  },
-  sectionCard: {
+  card: {
     backgroundColor: COLORS.surface, borderRadius: RADIUS.xl,
     borderWidth: 1, borderColor: COLORS.border, overflow: 'hidden',
   },
@@ -249,26 +341,43 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row', alignItems: 'center', gap: SPACING.md,
     padding: SPACING.md,
+    borderBottomWidth: 1, borderBottomColor: COLORS.border,
   },
+  rowLast: { borderBottomWidth: 0 },
   rowIcon: {
-    width: 38, height: 38, borderRadius: 10,
+    width: 34, height: 34, borderRadius: 8, flexShrink: 0,
+    backgroundColor: COLORS.surface2, borderWidth: 1, borderColor: COLORS.border,
     alignItems: 'center', justifyContent: 'center',
   },
+  rowIconDanger: { backgroundColor: 'rgba(239,68,68,0.1)', borderColor: 'rgba(239,68,68,0.2)' },
   rowContent: { flex: 1 },
-  rowLabel:   { fontSize: FONT_SIZE.md, fontWeight: FONT_WEIGHT.medium },
+  rowLabel:   { fontSize: FONT_SIZE.md, fontWeight: FONT_WEIGHT.medium, color: COLORS.text },
   rowSub:     { fontSize: FONT_SIZE.xs, color: COLORS.text3, marginTop: 2 },
   chevron:    { color: COLORS.text3, fontSize: FONT_SIZE.lg },
-  rowDivider: { height: 1, backgroundColor: COLORS.border, marginLeft: 58 },
 
-  logoutBtn: {
-    backgroundColor: COLORS.surface, borderRadius: RADIUS.xl,
-    borderWidth: 1, borderColor: COLORS.danger + '60',
-    padding: SPACING.md, alignItems: 'center',
+  themeBadge: {
+    backgroundColor: 'rgba(37,99,235,0.12)', borderRadius: RADIUS.full,
+    paddingHorizontal: 10, paddingVertical: 4,
   },
-  logoutText: { color: COLORS.danger, fontSize: FONT_SIZE.md, fontWeight: FONT_WEIGHT.semibold },
+  themeBadgeText: { color: COLORS.primaryH, fontSize: FONT_SIZE.xs, fontWeight: FONT_WEIGHT.semibold },
 
-  footer: {
-    textAlign: 'center', fontSize: FONT_SIZE.xs, color: COLORS.text3,
-    marginTop: -SPACING.sm,
+  aboutRow: { flexDirection: 'row', justifyContent: 'space-between', padding: SPACING.md },
+  aboutRowBorder: { borderBottomWidth: 1, borderBottomColor: COLORS.border },
+
+  textBtn:  { alignSelf: 'flex-start' },
+  pendingRow: {
+    flexDirection: 'row', justifyContent: 'space-between',
+    paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: COLORS.border,
   },
+  dangerActions: { flexDirection: 'row', gap: SPACING.sm },
+  ghostBtn: {
+    paddingHorizontal: SPACING.md, paddingVertical: 8,
+    borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border,
+  },
+  ghostBtnText: { color: COLORS.text2, fontWeight: FONT_WEIGHT.semibold, fontSize: FONT_SIZE.sm },
+  dangerBtn: {
+    paddingHorizontal: SPACING.md, paddingVertical: 8,
+    borderRadius: RADIUS.md, backgroundColor: COLORS.danger,
+  },
+  dangerBtnText: { color: COLORS.white, fontWeight: FONT_WEIGHT.semibold, fontSize: FONT_SIZE.sm },
 });

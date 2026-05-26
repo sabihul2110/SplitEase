@@ -3,24 +3,18 @@
 /**
  * MainNavigator.jsx
  *
- * Main app navigation after login.
- * Structure:
- *   BottomTabs
- *     ├── Dashboard (stack: DashboardScreen)
- *     ├── Groups    (stack: GroupsScreen → GroupDetailScreen → AddExpenseScreen → AddPaymentScreen)
- *     ├── Settle    (stack: SettlementsScreen)
- *     ├── Activity  (stack: ActivityScreen)
- *     └── More      (stack: NotificationsScreen, SettingsScreen)
+ * 5 tabs matching the web sidebar:
+ *   Dashboard | Groups | Loans | Activity | More (Settlements, Notifications, Settings)
  *
- * Nested stacks live inside tab screens so that tab bar is visible
- * on list screens but hidden on detail/form screens.
+ * Settlements moved into "More" stack — matches web where it's a separate page
+ * but less central than Dashboard/Groups/Loans.
  */
 
 import React from 'react';
 import { View, Text, Platform } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { COLORS, FONT_SIZE, SPACING } from '../constants/theme';
+import { COLORS } from '../constants/theme';
 
 // Screens
 import DashboardScreen     from '../screens/main/DashboardScreen';
@@ -28,35 +22,47 @@ import GroupsScreen        from '../screens/groups/GroupsScreen';
 import GroupDetailScreen   from '../screens/groups/GroupDetailScreen';
 import AddExpenseScreen    from '../screens/expenses/AddExpenseScreen';
 import AddPaymentScreen    from '../screens/expenses/AddPaymentScreen';
-import SettlementsScreen   from '../screens/settlements/SettlementsScreen';
+import LoansScreen         from '../screens/loans/LoansScreen';
 import ActivityScreen      from '../screens/activity/ActivityScreen';
+import SettlementsScreen   from '../screens/settlements/SettlementsScreen';
 import NotificationsScreen from '../screens/notifications/NotificationsScreen';
 import SettingsScreen      from '../screens/settings/SettingsScreen';
+import ProfileScreen       from '../screens/settings/ProfileScreen';
 
-// ── Tab icons (pure RN — no icon library dependency) ──────────────────────
-function TabIcon({ label, focused }) {
-  const icons = {
-    Dashboard: focused ? '⬡' : '⬡',
-    Groups:    '◫',
-    Settle:    '⇄',
-    Activity:  '◎',
-    More:      '···',
-  };
+// ── Tab icon labels → unicode symbols ─────────────────────────────────────
+const TAB_ICONS = {
+  Dashboard: { active: '⬡', inactive: '⬡' },
+  Groups:    { active: '◫', inactive: '◫' },
+  Loans:     { active: '⇄', inactive: '⇄' },
+  Activity:  { active: '◎', inactive: '◎' },
+  More:      { active: '···', inactive: '···' },
+};
+
+function TabIcon({ name, focused }) {
+  const icons = TAB_ICONS[name] || { active: '○', inactive: '○' };
   return (
-    <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-      <Text style={{
-        fontSize: label === 'More' ? 10 : 18,
-        color: focused ? COLORS.primary : COLORS.text3,
-        fontWeight: focused ? '700' : '400',
-        lineHeight: 22,
-      }}>
-        {icons[label] || '○'}
-      </Text>
-    </View>
+    <Text style={{
+      fontSize:   name === 'More' ? 10 : 18,
+      color:      focused ? COLORS.primary : COLORS.text3,
+      fontWeight: focused ? '700' : '400',
+      lineHeight: 22,
+    }}>
+      {focused ? icons.active : icons.inactive}
+    </Text>
   );
 }
 
-// ── Stacks ─────────────────────────────────────────────────────────────────
+// ── Individual stacks ──────────────────────────────────────────────────────
+
+const DashStack = createNativeStackNavigator();
+function DashboardStack() {
+  return (
+    <DashStack.Navigator screenOptions={{ headerShown: false }}>
+      <DashStack.Screen name="DashboardHome" component={DashboardScreen} />
+    </DashStack.Navigator>
+  );
+}
+
 const GroupStack = createNativeStackNavigator();
 function GroupsStack() {
   return (
@@ -69,21 +75,12 @@ function GroupsStack() {
   );
 }
 
-const DashStack = createNativeStackNavigator();
-function DashboardStack() {
+const LoanStack = createNativeStackNavigator();
+function LoansStack() {
   return (
-    <DashStack.Navigator screenOptions={{ headerShown: false }}>
-      <DashStack.Screen name="DashboardHome" component={DashboardScreen} />
-    </DashStack.Navigator>
-  );
-}
-
-const SettleStack = createNativeStackNavigator();
-function SettlementsStack() {
-  return (
-    <SettleStack.Navigator screenOptions={{ headerShown: false }}>
-      <SettleStack.Screen name="SettlementsHome" component={SettlementsScreen} />
-    </SettleStack.Navigator>
+    <LoanStack.Navigator screenOptions={{ headerShown: false }}>
+      <LoanStack.Screen name="LoansHome" component={LoansScreen} />
+    </LoanStack.Navigator>
   );
 }
 
@@ -101,7 +98,9 @@ function MoreTabStack() {
   return (
     <MoreStack.Navigator screenOptions={{ headerShown: false }}>
       <MoreStack.Screen name="Notifications" component={NotificationsScreen} />
+      <MoreStack.Screen name="Settlements"   component={SettlementsScreen} />
       <MoreStack.Screen name="Settings"      component={SettingsScreen} />
+      <MoreStack.Screen name="Profile"       component={ProfileScreen} />
     </MoreStack.Navigator>
   );
 }
@@ -130,15 +129,15 @@ export default function MainNavigator() {
           marginTop:  2,
         },
         tabBarIcon: ({ focused }) => (
-          <TabIcon label={route.name} focused={focused} />
+          <TabIcon name={route.name} focused={focused} />
         ),
       })}
     >
-      <Tab.Screen name="Dashboard" component={DashboardStack}    />
-      <Tab.Screen name="Groups"    component={GroupsStack}       />
-      <Tab.Screen name="Settle"    component={SettlementsStack}   />
-      <Tab.Screen name="Activity"  component={ActivityTabStack}  />
-      <Tab.Screen name="More"      component={MoreTabStack}      />
+      <Tab.Screen name="Dashboard" component={DashboardStack}  />
+      <Tab.Screen name="Groups"    component={GroupsStack}     />
+      <Tab.Screen name="Loans"     component={LoansStack}      />
+      <Tab.Screen name="Activity"  component={ActivityTabStack}/>
+      <Tab.Screen name="More"      component={MoreTabStack}    />
     </Tab.Navigator>
   );
 }
