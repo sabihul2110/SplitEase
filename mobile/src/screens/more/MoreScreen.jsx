@@ -9,7 +9,7 @@ import ScreenHeader from '../../components/layout/ScreenHeader';
 import { Icons } from '../../constants/icons';
 
 const ITEMS = [
-  { icon: Icons.expenses,    label: 'Expenses',      sub: 'View all your transactions',      screen: 'Expenses'      },
+  { icon: Icons.activity,    label: 'Activity',      sub: 'View your complete timeline',      screen: 'Activity'     },
   { icon: Icons.settlements, label: 'Settle Up',     sub: 'View and settle balances',        screen: 'Settlements'   },
   { icon: Icons.bell,        label: 'Notifications', sub: 'Reminders and activity alerts',   screen: 'Notifications' },
   { icon: Icons.settings,    label: 'Settings',      sub: 'Preferences and account options', screen: 'Settings'      },

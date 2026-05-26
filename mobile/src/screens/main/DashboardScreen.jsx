@@ -204,31 +204,42 @@ export default function DashboardScreen() {
                 youOwe={youOwe}
               />
 
-              {/* Right column: mini cards + quick actions */}
-              <MiniCard
-                label="YOU ARE OWED"
-                value={owedToYou}
-                color={COLORS.success}
-                sub={owedToYou > 0 ? 'Pending settlements' : 'All clear'}
-              />
-              <MiniCard
-                label="YOU OWE"
-                value={youOwe}
-                color={youOwe > 0 ? COLORS.danger : COLORS.text2}
-                sub={youOwe > 0 ? 'Pending payments' : 'All clear'}
-              />
+              {/* Side-by-side Mini Cards */}
+              <View style={{ flexDirection: 'row', gap: SPACING.sm }}>
+                <View style={{ flex: 1 }}>
+                  <MiniCard
+                    label="YOU ARE OWED"
+                    value={owedToYou}
+                    color={COLORS.success}
+                    sub={owedToYou > 0 ? 'Pending' : 'All clear'}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <MiniCard
+                    label="YOU OWE"
+                    value={youOwe}
+                    color={youOwe > 0 ? COLORS.danger : COLORS.text2}
+                    sub={youOwe > 0 ? 'Pending' : 'All clear'}
+                  />
+                </View>
+              </View>
 
               {/* Quick actions */}
               <View style={styles.quickCard}>
                 <Text style={styles.miniLabel}>QUICK ACTIONS</Text>
                 <View style={styles.quickList}>
                   <QuickAction
+                    label="Expenses"
+                    color="#10b981"
+                    onPress={() => navigation.navigate('Expenses')}
+                  />
+                  <QuickAction
                     label="View Groups"
                     color="#3b82f6"
                     onPress={() => navigation.navigate('Groups')}
                   />
                   <QuickAction
-                    label="My Loans"
+                    label="Loans"
                     color="#10b981"
                     onPress={() => navigation.navigate('Loans')}
                   />
