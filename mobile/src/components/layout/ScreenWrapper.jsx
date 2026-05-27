@@ -1,14 +1,5 @@
 // SplitEase/mobile/src/components/layout/ScreenWrapper.jsx
 
-/**
- * ScreenWrapper.jsx
- * Wraps every screen with:
- * - SafeAreaView (handles notch/home indicator)
- * - StatusBar config
- * - Optional ScrollView
- * - Consistent background color
- */
-
 import React from 'react';
 import {
   View, ScrollView, StyleSheet, StatusBar, RefreshControl,
@@ -18,8 +9,9 @@ import { COLORS, SPACING } from '../../constants/theme';
 
 export default function ScreenWrapper({
   children,
-  scroll      = true,
-  refreshing  = false,
+  header,
+  scroll        = true,
+  refreshing    = false,
   onRefresh,
   padHorizontal = true,
   padBottom     = true,
@@ -39,11 +31,15 @@ export default function ScreenWrapper({
 
   return (
     <SafeAreaView style={[styles.safe, style]} edges={['left', 'right', 'bottom']}>
+      {/* 🔥 Make status bar translucent to draw behind it seamlessly */}
       <StatusBar
         barStyle="light-content"
-        backgroundColor={COLORS.bg}
-        translucent={false}
+        backgroundColor="transparent"
+        translucent={true}
       />
+      
+      {header && <View style={styles.headerWrapper}>{header}</View>}
+
       {scroll ? (
         <ScrollView
           style={styles.scroll}
@@ -74,8 +70,12 @@ export default function ScreenWrapper({
 
 const styles = StyleSheet.create({
   safe: {
-    flex:            1,
+    flex: 1,
     backgroundColor: COLORS.bg,
+  },
+  headerWrapper: {
+    width: '100%',
+    zIndex: 10,
   },
   flex: {
     flex: 1,

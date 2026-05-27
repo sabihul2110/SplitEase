@@ -11,7 +11,7 @@ import React, {
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   TextInput, Alert, ActivityIndicator, FlatList,
-  Animated, Pressable, Linking,
+  Animated, Pressable, Linking, Modal
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -122,50 +122,131 @@ function SummaryCard({ label, value, color, sub, loading }) {
 }
 
 // ─────────────────────────────────────────────
-//  Month Navigator
+//  Month Navigator (With Picker Modal)
 // ─────────────────────────────────────────────
 function MonthNavigator({ value, onChange, availableMonths }) {
+  const [showPicker, setShowPicker] = useState(false);
+  const [pickerYear, setPickerYear] = useState(() => parseInt(value.split('-')[0], 10));
+
   const cur = currentMonth();
+  const curYear = parseInt(cur.split('-')[0], 10);
   const isCurrentMonth = value === cur;
-  const oldest = availableMonths.length ? availableMonths[0] : value;
-  const canGoBack    = value > oldest;
+  const canGoBack = true; 
   const canGoForward = value < cur || availableMonths.some(m => m > value);
+  
+  // 🔥 Prevent advancing the year past the current calendar year
+  const canGoNextYear = pickerYear < curYear;
+
+  const MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+  function handleSelectMonth(monthIndex) {
+    const paddedMonth = String(monthIndex + 1).padStart(2, '0');
+    onChange(`${pickerYear}-${paddedMonth}`);
+    setShowPicker(false);
+  }
 
   return (
-    <View style={styles.monthNav}>
-      <TouchableOpacity
-        style={[styles.monthNavBtn, !canGoBack && styles.monthNavBtnDisabled]}
-        onPress={() => canGoBack && onChange(shiftMonth(value, -1))}
-        disabled={!canGoBack}
-      >
-        <Icons.chevronLeft size={16} color={canGoBack ? COLORS.text2 : COLORS.border2} />
-      </TouchableOpacity>
-
-      <View style={styles.monthNavLabel}>
-        <Text style={[styles.monthNavLabelText, isCurrentMonth && { color: COLORS.primaryH }]}>
-          {fmtMonthLabel(value)}
-        </Text>
-      </View>
-
-      <TouchableOpacity
-        style={[styles.monthNavBtn, !canGoForward && styles.monthNavBtnDisabled]}
-        onPress={() => canGoForward && onChange(shiftMonth(value, 1))}
-        disabled={!canGoForward}
-      >
-        <Icons.chevronRight size={16} color={canGoForward ? COLORS.text2 : COLORS.border2} />
-      </TouchableOpacity>
-
-      {!isCurrentMonth && (
+    <>
+      <View style={styles.monthNav}>
         <TouchableOpacity
-          style={styles.monthReset}
-          onPress={() => onChange(cur)}
+          style={[styles.monthNavBtn, !canGoBack && styles.monthNavBtnDisabled]}
+          onPress={() => canGoBack && onChange(shiftMonth(value, -1))}
+          disabled={!canGoBack}
         >
-          <Text style={styles.monthResetText}>
-            ← {fmtMonthLabel(cur).split(" ")[0]}
+          <Icons.chevronLeft size={16} color={canGoBack ? COLORS.text2 : COLORS.border2} />
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.monthNavLabel}
+          onPress={() => {
+            setPickerYear(parseInt(value.split('-')[0], 10));
+            setShowPicker(true);
+          }}
+          activeOpacity={0.6}
+        >
+          <Text style={[styles.monthNavLabelText, isCurrentMonth && { color: COLORS.primaryH }]}>
+            {fmtMonthLabel(value)} ▾
           </Text>
         </TouchableOpacity>
-      )}
-    </View>
+
+        <TouchableOpacity
+          style={[styles.monthNavBtn, !canGoForward && styles.monthNavBtnDisabled]}
+          onPress={() => canGoForward && onChange(shiftMonth(value, 1))}
+          disabled={!canGoForward}
+        >
+          <Icons.chevronRight size={16} color={canGoForward ? COLORS.text2 : COLORS.border2} />
+        </TouchableOpacity>
+
+        {!isCurrentMonth && (
+          <TouchableOpacity style={styles.monthReset} onPress={() => onChange(cur)}>
+            <Text style={styles.monthResetText}>
+              ← {fmtMonthLabel(cur).split(" ")[0]}
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      <Modal visible={showPicker} transparent animationType="fade" onRequestClose={() => setShowPicker(false)}>
+        {/* 🔥 Fix 2: Pressable background that closes the modal */}
+        <Pressable style={styles.pickerOverlay} onPress={() => setShowPicker(false)}>
+          
+          {/* 🔥 Stop propagation so tapping inside the box doesn't close it */}
+          <Pressable style={styles.pickerBox} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.pickerYearHeader}>
+              <TouchableOpacity onPress={() => setPickerYear(y => y - 1)} hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
+                <Icons.chevronLeft size={20} color={COLORS.text} />
+              </TouchableOpacity>
+              
+              <Text style={styles.pickerYearText}>{pickerYear}</Text>
+              
+              <TouchableOpacity 
+                onPress={() => canGoNextYear && setPickerYear(y => y + 1)} 
+                hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}
+                disabled={!canGoNextYear}
+                style={!canGoNextYear && { opacity: 0.3 }}
+              >
+                <Icons.chevronRight size={20} color={COLORS.text} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.pickerGrid}>
+              {MONTHS_SHORT.map((m, i) => {
+                const paddedMonth = String(i + 1).padStart(2, '0');
+                const thisMonthStr = `${pickerYear}-${paddedMonth}`;
+                const isSelected = thisMonthStr === value;
+                const hasData = availableMonths.includes(thisMonthStr);
+                
+                // 🔥 Fix 1: Prevent selecting future months
+                const isFuture = thisMonthStr > cur;
+
+                return (
+                  <TouchableOpacity
+                    key={m}
+                    disabled={isFuture}
+                    style={[
+                      styles.pickerMonthBtn,
+                      isSelected && styles.pickerMonthBtnSelected,
+                      !isSelected && hasData && styles.pickerMonthBtnHasData,
+                      isFuture && styles.pickerMonthBtnDisabled
+                    ]}
+                    onPress={() => handleSelectMonth(i)}
+                  >
+                    <Text style={[
+                      styles.pickerMonthText,
+                      isSelected && styles.pickerMonthTextSelected,
+                      !isSelected && hasData && { color: COLORS.primaryH },
+                      isFuture && { color: COLORS.text3 } // Fade out text for future months
+                    ]}>
+                      {m}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </>
   );
 }
 
@@ -995,5 +1076,71 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.sm,
     fontWeight: FONT_WEIGHT.semibold,
     color: "#fff",
+  },
+
+  /* 🔥 Picker Modal Styles */
+  pickerOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.6)', // Integrated bg color directly into overlay
+  },
+  pickerBox: {
+    width: 300, // 🔥 Fix 3: Fixed compact width instead of 100% screen stretch
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.xl,
+    padding: SPACING.base, // Tighter padding
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5, 
+  },
+  pickerYearHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.base, // Tighter margin
+    paddingHorizontal: SPACING.xs,
+  },
+  pickerYearText: {
+    fontSize: 17, // Slightly reduced font
+    fontWeight: FONT_WEIGHT.bold,
+    color: COLORS.text,
+  },
+  pickerGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: SPACING.sm, // Tighter gap between buttons
+  },
+  pickerMonthBtn: {
+    width: '31%', // Ensures tight 3-column fit
+    alignItems: 'center',
+    paddingVertical: 10, // Hardcoded tighter height
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  pickerMonthBtnSelected: {
+    backgroundColor: COLORS.primary,
+  },
+  pickerMonthBtnHasData: {
+    backgroundColor: COLORS.surface2,
+    borderColor: COLORS.border,
+  },
+  pickerMonthBtnDisabled: {
+    opacity: 0.3, // Visually fade out future, un-clickable months
+  },
+  pickerMonthText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: COLORS.text2,
+  },
+  pickerMonthTextSelected: {
+    color: '#fff',
+    fontWeight: '700',
   },
 });

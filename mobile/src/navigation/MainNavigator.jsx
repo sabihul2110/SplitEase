@@ -1,68 +1,53 @@
 // SplitEase/mobile/src/navigation/MainNavigator.jsx
 
-/**
- * MainNavigator.jsx
- *
- * 5 tabs matching the web sidebar:
- *   Dashboard | Groups | Loans | Activity | More (Settlements, Notifications, Settings)
- *
- * Settlements moved into "More" stack — matches web where it's a separate page
- * but less central than Dashboard/Groups/Loans.
- */
-
 import React from 'react';
-import { View, Text, Platform } from 'react-native';
+import { View, Platform } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { COLORS } from '../constants/theme';
+import { Icons } from '../constants/icons';
 
 // Screens
-import { Icons } from '../constants/icons';
 import DashboardScreen     from '../screens/main/DashboardScreen';
 import GroupsScreen        from '../screens/groups/GroupsScreen';
 import GroupDetailScreen   from '../screens/groups/GroupDetailScreen';
-import ExpensesScreen from '../screens/expenses/ExpensesScreen';
+import ExpensesScreen      from '../screens/expenses/ExpensesScreen';
 import AddExpenseScreen    from '../screens/expenses/AddExpenseScreen';
 import AddPaymentScreen    from '../screens/expenses/AddPaymentScreen';
+import AddEntryScreen      from '../screens/expenses/AddEntryScreen';
 import LoansScreen         from '../screens/loans/LoansScreen';
 import ActivityScreen      from '../screens/activity/ActivityScreen';
 import SettlementsScreen   from '../screens/settlements/SettlementsScreen';
 import NotificationsScreen from '../screens/notifications/NotificationsScreen';
 import SettingsScreen      from '../screens/settings/SettingsScreen';
 import ProfileScreen       from '../screens/settings/ProfileScreen';
-import MoreScreen from '../screens/more/MoreScreen';
+import MoreScreen          from '../screens/more/MoreScreen';
 
 // ── Tab Icons ──────────────────────────────────────────────────────────────
 
 function TabIcon({ name, focused }) {
-  // Map the capitalized route names to your lowercased icon components
   const iconMap = {
     Dashboard: Icons.dashboard,
-    Expenses:  Icons.expenses, // New
+    Expenses:  Icons.expenses,
     Groups:    Icons.groups,
     Loans:     Icons.loans,
-    More:      Icons.more, 
+    More:      Icons.more,
   };
-
   const IconComponent = iconMap[name];
   const color = focused ? COLORS.primary : COLORS.text3;
-
-  // Fallback just in case an icon isn't found
   if (!IconComponent) {
     return <View style={{ width: 24, height: 24, backgroundColor: color, borderRadius: 12 }} />;
   }
-
   return <IconComponent size={24} color={color} />;
 }
 
-// ── Individual stacks ──────────────────────────────────────────────────────
+// ── Stacks ─────────────────────────────────────────────────────────────────
 
 const DashStack = createNativeStackNavigator();
 function DashboardStack() {
   return (
     <DashStack.Navigator screenOptions={{ headerShown: false }}>
       <DashStack.Screen name="DashboardHome" component={DashboardScreen} />
-      <DashStack.Screen name="Expenses" component={ExpensesScreen} />
     </DashStack.Navigator>
   );
 }
@@ -72,6 +57,8 @@ function ExpensesStack() {
   return (
     <ExpensesTabStack.Navigator screenOptions={{ headerShown: false }}>
       <ExpensesTabStack.Screen name="ExpensesHome" component={ExpensesScreen} />
+      {/* AddEntry must live here — ExpensesScreen navigates to it */}
+      <ExpensesTabStack.Screen name="AddEntry"     component={AddEntryScreen} />
     </ExpensesTabStack.Navigator>
   );
 }
@@ -80,10 +67,10 @@ const GroupStack = createNativeStackNavigator();
 function GroupsStack() {
   return (
     <GroupStack.Navigator screenOptions={{ headerShown: false }}>
-      <GroupStack.Screen name="GroupsList"   component={GroupsScreen} />
-      <GroupStack.Screen name="GroupDetail"  component={GroupDetailScreen} />
-      <GroupStack.Screen name="AddExpense"   component={AddExpenseScreen} />
-      <GroupStack.Screen name="AddPayment"   component={AddPaymentScreen} />
+      <GroupStack.Screen name="GroupsList"  component={GroupsScreen} />
+      <GroupStack.Screen name="GroupDetail" component={GroupDetailScreen} />
+      <GroupStack.Screen name="AddExpense"  component={AddExpenseScreen} />
+      <GroupStack.Screen name="AddPayment"  component={AddPaymentScreen} />
     </GroupStack.Navigator>
   );
 }
@@ -94,15 +81,6 @@ function LoansStack() {
     <LoanStack.Navigator screenOptions={{ headerShown: false }}>
       <LoanStack.Screen name="LoansHome" component={LoansScreen} />
     </LoanStack.Navigator>
-  );
-}
-
-const ActivityStack = createNativeStackNavigator();
-function ActivityTabStack() {
-  return (
-    <ActivityStack.Navigator screenOptions={{ headerShown: false }}>
-      <ActivityStack.Screen name="ActivityHome" component={ActivityScreen} />
-    </ActivityStack.Navigator>
   );
 }
 
@@ -148,11 +126,11 @@ export default function MainNavigator() {
         ),
       })}
     >
-      <Tab.Screen name="Dashboard" component={DashboardStack}  />
-      <Tab.Screen name="Expenses"  component={ExpensesStack} />
-      <Tab.Screen name="Groups"    component={GroupsStack}     />
-      <Tab.Screen name="Loans"     component={LoansStack}      />
-      <Tab.Screen name="More"      component={MoreTabStack}    />
+      <Tab.Screen name="Dashboard" component={DashboardStack} />
+      <Tab.Screen name="Expenses"  component={ExpensesStack}  />
+      <Tab.Screen name="Groups"    component={GroupsStack}    />
+      <Tab.Screen name="Loans"     component={LoansStack}     />
+      <Tab.Screen name="More"      component={MoreTabStack}   />
     </Tab.Navigator>
   );
 }
