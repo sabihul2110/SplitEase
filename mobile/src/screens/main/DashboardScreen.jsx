@@ -18,17 +18,31 @@ function fmt(n) {
 }
 
 // ── Top bar (Avatar → Account, Bell → Notifications) ───────────────────────
-function TopBar({ initials, onAvatar, onBell }) {
+function TopBar({ initials, unreadCount = 0, onAvatar, onBell }) {
   return (
     <View style={styles.topBar}>
       <Text style={styles.topBarBrand}>SplitEase</Text>
       <View style={styles.topBarRight}>
+        {/* <TouchableOpacity
+          style={styles.topBarIconBtn}
+          onPress={onBell}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Icons.bell size={20} color={COLORS.text2} />
+        </TouchableOpacity> */}
         <TouchableOpacity
           style={styles.topBarIconBtn}
           onPress={onBell}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Icons.bell size={20} color={COLORS.text2} />
+          {unreadCount > 0 && (
+            <View style={styles.bellBadge}>
+              <Text style={styles.bellBadgeText}>
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </Text>
+            </View>
+          )}
         </TouchableOpacity>
         <TouchableOpacity style={styles.topBarAvatar} onPress={onAvatar}>
           <Text style={styles.topBarAvatarText}>{initials}</Text>
@@ -126,6 +140,7 @@ export default function DashboardScreen() {
   const [youOwe,     setYouOwe]     = useState(0);
   const [loading,    setLoading]    = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const initials = (user?.name || '?').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
 
@@ -154,6 +169,12 @@ export default function DashboardScreen() {
         setOwedToYou(0);
         setYouOwe(0);
       }
+
+      try {
+        const { data: nc } = await client.get(ENDPOINTS.notifCount);
+        setUnreadCount(nc?.count || 0);
+      } catch {}
+
     } catch (err) {
       console.error('Dashboard load error:', err);
     } finally {
@@ -195,8 +216,12 @@ export default function DashboardScreen() {
             {/* ── Global header bar ── */}
             <TopBar
               initials={initials}
+              unreadCount={unreadCount}
               onAvatar={() => navigation.navigate('Account')}
-              onBell={()   => navigation.navigate('Notifications')}
+              onBell={() => {
+                setUnreadCount(0);
+                navigation.navigate('Notifications');
+              }}
             />
 
             {/* Status chips */}
@@ -329,6 +354,18 @@ const styles = StyleSheet.create({
     width: 38, height: 38, borderRadius: 10,
     backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center',
   },
+  bellBadge: {
+    position: 'absolute', top: -4, right: -4,
+    minWidth: 16, height: 16, borderRadius: 8,
+    backgroundColor: COLORS.danger,
+    alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: 3,
+    borderWidth: 1.5, borderColor: COLORS.bg,
+  },
+  bellBadgeText: {
+    fontSize: 9, fontWeight: FONT_WEIGHT.bold, color: '#fff',
+  },
+
   topBarAvatarText: {
     fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.extrabold, color: COLORS.white,
   },

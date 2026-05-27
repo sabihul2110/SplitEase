@@ -48,16 +48,17 @@ export default function AddExpenseScreen() {
   const { user }   = useAuth();
   const navigation = useNavigation();
   const route      = useRoute();
-  const { groupId, groupName, members = [] } = route.params;
+  const { groupId, groupName, members = [], editExpense = null } = route.params;
+  const isEdit = !!editExpense;
 
   // Form state
-  const [description,   setDescription]   = useState('');
-  const [amount,        setAmount]        = useState('');
-  const [payerId,       setPayerId]       = useState(user.user_id);
-  const [categoryId,    setCategoryId]    = useState(3);
+  const [description,   setDescription]   = useState(editExpense?.description   || '');
+  const [amount,        setAmount]        = useState(editExpense ? String(editExpense.total_amount) : '');
+  const [payerId,       setPayerId]       = useState(editExpense ? (members.find(m => m.name === editExpense.payer_name)?.user_id ?? user.user_id) : user.user_id);
+  const [categoryId,    setCategoryId]    = useState(3);   // will be refined below
   const [subcategoryId, setSubcategoryId] = useState(null);
-  const [splitType,     setSplitType]     = useState('equal');
-  const [expenseDate,   setExpenseDate]   = useState(todayStr());
+  const [splitType,     setSplitType]     = useState(editExpense?.split_type    || 'equal');
+  const [expenseDate,   setExpenseDate]   = useState(editExpense?.expense_date  || todayStr());
   const [participants,  setParticipants]  = useState(members.map(m => m.user_id));
   const [customAmounts, setCustomAmounts] = useState({});
   const [loading,       setLoading]       = useState(false);
@@ -73,7 +74,24 @@ export default function AddExpenseScreen() {
       setCatsLoading(true);
       try {
         const { data } = await client.get('/groups/categories');
-        if (data?.length) setCategories(data);
+        if (data?.length) {
+          setCategories(data);
+          if (editExpense) {
+            const match = data.find(c => c.category_name === editExpense.category_name);
+            if (match) {
+              setCategoryId(match.category_id);
+              // load subcategories for this category
+              try {
+                const sub = await client.get(`/groups/subcategories/${match.category_id}`);
+                setSubcats(sub.data || []);
+                if (editExpense.subcategory_name) {
+                  const smatch = sub.data?.find(s => s.subcategory_name === editExpense.subcategory_name);
+                  if (smatch) setSubcategoryId(smatch.subcategory_id);
+                }
+              } catch {}
+            }
+          }
+        }
       } catch {
         // keep fallback
       } finally {
@@ -156,7 +174,7 @@ export default function AddExpenseScreen() {
           }));
 
       // Matches web: api.post(`/expenses/${id}`, { payer_id, category_id, subcategory_id, total_amount, description, split_type, expense_date, splits })
-      await client.post(`/expenses/${groupId}`, {
+      const payload = {
         payer_id:       payerId,
         category_id:    categoryId,
         subcategory_id: subcategoryId || null,
@@ -165,9 +183,19 @@ export default function AddExpenseScreen() {
         split_type:     splitType,
         expense_date:   expenseDate,
         splits,
-      });
+      };
+      if (isEdit) {
+        await client.put(`/expenses/${editExpense.expense_id}`, payload);
+      } else {
+        await client.post(`/expenses/${groupId}`, payload);
+      }
 
-      navigation.goBack();
+      // navigation.goBack();
+      navigation.navigate('GroupDetail', { 
+        groupId, 
+        groupName, 
+        refreshStamp: Date.now() 
+      });
     } catch (err) {
       Alert.alert('Error', err?.response?.data?.detail || 'Failed to add expense');
     } finally {
@@ -179,7 +207,7 @@ export default function AddExpenseScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
-      <ScreenHeader title="Add Expense" subtitle={groupName} showBack />
+      <ScreenHeader title={isEdit ? 'Edit Expense' : 'Add Expense'} subtitle={groupName} showBack />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -446,7 +474,7 @@ export default function AddExpenseScreen() {
           )}
 
           <Button
-            title={loading ? 'Recording…' : 'Record Expense →'}
+            title={loading ? (isEdit ? 'Saving…' : 'Recording…') : (isEdit ? 'Save Changes →' : 'Record Expense →')}
             onPress={handleSubmit}
             loading={loading}
             fullWidth

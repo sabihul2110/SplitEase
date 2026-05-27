@@ -150,7 +150,7 @@ function CategoryIcon({ categoryName, size = 40 }) {
 }
 
 // ─── Expense row ──────────────────────────────────────────────────────────────
-function ExpenseRow({ item, currentUserName, onDelete }) {
+function ExpenseRow({ item, currentUserName, onDelete, onEdit }) {
   const isPayer = item.payer_name === currentUserName;
   return (
     <View style={styles.ledgerRow}>
@@ -166,7 +166,7 @@ function ExpenseRow({ item, currentUserName, onDelete }) {
       </View>
       <View style={styles.ledgerRight}>
         <Text style={styles.ledgerAmt}>₹{fmtAmount(item.total_amount)}</Text>
-        {isPayer && (
+        {/* {isPayer && (
           <TouchableOpacity
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             onPress={() => Alert.alert('Delete Expense', 'Remove this expense?', [
@@ -176,6 +176,25 @@ function ExpenseRow({ item, currentUserName, onDelete }) {
           >
             <Icons.trash size={14} color={C.danger} />
           </TouchableOpacity>
+        )} */}
+        {isPayer && (
+          <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+            <TouchableOpacity
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              onPress={() => onEdit(item)}
+            >
+              <Icons.edit size={14} color={C.primary} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              onPress={() => Alert.alert('Delete Expense', 'Remove this expense?', [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Delete', style: 'destructive', onPress: () => onDelete('expense', item.expense_id) },
+              ])}
+            >
+              <Icons.trash size={14} color={C.danger} />
+            </TouchableOpacity>
+          </View>
         )}
       </View>
     </View>
@@ -493,7 +512,34 @@ export default function GroupDetailScreen() {
     }
   }, [groupId]);
 
-  useFocusEffect(useCallback(() => { loadCore(); }, [loadCore]));
+  // 🔥 This runs every single time the screen comes into view (e.g. returning from Add Expense)
+  useFocusEffect(useCallback(() => {
+    loadCore(); // Always refetch the ledger
+
+    if (tab === 'Settlements') {
+      // If we are currently looking at settlements, fetch them immediately!
+      loadSettlements();
+    } else {
+      // Otherwise, just mark it dirty so it fetches next time they click the tab
+      setSettLoaded(false); 
+    }
+  }, [loadCore, loadSettlements, tab])); // ✅ 'tab' is safely in the dependencies now!
+
+  // Listen for the refreshStamp from AddExpenseScreen
+  React.useEffect(() => {
+    if (route.params?.refreshStamp) {
+      loadCore(); // Refetch ledger instantly
+      
+      if (tab === 'Settlements') {
+        loadSettlements(); // Refetch settlements instantly if we are on that tab
+      } else {
+        setSettLoaded(false); // Otherwise, mark it dirty for the next tab click
+      }
+      
+      // Clear the stamp so we don't loop
+      navigation.setParams({ refreshStamp: undefined });
+    }
+  }, [route.params?.refreshStamp]);
 
   function handleTab(t) {
     setTab(t);
@@ -526,6 +572,16 @@ export default function GroupDetailScreen() {
         'Failed to send reminder.'
       );
     } finally { setReminding(''); }
+  }
+
+  async function handleLeaveGroup() {
+    try {
+      await client.delete(`/groups/${groupId}/members/${user.user_id}`);
+      navigation.goBack();
+    } catch (err) {
+      const detail = err?.response?.data?.detail;
+      Alert.alert('Cannot Leave', typeof detail === 'string' ? detail : 'Failed to leave group.');
+    }
   }
 
   async function handleInvite() {
@@ -563,7 +619,7 @@ export default function GroupDetailScreen() {
     );
     return combined.map(item =>
       item._type === 'expense' ? (
-        <ExpenseRow key={`e-${item.expense_id}`} item={item} currentUserName={userName} onDelete={handleDelete} />
+        <ExpenseRow key={`e-${item.expense_id}`} item={item} currentUserName={userName} onDelete={handleDelete} onEdit={(exp) => navigation.navigate('AddExpense', { groupId, groupName, members, editExpense: exp })} />
       ) : (
         <PaymentRow key={`p-${item.payment_id}`} item={item} currentUserName={userName} onDelete={handleDelete} />
       )
@@ -629,9 +685,29 @@ export default function GroupDetailScreen() {
         subtitle="Invite people to join this group."
       />
     );
-    return members.map((m, i) => (
-      <MemberRow key={i} member={m} currentUserName={userName} />
-    ));
+    // return members.map((m, i) => (
+    //   <MemberRow key={i} member={m} currentUserName={userName} />
+    // ));
+
+    return (
+      <>
+        {members.map((m, i) => (
+          <MemberRow key={i} member={m} currentUserName={userName} />
+        ))}
+        <TouchableOpacity
+          style={[styles.leaveBtn]}
+          onPress={() =>
+            Alert.alert('Leave Group', 'Are you sure you want to leave this group? You must have a zero balance.', [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Leave', style: 'destructive', onPress: handleLeaveGroup },
+            ])
+          }
+        >
+          <Icons.trash size={15} color={C.danger} />
+          <Text style={styles.leaveBtnText}>Leave Group</Text>
+        </TouchableOpacity>
+      </>
+    );
   }
 
   const refreshControl = (
@@ -1013,4 +1089,12 @@ const styles = StyleSheet.create({
     fontWeight: W.bold,
     color: C.primary,
   },
+
+  leaveBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    marginTop: SP.lg, borderWidth: 1, borderColor: C.danger + '40',
+    borderRadius: R.xl, paddingVertical: 14,
+    backgroundColor: C.dangerLo,
+  },
+  leaveBtnText: { color: C.danger, fontSize: F.md, fontWeight: W.bold },
 });

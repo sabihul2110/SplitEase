@@ -83,8 +83,17 @@ def update_members(group_id: int, body: UpdateMembersRequest, current_user: dict
     return {"message": "Members updated."}
 
 
+# @router.delete("/{group_id}")
+# def delete_group(group_id: int, current_user: dict = Depends(require_admin)):
+#     db.delete_group(group_id)
+#     return {"message": "Group deleted."}
+
 @router.delete("/{group_id}")
-def delete_group(group_id: int, current_user: dict = Depends(require_admin)):
+def delete_group(group_id: int, current_user: dict = Depends(get_current_user)):
+    is_admin   = current_user.get("role") == "admin"
+    creator_id = db.fetch_group_creator(group_id)
+    if not is_admin and current_user["user_id"] != creator_id:
+        raise HTTPException(status_code=403, detail="Only the group creator can delete this group.")
     db.delete_group(group_id)
     return {"message": "Group deleted."}
 
@@ -157,3 +166,29 @@ def has_expenses_bulk(
         return {}
 
     return db.fetch_groups_has_expenses(allowed_ids)
+
+
+@router.delete("/{group_id}/members/{user_id}")
+def leave_group(group_id: int, user_id: int, current_user: dict = Depends(get_current_user)):
+    """
+    A user can remove themselves (leave). Admins can remove anyone.
+    Blocked if the member has a non-zero net balance in the group.
+    """
+    is_admin = current_user.get("role") == "admin"
+    if not is_admin and current_user["user_id"] != user_id:
+        raise HTTPException(status_code=403, detail="Cannot remove another member.")
+
+    if not db.is_group_member(group_id, user_id):
+        raise HTTPException(status_code=404, detail="Member not found in group.")
+
+    net = db.fetch_member_net_balance(group_id, user_id)
+    if net is None:
+        net = 0.0
+    if abs(net) > 0.01:   # allow tiny float rounding
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot leave: net balance is ₹{net:,.0f}. Settle up first.",
+        )
+
+    db.remove_group_member(group_id, user_id)
+    return {"message": "Left the group."}

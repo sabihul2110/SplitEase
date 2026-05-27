@@ -1716,6 +1716,46 @@ def get_user_pending_settlements(user_id: int) -> list[dict]:
         r["net_balance"] = float(r["net_balance"])
     return rows
 
+def update_expense(
+    expense_id: int,
+    payer_id: int,
+    category_id: int,
+    subcategory_id: int | None,
+    total_amount: float,
+    description: str,
+    split_type: str,
+    expense_date: str,
+    splits: list[dict],
+) -> None:
+    conn = get_connection()
+    cur  = conn.cursor()
+    try:
+        conn.start_transaction()
+        cur.execute(
+            """
+            UPDATE Expenses
+            SET payer_id=%s, category_id=%s, subcategory_id=%s,
+                total_amount=%s, description=%s, split_type=%s, expense_date=%s
+            WHERE expense_id=%s
+            """,
+            (payer_id, category_id, subcategory_id,
+             total_amount, description, split_type, expense_date, expense_id),
+        )
+        cur.execute("DELETE FROM Expense_Splits WHERE expense_id = %s", (expense_id,))
+        cur.executemany(
+            """
+            INSERT INTO Expense_Splits (expense_id, user_id, amount_owed, share_pct)
+            VALUES (%s, %s, %s, %s)
+            """,
+            [(expense_id, s["user_id"], round(s["amount_owed"], 2), s.get("share_pct")) for s in splits],
+        )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close(); conn.close()
+
 
 def admin_wipe_app(admin_user_id: int) -> dict:
     """
@@ -1743,6 +1783,60 @@ def admin_wipe_app(admin_user_id: int) -> dict:
 
         conn.commit()
         return {"wiped": True}
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close(); conn.close()
+
+
+def fetch_group_creator(group_id: int):
+    """Returns the user_id of the first member added (proxy for creator)."""
+    conn = get_connection()
+    cur  = conn.cursor()
+    cur.execute(
+        "SELECT user_id FROM Group_Members WHERE group_id = %s ORDER BY joined_at ASC LIMIT 1",
+        (group_id,),
+    )
+    row = cur.fetchone()
+    cur.close(); conn.close()
+    return row[0] if row else None
+
+
+def fetch_member_net_balance(group_id: int, user_id: int) -> float:
+    """Net balance for one member in one group. Positive = owed to them."""
+    conn = get_connection()
+    cur  = conn.cursor()
+    cur.execute(
+        """
+        SELECT
+            IFNULL(paid.total_paid,        0)
+          - IFNULL(owed.total_owed,        0)
+          + IFNULL(psent.payments_sent,    0)
+          - IFNULL(prec.payments_received, 0)
+        FROM (SELECT 1) dummy
+        LEFT JOIN (SELECT SUM(total_amount) AS total_paid   FROM Expenses        WHERE group_id=%s AND payer_id=%s) paid  ON 1=1
+        LEFT JOIN (SELECT SUM(es.amount_owed) AS total_owed FROM Expense_Splits es JOIN Expenses e ON e.expense_id=es.expense_id WHERE e.group_id=%s AND es.user_id=%s) owed ON 1=1
+        LEFT JOIN (SELECT SUM(amount) AS payments_sent      FROM Payments        WHERE group_id=%s AND payer_id=%s) psent ON 1=1
+        LEFT JOIN (SELECT SUM(amount) AS payments_received  FROM Payments        WHERE group_id=%s AND payee_id=%s) prec  ON 1=1
+        """,
+        (group_id, user_id, group_id, user_id, group_id, user_id, group_id, user_id),
+    )
+    row = cur.fetchone()
+    cur.close(); conn.close()
+    return float(row[0]) if row and row[0] is not None else 0.0
+
+
+def remove_group_member(group_id: int, user_id: int) -> None:
+    conn = get_connection()
+    cur  = conn.cursor()
+    try:
+        conn.start_transaction()
+        cur.execute(
+            "DELETE FROM Group_Members WHERE group_id=%s AND user_id=%s",
+            (group_id, user_id),
+        )
+        conn.commit()
     except Exception:
         conn.rollback()
         raise

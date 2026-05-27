@@ -36,6 +36,13 @@ def get_user_name(user_id: int) -> str:
     cur.close(); conn.close()
     return row[0] if row else "Someone"
 
+def get_group_name(group_id: int) -> str:
+    conn = db.get_connection()
+    cur  = conn.cursor()
+    cur.execute("SELECT group_name FROM `Groups` WHERE group_id = %s", (group_id,))
+    row = cur.fetchone()
+    cur.close(); conn.close()
+    return row[0] if row else "your group"
 
 def create_notification(
     user_id:      int,
@@ -108,9 +115,11 @@ def get_notifications(
         """
         SELECT n.notification_id, n.type, n.message,
                 n.is_read, n.group_id, n.created_at,
-                u.name AS from_name
+                u.name AS from_name,
+                g.group_name
         FROM   Notifications n
         LEFT JOIN Users u ON u.user_id = n.from_user_id
+        LEFT JOIN `Groups` g ON g.group_id = n.group_id
         WHERE  n.user_id = %s
         ORDER  BY n.created_at DESC
         LIMIT  %s OFFSET %s
@@ -121,7 +130,8 @@ def get_notifications(
     cur.close(); conn.close()
     for r in rows:
         if r.get("created_at"):
-            r["created_at"] = str(r["created_at"])
+            ts = r["created_at"]
+            r["created_at"] = ts.isoformat() if hasattr(ts, "isoformat") else str(ts)
     return rows
 
 
@@ -188,9 +198,14 @@ def send_reminder(
     if not debtor:
         raise HTTPException(status_code=404, detail="Member not found in this group.")
 
+    # message = (
+    #     f"{sender_name} sent you a reminder: "
+    #     f"you owe ₹{body.amount:,.0f} in this group."
+    # )
+    group_name = get_group_name(group_id)
     message = (
         f"{sender_name} sent you a reminder: "
-        f"you owe ₹{body.amount:,.0f} in this group."
+        f"you owe ₹{body.amount:,.0f} in '{group_name}'."
     )
 
     create_notification(

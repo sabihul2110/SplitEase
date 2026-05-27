@@ -10,17 +10,20 @@ import {
   View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import client from '../../api/client';
 import { ENDPOINTS } from '../../constants/api';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS } from '../../constants/theme';
 import { EmptyState, LoadingState } from '../../components/common/ui';
 import Button from '../../components/common/Button';
 import ScreenHeader from '../../components/layout/ScreenHeader';
+import { Icons } from '../../constants/icons'; // Add this import
 
 function timeAgo(dateStr) {
   if (!dateStr) return '';
-  const diff = Date.now() - new Date(dateStr).getTime();
+  // If no timezone suffix, treat as UTC (MySQL DATETIME has no tz)
+  const normalized = /[Zz+]/.test(dateStr) ? dateStr : dateStr + 'Z';
+  const diff = Date.now() - new Date(normalized).getTime();
   const mins  = Math.floor(diff / 60000);
   const hours = Math.floor(mins / 60);
   const days  = Math.floor(hours / 24);
@@ -30,20 +33,64 @@ function timeAgo(dateStr) {
   return 'Just now';
 }
 
-function NotifItem({ item, onRead }) {
+// function NotifItem({ item, onRead, onNavigate }) {
+//   const isUnread = !item.is_read;
+//   const icon = item.type === 'reminder' ? '🔔'
+//     : item.type === 'payment'  ? '✅'
+//     : item.type === 'expense'  ? '💸' : '📢';
+
+//   return (
+//     <TouchableOpacity
+//       style={[styles.item, isUnread && styles.itemUnread]}
+//       onPress={() => {
+//         if (!item.is_read) onRead(item.notification_id);
+//         if (item.group_id) onNavigate(item.group_id, item.group_name);
+//       }}
+//       activeOpacity={0.7}
+//     >
+//       <View style={styles.itemIcon}>
+//         <Text style={{ fontSize: 20 }}>{icon}</Text>
+//         {isUnread && <View style={styles.unreadDot} />}
+//       </View>
+//       <View style={styles.itemContent}>
+//         <Text style={[styles.itemMsg, isUnread && styles.itemMsgBold]}>
+//           {item.message}
+//         </Text>
+//         <Text style={styles.itemTime}>{timeAgo(item.created_at)}</Text>
+//       </View>
+//     </TouchableOpacity>
+//   );
+// }
+
+function NotifItem({ item, onRead, onNavigate }) {
   const isUnread = !item.is_read;
-  const icon = item.type === 'reminder' ? '🔔'
-    : item.type === 'payment'  ? '✅'
-    : item.type === 'expense'  ? '💸' : '📢';
+  
+  // Determine icon and colors based on notification type
+  let IconComp = Icons.bell;
+  let iconColor = COLORS.warning;
+  let iconBg = 'rgba(245,158,11,0.15)'; // warning light
+
+  if (item.type === 'payment' || item.type === 'settlement') {
+    IconComp = Icons.checkCircle;
+    iconColor = COLORS.success;
+    iconBg = 'rgba(16,185,129,0.15)';
+  } else if (item.type === 'expense') {
+    IconComp = Icons.receipt;
+    iconColor = COLORS.primary;
+    iconBg = 'rgba(59,130,246,0.15)';
+  }
 
   return (
     <TouchableOpacity
       style={[styles.item, isUnread && styles.itemUnread]}
-      onPress={() => !item.is_read && onRead(item.notification_id)}
+      onPress={() => {
+        if (!item.is_read) onRead(item.notification_id);
+        if (item.group_id) onNavigate(item.group_id, item.group_name);
+      }}
       activeOpacity={0.7}
     >
-      <View style={styles.itemIcon}>
-        <Text style={{ fontSize: 20 }}>{icon}</Text>
+      <View style={[styles.itemIconBox, { backgroundColor: iconBg }]}>
+        <IconComp size={18} color={iconColor} />
         {isUnread && <View style={styles.unreadDot} />}
       </View>
       <View style={styles.itemContent}>
@@ -57,6 +104,7 @@ function NotifItem({ item, onRead }) {
 }
 
 export default function NotificationsScreen() {
+  const navigation = useNavigation();
   const [notifs,     setNotifs]     = useState([]);
   const [loading,    setLoading]    = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -137,7 +185,16 @@ export default function NotificationsScreen() {
           />
         )}
         renderItem={({ item }) => (
-          <NotifItem item={item} onRead={markRead} />
+          <NotifItem
+            item={item}
+            onRead={markRead}
+            onNavigate={(groupId, groupName) =>
+              navigation.navigate('Groups', {
+                screen: 'GroupDetail',
+                params: { groupId, groupName: groupName || 'Group' },
+              })
+            }
+          />
         )}
         contentContainerStyle={styles.list}
       />
@@ -156,18 +213,43 @@ const styles = StyleSheet.create({
   },
   badgeText: { color: COLORS.primaryH, fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.semibold },
 
+  // item: {
+  //   flexDirection: 'row', alignItems: 'flex-start', gap: SPACING.md,
+  //   paddingHorizontal: SPACING.base, paddingVertical: SPACING.md,
+  //   borderBottomWidth: 1, borderBottomColor: COLORS.border,
+  // },
+  // itemUnread: { backgroundColor: COLORS.surface },
+  // itemIcon:   { position: 'relative', width: 38, alignItems: 'center' },
+  // unreadDot: {
+  //   position: 'absolute', top: 0, right: 0,
+  //   width: 8, height: 8, borderRadius: 4,
+  //   backgroundColor: COLORS.primary,
+  // },
+
   item: {
     flexDirection: 'row', alignItems: 'flex-start', gap: SPACING.md,
     paddingHorizontal: SPACING.base, paddingVertical: SPACING.md,
     borderBottomWidth: 1, borderBottomColor: COLORS.border,
   },
   itemUnread: { backgroundColor: COLORS.surface },
-  itemIcon:   { position: 'relative', width: 38, alignItems: 'center' },
-  unreadDot: {
-    position: 'absolute', top: 0, right: 0,
-    width: 8, height: 8, borderRadius: 4,
-    backgroundColor: COLORS.primary,
+  
+  // 🔥 New SVG Icon Box styles
+  itemIconBox: { 
+    position: 'relative', 
+    width: 40, 
+    height: 40, 
+    borderRadius: RADIUS.full,
+    alignItems: 'center', 
+    justifyContent: 'center',
+    flexShrink: 0
   },
+  unreadDot: {
+    position: 'absolute', top: -2, right: -2,
+    width: 12, height: 12, borderRadius: 6,
+    backgroundColor: COLORS.primary,
+    borderWidth: 2, borderColor: COLORS.surface, // Creates a cutout effect
+  },
+
   itemContent: { flex: 1, gap: 4 },
   itemMsg:     { fontSize: FONT_SIZE.base, color: COLORS.text2, lineHeight: 20 },
   itemMsgBold: { color: COLORS.text, fontWeight: FONT_WEIGHT.medium },

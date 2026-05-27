@@ -6,6 +6,7 @@
  */
 
 export const BASE_URL    = 'https://splitease-4hcc.onrender.com';
+// export const BASE_URL    = 'http://192.168.29.115:8000';
 export const STORAGE_KEY = 'splitease_user';
 
 export const ENDPOINTS = {

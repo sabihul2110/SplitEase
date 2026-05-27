@@ -101,3 +101,39 @@ def delete_expense(expense_id: int, current_user: dict = Depends(get_current_use
 
     db.delete_expense(expense_id)
     return {"message": "Expense deleted."}
+
+
+class UpdateExpenseRequest(BaseModel):
+    payer_id:       int
+    category_id:    int
+    subcategory_id: int | None = None
+    total_amount:   float
+    description:    str
+    split_type:     str = "equal"
+    expense_date:   date
+    splits:         list[SplitItem]
+
+
+@router.put("/{expense_id}")
+def update_expense(expense_id: int, body: UpdateExpenseRequest, current_user: dict = Depends(get_current_user)):
+    group_id = db.fetch_expense_group_id(expense_id)
+    if group_id is None:
+        raise HTTPException(status_code=404, detail="Expense not found.")
+    is_member = db.is_group_member(group_id, current_user["user_id"])
+    is_admin  = current_user.get("role") == "admin"
+    if not is_member and not is_admin:
+        raise HTTPException(status_code=403, detail="Not a member of this group.")
+    if body.split_type not in ("equal", "custom"):
+        raise HTTPException(status_code=400, detail="split_type must be 'equal' or 'custom'.")
+    db.update_expense(
+        expense_id     = expense_id,
+        payer_id       = body.payer_id,
+        category_id    = body.category_id,
+        subcategory_id = body.subcategory_id,
+        total_amount   = body.total_amount,
+        description    = body.description,
+        split_type     = body.split_type,
+        expense_date   = str(body.expense_date),
+        splits         = [s.model_dump() for s in body.splits],
+    )
+    return {"message": "Expense updated."}
