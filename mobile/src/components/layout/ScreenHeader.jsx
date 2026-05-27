@@ -1,30 +1,22 @@
 // SplitEase/mobile/src/components/layout/ScreenHeader.jsx
 
-/**
- * ScreenHeader.jsx
- * Reusable header bar for all screens.
- * Replaces the web app's AppShell topbar for mobile.
- * Supports back button, title, subtitle, and right actions.
- */
-
 import React from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, Platform, StatusBar,
+  View, Text, TouchableOpacity, StyleSheet,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING } from '../../constants/theme';
+import { COLORS, FONT_SIZE, SPACING } from '../../constants/theme';
+import { Icons } from '../../constants/icons';
 
 export default function ScreenHeader({
   title,
   subtitle,
-  showBack    = false,
+  showBack = false,
   onBack,
-  rightElement,
+  actions,
   transparent = false,
 }) {
-  const nav    = useNavigation();
-  const insets = useSafeAreaInsets();
+  const nav = useNavigation();
 
   function handleBack() {
     if (onBack) onBack();
@@ -34,33 +26,32 @@ export default function ScreenHeader({
   return (
     <View style={[
       styles.container,
-      { paddingTop: insets.top + (Platform.OS === 'android' ? StatusBar.currentHeight || 0 : 0) },
+      // 🔥 Removed paddingTop: insets.top entirely!
       transparent && styles.transparent,
     ]}>
       <View style={styles.row}>
-        {/* Left: back button or spacer */}
-        <View style={styles.side}>
-          {showBack && (
-            <TouchableOpacity
-              onPress={handleBack}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              style={styles.backBtn}
-            >
-              <Text style={styles.backIcon}>←</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+        
+        {showBack && (
+          <TouchableOpacity
+            onPress={handleBack}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            style={styles.backBtn}
+          >
+            <Icons.back size={22} color={COLORS.text} />
+          </TouchableOpacity>
+        )}
 
-        {/* Center: title */}
-        <View style={styles.center}>
+        <View style={styles.titleWrapper}>
           <Text style={styles.title} numberOfLines={1}>{title}</Text>
           {subtitle && <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text>}
         </View>
 
-        {/* Right: actions */}
-        <View style={[styles.side, styles.sideRight]}>
-          {rightElement}
-        </View>
+        {actions && (
+          <View style={styles.actionsWrapper}>
+            {actions}
+          </View>
+        )}
+        
       </View>
     </View>
   );
@@ -68,51 +59,50 @@ export default function ScreenHeader({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: COLORS.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    paddingHorizontal: SPACING.base,
-    paddingBottom: SPACING.md,
+    backgroundColor: COLORS.bg,
+    // 🔥 Restored horizontal padding (you can use paddingLeft: 24 here if you still want it nudged right)
+    paddingHorizontal: SPACING.base, 
+    // 🔥 Added a tiny normal padding so the text doesn't touch the black status bar
+    paddingTop: SPACING.sm,
+    paddingBottom: SPACING.sm, 
   },
   transparent: {
-    backgroundColor: COLORS.transparent,
-    borderBottomWidth: 0,
+    backgroundColor: 'transparent',
   },
   row: {
-    flexDirection:  'row',
-    alignItems:     'center',
-    minHeight:      44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 40,
+    gap: SPACING.sm,
   },
-  side: {
-    width:          44,
-    alignItems:     'flex-start',
+  titleWrapper: {
+    flex: 1,
+    alignItems: 'flex-start',
     justifyContent: 'center',
   },
-  sideRight: {
-    alignItems:  'flex-end',
-    width:       'auto',
-    flex:        0,
-  },
-  center: {
-    flex:       1,
-    alignItems: 'center',
-  },
   title: {
-    fontSize:   FONT_SIZE.lg,
-    fontWeight: FONT_WEIGHT.semibold,
-    color:      COLORS.text,
+    fontSize: 28,
+    fontWeight: '800',
+    color: COLORS.text,
+    letterSpacing: -0.5,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   subtitle: {
-    fontSize:   FONT_SIZE.xs,
-    color:      COLORS.text3,
-    marginTop:  2,
+    fontSize: FONT_SIZE.xs,
+    fontWeight: '600',
+    color: COLORS.text3,
+    marginTop: 2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   backBtn: {
-    padding: 4,
+    paddingRight: 4,
+    justifyContent: 'center',
   },
-  backIcon: {
-    fontSize:   FONT_SIZE.xl,
-    color:      COLORS.primary,
-    fontWeight: FONT_WEIGHT.semibold,
+  actionsWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
   },
 });
