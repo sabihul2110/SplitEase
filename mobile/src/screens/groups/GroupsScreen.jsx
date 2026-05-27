@@ -212,7 +212,7 @@ function CreateGroupModal({ visible, onClose, onCreated }) {
         group_name: name.trim(),
         user_ids: ids,
       });
-      onCreated(data);
+      onCreated({ ...data, group_name: name.trim() });
       onClose();
     } catch (err) {
       const detail = err.response?.data?.detail;
@@ -375,7 +375,7 @@ function CreateGroupModal({ visible, onClose, onCreated }) {
 }
 
 // ─── Header ───────────────────────────────────────────────────────────────────
-function Header({ groupCount, onCreate }) {
+function Header({ groupCount, onCreate, onJoin }) {
   return (
     <View style={styles.header}>
       <View>
@@ -384,13 +384,196 @@ function Header({ groupCount, onCreate }) {
           <Text style={styles.headerSub}>{groupCount} active {groupCount === 1 ? 'group' : 'groups'}</Text>
         )}
       </View>
-      <TouchableOpacity style={styles.createHeaderBtn} onPress={onCreate} activeOpacity={0.85}>
-        <Icons.plus size={15} color="#fff" />
-        <Text style={styles.createHeaderBtnText}>New Group</Text>
-      </TouchableOpacity>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: SP.sm }}>
+        
+        {/* 🔥 The New Web-Style Blue Pill Join Button */}
+        <TouchableOpacity
+          style={styles.headerJoinBtn}
+          onPress={onJoin}
+          activeOpacity={0.7}
+        >
+          <Icons.externalLink size={14} color={C.primary} />
+          <Text style={styles.headerJoinText}>Join</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.createHeaderBtn} onPress={onCreate} activeOpacity={0.85}>
+          <Icons.plus size={15} color="#fff" />
+          <Text style={styles.createHeaderBtnText}>New Group</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
+
+function JoinGroupModal({ visible, onClose, onJoined }) {
+  const { user } = useAuth();
+  const [input,     setInput]     = useState('');
+  const [step,      setStep]      = useState('input'); // input | preview | joining | success
+  const [groupInfo, setGroupInfo] = useState(null);
+  const [error,     setError]     = useState('');
+  const [loading,   setLoading]   = useState(false);
+
+  useEffect(() => {
+    if (visible) { setInput(''); setStep('input'); setGroupInfo(null); setError(''); }
+  }, [visible]);
+
+  // Accept full URL (https://splitease.app/join/TOKEN) or bare token
+  function extractToken(text) {
+    const match = text.match(/\/join\/([a-zA-Z0-9_-]+)/);
+    return match ? match[1] : text.trim();
+  }
+
+  async function handlePreview() {
+    const token = extractToken(input);
+    if (!token) { setError('Please enter a valid invite link or token.'); return; }
+    setLoading(true); setError('');
+    try {
+      const { data } = await client.get(`/invite/${token}`);
+      setGroupInfo({ ...data, token });
+      setStep('preview');
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Invalid or expired invite link.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleJoin() {
+    setStep('joining');
+    try {
+      const { data } = await client.post(`/invite/${groupInfo.token}/join`);
+      setStep('success');
+      setTimeout(() => { onJoined(data); onClose(); }, 1200);
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Failed to join group.');
+      setStep('preview');
+    }
+  }
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <KeyboardAvoidingView
+        style={styles.modalOverlay}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <TouchableOpacity style={StyleSheet.absoluteFill} onPress={onClose} activeOpacity={1} />
+        <View style={styles.modalSheet}>
+          <View style={styles.modalHandle} />
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Join via Invite</Text>
+            <TouchableOpacity style={styles.modalClose} onPress={onClose}>
+              <Icons.back size={20} color={C.text2} />
+            </TouchableOpacity>
+          </View>
+
+          <View style={{ padding: SP.base, gap: SP.base, paddingBottom: SP.xl }}>
+
+            {/* ── Success ── */}
+            {step === 'success' && (
+              <View style={joinStyles.successBox}>
+                <View style={joinStyles.successIcon}>
+                  <Icons.checkCircle size={32} color={C.success} />
+                </View>
+                <Text style={joinStyles.successTitle}>You're in!</Text>
+                <Text style={joinStyles.successSub}>Redirecting to group…</Text>
+              </View>
+            )}
+
+            {/* ── Preview / Joining ── */}
+            {(step === 'preview' || step === 'joining') && (
+              <>
+                <View style={joinStyles.previewCard}>
+                  <Text style={joinStyles.previewMeta}>YOU'RE JOINING</Text>
+                  <Text style={joinStyles.previewName}>{groupInfo?.group_name}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                    <Icons.users size={12} color={C.text3} />
+                    <Text style={joinStyles.previewAs}>Joining as {user?.name}</Text>
+                  </View>
+                </View>
+                {!!error && <Text style={joinStyles.errorText}>{error}</Text>}
+                <View style={styles.modalFooter}>
+                  <TouchableOpacity style={[styles.cancelBtn, { flex: 1 }]} onPress={() => setStep('input')}>
+                    <Text style={styles.cancelBtnText}>← Back</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.createBtn, { flex: 2 }, step === 'joining' && { opacity: 0.7 }]}
+                    onPress={handleJoin}
+                    disabled={step === 'joining'}
+                  >
+                    {step === 'joining'
+                      ? <ActivityIndicator color="#fff" size="small" />
+                      : <><Icons.check size={15} color="#fff" /><Text style={styles.createBtnText}>Join Group</Text></>
+                    }
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+
+            {/* ── Input ── */}
+            {step === 'input' && (
+              <>
+                <Text style={joinStyles.hint}>
+                  Paste the invite link or token shared by a group member.
+                </Text>
+                <View style={[styles.fieldInput, !!error && styles.fieldInputError]}>
+                  <Icons.externalLink size={16} color={C.text3} />
+                  <TextInput
+                    style={styles.fieldTextInput}
+                    value={input}
+                    onChangeText={v => { setInput(v); setError(''); }}
+                    placeholder="Paste link or token…"
+                    placeholderTextColor={C.text3}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    autoFocus
+                  />
+                </View>
+                {!!error && <Text style={joinStyles.errorText}>{error}</Text>}
+                <View style={styles.modalFooter}>
+                  <TouchableOpacity style={[styles.cancelBtn, { flex: 1 }]} onPress={onClose}>
+                    <Text style={styles.cancelBtnText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.createBtn, { flex: 2 }, (!input.trim() || loading) && { opacity: 0.55 }]}
+                    onPress={handlePreview}
+                    disabled={!input.trim() || loading}
+                  >
+                    {loading
+                      ? <ActivityIndicator color="#fff" size="small" />
+                      : <Text style={styles.createBtnText}>Continue →</Text>
+                    }
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
+// JoinGroupModal-specific styles (small, no overlap with existing styles)
+const joinStyles = StyleSheet.create({
+  hint:         { fontSize: F.sm, color: C.text2, lineHeight: 19 },
+  errorText:    { fontSize: F.sm, color: C.danger, marginTop: -SP.sm },
+  previewCard:  {
+    backgroundColor: C.surface2, borderRadius: R.lg,
+    borderWidth: 1, borderColor: C.border,
+    padding: SP.base, gap: 4,
+  },
+  previewMeta:  { fontSize: F.xs, fontWeight: W.bold, color: C.text3, letterSpacing: 0.8, textTransform: 'uppercase' },
+  previewName:  { fontSize: F.xl, fontWeight: W.heavy, color: C.text, letterSpacing: -0.3 },
+  previewAs:    { fontSize: F.sm, color: C.text3 },
+  successBox:   { alignItems: 'center', paddingVertical: SP.xl, gap: SP.md },
+  successIcon:  {
+    width: 72, height: 72, borderRadius: 22,
+    backgroundColor: C.successLo, borderWidth: 1, borderColor: C.success + '40',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  successTitle: { fontSize: F.xl, fontWeight: W.bold, color: C.text },
+  successSub:   { fontSize: F.base, color: C.text3 },
+});
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
 export default function GroupsScreen() {
@@ -400,6 +583,7 @@ export default function GroupsScreen() {
   const [loading,    setLoading]    = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
+  const [showJoin, setShowJoin] = useState(false);
 
   useEffect(() => {
     if (route.params?.openCreate) {
@@ -454,7 +638,8 @@ export default function GroupsScreen() {
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   function handleCreated(newGroup) {
-    setGroups(prev => [newGroup, ...prev]);
+    // setGroups(prev => [newGroup, ...prev]);
+    load(); // let load() rebuild the full list with members
     navigation.navigate('GroupDetail', {
       groupId:   newGroup.group_id,
       groupName: newGroup.group_name,
@@ -464,7 +649,7 @@ export default function GroupsScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
-        <Header groupCount={0} onCreate={() => setShowCreate(true)} />
+        <Header groupCount={groups.length} onCreate={() => setShowCreate(true)} onJoin={() => setShowJoin(true)} />
         <View style={styles.loadingWrap}>
           <ActivityIndicator color={C.primary} size="large" />
           <Text style={styles.loadingText}>Loading groups…</Text>
@@ -475,7 +660,7 @@ export default function GroupsScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
-      <Header groupCount={groups.length} onCreate={() => setShowCreate(true)} />
+      <Header groupCount={groups.length} onCreate={() => setShowCreate(true)} onJoin={() => setShowJoin(true)} />
 
       <FlatList
         data={groups}
@@ -512,6 +697,18 @@ export default function GroupsScreen() {
         visible={showCreate}
         onClose={() => setShowCreate(false)}
         onCreated={handleCreated}
+      />
+
+      <JoinGroupModal
+        visible={showJoin}
+        onClose={() => setShowJoin(false)}
+        onJoined={(data) => {
+          load(); // refresh groups list
+          navigation.navigate('GroupDetail', {
+            groupId:   data.group_id,
+            groupName: data.group_name || data.message,
+          });
+        }}
       />
     </SafeAreaView>
   );
@@ -694,4 +891,22 @@ const styles = StyleSheet.create({
     backgroundColor: C.primary,
   },
   createBtnText: { fontSize: F.md, fontWeight: W.bold, color: '#fff' },
+
+  // ─── Header Join Pill ───
+  headerJoinBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: C.primaryLo,            
+    borderWidth: 1,
+    borderColor: C.primary + '40',                
+    borderRadius: R.full,                    
+    paddingHorizontal: 12,
+    paddingVertical: 7, // Matches the height of the New Group button perfectly
+  },
+  headerJoinText: {
+    fontSize: F.sm,                        
+    fontWeight: W.bold,
+    color: C.primary,
+  },
 });

@@ -9,7 +9,7 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Alert,
-  RefreshControl, ScrollView, Linking, ActivityIndicator, Platform,
+  RefreshControl, ScrollView, Linking, ActivityIndicator, Platform, Share
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
@@ -218,74 +218,86 @@ function PaymentRow({ item, currentUserName, onDelete }) {
 }
 
 // ─── Settlement row ───────────────────────────────────────────────────────────
+
 function SettlementRow({ item, currentUserName, members, onRemind, reminding }) {
   const isDebtor   = item.from === currentUserName;
   const isCreditor = item.to   === currentUserName;
 
   const toMember = members.find(m => m.name === item.to);
-  const upiLink = toMember?.upi_id
+  const upiLink  = toMember?.upi_id
     ? `upi://pay?pa=${toMember.upi_id}&am=${item.amount}&cu=INR&tn=SplitEase`
     : null;
 
-  const borderColor = isDebtor ? C.danger + '30' : isCreditor ? C.success + '25' : C.border;
+  const cardBorder = isDebtor ? C.danger + '28' : isCreditor ? C.success + '22' : C.border;
+  const cardBg     = isDebtor ? 'rgba(239,68,68,0.04)' : isCreditor ? 'rgba(16,185,129,0.04)' : 'transparent';
 
   return (
-    <View style={[styles.settleRow, { borderColor }]}>
-      <View style={styles.settleNames}>
-        <Avatar name={item.from} size={32} variant={isDebtor ? 'danger' : 'auto'} />
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={[styles.settleName, isDebtor && { color: C.text }]} numberOfLines={1}>
-            {isDebtor ? 'You' : item.from}
+    <View style={[styles.settleCard, { borderColor: cardBorder, backgroundColor: cardBg }]}>
+
+      {/* ── Who → Who row ── */}
+      <View style={styles.settleFlow}>
+        {/* From */}
+        <View style={styles.settleParty}>
+          <Avatar name={item.from} size={38} variant={isDebtor ? 'danger' : 'auto'} />
+          <Text style={[styles.settlePartyName, isDebtor && { color: C.text, fontWeight: W.bold }]} numberOfLines={1}>
+            {isDebtor ? 'You' : item.from.split(' ')[0]}
           </Text>
-          {isDebtor && <Text style={{ color: C.danger, fontSize: F.xs }}>owes</Text>}
+          <Text style={[styles.settlePartyRole, { color: isDebtor ? C.danger : C.text3 }]}>pays</Text>
         </View>
-        <View style={styles.settleArrowBox}>
-          <Icons.settlements size={14} color={C.text3} />
+
+        {/* Directional arrow — always left-to-right (from=debtor, to=creditor) */}
+        <View style={styles.settleArrow}>
+          <View style={styles.settleArrowLine} />
+          <Icons.chevronRight size={14} color={C.text3} />
         </View>
-        <View style={{ flex: 1, minWidth: 0, alignItems: 'flex-end' }}>
-          <Text style={[styles.settleName, isCreditor && { color: C.text }]} numberOfLines={1}>
-            {isCreditor ? 'You' : item.to}
+
+        {/* To */}
+        <View style={[styles.settleParty, { alignItems: 'flex-end' }]}>
+          <Avatar name={item.to} size={38} variant={isCreditor ? 'success' : 'auto'} />
+          <Text style={[styles.settlePartyName, isCreditor && { color: C.text, fontWeight: W.bold }]} numberOfLines={1}>
+            {isCreditor ? 'You' : item.to.split(' ')[0]}
           </Text>
-          {isCreditor && <Text style={{ color: C.success, fontSize: F.xs }}>receives</Text>}
+          <Text style={[styles.settlePartyRole, { color: isCreditor ? C.success : C.text3 }]}>receives</Text>
         </View>
-        <Avatar name={item.to} size={32} variant={isCreditor ? 'success' : 'auto'} />
       </View>
 
-      <View style={styles.settleAction}>
-        {isDebtor ? (
-          <>
-            <Text style={[styles.settleAmt, { color: C.danger }]}>₹{fmtAmount(item.amount)}</Text>
-            {upiLink ? (
-              <TouchableOpacity
-                style={[styles.actionBtn, { backgroundColor: C.primaryLo, borderColor: C.primary + '40' }]}
-                onPress={() => Linking.openURL(upiLink).catch(() => Alert.alert('UPI app not found'))}
-              >
-                <Icons.upi size={13} color={C.primary} />
-                <Text style={[styles.actionBtnText, { color: C.primary }]}>Pay via UPI</Text>
-              </TouchableOpacity>
-            ) : (
-              <Text style={styles.noUpi}>No UPI set</Text>
-            )}
-          </>
-        ) : isCreditor ? (
-          <>
-            <Text style={[styles.settleAmt, { color: C.success }]}>+₹{fmtAmount(item.amount)}</Text>
-            <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: C.warningLo, borderColor: C.warning + '40' }]}
-              onPress={() => onRemind(item)}
-              disabled={reminding === item.from}
-            >
-              {reminding === item.from
-                ? <ActivityIndicator size="small" color={C.warning} />
-                : <>
-                    <Icons.bell size={13} color={C.warning} />
-                    <Text style={[styles.actionBtnText, { color: C.warning }]}>Remind</Text>
-                  </>
-              }
-            </TouchableOpacity>
-          </>
-        ) : (
-          <Text style={[styles.settleAmt, { color: C.text2 }]}>₹{fmtAmount(item.amount)}</Text>
+      {/* ── Amount + Action ── */}
+      <View style={styles.settleFooter}>
+        <Text style={[styles.settleAmt, {
+          color: isDebtor ? C.danger : isCreditor ? C.success : C.text2
+        }]}>
+          {isDebtor ? '−' : isCreditor ? '+' : ''}₹{fmtAmount(item.amount)}
+        </Text>
+
+        {isDebtor && upiLink && (
+          <TouchableOpacity
+            style={[styles.actionBtn, { backgroundColor: C.primaryLo, borderColor: C.primary + '40' }]}
+            onPress={() => Linking.openURL(upiLink).catch(() => Alert.alert('UPI app not found'))}
+          >
+            <Icons.upi size={13} color={C.primary} />
+            <Text style={[styles.actionBtnText, { color: C.primary }]}>Pay via UPI</Text>
+          </TouchableOpacity>
+        )}
+        {isDebtor && !upiLink && (
+          <Text style={styles.noUpi}>No UPI set</Text>
+        )}
+        {isCreditor && (
+          <TouchableOpacity
+            style={[styles.actionBtn, { backgroundColor: C.warningLo, borderColor: C.warning + '40' }]}
+            onPress={() => {
+              const fromMember = members.find(m => m.name === item.from);
+              onRemind({ ...item, from_user_id: fromMember?.user_id });
+            }}
+            disabled={reminding === item.from}
+          >
+            {reminding === item.from
+              ? <ActivityIndicator size="small" color={C.warning} />
+              : <><Icons.bell size={13} color={C.warning} /><Text style={[styles.actionBtnText, { color: C.warning }]}>Remind</Text></>
+            }
+          </TouchableOpacity>
+        )}
+        {!isDebtor && !isCreditor && (
+          <Text style={styles.noUpi}>No action needed</Text>
         )}
       </View>
     </View>
@@ -435,6 +447,7 @@ export default function GroupDetailScreen() {
   const [settLoaded,  setSettLoaded]  = useState(false);
   const [reminding,   setReminding]   = useState('');
   const [toast,       setToast]       = useState('');
+  const [inviting, setInviting] = useState(false);
 
   function showToast(msg) {
     setToast(msg);
@@ -445,6 +458,7 @@ export default function GroupDetailScreen() {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
     try {
+      setSettLoaded(false);
       const [expRes, payRes, memRes] = await Promise.all([
         client.get(`/expenses/${groupId}`),
         client.get(`/payments/${groupId}`),
@@ -502,11 +516,32 @@ export default function GroupDetailScreen() {
   async function handleRemind(s) {
     setReminding(s.from);
     try {
-      await client.post(`/groups/${groupId}/remind`, { debtor_name: s.from, amount: s.amount });
+      await client.post(`/groups/${groupId}/remind`, { debtor_user_id: s.from_user_id, amount: s.amount });
       showToast(`Reminder sent to ${s.from}`);
     } catch (err) {
-      showToast(err?.response?.data?.detail || 'Failed to send reminder.');
+      const detail = err?.response?.data?.detail;
+      showToast(
+        Array.isArray(detail)   ? detail[0]?.msg :
+        typeof detail === 'string' ? detail        :
+        'Failed to send reminder.'
+      );
     } finally { setReminding(''); }
+  }
+
+  async function handleInvite() {
+    setInviting(true);
+    try {
+      const { data } = await client.post(`/groups/${groupId}/invite`);
+      const link = data.invite_url || `https://splitease.app/join/${data.token}`;
+      await Share.share({
+        message: `Join "${groupName}" on SplitEase:\n${link}`,
+        title: 'Invite to Group',
+      });
+    } catch {
+      Alert.alert('Error', 'Could not generate invite link.');
+    } finally {
+      setInviting(false);
+    }
   }
 
   const totalSpent = expenses.reduce((s, e) => s + Number(e.total_amount), 0);
@@ -637,7 +672,26 @@ export default function GroupDetailScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <Icons.back size={22} color={C.text2} />
         </TouchableOpacity>
+        
         <Text style={styles.headerTitle} numberOfLines={1}>{groupName}</Text>
+        
+        {/* 🔥 The New Web-Style Blue Pill Invite Button */}
+        <TouchableOpacity
+          style={styles.headerInviteBtn}
+          onPress={handleInvite}
+          disabled={inviting}
+          activeOpacity={0.7}
+        >
+          {inviting ? (
+            <ActivityIndicator size="small" color={C.primary} />
+          ) : (
+            <>
+              <Icons.userPlus size={14} color={C.primary} />
+              <Text style={styles.headerInviteText}>Invite</Text>
+            </>
+          )}
+        </TouchableOpacity>
+
         <TouchableOpacity
           style={styles.payBtn}
           onPress={() => navigation.navigate('AddPayment', { groupId, groupName, members })}
@@ -801,20 +855,54 @@ const styles = StyleSheet.create({
   ledgerAmt:  { fontSize: F.md, fontWeight: W.heavy, color: C.text },
 
   // Settlements
-  settleRow: {
-    backgroundColor: C.surface, borderRadius: R.xl,
-    borderWidth: 1, padding: SP.md, gap: SP.sm,
+  // settleRow: {
+  //   backgroundColor: C.surface, borderRadius: R.xl,
+  //   borderWidth: 1, padding: SP.md, gap: SP.sm,
+  // },
+  // settleNames: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  // settleName:  { fontSize: F.sm, fontWeight: W.semibold, color: C.text2 },
+  // settleArrowBox: {
+  //   width: 26, height: 26, borderRadius: R.full,
+  //   backgroundColor: C.surface3, alignItems: 'center', justifyContent: 'center',
+  // },
+  // settleAction: {
+  //   flexDirection: 'row', alignItems: 'center',
+  //   justifyContent: 'flex-end', gap: 10,
+  // },
+
+  // ── Settlement card (replaces settleRow/settleNames etc.) ──
+  settleCard: {
+    borderRadius: R.xl, borderWidth: 1,
+    padding: SP.base, gap: SP.md,
   },
-  settleNames: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  settleName:  { fontSize: F.sm, fontWeight: W.semibold, color: C.text2 },
-  settleArrowBox: {
-    width: 26, height: 26, borderRadius: R.full,
-    backgroundColor: C.surface3, alignItems: 'center', justifyContent: 'center',
+  settleFlow: {
+    flexDirection: 'row', alignItems: 'center', gap: SP.sm,
   },
-  settleAction: {
+  settleParty: {
+    flex: 1, alignItems: 'center', gap: 4,
+  },
+  settlePartyName: {
+    fontSize: F.sm, fontWeight: W.semibold, color: C.text2,
+    textAlign: 'center',
+  },
+  settlePartyRole: {
+    fontSize: F.xs, fontWeight: W.medium,
+  },
+  settleArrow: {
     flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'flex-end', gap: 10,
+    paddingHorizontal: 2,
   },
+  settleArrowLine: {
+    width: 18, height: 1.5,
+    backgroundColor: C.text3, opacity: 0.4,
+  },
+  settleFooter: {
+    flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: SP.sm,
+    borderTopWidth: 1, borderTopColor: C.border,
+  },
+
   settleAmt: { fontSize: F.lg, fontWeight: W.heavy },
   actionBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
@@ -901,4 +989,28 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.45, shadowRadius: 14, elevation: 10,
   },
   fabText: { color: C.white, fontSize: F.md, fontWeight: W.bold, letterSpacing: 0.2 },
+
+  iconBtn: {
+    width: 34, height: 34, borderRadius: R.md,
+    backgroundColor: C.primaryLo, borderWidth: 1, borderColor: C.primary + '30',
+    alignItems: 'center', justifyContent: 'center',
+  },
+
+  // ─── Header Invite Pill ───
+  headerInviteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: C.primaryLo,            
+    borderWidth: 1,
+    borderColor: C.primary + '40',                
+    borderRadius: R.full,                    
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  headerInviteText: {
+    fontSize: F.sm,                        
+    fontWeight: W.bold,
+    color: C.primary,
+  },
 });
