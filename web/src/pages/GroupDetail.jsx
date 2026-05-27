@@ -6,6 +6,15 @@ import api from "../api/axios";
 import { useAuth } from "../context/AuthContext";
 import AppShell from "../components/AppShell";
 
+const UserPlusIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+    <circle cx="9" cy="7" r="4"></circle>
+    <line x1="19" y1="8" x2="19" y2="14"></line>
+    <line x1="22" y1="11" x2="16" y2="11"></line>
+  </svg>
+);
+
 export default function GroupDetail() {
   const { id }   = useParams();
   const { user } = useAuth();
@@ -180,9 +189,32 @@ export default function GroupDetail() {
   const myBalance  = settlements.find(s => s.user_name === user?.name);
   const myNet      = myBalance ? Number(myBalance.net_balance) : null;
 
+  // const actions = (
+  //   <>
+  //     <button className="btn btn-ghost btn-sm" onClick={generateInvite}>⊕ Invite</button>
+  //     <Link to={`/groups/${id}/add-payment`} className="btn btn-ghost btn-sm">+ Payment</Link>
+  //     <Link to={`/groups/${id}/add-expense`} className="btn btn-primary btn-sm">+ Expense</Link>
+  //   </>
+  // );
+
   const actions = (
     <>
-      <button className="btn btn-ghost btn-sm" onClick={generateInvite}>⊕ Invite</button>
+      <button 
+        className="btn btn-sm" 
+        onClick={generateInvite}
+        style={{
+          display: "flex", 
+          alignItems: "center", 
+          gap: "6px",
+          background: "rgba(59, 130, 246, 0.15)", // Soft blue background
+          color: "var(--primary-h)",              // Bright blue text
+          border: "1px solid rgba(59, 130, 246, 0.25)",
+          borderRadius: "20px",                   // Pill shape
+          padding: "4px 12px"
+        }}
+      >
+        <UserPlusIcon /> Invite
+      </button>
       <Link to={`/groups/${id}/add-payment`} className="btn btn-ghost btn-sm">+ Payment</Link>
       <Link to={`/groups/${id}/add-expense`} className="btn btn-primary btn-sm">+ Expense</Link>
     </>
@@ -342,7 +374,7 @@ export default function GroupDetail() {
                   <button className="btn btn-ghost btn-sm" onClick={() => handleTab("settlements")}>Calculate →</button>
                 )}
               </div>
-              <div className="card card-p">
+              {/* <div className="card card-p">
                 <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text3)", marginBottom: 12 }}>
                   Quick Actions
                 </div>
@@ -350,6 +382,32 @@ export default function GroupDetail() {
                   <Link to={`/groups/${id}/add-expense`} className="btn btn-primary" style={{ justifyContent: "center" }}>+ Add Expense</Link>
                   <Link to={`/groups/${id}/add-payment`} className="btn btn-ghost" style={{ justifyContent: "center" }}>+ Record Payment</Link>
                   <button className="btn btn-ghost" style={{ justifyContent: "center" }} onClick={generateInvite}>⊕ Invite Member</button>
+                </div>
+              </div> */}
+              <div className="card card-p">
+                <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text3)", marginBottom: 12 }}>
+                  Quick Actions
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <Link to={`/groups/${id}/add-expense`} className="btn btn-primary" style={{ justifyContent: "center" }}>+ Add Expense</Link>
+                  <Link to={`/groups/${id}/add-payment`} className="btn btn-ghost" style={{ justifyContent: "center" }}>+ Record Payment</Link>
+                  
+                  {/* Upgraded Sidebar Invite Button */}
+                  <button 
+                    className="btn" 
+                    onClick={generateInvite}
+                    style={{ 
+                      justifyContent: "center", 
+                      display: "flex", 
+                      alignItems: "center", 
+                      gap: "8px",
+                      background: "var(--surface2)",
+                      border: "1px solid var(--border)",
+                      color: "var(--text2)"
+                    }}
+                  >
+                    <UserPlusIcon /> Invite Member
+                  </button>
                 </div>
               </div>
             </div>

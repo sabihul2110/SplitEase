@@ -19,8 +19,7 @@ import LoansScreen         from '../screens/loans/LoansScreen';
 import ActivityScreen      from '../screens/activity/ActivityScreen';
 import SettlementsScreen   from '../screens/settlements/SettlementsScreen';
 import NotificationsScreen from '../screens/notifications/NotificationsScreen';
-import SettingsScreen      from '../screens/settings/SettingsScreen';
-import ProfileScreen       from '../screens/settings/ProfileScreen';
+import AccountScreen       from '../screens/account/AccountScreen'; // new merged screen
 import MoreScreen          from '../screens/more/MoreScreen';
 
 // ── Tab Icons ──────────────────────────────────────────────────────────────
@@ -47,7 +46,10 @@ const DashStack = createNativeStackNavigator();
 function DashboardStack() {
   return (
     <DashStack.Navigator screenOptions={{ headerShown: false }}>
-      <DashStack.Screen name="DashboardHome" component={DashboardScreen} />
+      <DashStack.Screen name="DashboardHome"  component={DashboardScreen}     />
+      {/* Account and Notifications are pushed from the Dashboard header */}
+      <DashStack.Screen name="Account"        component={AccountScreen}       />
+      <DashStack.Screen name="Notifications"  component={NotificationsScreen} />
     </DashStack.Navigator>
   );
 }
@@ -57,7 +59,6 @@ function ExpensesStack() {
   return (
     <ExpensesTabStack.Navigator screenOptions={{ headerShown: false }}>
       <ExpensesTabStack.Screen name="ExpensesHome" component={ExpensesScreen} />
-      {/* AddEntry must live here — ExpensesScreen navigates to it */}
       <ExpensesTabStack.Screen name="AddEntry"     component={AddEntryScreen} />
     </ExpensesTabStack.Navigator>
   );
@@ -67,10 +68,10 @@ const GroupStack = createNativeStackNavigator();
 function GroupsStack() {
   return (
     <GroupStack.Navigator screenOptions={{ headerShown: false }}>
-      <GroupStack.Screen name="GroupsList"  component={GroupsScreen} />
+      <GroupStack.Screen name="GroupsList"  component={GroupsScreen}      />
       <GroupStack.Screen name="GroupDetail" component={GroupDetailScreen} />
-      <GroupStack.Screen name="AddExpense"  component={AddExpenseScreen} />
-      <GroupStack.Screen name="AddPayment"  component={AddPaymentScreen} />
+      <GroupStack.Screen name="AddExpense"  component={AddExpenseScreen}  />
+      <GroupStack.Screen name="AddPayment"  component={AddPaymentScreen}  />
     </GroupStack.Navigator>
   );
 }
@@ -84,16 +85,14 @@ function LoansStack() {
   );
 }
 
+// More tab: Activity + Settle Up only — Profile/Settings/Notifications moved to Dashboard header
 const MoreStack = createNativeStackNavigator();
 function MoreTabStack() {
   return (
     <MoreStack.Navigator screenOptions={{ headerShown: false }}>
-      <MoreStack.Screen name="MoreHome"      component={MoreScreen} />
-      <MoreStack.Screen name="Activity"      component={ActivityScreen} />
-      <MoreStack.Screen name="Notifications" component={NotificationsScreen} />
-      <MoreStack.Screen name="Settlements"   component={SettlementsScreen} />
-      <MoreStack.Screen name="Settings"      component={SettingsScreen} />
-      <MoreStack.Screen name="Profile"       component={ProfileScreen} />
+      <MoreStack.Screen name="MoreHome"    component={MoreScreen}       />
+      <MoreStack.Screen name="Activity"    component={ActivityScreen}   />
+      <MoreStack.Screen name="Settlements" component={SettlementsScreen}/>
     </MoreStack.Navigator>
   );
 }

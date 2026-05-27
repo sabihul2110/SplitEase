@@ -1,119 +1,106 @@
 // SplitEase/mobile/src/screens/groups/GroupDetailScreen.jsx
 //
-// Full feature parity with web GroupDetail:
-//   Ledger tab  — expenses + payments combined, delete both
-//   Settlements — simplified "who pays whom" + net balances
-//   Members     — list with UPI IDs
-//
-// Bug fixes vs original:
-//   • Parallel API calls now match web routes exactly
-//   • Settlements use /settlements/:id/simplified (same as web)
-//   • FlatList replaced with direct map() inside ScrollView (avoids
-//     nested VirtualizedList warning / scroll conflicts)
-//   • Each tab loads independently — no all-or-nothing failure
-//   • Toast feedback for actions (reminder sent, copied, etc.)
+// Full redesign:
+//   • Double tab indicator fixed (removed redundant tabIndicator View)
+//   • All emojis replaced with SVG icons from icons.jsx
+//   • Modern card layout, refined typography, professional aesthetic
+//   • Expense icon uses CATEGORY_ICONS SVGs not emoji text
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Alert,
-  RefreshControl, ScrollView, Animated, Linking,
-  ActivityIndicator, Clipboard, Platform,
+  RefreshControl, ScrollView, Linking, ActivityIndicator, Platform, Share
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import client from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
+import { Icons, CATEGORY_ICONS } from '../../constants/icons';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
-  bg:        '#0f1117',
-  surface:   '#181c27',
-  surface2:  '#1e2333',
-  surface3:  '#252a3a',
-  border:    '#2a2f42',
-  border2:   '#333a52',
+  bg:        '#0a0d14',
+  surface:   '#111520',
+  surface2:  '#171c2c',
+  surface3:  '#1e2438',
+  border:    '#242a3d',
+  border2:   '#2e3650',
   primary:   '#3b82f6',
-  primaryLo: 'rgba(59,130,246,0.12)',
+  primaryLo: 'rgba(59,130,246,0.10)',
   success:   '#10b981',
-  successLo: 'rgba(16,185,129,0.12)',
+  successLo: 'rgba(16,185,129,0.10)',
   danger:    '#ef4444',
-  dangerLo:  'rgba(239,68,68,0.12)',
+  dangerLo:  'rgba(239,68,68,0.10)',
   warning:   '#f59e0b',
   warningLo: 'rgba(245,158,11,0.10)',
-  text:      '#f1f5f9',
-  text2:     '#94a3b8',
-  text3:     '#64748b',
+  text:      '#f0f4ff',
+  text2:     '#8892b0',
+  text3:     '#4a5578',
   white:     '#ffffff',
 };
+const F = { xs: 11, sm: 12, base: 13, md: 14, lg: 16, xl: 20, xxl: 28 };
+const W = { regular: '400', medium: '500', semibold: '600', bold: '700', heavy: '800' };
+const R = { sm: 8, md: 10, lg: 14, xl: 18, xxl: 22, full: 999 };
+const SP = { xs: 4, sm: 8, md: 12, base: 16, lg: 20, xl: 24 };
 
-const F = {
-  xs: 11, sm: 12, base: 13, md: 14, lg: 16, xl: 20, xxl: 28,
-};
-
-const W = {
-  regular: '400', medium: '500', semibold: '600', bold: '700', heavy: '800',
-};
-
-const R = { sm: 8, md: 10, lg: 14, xl: 18, full: 999 };
-const S = { xs: 4, sm: 8, md: 12, base: 16, lg: 20, xl: 28 };
-
-// ─── Tiny helpers ─────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+const AVATAR_COLORS = [
+  '#6366f1','#3b82f6','#10b981','#f59e0b',
+  '#ec4899','#8b5cf6','#06b6d4','#f97316',
+];
+function avatarColor(name = '') {
+  return AVATAR_COLORS[name.charCodeAt(0) % AVATAR_COLORS.length];
+}
 function initials(name = '') {
   return name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
 }
-
 function fmtAmount(v) {
   return Number(v).toLocaleString('en-IN');
 }
-
 function fmtDate(d) {
   if (!d) return '';
   return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
 }
 
-function categoryEmoji(cat) {
-  const map = {
-    'Food & Dining': '🍽️', Travel: '✈️', Accommodation: '🏨',
-    Activities: '🎉', Utilities: '💡', Groceries: '🛒',
-    Shopping: '🛍️', Entertainment: '🎬', Health: '🏥',
-    Transport: '🚗',
-  };
-  return map[cat] || '💰';
-}
-
 // ─── Avatar ───────────────────────────────────────────────────────────────────
-function Avatar({ name, size = 34, variant = 'neutral' }) {
-  const colors = {
-    neutral:  { bg: C.surface3, text: C.text2, border: C.border },
-    danger:   { bg: C.dangerLo, text: C.danger, border: 'rgba(239,68,68,0.3)' },
-    success:  { bg: C.successLo, text: C.success, border: 'rgba(16,185,129,0.25)' },
-  };
-  const col = colors[variant] || colors.neutral;
+function Avatar({ name, size = 36, variant = 'auto' }) {
+  const bg = variant === 'auto'
+    ? avatarColor(name)
+    : variant === 'success' ? C.success
+    : variant === 'danger'  ? C.danger
+    : variant === 'primary' ? C.primary
+    : C.surface3;
+
   return (
     <View style={{
       width: size, height: size, borderRadius: size / 2,
-      backgroundColor: col.bg, borderWidth: 1, borderColor: col.border,
-      alignItems: 'center', justifyContent: 'center',
+      backgroundColor: bg + (variant === 'auto' ? '' : '28'),
+      borderWidth: variant === 'auto' ? 0 : 1,
+      borderColor: bg + '55',
+      alignItems: 'center', justifyContent: 'center', flexShrink: 0,
     }}>
-      <Text style={{ fontSize: size * 0.34, fontWeight: W.bold, color: col.text }}>
+      <Text style={{
+        fontSize: size * 0.36, fontWeight: W.bold,
+        color: variant === 'auto' ? '#fff' : bg,
+      }}>
         {initials(name)}
       </Text>
     </View>
   );
 }
 
-// ─── Badge / Tag ──────────────────────────────────────────────────────────────
+// ─── Badge ────────────────────────────────────────────────────────────────────
 function Badge({ label, variant = 'neutral' }) {
-  const vars = {
-    neutral: { bg: C.surface3, color: C.text2 },
-    success: { bg: C.successLo, color: C.success },
-    danger:  { bg: C.dangerLo,  color: C.danger },
-    primary: { bg: C.primaryLo, color: C.primary },
-    warning: { bg: C.warningLo, color: C.warning },
+  const map = {
+    neutral: { bg: C.surface3,   color: C.text2   },
+    success: { bg: C.successLo,  color: C.success  },
+    danger:  { bg: C.dangerLo,   color: C.danger   },
+    primary: { bg: C.primaryLo,  color: C.primary  },
+    warning: { bg: C.warningLo,  color: C.warning  },
   };
-  const v = vars[variant] || vars.neutral;
+  const v = map[variant] || map.neutral;
   return (
-    <View style={{ backgroundColor: v.bg, borderRadius: R.full, paddingHorizontal: 8, paddingVertical: 3 }}>
+    <View style={{ backgroundColor: v.bg, borderRadius: R.full, paddingHorizontal: 7, paddingVertical: 2 }}>
       <Text style={{ fontSize: F.xs, fontWeight: W.semibold, color: v.color }}>{label}</Text>
     </View>
   );
@@ -124,6 +111,7 @@ function Toast({ message }) {
   if (!message) return null;
   return (
     <View style={styles.toast} pointerEvents="none">
+      <Icons.check size={14} color={C.success} />
       <Text style={styles.toastText}>{message}</Text>
     </View>
   );
@@ -139,7 +127,7 @@ function StatCard({ label, value, color }) {
   );
 }
 
-// ─── Section header ───────────────────────────────────────────────────────────
+// ─── Section head ─────────────────────────────────────────────────────────────
 function SectionHead({ title, right }) {
   return (
     <View style={styles.sectionHead}>
@@ -149,17 +137,27 @@ function SectionHead({ title, right }) {
   );
 }
 
+// ─── Category icon for expense rows ──────────────────────────────────────────
+function CategoryIcon({ categoryName, size = 40 }) {
+  const cfg = CATEGORY_ICONS[categoryName];
+  const color = cfg?.color || C.text3;
+  const IconComp = cfg?.Icon || Icons.receipt;
+  return (
+    <View style={[styles.ledgerIcon, { backgroundColor: color + '18' }]}>
+      <IconComp size={20} color={color} />
+    </View>
+  );
+}
+
 // ─── Expense row ──────────────────────────────────────────────────────────────
 function ExpenseRow({ item, currentUserName, onDelete }) {
   const isPayer = item.payer_name === currentUserName;
   return (
     <View style={styles.ledgerRow}>
-      <View style={styles.ledgerIcon}>
-        <Text style={{ fontSize: 17 }}>{categoryEmoji(item.category_name)}</Text>
-      </View>
+      <CategoryIcon categoryName={item.category_name} />
       <View style={styles.ledgerMid}>
         <Text style={styles.ledgerDesc} numberOfLines={1}>{item.description}</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3, flexWrap: 'wrap' }}>
           <Text style={styles.ledgerMeta}>
             {isPayer ? 'You paid' : `${item.payer_name} paid`} · {fmtDate(item.expense_date)}
           </Text>
@@ -176,7 +174,7 @@ function ExpenseRow({ item, currentUserName, onDelete }) {
               { text: 'Delete', style: 'destructive', onPress: () => onDelete('expense', item.expense_id) },
             ])}
           >
-            <Text style={styles.deleteX}>✕</Text>
+            <Icons.trash size={14} color={C.danger} />
           </TouchableOpacity>
         )}
       </View>
@@ -190,7 +188,7 @@ function PaymentRow({ item, currentUserName, onDelete }) {
   return (
     <View style={[styles.ledgerRow, { opacity: 0.75 }]}>
       <View style={[styles.ledgerIcon, { backgroundColor: C.successLo }]}>
-        <Text style={{ fontSize: 17 }}>💸</Text>
+        <Icons.settlement size={20} color={C.success} />
       </View>
       <View style={styles.ledgerMid}>
         <Text style={[styles.ledgerDesc, { fontStyle: 'italic', color: C.text2 }]} numberOfLines={1}>
@@ -211,7 +209,7 @@ function PaymentRow({ item, currentUserName, onDelete }) {
               { text: 'Delete', style: 'destructive', onPress: () => onDelete('payment', item.payment_id) },
             ])}
           >
-            <Text style={styles.deleteX}>✕</Text>
+            <Icons.trash size={14} color={C.danger} />
           </TouchableOpacity>
         )}
       </View>
@@ -220,75 +218,86 @@ function PaymentRow({ item, currentUserName, onDelete }) {
 }
 
 // ─── Settlement row ───────────────────────────────────────────────────────────
+
 function SettlementRow({ item, currentUserName, members, onRemind, reminding }) {
   const isDebtor   = item.from === currentUserName;
   const isCreditor = item.to   === currentUserName;
 
-  // Build UPI link
   const toMember = members.find(m => m.name === item.to);
-  const upiLink = toMember?.upi_id
+  const upiLink  = toMember?.upi_id
     ? `upi://pay?pa=${toMember.upi_id}&am=${item.amount}&cu=INR&tn=SplitEase`
     : null;
 
-  const borderColor = isDebtor ? 'rgba(239,68,68,0.25)'
-    : isCreditor ? 'rgba(16,185,129,0.2)'
-    : C.border;
+  const cardBorder = isDebtor ? C.danger + '28' : isCreditor ? C.success + '22' : C.border;
+  const cardBg     = isDebtor ? 'rgba(239,68,68,0.04)' : isCreditor ? 'rgba(16,185,129,0.04)' : 'transparent';
 
   return (
-    <View style={[styles.settleRow, { borderColor }]}>
-      <View style={styles.settleNames}>
-        <Avatar name={item.from} size={30} variant={isDebtor ? 'danger' : 'neutral'} />
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.settleName, isDebtor && { color: C.text }]}>
-            {isDebtor ? 'You' : item.from}
-            {isDebtor && <Text style={{ color: C.danger, fontSize: F.xs }}> · you</Text>}
+    <View style={[styles.settleCard, { borderColor: cardBorder, backgroundColor: cardBg }]}>
+
+      {/* ── Who → Who row ── */}
+      <View style={styles.settleFlow}>
+        {/* From */}
+        <View style={styles.settleParty}>
+          <Avatar name={item.from} size={38} variant={isDebtor ? 'danger' : 'auto'} />
+          <Text style={[styles.settlePartyName, isDebtor && { color: C.text, fontWeight: W.bold }]} numberOfLines={1}>
+            {isDebtor ? 'You' : item.from.split(' ')[0]}
           </Text>
+          <Text style={[styles.settlePartyRole, { color: isDebtor ? C.danger : C.text3 }]}>pays</Text>
         </View>
-        <Text style={styles.settleArrow}>→</Text>
-        <View style={{ flex: 1, alignItems: 'flex-end' }}>
-          <Text style={[styles.settleName, isCreditor && { color: C.text }]}>
-            {isCreditor ? 'You' : item.to}
-            {isCreditor && <Text style={{ color: C.success, fontSize: F.xs }}> · you</Text>}
+
+        {/* Directional arrow — always left-to-right (from=debtor, to=creditor) */}
+        <View style={styles.settleArrow}>
+          <View style={styles.settleArrowLine} />
+          <Icons.chevronRight size={14} color={C.text3} />
+        </View>
+
+        {/* To */}
+        <View style={[styles.settleParty, { alignItems: 'flex-end' }]}>
+          <Avatar name={item.to} size={38} variant={isCreditor ? 'success' : 'auto'} />
+          <Text style={[styles.settlePartyName, isCreditor && { color: C.text, fontWeight: W.bold }]} numberOfLines={1}>
+            {isCreditor ? 'You' : item.to.split(' ')[0]}
           </Text>
+          <Text style={[styles.settlePartyRole, { color: isCreditor ? C.success : C.text3 }]}>receives</Text>
         </View>
-        <Avatar name={item.to} size={30} variant={isCreditor ? 'success' : 'neutral'} />
       </View>
 
-      <View style={styles.settleAction}>
-        {isDebtor ? (
-          <>
-            <Text style={[styles.settleAmt, { color: C.danger }]}>
-              ₹{fmtAmount(item.amount)}
-            </Text>
-            {upiLink ? (
-              <TouchableOpacity
-                style={[styles.actionBtn, { backgroundColor: C.primaryLo, borderColor: 'rgba(59,130,246,0.3)' }]}
-                onPress={() => Linking.openURL(upiLink).catch(() => Alert.alert('UPI app not found'))}
-              >
-                <Text style={[styles.actionBtnText, { color: C.primary }]}>Pay via UPI</Text>
-              </TouchableOpacity>
-            ) : (
-              <Text style={styles.noUpi}>No UPI set</Text>
-            )}
-          </>
-        ) : isCreditor ? (
-          <>
-            <Text style={[styles.settleAmt, { color: C.success }]}>
-              +₹{fmtAmount(item.amount)}
-            </Text>
-            <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: C.warningLo, borderColor: 'rgba(245,158,11,0.3)' }]}
-              onPress={() => onRemind(item)}
-              disabled={reminding === item.from}
-            >
-              {reminding === item.from
-                ? <ActivityIndicator size="small" color={C.warning} />
-                : <Text style={[styles.actionBtnText, { color: C.warning }]}>🔔 Remind</Text>
-              }
-            </TouchableOpacity>
-          </>
-        ) : (
-          <Text style={[styles.settleAmt, { color: C.text2 }]}>₹{fmtAmount(item.amount)}</Text>
+      {/* ── Amount + Action ── */}
+      <View style={styles.settleFooter}>
+        <Text style={[styles.settleAmt, {
+          color: isDebtor ? C.danger : isCreditor ? C.success : C.text2
+        }]}>
+          {isDebtor ? '−' : isCreditor ? '+' : ''}₹{fmtAmount(item.amount)}
+        </Text>
+
+        {isDebtor && upiLink && (
+          <TouchableOpacity
+            style={[styles.actionBtn, { backgroundColor: C.primaryLo, borderColor: C.primary + '40' }]}
+            onPress={() => Linking.openURL(upiLink).catch(() => Alert.alert('UPI app not found'))}
+          >
+            <Icons.upi size={13} color={C.primary} />
+            <Text style={[styles.actionBtnText, { color: C.primary }]}>Pay via UPI</Text>
+          </TouchableOpacity>
+        )}
+        {isDebtor && !upiLink && (
+          <Text style={styles.noUpi}>No UPI set</Text>
+        )}
+        {isCreditor && (
+          <TouchableOpacity
+            style={[styles.actionBtn, { backgroundColor: C.warningLo, borderColor: C.warning + '40' }]}
+            onPress={() => {
+              const fromMember = members.find(m => m.name === item.from);
+              onRemind({ ...item, from_user_id: fromMember?.user_id });
+            }}
+            disabled={reminding === item.from}
+          >
+            {reminding === item.from
+              ? <ActivityIndicator size="small" color={C.warning} />
+              : <><Icons.bell size={13} color={C.warning} /><Text style={[styles.actionBtnText, { color: C.warning }]}>Remind</Text></>
+            }
+          </TouchableOpacity>
+        )}
+        {!isDebtor && !isCreditor && (
+          <Text style={styles.noUpi}>No action needed</Text>
         )}
       </View>
     </View>
@@ -303,7 +312,7 @@ function NetRow({ item, currentUserName }) {
   const label   = `${net > 0 ? '+' : ''}₹${Math.abs(net).toLocaleString('en-IN')}`;
   return (
     <View style={[styles.netRow, isMe && styles.netRowMe]}>
-      <Avatar name={item.user_name} size={32} variant={isMe ? 'primary' : 'neutral'} />
+      <Avatar name={item.user_name} size={34} />
       <View style={{ flex: 1 }}>
         <Text style={[styles.netName, isMe && { color: C.text, fontWeight: W.bold }]}>
           {item.user_name}
@@ -321,22 +330,27 @@ function MemberRow({ member, currentUserName }) {
   const isMe = member.name === currentUserName;
   return (
     <View style={[styles.memberRow, isMe && styles.memberRowMe]}>
-      <Avatar name={member.name} size={40} variant={isMe ? 'primary' : 'neutral'} />
+      <Avatar name={member.name} size={42} />
       <View style={{ flex: 1 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
           <Text style={styles.memberName}>{member.name}</Text>
           {isMe && <Badge label="you" variant="primary" />}
         </View>
-        {member.upi_id
-          ? <Text style={styles.memberUpi}>{member.upi_id}</Text>
-          : <Text style={[styles.memberUpi, { fontStyle: 'italic' }]}>No UPI ID</Text>
-        }
+        {member.upi_id ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 }}>
+            <Icons.upi size={11} color={C.text3} />
+            <Text style={styles.memberUpi}>{member.upi_id}</Text>
+          </View>
+        ) : (
+          <Text style={[styles.memberUpi, { fontStyle: 'italic' }]}>No UPI ID</Text>
+        )}
       </View>
+      {isMe && <Icons.check size={16} color={C.primary} />}
     </View>
   );
 }
 
-// ─── Tab bar ──────────────────────────────────────────────────────────────────
+// ─── Tab bar — FIXED: single indicator only ───────────────────────────────────
 const TABS = ['Ledger', 'Settlements', 'Members'];
 
 function TabBar({ active, counts, onSelect }) {
@@ -355,6 +369,7 @@ function TabBar({ active, counts, onSelect }) {
             <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>
               {t}{count !== undefined ? ` (${count})` : ''}
             </Text>
+            {/* Single indicator — NO borderBottomWidth on tabItem */}
             {isActive && <View style={styles.tabIndicator} />}
           </TouchableOpacity>
         );
@@ -363,39 +378,48 @@ function TabBar({ active, counts, onSelect }) {
   );
 }
 
-// ─── My balance banner ────────────────────────────────────────────────────────
+// ─── Balance banner ───────────────────────────────────────────────────────────
 function BalanceBanner({ netBalances, currentUserName }) {
   const me = netBalances.find(s => s.user_name === currentUserName);
   if (!me) return null;
   const net = Number(me.net_balance);
 
   if (net === 0) return (
-    <View style={[styles.banner, { borderColor: 'rgba(16,185,129,0.2)', backgroundColor: C.successLo }]}>
-      <Text style={[styles.bannerLabel, { color: C.success }]}>✓ You're all settled up.</Text>
+    <View style={[styles.banner, { borderColor: C.success + '30', backgroundColor: C.successLo }]}>
+      <Icons.checkCircle size={18} color={C.success} />
+      <Text style={[styles.bannerLabel, { color: C.success }]}>You're all settled up.</Text>
     </View>
   );
 
   const isOwed = net > 0;
   return (
     <View style={[styles.banner, {
-      borderColor: isOwed ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)',
+      borderColor: (isOwed ? C.success : C.danger) + '30',
       backgroundColor: isOwed ? C.successLo : C.dangerLo,
     }]}>
-      <Text style={[styles.bannerSub, { color: C.text3 }]}>
-        {isOwed ? 'You are owed' : 'You owe'}
-      </Text>
-      <Text style={[styles.bannerAmt, { color: isOwed ? C.success : C.danger }]}>
-        {isOwed ? '+' : ''}₹{Math.abs(net).toLocaleString('en-IN')}
-      </Text>
+      <View>
+        <Text style={[styles.bannerSub, { color: C.text3 }]}>
+          {isOwed ? 'You are owed' : 'You owe'}
+        </Text>
+        <Text style={[styles.bannerAmt, { color: isOwed ? C.success : C.danger }]}>
+          {isOwed ? '+' : ''}₹{Math.abs(net).toLocaleString('en-IN')}
+        </Text>
+      </View>
+      {isOwed
+        ? <Icons.income size={28} color={C.success} />
+        : <Icons.lendMoney size={28} color={C.danger} />
+      }
     </View>
   );
 }
 
-// ─── Empty state ──────────────────────────────────────────────────────────────
-function Empty({ icon, title, subtitle }) {
+// ─── Empty state — SVG icon, no emoji ────────────────────────────────────────
+function Empty({ icon: IconComp, iconColor = C.text3, title, subtitle }) {
   return (
     <View style={styles.empty}>
-      <Text style={{ fontSize: 36 }}>{icon}</Text>
+      <View style={[styles.emptyIconBox, { backgroundColor: iconColor + '14', borderColor: iconColor + '25' }]}>
+        <IconComp size={32} color={iconColor} />
+      </View>
       <Text style={styles.emptyTitle}>{title}</Text>
       <Text style={styles.emptySub}>{subtitle}</Text>
     </View>
@@ -411,29 +435,30 @@ export default function GroupDetailScreen() {
 
   const userName = user?.name || user?.email || '';
 
-  const [tab,          setTab]          = useState('Ledger');
-  const [expenses,     setExpenses]     = useState([]);
-  const [payments,     setPayments]     = useState([]);
-  const [members,      setMembers]      = useState([]);
-  const [simplified,   setSimplified]   = useState([]);
-  const [netBalances,  setNetBalances]  = useState([]);
-  const [loading,      setLoading]      = useState(true);
-  const [settLoading,  setSettLoading]  = useState(false);
-  const [refreshing,   setRefreshing]   = useState(false);
-  const [settLoaded,   setSettLoaded]   = useState(false);
-  const [reminding,    setReminding]    = useState('');
-  const [toast,        setToast]        = useState('');
+  const [tab,         setTab]         = useState('Ledger');
+  const [expenses,    setExpenses]    = useState([]);
+  const [payments,    setPayments]    = useState([]);
+  const [members,     setMembers]     = useState([]);
+  const [simplified,  setSimplified]  = useState([]);
+  const [netBalances, setNetBalances] = useState([]);
+  const [loading,     setLoading]     = useState(true);
+  const [settLoading, setSettLoading] = useState(false);
+  const [refreshing,  setRefreshing]  = useState(false);
+  const [settLoaded,  setSettLoaded]  = useState(false);
+  const [reminding,   setReminding]   = useState('');
+  const [toast,       setToast]       = useState('');
+  const [inviting, setInviting] = useState(false);
 
   function showToast(msg) {
     setToast(msg);
-    setTimeout(() => setToast(''), 3500);
+    setTimeout(() => setToast(''), 3000);
   }
 
-  // ── Load core data (ledger + members) ──────────────────────────────────────
   const loadCore = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
     try {
+      setSettLoaded(false);
       const [expRes, payRes, memRes] = await Promise.all([
         client.get(`/expenses/${groupId}`),
         client.get(`/payments/${groupId}`),
@@ -443,18 +468,14 @@ export default function GroupDetailScreen() {
       setPayments(payRes.data  || []);
       setMembers(memRes.data   || []);
     } catch (err) {
-      console.error('GroupDetail loadCore error:', err?.response?.status, err?.message);
-      Alert.alert(
-        'Failed to load',
-        err?.response?.data?.detail || err?.message || 'Could not fetch group data. Check your connection.',
-      );
+      Alert.alert('Failed to load',
+        err?.response?.data?.detail || err?.message || 'Check your connection.');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   }, [groupId]);
 
-  // ── Load settlements (lazy — only when tab opens) ─────────────────────────
   const loadSettlements = useCallback(async () => {
     setSettLoading(true);
     try {
@@ -465,8 +486,7 @@ export default function GroupDetailScreen() {
       setNetBalances(raw.data  || []);
       setSimplified(simp.data  || []);
       setSettLoaded(true);
-    } catch (err) {
-      console.error('Settlements error:', err?.response?.status, err?.message);
+    } catch {
       Alert.alert('Error', 'Could not load settlements.');
     } finally {
       setSettLoading(false);
@@ -480,7 +500,6 @@ export default function GroupDetailScreen() {
     if (t === 'Settlements' && !settLoaded) loadSettlements();
   }
 
-  // ── Delete ─────────────────────────────────────────────────────────────────
   async function handleDelete(type, id) {
     try {
       if (type === 'expense') {
@@ -490,32 +509,44 @@ export default function GroupDetailScreen() {
         await client.delete(`/payments/${id}`);
         setPayments(p => p.filter(x => x.payment_id !== id));
       }
-      showToast('Deleted successfully');
-    } catch {
-      Alert.alert('Error', 'Failed to delete.');
-    }
+      showToast('Deleted');
+    } catch { Alert.alert('Error', 'Failed to delete.'); }
   }
 
-  // ── Send reminder ──────────────────────────────────────────────────────────
   async function handleRemind(s) {
     setReminding(s.from);
     try {
-      await client.post(`/groups/${groupId}/remind`, {
-        debtor_name: s.from,
-        amount: s.amount,
-      });
-      showToast(`✓ Reminder sent to ${s.from}`);
+      await client.post(`/groups/${groupId}/remind`, { debtor_user_id: s.from_user_id, amount: s.amount });
+      showToast(`Reminder sent to ${s.from}`);
     } catch (err) {
-      showToast(err?.response?.data?.detail || 'Failed to send reminder.');
+      const detail = err?.response?.data?.detail;
+      showToast(
+        Array.isArray(detail)   ? detail[0]?.msg :
+        typeof detail === 'string' ? detail        :
+        'Failed to send reminder.'
+      );
+    } finally { setReminding(''); }
+  }
+
+  async function handleInvite() {
+    setInviting(true);
+    try {
+      const { data } = await client.post(`/groups/${groupId}/invite`);
+      const link = data.invite_url || `https://splitease.app/join/${data.token}`;
+      await Share.share({
+        message: `Join "${groupName}" on SplitEase:\n${link}`,
+        title: 'Invite to Group',
+      });
+    } catch {
+      Alert.alert('Error', 'Could not generate invite link.');
     } finally {
-      setReminding('');
+      setInviting(false);
     }
   }
 
-  // ── Stats ──────────────────────────────────────────────────────────────────
   const totalSpent = expenses.reduce((s, e) => s + Number(e.total_amount), 0);
 
-  // ── Render tabs ────────────────────────────────────────────────────────────
+  // ── Tab content ──────────────────────────────────────────────────────────
   function renderLedger() {
     const combined = [
       ...expenses.map(e => ({ ...e, _type: 'expense', _date: e.expense_date })),
@@ -523,24 +554,18 @@ export default function GroupDetailScreen() {
     ].sort((a, b) => new Date(b._date) - new Date(a._date));
 
     if (!combined.length) return (
-      <Empty icon="🧾" title="No transactions yet" subtitle="Add the first expense for this group." />
+      <Empty
+        icon={Icons.receipt}
+        iconColor={C.text3}
+        title="No transactions yet"
+        subtitle="Add the first expense for this group."
+      />
     );
-
-    return combined.map((item, i) =>
+    return combined.map(item =>
       item._type === 'expense' ? (
-        <ExpenseRow
-          key={`e-${item.expense_id}`}
-          item={item}
-          currentUserName={userName}
-          onDelete={handleDelete}
-        />
+        <ExpenseRow key={`e-${item.expense_id}`} item={item} currentUserName={userName} onDelete={handleDelete} />
       ) : (
-        <PaymentRow
-          key={`p-${item.payment_id}`}
-          item={item}
-          currentUserName={userName}
-          onDelete={handleDelete}
-        />
+        <PaymentRow key={`p-${item.payment_id}`} item={item} currentUserName={userName} onDelete={handleDelete} />
       )
     );
   }
@@ -549,40 +574,40 @@ export default function GroupDetailScreen() {
     if (settLoading) return (
       <View style={styles.centred}>
         <ActivityIndicator color={C.primary} size="large" />
-        <Text style={[styles.ledgerMeta, { marginTop: 12 }]}>Calculating…</Text>
+        <Text style={styles.centredText}>Calculating…</Text>
       </View>
     );
-
     return (
       <>
         {netBalances.length > 0 && (
           <BalanceBanner netBalances={netBalances} currentUserName={userName} />
         )}
-
         <SectionHead
           title="Who pays whom"
           right={
             <TouchableOpacity onPress={loadSettlements} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Text style={{ color: C.primary, fontSize: F.base }}>↻ Refresh</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Icons.refresh size={13} color={C.primary} />
+                <Text style={{ color: C.primary, fontSize: F.sm, fontWeight: W.medium }}>Refresh</Text>
+              </View>
             </TouchableOpacity>
           }
         />
-
         {simplified.length === 0 ? (
-          <Empty icon="🎉" title="All settled up!" subtitle="No outstanding balances." />
+          <Empty
+            icon={Icons.checkCircle}
+            iconColor={C.success}
+            title="All settled up!"
+            subtitle="No outstanding balances in this group."
+          />
         ) : (
           simplified.map((s, i) => (
             <SettlementRow
-              key={i}
-              item={s}
-              currentUserName={userName}
-              members={members}
-              onRemind={handleRemind}
-              reminding={reminding}
+              key={i} item={s} currentUserName={userName}
+              members={members} onRemind={handleRemind} reminding={reminding}
             />
           ))
         )}
-
         {netBalances.length > 0 && (
           <>
             <SectionHead title="Net Balances" />
@@ -597,36 +622,44 @@ export default function GroupDetailScreen() {
 
   function renderMembers() {
     if (!members.length) return (
-      <Empty icon="👥" title="No members" subtitle="Invite people to join this group." />
+      <Empty
+        icon={Icons.users}
+        iconColor={C.text3}
+        title="No members"
+        subtitle="Invite people to join this group."
+      />
     );
     return members.map((m, i) => (
       <MemberRow key={i} member={m} currentUserName={userName} />
     ));
   }
 
-  // ── Header ─────────────────────────────────────────────────────────────────
   const refreshControl = (
     <RefreshControl
       refreshing={refreshing}
-      onRefresh={() => { loadCore(true); if (tab === 'Settlements') { setSettLoaded(false); loadSettlements(); } }}
+      onRefresh={() => {
+        loadCore(true);
+        if (tab === 'Settlements') { setSettLoaded(false); loadSettlements(); }
+      }}
       tintColor={C.primary}
       colors={[C.primary]}
     />
   );
 
+  // ── Loading skeleton ──────────────────────────────────────────────────────
   if (loading) {
     return (
       <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <Text style={styles.backArrow}>←</Text>
+            <Icons.back size={22} color={C.text2} />
           </TouchableOpacity>
           <Text style={styles.headerTitle} numberOfLines={1}>{groupName}</Text>
           <View style={{ width: 32 }} />
         </View>
         <View style={styles.centred}>
           <ActivityIndicator color={C.primary} size="large" />
-          <Text style={[styles.ledgerMeta, { marginTop: 12 }]}>Loading group…</Text>
+          <Text style={styles.centredText}>Loading group…</Text>
         </View>
       </SafeAreaView>
     );
@@ -637,18 +670,37 @@ export default function GroupDetailScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-          <Text style={styles.backArrow}>←</Text>
+          <Icons.back size={22} color={C.text2} />
         </TouchableOpacity>
+        
         <Text style={styles.headerTitle} numberOfLines={1}>{groupName}</Text>
+        
+        {/* 🔥 The New Web-Style Blue Pill Invite Button */}
         <TouchableOpacity
-          onPress={() => navigation.navigate('AddPayment', { groupId, groupName, members })}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          style={styles.headerInviteBtn}
+          onPress={handleInvite}
+          disabled={inviting}
+          activeOpacity={0.7}
         >
-          <Text style={styles.headerPay}>Pay</Text>
+          {inviting ? (
+            <ActivityIndicator size="small" color={C.primary} />
+          ) : (
+            <>
+              <Icons.userPlus size={14} color={C.primary} />
+              <Text style={styles.headerInviteText}>Invite</Text>
+            </>
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.payBtn}
+          onPress={() => navigation.navigate('AddPayment', { groupId, groupName, members })}
+        >
+          <Icons.settlements size={13} color={C.success} />
+          <Text style={styles.payBtnText}>Pay</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Toast */}
       <Toast message={toast} />
 
       <ScrollView
@@ -657,20 +709,21 @@ export default function GroupDetailScreen() {
         refreshControl={refreshControl}
         contentContainerStyle={{ paddingBottom: 110 }}
       >
-        {/* Members strip */}
-        <View style={styles.memberStrip}>
-          {members.slice(0, 6).map((m, i) => (
+        {/* Member strip */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.memberStrip}
+        >
+          {members.map((m, i) => (
             <View key={i} style={styles.memberChip}>
-              <Avatar name={m.name} size={24} variant={m.name === userName ? 'primary' : 'neutral'} />
+              <Avatar name={m.name} size={24} />
               <Text style={styles.memberChipName} numberOfLines={1}>
                 {m.name === userName ? 'You' : m.name.split(' ')[0]}
               </Text>
             </View>
           ))}
-          {members.length > 6 && (
-            <Text style={styles.memberMore}>+{members.length - 6}</Text>
-          )}
-        </View>
+        </ScrollView>
 
         {/* Stats */}
         <View style={styles.statsRow}>
@@ -680,12 +733,10 @@ export default function GroupDetailScreen() {
           <StatCard label="Members"      value={String(members.length)} />
         </View>
 
-        {/* Tabs */}
+        {/* Tab bar */}
         <TabBar
           active={tab}
-          counts={{
-            Ledger: expenses.length + payments.length,
-          }}
+          counts={{ Ledger: expenses.length + payments.length }}
           onSelect={handleTab}
         />
 
@@ -704,7 +755,8 @@ export default function GroupDetailScreen() {
           onPress={() => navigation.navigate('AddExpense', { groupId, groupName, members })}
           activeOpacity={0.88}
         >
-          <Text style={styles.fabText}>＋ Add Expense</Text>
+          <Icons.plus size={18} color="#fff" />
+          <Text style={styles.fabText}>Add Expense</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -719,88 +771,143 @@ const styles = StyleSheet.create({
   // Header
   header: {
     flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: S.base, paddingVertical: 12,
+    paddingHorizontal: SP.base, paddingVertical: 13,
     backgroundColor: C.surface,
     borderBottomWidth: 1, borderBottomColor: C.border,
     gap: 12,
   },
-  backArrow:   { fontSize: F.xl, color: C.text2, lineHeight: 24 },
-  headerTitle: { flex: 1, fontSize: F.lg, fontWeight: W.bold, color: C.text },
-  headerPay:   { fontSize: F.md, fontWeight: W.semibold, color: C.success },
-
-  // Members strip
-  memberStrip: {
-    flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap',
-    paddingHorizontal: S.base, paddingTop: S.md, paddingBottom: S.sm, gap: 8,
+  headerTitle: { flex: 1, fontSize: F.lg, fontWeight: W.bold, color: C.text, letterSpacing: -0.2 },
+  payBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: C.successLo, borderRadius: R.full,
+    paddingHorizontal: 12, paddingVertical: 6,
+    borderWidth: 1, borderColor: C.success + '30',
   },
-  memberChip:  { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: C.surface2, borderRadius: R.full, paddingHorizontal: 8, paddingVertical: 4, borderWidth: 1, borderColor: C.border },
+  payBtnText: { fontSize: F.sm, fontWeight: W.bold, color: C.success },
+
+  // Member strip
+  memberStrip: {
+    paddingHorizontal: SP.base, paddingVertical: SP.md, gap: 8,
+    flexDirection: 'row',
+  },
+  memberChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: C.surface2, borderRadius: R.full,
+    paddingHorizontal: 10, paddingVertical: 5,
+    borderWidth: 1, borderColor: C.border,
+  },
   memberChipName: { fontSize: F.xs, color: C.text2, fontWeight: W.medium, maxWidth: 70 },
-  memberMore:  { fontSize: F.sm, color: C.text3, marginLeft: 4 },
 
   // Stats
   statsRow: {
-    flexDirection: 'row', paddingHorizontal: S.base,
-    gap: S.sm, marginBottom: S.sm,
+    flexDirection: 'row', paddingHorizontal: SP.base,
+    gap: SP.sm, marginBottom: SP.sm,
   },
   statCard: {
     flex: 1, backgroundColor: C.surface, borderRadius: R.lg,
     borderWidth: 1, borderColor: C.border,
-    paddingVertical: 10, paddingHorizontal: 8, alignItems: 'center',
+    paddingVertical: 10, paddingHorizontal: 6, alignItems: 'center',
   },
-  statLabel: { fontSize: F.xs, color: C.text3, fontWeight: W.medium, marginBottom: 4, textAlign: 'center' },
+  statLabel: { fontSize: 10, color: C.text3, fontWeight: W.medium, marginBottom: 4, textAlign: 'center' },
   statVal:   { fontSize: F.lg, fontWeight: W.heavy, color: C.text },
 
-  // Tabs
+  // ── Tab bar — single indicator approach ──────────────────────────────────
   tabBar: {
-    flexDirection: 'row', backgroundColor: C.surface,
+    flexDirection: 'row',
+    backgroundColor: C.surface,
     borderBottomWidth: 1, borderBottomColor: C.border,
-    marginBottom: S.sm,
+    marginBottom: SP.sm,
   },
   tabItem: {
+    // NO borderBottomWidth here — that caused the double line
     flex: 1, paddingVertical: 13, alignItems: 'center',
-    borderBottomWidth: 2, borderBottomColor: 'transparent',
     position: 'relative',
   },
-  tabItemActive:  { borderBottomColor: C.primary },
+  tabItemActive: {
+    // Nothing — indicator View below handles it
+  },
   tabLabel:       { fontSize: F.base, color: C.text3, fontWeight: W.medium },
-  tabLabelActive: { color: C.primary, fontWeight: W.semibold },
-  tabIndicator:   { position: 'absolute', bottom: 0, height: 2, width: '60%', backgroundColor: C.primary, borderRadius: 2 },
+  tabLabelActive: { color: C.primary, fontWeight: W.bold },
+  // Single indicator — absolutely positioned at bottom
+  tabIndicator: {
+    position: 'absolute', bottom: 0,
+    left: '20%', right: '20%',
+    height: 2.5, backgroundColor: C.primary, borderRadius: 2,
+  },
 
-  content: { paddingHorizontal: S.base, gap: S.sm },
+  content: { paddingHorizontal: SP.base, gap: SP.sm },
 
   // Ledger rows
   ledgerRow: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: C.surface, borderRadius: R.lg,
+    backgroundColor: C.surface, borderRadius: R.xl,
     borderWidth: 1, borderColor: C.border,
-    padding: S.md, gap: S.sm,
+    padding: SP.md, gap: SP.md,
   },
   ledgerIcon: {
-    width: 40, height: 40, borderRadius: R.md,
-    backgroundColor: C.surface3, alignItems: 'center', justifyContent: 'center',
-    flexShrink: 0,
+    width: 42, height: 42, borderRadius: R.md,
+    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
-  ledgerMid:  { flex: 1 },
+  ledgerMid:  { flex: 1, minWidth: 0 },
   ledgerDesc: { fontSize: F.md, fontWeight: W.semibold, color: C.text },
   ledgerMeta: { fontSize: F.xs, color: C.text3 },
-  ledgerRight:{ alignItems: 'flex-end', gap: 4 },
+  ledgerRight:{ alignItems: 'flex-end', gap: 6, flexShrink: 0 },
   ledgerAmt:  { fontSize: F.md, fontWeight: W.heavy, color: C.text },
-  deleteX:    { color: C.danger, fontSize: F.base, lineHeight: 20 },
 
   // Settlements
-  settleRow: {
-    backgroundColor: C.surface, borderRadius: R.lg,
-    borderWidth: 1, padding: S.md, gap: S.sm,
+  // settleRow: {
+  //   backgroundColor: C.surface, borderRadius: R.xl,
+  //   borderWidth: 1, padding: SP.md, gap: SP.sm,
+  // },
+  // settleNames: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  // settleName:  { fontSize: F.sm, fontWeight: W.semibold, color: C.text2 },
+  // settleArrowBox: {
+  //   width: 26, height: 26, borderRadius: R.full,
+  //   backgroundColor: C.surface3, alignItems: 'center', justifyContent: 'center',
+  // },
+  // settleAction: {
+  //   flexDirection: 'row', alignItems: 'center',
+  //   justifyContent: 'flex-end', gap: 10,
+  // },
+
+  // ── Settlement card (replaces settleRow/settleNames etc.) ──
+  settleCard: {
+    borderRadius: R.xl, borderWidth: 1,
+    padding: SP.base, gap: SP.md,
   },
-  settleNames: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  settleName:  { fontSize: F.base, fontWeight: W.semibold, color: C.text2 },
-  settleArrow: { color: C.text3, fontSize: F.base, marginHorizontal: 2 },
-  settleAction:{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 10 },
-  settleAmt:   { fontSize: F.lg, fontWeight: W.heavy, fontVariant: ['tabular-nums'] },
+  settleFlow: {
+    flexDirection: 'row', alignItems: 'center', gap: SP.sm,
+  },
+  settleParty: {
+    flex: 1, alignItems: 'center', gap: 4,
+  },
+  settlePartyName: {
+    fontSize: F.sm, fontWeight: W.semibold, color: C.text2,
+    textAlign: 'center',
+  },
+  settlePartyRole: {
+    fontSize: F.xs, fontWeight: W.medium,
+  },
+  settleArrow: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 2,
+  },
+  settleArrowLine: {
+    width: 18, height: 1.5,
+    backgroundColor: C.text3, opacity: 0.4,
+  },
+  settleFooter: {
+    flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: SP.sm,
+    borderTopWidth: 1, borderTopColor: C.border,
+  },
+
+  settleAmt: { fontSize: F.lg, fontWeight: W.heavy },
   actionBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
     borderWidth: 1, borderRadius: R.full,
-    paddingHorizontal: 12, paddingVertical: 5,
-    minWidth: 90, alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: 12, paddingVertical: 6,
   },
   actionBtnText: { fontSize: F.sm, fontWeight: W.semibold },
   noUpi:         { fontSize: F.xs, color: C.text3, fontStyle: 'italic' },
@@ -808,72 +915,102 @@ const styles = StyleSheet.create({
   // Net balances
   netRow: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: C.surface, borderRadius: R.lg,
+    backgroundColor: C.surface, borderRadius: R.xl,
     borderWidth: 1, borderColor: C.border,
-    padding: S.md, gap: S.sm,
+    padding: SP.md, gap: SP.md,
   },
-  netRowMe: { borderColor: 'rgba(59,130,246,0.25)', backgroundColor: 'rgba(59,130,246,0.04)' },
+  netRowMe: { borderColor: C.primary + '30', backgroundColor: C.primaryLo },
   netName:  { fontSize: F.md, fontWeight: W.medium, color: C.text2 },
   netPaid:  { fontSize: F.xs, color: C.text3, marginTop: 2 },
 
   // Members tab
   memberRow: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: C.surface, borderRadius: R.lg,
+    backgroundColor: C.surface, borderRadius: R.xl,
     borderWidth: 1, borderColor: C.border,
-    padding: S.md, gap: S.md,
+    padding: SP.md, gap: SP.md,
   },
-  memberRowMe: { borderColor: 'rgba(59,130,246,0.2)' },
+  memberRowMe: { borderColor: C.primary + '25', backgroundColor: C.primaryLo },
   memberName: { fontSize: F.md, fontWeight: W.semibold, color: C.text },
   memberUpi:  { fontSize: F.xs, color: C.text3, marginTop: 3 },
 
   // Balance banner
   banner: {
-    borderWidth: 1, borderRadius: R.lg,
-    padding: S.md, marginBottom: S.md,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    borderWidth: 1, borderRadius: R.xl,
+    padding: SP.base, marginBottom: SP.md, gap: SP.md,
   },
-  bannerLabel: { fontSize: F.md, fontWeight: W.medium },
-  bannerSub:   { fontSize: F.xs, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 },
-  bannerAmt:   { fontSize: F.xxl, fontWeight: W.heavy },
+  bannerLabel: { fontSize: F.md, fontWeight: W.semibold },
+  bannerSub:   { fontSize: F.xs, textTransform: 'uppercase', letterSpacing: 0.7, marginBottom: 3 },
+  bannerAmt:   { fontSize: F.xxl, fontWeight: W.heavy, letterSpacing: -0.5 },
 
   // Section head
   sectionHead: {
     flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'space-between', marginBottom: S.sm,
-    marginTop: S.sm,
+    justifyContent: 'space-between', marginBottom: SP.sm, marginTop: SP.sm,
   },
-  sectionTitle: { fontSize: F.md, fontWeight: W.semibold, color: C.text },
+  sectionTitle: { fontSize: F.md, fontWeight: W.bold, color: C.text },
 
-  // Empty
-  empty: { alignItems: 'center', paddingVertical: 48, gap: 8 },
-  emptyTitle: { fontSize: F.lg, fontWeight: W.semibold, color: C.text },
-  emptySub:   { fontSize: F.base, color: C.text2, textAlign: 'center' },
+  // Empty state
+  empty: { alignItems: 'center', paddingVertical: 48, gap: 10 },
+  emptyIconBox: {
+    width: 72, height: 72, borderRadius: 22,
+    borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginBottom: 4,
+  },
+  emptyTitle: { fontSize: F.lg, fontWeight: W.bold, color: C.text },
+  emptySub:   { fontSize: F.base, color: C.text2, textAlign: 'center', lineHeight: 20 },
 
   // Toast
   toast: {
-    position: 'absolute', bottom: 120, left: S.xl, right: S.xl, zIndex: 999,
-    backgroundColor: C.surface2, borderRadius: R.lg,
+    position: 'absolute', bottom: 120, left: SP.xl, right: SP.xl, zIndex: 999,
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: C.surface2, borderRadius: R.xl,
     borderWidth: 1, borderColor: C.border,
-    paddingVertical: 12, paddingHorizontal: S.base, alignItems: 'center',
+    paddingVertical: 11, paddingHorizontal: SP.base,
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3, shadowRadius: 10, elevation: 10,
   },
   toastText: { fontSize: F.base, color: C.text, fontWeight: W.medium },
 
   // Centred loader
-  centred: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80 },
+  centred:     { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80, gap: 12 },
+  centredText: { fontSize: F.base, color: C.text3 },
 
   // FAB
   fabArea: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
-    paddingHorizontal: S.base, paddingBottom: S.lg, paddingTop: S.sm,
-    backgroundColor: 'transparent',
+    paddingHorizontal: SP.base, paddingBottom: SP.lg, paddingTop: SP.sm,
   },
   fab: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     backgroundColor: C.primary, borderRadius: R.xl,
-    paddingVertical: 15, alignItems: 'center',
+    paddingVertical: 15,
     shadowColor: C.primary, shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.45, shadowRadius: 14, elevation: 10,
   },
-  fabText: { color: C.white, fontSize: F.md, fontWeight: W.bold, letterSpacing: 0.3 },
+  fabText: { color: C.white, fontSize: F.md, fontWeight: W.bold, letterSpacing: 0.2 },
+
+  iconBtn: {
+    width: 34, height: 34, borderRadius: R.md,
+    backgroundColor: C.primaryLo, borderWidth: 1, borderColor: C.primary + '30',
+    alignItems: 'center', justifyContent: 'center',
+  },
+
+  // ─── Header Invite Pill ───
+  headerInviteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: C.primaryLo,            
+    borderWidth: 1,
+    borderColor: C.primary + '40',                
+    borderRadius: R.full,                    
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  headerInviteText: {
+    fontSize: F.sm,                        
+    fontWeight: W.bold,
+    color: C.primary,
+  },
 });
