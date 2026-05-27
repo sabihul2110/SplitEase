@@ -188,11 +188,6 @@ export default function ActivityScreen() {
         }
         ListHeaderComponent={() => (
           <View style={styles.listHeader}>
-            {/* Page header */}
-            <View style={styles.pageHead}>
-              <Text style={styles.pageTitle}>Activity</Text>
-              <Text style={styles.pageSub}>Your complete financial timeline</Text>
-            </View>
 
             {/* Summary chips */}
             {feed.length > 0 && (
@@ -274,10 +269,6 @@ const styles = StyleSheet.create({
   safe:       { flex: 1, backgroundColor: COLORS.bg },
   list:       { paddingBottom: SPACING['2xl'] },
   listHeader: { padding: SPACING.base, gap: SPACING.base },
-
-  pageHead: { gap: 4 },
-  pageTitle: { fontSize: FONT_SIZE['2xl'], fontWeight: FONT_WEIGHT.extrabold, color: COLORS.text },
-  pageSub:   { fontSize: FONT_SIZE.base, color: COLORS.text3 },
 
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
   chip: {

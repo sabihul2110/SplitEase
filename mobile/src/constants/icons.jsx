@@ -1,22 +1,15 @@
 // SplitEase/mobile/src/constants/icons.jsx
-// Full icon set — mirrors web Icons util, adapted for react-native-svg
 
 import React from "react";
-import Svg, {
-  Rect, Path, Circle, Polyline, Line, Ellipse, G,
-} from "react-native-svg";
+import Svg, { Rect, Path, Circle, Polyline, Line, Ellipse, G, Defs, LinearGradient, Stop } from "react-native-svg";
 
 const S = (color, w = "2") => ({
-  fill: "none",
-  stroke: color,
-  strokeWidth: w,
-  strokeLinecap: "round",
-  strokeLinejoin: "round",
+  fill: "none", stroke: color, strokeWidth: w,
+  strokeLinecap: "round", strokeLinejoin: "round",
 });
 
 export const Icons = {
   // ── Navigation ──────────────────────────────────────────────────────────
-
   dashboard: ({ size = 24, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
       <Rect x="3" y="3" width="7" height="7" rx="1" />
@@ -25,7 +18,6 @@ export const Icons = {
       <Rect x="14" y="14" width="7" height="7" rx="1" />
     </Svg>
   ),
-
   expenses: ({ size = 24, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
       <Path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -34,7 +26,6 @@ export const Icons = {
       <Line x1="9" y1="17" x2="13" y2="17" />
     </Svg>
   ),
-
   loans: ({ size = 24, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
       <Circle cx="5" cy="8" r="3" />
@@ -44,34 +35,6 @@ export const Icons = {
       <Path d="M12 12v6m-2-2 2 2 2-2" />
     </Svg>
   ),
-
-  // loans: ({ size = 20, color = "currentColor" }) => (
-  //   <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
-  //     {/* Top-left Person */}
-  //     <Circle cx="5" cy="5" r="2" />
-  //     <Path d="M2 11c0-1.1.9-2 2-2h2c1.1 0 2 .9 2 2" />
-
-  //     {/* Bottom-right Person */}
-  //     <Circle cx="19" cy="19" r="2" />
-  //     <Path d="M16 24c0-1.1.9-2 2-2h2c1.1 0 2 .9 2 2" />
-
-  //     {/* Center Coin */}
-  //     <Circle cx="12" cy="12" r="3.5" />
-      
-  //     {/* Dollar Symbol Inside Coin */}
-  //     <Path d="M12 9.5v5" />
-  //     <Path d="M13.5 10.5a1 1 0 0 0-1.5-.5h-1a1 1 0 0 0 0 2h1a1 1 0 0 1 0 2h-1a1 1 0 0 1-1.5-.5" />
-
-  //     {/* Top-right Arrow (Flowing down) */}
-  //     <Path d="M10 4h5a4 4 0 0 1 4 4v5" />
-  //     <Path d="M16 10l3 3 3-3" />
-
-  //     {/* Bottom-left Arrow (Flowing up) */}
-  //     <Path d="M14 20H9a4 4 0 0 1-4-4v-5" />
-  //     <Path d="M2 14l3-3 3 3" />
-  //   </Svg>
-  // ),
-
   groups: ({ size = 24, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
       <Circle cx="9" cy="7" r="3" />
@@ -80,27 +43,23 @@ export const Icons = {
       <Path d="M21 20v-1a6 6 0 0 0-6-6H9a6 6 0 0 0-6 6v1" />
     </Svg>
   ),
-
   settlements: ({ size = 24, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
       <Path d="M7 16V4m0 0L3 8m4-4 4 4" />
       <Path d="M17 8v12m0 0 4-4m-4 4-4-4" />
     </Svg>
   ),
-
   activity: ({ size = 24, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
       <Polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
     </Svg>
   ),
-
   settings: ({ size = 24, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
       <Circle cx="12" cy="12" r="3" />
       <Path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
     </Svg>
   ),
-
   more: ({ size = 24, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
       <Circle cx="12" cy="6" r="1.5" />
@@ -108,28 +67,24 @@ export const Icons = {
       <Circle cx="12" cy="18" r="1.5" />
     </Svg>
   ),
-
   bell: ({ size = 24, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
       <Path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
       <Path d="M13.73 21a2 2 0 0 1-3.46 0" />
     </Svg>
   ),
-
   edit: ({ size = 24, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
       <Path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
       <Path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
     </Svg>
   ),
-
   lock: ({ size = 24, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
       <Rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
       <Path d="M7 11V7a5 5 0 0 1 10 0v4" />
     </Svg>
   ),
-
   upi: ({ size = 24, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
       <Path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
@@ -137,14 +92,12 @@ export const Icons = {
       <Path d="M18 12a2 2 0 0 0 0 4h4v-4Z" />
     </Svg>
   ),
-
   mail: ({ size = 24, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
       <Path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
       <Polyline points="22,6 12,13 2,6" />
     </Svg>
   ),
-
   wallet: ({ size = 24, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
       <Path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
@@ -152,7 +105,6 @@ export const Icons = {
       <Path d="M18 12a2 2 0 0 0 0 4h4v-4Z" />
     </Svg>
   ),
-
   users: ({ size = 24, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
       <Path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -161,37 +113,73 @@ export const Icons = {
       <Path d="M16 3.13a4 4 0 0 1 0 7.75" />
     </Svg>
   ),
-
   eye: ({ size = 24, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
       <Path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
       <Circle cx="12" cy="12" r="3" />
     </Svg>
   ),
-
   eyeOff: ({ size = 24, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
       <Path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
       <Line x1="1" y1="1" x2="23" y2="23" />
     </Svg>
   ),
-
   check: ({ size = 24, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color, "2.5")}>
       <Polyline points="20 6 9 17 4 12" />
     </Svg>
   ),
-
+  // Filled circle with check — for success states
+  checkCircle: ({ size = 24, color = "currentColor" }) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
+      <Path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+      <Polyline points="22 4 12 14.01 9 11.01" />
+    </Svg>
+  ),
   back: ({ size = 24, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
       <Polyline points="15 18 9 12 15 6" />
     </Svg>
   ),
+  moon: ({ size = 24, color = "currentColor" }) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
+      <Path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+    </Svg>
+  ),
+  logout: ({ size = 24, color = "currentColor" }) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
+      <Path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+      <Polyline points="16 17 21 12 16 7" />
+      <Line x1="21" y1="12" x2="9" y2="12" />
+    </Svg>
+  ),
 
-  // ── Entry-type icons (matches web TYPE_ICONS keys) ───────────────────────
-
-  // ── Option 1: Receipt ─────────────────────────────
-  personalExpense: ({ size = 20, color = "currentColor" }) => (
+  // ── Empty state illustrations ─────────────────────────────────────────────
+  // Inbox zero — for empty ledger
+  inboxZero: ({ size = 24, color = "currentColor" }) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
+      <Polyline points="22 12 16 12 14 15 10 15 8 12 2 12" />
+      <Path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
+    </Svg>
+  ),
+  // Sparkle / all-clear star
+  sparkle: ({ size = 24, color = "currentColor" }) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
+      <Path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z" />
+    </Svg>
+  ),
+  // Users with plus — empty groups
+  usersPlus: ({ size = 24, color = "currentColor" }) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
+      <Path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+      <Circle cx="8.5" cy="7" r="4" />
+      <Line x1="20" y1="8" x2="20" y2="14" />
+      <Line x1="23" y1="11" x2="17" y2="11" />
+    </Svg>
+  ),
+  // Receipt — transactions
+  receipt: ({ size = 24, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
       <Path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1Z" />
       <Path d="M16 8h-8" />
@@ -200,6 +188,15 @@ export const Icons = {
     </Svg>
   ),
 
+  // ── Entry-type icons ──────────────────────────────────────────────────────
+  personalExpense: ({ size = 20, color = "currentColor" }) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
+      <Path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1Z" />
+      <Path d="M16 8h-8" />
+      <Path d="M16 12h-8" />
+      <Path d="M10 16H8" />
+    </Svg>
+  ),
   groupExpense: ({ size = 20, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
       <Path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -208,14 +205,12 @@ export const Icons = {
       <Path d="M16 3.13a4 4 0 0 1 0 7.75" />
     </Svg>
   ),
-
   settlement: ({ size = 20, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
       <Path d="M7 16V4m0 0L3 8m4-4 4 4" />
       <Path d="M17 8v12m0 0 4-4m-4 4-4-4" />
     </Svg>
   ),
-
   income: ({ size = 20, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
       <Path d="M12 2v12" />
@@ -223,7 +218,6 @@ export const Icons = {
       <Path d="M20 16v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2" />
     </Svg>
   ),
-
   lendMoney: ({ size = 20, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
       <Circle cx="12" cy="18" r="4" />
@@ -231,7 +225,6 @@ export const Icons = {
       <Path d="M7 7l5-5 5 5" />
     </Svg>
   ),
-
   borrowMoney: ({ size = 20, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
       <Circle cx="12" cy="18" r="4" />
@@ -239,40 +232,34 @@ export const Icons = {
       <Path d="M7 9l5 5 5-5" />
     </Svg>
   ),
-
   trash: ({ size = 20, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
       <Polyline points="3 6 5 6 21 6" />
       <Path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
     </Svg>
   ),
-
   search: ({ size = 20, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
       <Circle cx="11" cy="11" r="8" />
       <Line x1="21" y1="21" x2="16.65" y2="16.65" />
     </Svg>
   ),
-
   chevronLeft: ({ size = 20, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color, "2.2")}>
       <Polyline points="15 18 9 12 15 6" />
     </Svg>
   ),
-
   chevronRight: ({ size = 20, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color, "2.2")}>
       <Polyline points="9 18 15 12 9 6" />
     </Svg>
   ),
-
   plus: ({ size = 20, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
       <Line x1="12" y1="5" x2="12" y2="19" />
       <Line x1="5" y1="12" x2="19" y2="12" />
     </Svg>
   ),
-
   refresh: ({ size = 20, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
       <Path d="M23 4v6h-6" />
@@ -280,7 +267,6 @@ export const Icons = {
       <Path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
     </Svg>
   ),
-
   userPlus: ({ size = 20, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
       <Path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -289,14 +275,12 @@ export const Icons = {
       <Line x1="23" y1="11" x2="17" y2="11" />
     </Svg>
   ),
-
   copy: ({ size = 20, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
       <Rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
       <Path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
     </Svg>
   ),
-
   externalLink: ({ size = 20, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
       <Path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
@@ -305,24 +289,18 @@ export const Icons = {
     </Svg>
   ),
 
-  // ── Category icons (AddExpenseScreen) ───────────────────────────────────
-
-  /** Travel — plane */
+  // ── Category icons ────────────────────────────────────────────────────────
   travel: ({ size = 20, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
       <Path d="M17.8 19.2 16 11l3.5-3.5C21 6 21 4 21 4s-2 0-3.5 1.5L14 9 5.8 7.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 3.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z" />
     </Svg>
   ),
-
-  /** Accommodation — house */
   accommodation: ({ size = 20, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
       <Path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
       <Polyline points="9 22 9 12 15 12 15 22" />
     </Svg>
   ),
-
-  /** Food & Dining — coffee cup */
   foodDining: ({ size = 20, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
       <Path d="M18 8h1a4 4 0 0 1 0 8h-1" />
@@ -332,15 +310,11 @@ export const Icons = {
       <Line x1="14" y1="1" x2="14" y2="4" />
     </Svg>
   ),
-
-  /** Activities — zap */
   activities: ({ size = 20, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
       <Polyline points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
     </Svg>
   ),
-
-  /** Utilities — lightbulb */
   utilities: ({ size = 20, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
       <Line x1="9" y1="18" x2="15" y2="18" />
@@ -348,8 +322,6 @@ export const Icons = {
       <Path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14" />
     </Svg>
   ),
-
-  /** Groceries — shopping bag */
   groceries: ({ size = 20, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
       <Path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
@@ -357,16 +329,12 @@ export const Icons = {
       <Path d="M16 10a4 4 0 0 1-8 0" />
     </Svg>
   ),
-
-  /** Shopping — price tag */
   shopping: ({ size = 20, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
       <Path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
       <Line x1="7" y1="7" x2="7.01" y2="7" />
     </Svg>
   ),
-
-  /** Transport — truck/car */
   transport: ({ size = 20, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
       <Rect x="1" y="3" width="15" height="13" rx="2" />
@@ -375,8 +343,6 @@ export const Icons = {
       <Circle cx="18.5" cy="18.5" r="2.5" />
     </Svg>
   ),
-
-  /** Entertainment — film */
   entertainment: ({ size = 20, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
       <Rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18" />
@@ -389,8 +355,6 @@ export const Icons = {
       <Line x1="17" y1="7" x2="22" y2="7" />
     </Svg>
   ),
-
-  /** Health — pulse/heartbeat */
   health: ({ size = 20, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
       <Polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
@@ -398,20 +362,17 @@ export const Icons = {
   ),
 };
 
-// ── TYPE_ICONS map matching web app ─────────────────────────────────────────
 export const TYPE_ICONS = {
-  personal_expense:    { Icon: Icons.personalExpense, bg: "rgba(239,68,68,0.12)",   color: "#f87171"  },
-  group_expense:       { Icon: Icons.groupExpense,    bg: "rgba(37,99,235,0.12)",   color: "#f87171"  },
-  group_expense_owed:  { Icon: Icons.groupExpense,    bg: "rgba(37,99,235,0.12)",   color: "#f87171"  },
-  settlement_sent:     { Icon: Icons.settlement,      bg: "rgba(239,68,68,0.10)",   color: "#f87171"  },
-  income:              { Icon: Icons.income,          bg: "rgba(16,185,129,0.12)",  color: "#10b981"  },
-  settlement_received: { Icon: Icons.settlement,      bg: "rgba(99,102,241,0.12)",  color: "#10b981"  },
-  loan_given:          { Icon: Icons.lendMoney,       bg: "rgba(245,158,11,0.12)",  color: "#f59e0b"  },
-  loan_taken:          { Icon: Icons.borrowMoney,     bg: "rgba(99,102,241,0.12)",  color: "#818cf8"  },
+  personal_expense:    { Icon: Icons.personalExpense, bg: "rgba(239,68,68,0.12)",   color: "#f87171" },
+  group_expense:       { Icon: Icons.groupExpense,    bg: "rgba(37,99,235,0.12)",   color: "#f87171" },
+  group_expense_owed:  { Icon: Icons.groupExpense,    bg: "rgba(37,99,235,0.12)",   color: "#f87171" },
+  settlement_sent:     { Icon: Icons.settlement,      bg: "rgba(239,68,68,0.10)",   color: "#f87171" },
+  income:              { Icon: Icons.income,          bg: "rgba(16,185,129,0.12)",  color: "#10b981" },
+  settlement_received: { Icon: Icons.settlement,      bg: "rgba(99,102,241,0.12)",  color: "#10b981" },
+  loan_given:          { Icon: Icons.lendMoney,       bg: "rgba(245,158,11,0.12)",  color: "#f59e0b" },
+  loan_taken:          { Icon: Icons.borrowMoney,     bg: "rgba(99,102,241,0.12)",  color: "#818cf8" },
 };
 
-// ── CATEGORY_ICONS map (used in AddExpenseScreen) ───────────────────────────
-// Keys match category_name strings returned by the API
 export const CATEGORY_ICONS = {
   'Travel':        { Icon: Icons.travel,        color: "#60a5fa" },
   'Accommodation': { Icon: Icons.accommodation, color: "#a78bfa" },

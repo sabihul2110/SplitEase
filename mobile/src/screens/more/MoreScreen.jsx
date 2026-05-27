@@ -9,11 +9,20 @@ import ScreenHeader from '../../components/layout/ScreenHeader';
 import { Icons } from '../../constants/icons';
 
 const ITEMS = [
-  { icon: Icons.activity,    label: 'Activity',      sub: 'View your complete timeline',      screen: 'Activity'     },
-  { icon: Icons.settlements, label: 'Settle Up',     sub: 'View and settle balances',        screen: 'Settlements'   },
-  { icon: Icons.bell,        label: 'Notifications', sub: 'Reminders and activity alerts',   screen: 'Notifications' },
-  { icon: Icons.settings,    label: 'Settings',      sub: 'Preferences and account options', screen: 'Settings'      },
-  { icon: Icons.users,       label: 'Profile',       sub: 'Edit your profile and password',  screen: 'Profile'       },
+  {
+    icon:   Icons.activity,
+    label:  'Activity',
+    sub:    'Your complete financial timeline',
+    screen: 'Activity',
+    color:  '#f59e0b',
+  },
+  {
+    icon:   Icons.settlements,
+    label:  'Settle Up',
+    sub:    'View and clear outstanding balances',
+    screen: 'Settlements',
+    color:  '#8b5cf6',
+  },
 ];
 
 export default function MoreScreen() {
@@ -22,15 +31,15 @@ export default function MoreScreen() {
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       <ScreenHeader title="More" />
       <ScrollView contentContainerStyle={styles.list}>
-        {ITEMS.map((item, i) => (
+        {ITEMS.map(item => (
           <TouchableOpacity
             key={item.screen}
-            style={[styles.row, i === ITEMS.length - 1 && styles.rowLast]}
+            style={styles.row}
             onPress={() => navigation.navigate(item.screen)}
             activeOpacity={0.7}
           >
-            <View style={styles.iconBox}>
-              <item.icon size={20} color={COLORS.primary} />
+            <View style={[styles.iconBox, { borderColor: item.color + '30', backgroundColor: item.color + '12' }]}>
+              <item.icon size={20} color={item.color} />
             </View>
             <View style={styles.info}>
               <Text style={styles.label}>{item.label}</Text>
@@ -53,10 +62,9 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: COLORS.border,
     padding: SPACING.base,
   },
-  rowLast: {},
   iconBox: {
-    width: 42, height: 42, borderRadius: 12,
-    backgroundColor: COLORS.surface2, borderWidth: 1, borderColor: COLORS.border,
+    width: 44, height: 44, borderRadius: 12,
+    borderWidth: 1,
     alignItems: 'center', justifyContent: 'center',
   },
   info:    { flex: 1 },

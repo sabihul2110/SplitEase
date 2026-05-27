@@ -1,17 +1,5 @@
 // SplitEase/mobile/src/screens/main/DashboardScreen.jsx
 
-/**
- * DashboardScreen.jsx
- *
- * Matches the web Dashboard exactly:
- * - Hero card with "Mohammad's SplitEase" style
- * - Uses POST /settlements/bulk (one call, not N calls)
- * - Net balance chips at top
- * - You Are Owed / You Owe mini cards
- * - Quick actions
- * - Recent groups list
- */
-
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl,
@@ -23,12 +11,34 @@ import { ENDPOINTS } from '../../constants/api';
 import { useAuth } from '../../context/AuthContext';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS } from '../../constants/theme';
 import { Avatar, LoadingState, EmptyState } from '../../components/common/ui';
+import { Icons } from '../../constants/icons';
 
 function fmt(n) {
   return Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-// ── Hero card (matches web .db-hero) ──────────────────────────────────────
+// ── Top bar (Avatar → Account, Bell → Notifications) ───────────────────────
+function TopBar({ initials, onAvatar, onBell }) {
+  return (
+    <View style={styles.topBar}>
+      <Text style={styles.topBarBrand}>SplitEase</Text>
+      <View style={styles.topBarRight}>
+        <TouchableOpacity
+          style={styles.topBarIconBtn}
+          onPress={onBell}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Icons.bell size={20} color={COLORS.text2} />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.topBarAvatar} onPress={onAvatar}>
+          <Text style={styles.topBarAvatarText}>{initials}</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+// ── Hero card ──────────────────────────────────────────────────────────────
 function HeroCard({ user, groups, netBalance, owedToYou, youOwe }) {
   const isPositive = netBalance >= 0;
   const netColor   = isPositive ? COLORS.success : COLORS.danger;
@@ -56,7 +66,9 @@ function HeroCard({ user, groups, netBalance, owedToYou, youOwe }) {
           <Text style={styles.heroStatLbl}>YOU ARE OWED</Text>
         </View>
         <View style={styles.heroStat}>
-          <Text style={[styles.heroStatVal, { color: youOwe > 0 ? COLORS.danger : COLORS.text2 }]}>₹{fmt(youOwe)}</Text>
+          <Text style={[styles.heroStatVal, { color: youOwe > 0 ? COLORS.danger : COLORS.text2 }]}>
+            ₹{fmt(youOwe)}
+          </Text>
           <Text style={styles.heroStatLbl}>YOU OWE</Text>
         </View>
       </View>
@@ -95,9 +107,7 @@ function GroupRow({ group, onPress }) {
     : '';
   return (
     <TouchableOpacity style={styles.groupRow} onPress={onPress} activeOpacity={0.7}>
-      <View style={styles.groupIcon}>
-        <Avatar name={group.group_name} size={38} />
-      </View>
+      <Avatar name={group.group_name} size={38} />
       <View style={styles.groupInfo}>
         <Text style={styles.groupName} numberOfLines={1}>{group.group_name}</Text>
         <Text style={styles.groupDate}>{date}</Text>
@@ -117,6 +127,8 @@ export default function DashboardScreen() {
   const [loading,    setLoading]    = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  const initials = (user?.name || '?').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
+
   const load = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     else           setLoading(true);
@@ -125,14 +137,11 @@ export default function DashboardScreen() {
       setGroups(groupList || []);
 
       if (groupList?.length) {
-        // Single bulk call — matches web FIX #15
         const { data: bulkResult } = await client.post(ENDPOINTS.settlementsBulk, {
           group_ids: groupList.map(g => g.group_id),
         });
-
         let owe = 0, owed = 0;
         Object.values(bulkResult).forEach(rows => {
-          // Match by user_id — matches web FIX #9
           const myRow = rows.find(s => s.user_id === user?.user_id);
           if (!myRow) return;
           const net = Number(myRow.net_balance);
@@ -160,10 +169,9 @@ export default function DashboardScreen() {
 
   if (loading) return <LoadingState label="Loading dashboard…" />;
 
-  // Chip data matching web .db-chip
   const chips = [
     { label: `${groups.length} active group${groups.length !== 1 ? 's' : ''}`, color: '#3b82f6' },
-    { label: user?.role === 'admin' ? 'Admin account' : 'Member account', color: '#10b981' },
+    { label: user?.role === 'admin' ? 'Admin account' : 'Member account',      color: '#10b981' },
     { label: `Net balance: ${isPositive ? '+' : '−'}₹${fmt(Math.abs(netBalance))}`, color: isPositive ? '#10b981' : '#ef4444' },
   ];
 
@@ -183,7 +191,15 @@ export default function DashboardScreen() {
         }
         ListHeaderComponent={() => (
           <View style={styles.header}>
-            {/* Chips */}
+
+            {/* ── Global header bar ── */}
+            <TopBar
+              initials={initials}
+              onAvatar={() => navigation.navigate('Account')}
+              onBell={()   => navigation.navigate('Notifications')}
+            />
+
+            {/* Status chips */}
             <View style={styles.chips}>
               {chips.map((c, i) => (
                 <View key={i} style={styles.chip}>
@@ -193,7 +209,6 @@ export default function DashboardScreen() {
               ))}
             </View>
 
-            {/* Main grid */}
             <View style={styles.grid}>
               {/* Hero */}
               <HeroCard
@@ -204,7 +219,7 @@ export default function DashboardScreen() {
                 youOwe={youOwe}
               />
 
-              {/* Side-by-side Mini Cards */}
+              {/* Mini cards */}
               <View style={{ flexDirection: 'row', gap: SPACING.sm }}>
                 <View style={{ flex: 1 }}>
                   <MiniCard
@@ -244,7 +259,12 @@ export default function DashboardScreen() {
                     onPress={() => navigation.navigate('Loans')}
                   />
                   <QuickAction
-                    label="Settlements"
+                    label="Activity"
+                    color="#f59e0b"
+                    onPress={() => navigation.navigate('More', { screen: 'Activity' })}
+                  />
+                  <QuickAction
+                    label="Settle Up"
                     color="#8b5cf6"
                     onPress={() => navigation.navigate('More', { screen: 'Settlements' })}
                   />
@@ -252,7 +272,7 @@ export default function DashboardScreen() {
               </View>
             </View>
 
-            {/* Recent groups header */}
+            {/* Recent groups heading */}
             <View style={styles.sectionHead}>
               <Text style={styles.sectionTitle}>Recent Groups</Text>
               <TouchableOpacity onPress={() => navigation.navigate('Groups')}>
@@ -288,8 +308,32 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   safe:   { flex: 1, backgroundColor: COLORS.bg },
   list:   { paddingBottom: SPACING['2xl'] },
-  header: { gap: SPACING.md, paddingTop: SPACING.md },
+  header: { gap: SPACING.md, paddingTop: SPACING.sm },
 
+  // ── Top bar ──
+  topBar: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: SPACING.base, paddingVertical: SPACING.sm,
+  },
+  topBarBrand: {
+    fontSize: FONT_SIZE.lg, fontWeight: FONT_WEIGHT.extrabold,
+    color: COLORS.text, letterSpacing: -0.3,
+  },
+  topBarRight:      { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
+  topBarIconBtn: {
+    width: 38, height: 38, borderRadius: 10,
+    backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  topBarAvatar: {
+    width: 38, height: 38, borderRadius: 10,
+    backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center',
+  },
+  topBarAvatarText: {
+    fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.extrabold, color: COLORS.white,
+  },
+
+  // ── Chips ──
   chips: {
     flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm,
     paddingHorizontal: SPACING.base,
@@ -305,7 +349,7 @@ const styles = StyleSheet.create({
 
   grid: { gap: SPACING.sm, paddingHorizontal: SPACING.base },
 
-  // Hero card — matches web .db-hero gradient feel
+  // ── Hero ──
   hero: {
     backgroundColor: COLORS.surface,
     borderRadius: RADIUS.xl,
@@ -313,29 +357,25 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(37,99,235,0.22)',
     padding: SPACING.xl,
     gap: SPACING.sm,
-    // Subtle blue tint
     shadowColor: '#2563eb',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 3,
   },
-  heroLabel: {
-    fontSize: FONT_SIZE.xs, fontWeight: FONT_WEIGHT.bold,
-    color: 'rgba(147,197,253,0.65)', letterSpacing: 1,
-  },
-  heroName:  { fontSize: FONT_SIZE['2xl'], fontWeight: FONT_WEIGHT.extrabold, color: '#93c5fd' },
-  heroEmail: { fontSize: FONT_SIZE.sm, color: 'rgba(147,197,253,0.55)' },
+  heroLabel:   { fontSize: FONT_SIZE.xs, fontWeight: FONT_WEIGHT.bold, color: 'rgba(147,197,253,0.65)', letterSpacing: 1 },
+  heroName:    { fontSize: FONT_SIZE['2xl'], fontWeight: FONT_WEIGHT.extrabold, color: '#93c5fd' },
+  heroEmail:   { fontSize: FONT_SIZE.sm, color: 'rgba(147,197,253,0.55)' },
   heroStats: {
-    flexDirection: 'row', flexWrap: 'wrap',
-    gap: SPACING.lg, marginTop: SPACING.sm,
-    paddingTop: SPACING.md,
+    flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.lg,
+    marginTop: SPACING.sm, paddingTop: SPACING.md,
     borderTopWidth: 1, borderTopColor: 'rgba(37,99,235,0.2)',
   },
   heroStat:    { gap: 3 },
   heroStatVal: { fontSize: FONT_SIZE.lg, fontWeight: FONT_WEIGHT.extrabold },
   heroStatLbl: { fontSize: 9, fontWeight: FONT_WEIGHT.bold, color: COLORS.text3, letterSpacing: 0.8 },
 
+  // ── Mini cards ──
   miniCard: {
     backgroundColor: COLORS.surface, borderRadius: RADIUS.lg,
     borderWidth: 1, padding: SPACING.base, gap: 4,
@@ -344,6 +384,7 @@ const styles = StyleSheet.create({
   miniVal:   { fontSize: FONT_SIZE['3xl'], fontWeight: FONT_WEIGHT.extrabold },
   miniSub:   { fontSize: FONT_SIZE.xs, color: COLORS.text3 },
 
+  // ── Quick actions ──
   quickCard: {
     backgroundColor: COLORS.surface, borderRadius: RADIUS.lg,
     borderWidth: 1, borderColor: COLORS.border, padding: SPACING.base, gap: SPACING.md,
@@ -355,6 +396,7 @@ const styles = StyleSheet.create({
   },
   qaLabel: { fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.semibold },
 
+  // ── Section head ──
   sectionHead: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: SPACING.base, paddingTop: SPACING.sm,
@@ -362,12 +404,12 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: FONT_SIZE.md, fontWeight: FONT_WEIGHT.bold, color: COLORS.text },
   viewAll:      { fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.semibold, color: COLORS.primary },
 
+  // ── Group rows ──
   groupRow: {
     flexDirection: 'row', alignItems: 'center', gap: SPACING.md,
     paddingHorizontal: SPACING.base, paddingVertical: SPACING.md,
     borderBottomWidth: 1, borderBottomColor: COLORS.border,
   },
-  groupIcon:    {},
   groupInfo:    { flex: 1 },
   groupName:    { fontSize: FONT_SIZE.md, fontWeight: FONT_WEIGHT.semibold, color: COLORS.text },
   groupDate:    { fontSize: FONT_SIZE.xs, color: COLORS.text3, marginTop: 2 },
