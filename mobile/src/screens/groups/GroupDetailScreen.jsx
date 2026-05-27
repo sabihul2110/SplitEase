@@ -166,17 +166,6 @@ function ExpenseRow({ item, currentUserName, onDelete, onEdit }) {
       </View>
       <View style={styles.ledgerRight}>
         <Text style={styles.ledgerAmt}>₹{fmtAmount(item.total_amount)}</Text>
-        {/* {isPayer && (
-          <TouchableOpacity
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            onPress={() => Alert.alert('Delete Expense', 'Remove this expense?', [
-              { text: 'Cancel', style: 'cancel' },
-              { text: 'Delete', style: 'destructive', onPress: () => onDelete('expense', item.expense_id) },
-            ])}
-          >
-            <Icons.trash size={14} color={C.danger} />
-          </TouchableOpacity>
-        )} */}
         {isPayer && (
           <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
             <TouchableOpacity
@@ -512,7 +501,6 @@ export default function GroupDetailScreen() {
     }
   }, [groupId]);
 
-  // 🔥 This runs every single time the screen comes into view (e.g. returning from Add Expense)
   useFocusEffect(useCallback(() => {
     loadCore(); // Always refetch the ledger
 
@@ -523,7 +511,7 @@ export default function GroupDetailScreen() {
       // Otherwise, just mark it dirty so it fetches next time they click the tab
       setSettLoaded(false); 
     }
-  }, [loadCore, loadSettlements, tab])); // ✅ 'tab' is safely in the dependencies now!
+  }, [loadCore, loadSettlements, tab])); 
 
   // Listen for the refreshStamp from AddExpenseScreen
   React.useEffect(() => {
@@ -685,9 +673,6 @@ export default function GroupDetailScreen() {
         subtitle="Invite people to join this group."
       />
     );
-    // return members.map((m, i) => (
-    //   <MemberRow key={i} member={m} currentUserName={userName} />
-    // ));
 
     return (
       <>
@@ -751,7 +736,6 @@ export default function GroupDetailScreen() {
         
         <Text style={styles.headerTitle} numberOfLines={1}>{groupName}</Text>
         
-        {/* 🔥 The New Web-Style Blue Pill Invite Button */}
         <TouchableOpacity
           style={styles.headerInviteBtn}
           onPress={handleInvite}
@@ -930,23 +914,8 @@ const styles = StyleSheet.create({
   ledgerRight:{ alignItems: 'flex-end', gap: 6, flexShrink: 0 },
   ledgerAmt:  { fontSize: F.md, fontWeight: W.heavy, color: C.text },
 
-  // Settlements
-  // settleRow: {
-  //   backgroundColor: C.surface, borderRadius: R.xl,
-  //   borderWidth: 1, padding: SP.md, gap: SP.sm,
-  // },
-  // settleNames: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  // settleName:  { fontSize: F.sm, fontWeight: W.semibold, color: C.text2 },
-  // settleArrowBox: {
-  //   width: 26, height: 26, borderRadius: R.full,
-  //   backgroundColor: C.surface3, alignItems: 'center', justifyContent: 'center',
-  // },
-  // settleAction: {
-  //   flexDirection: 'row', alignItems: 'center',
-  //   justifyContent: 'flex-end', gap: 10,
-  // },
 
-  // ── Settlement card (replaces settleRow/settleNames etc.) ──
+  // ── Settlement card ──
   settleCard: {
     borderRadius: R.xl, borderWidth: 1,
     padding: SP.base, gap: SP.md,
