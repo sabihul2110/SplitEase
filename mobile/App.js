@@ -10,13 +10,13 @@
  * react-native-screens must be enabled before NavigationContainer renders.
  */
 
-import 'react-native-gesture-handler';
+import 'react-native-gesture-handler'; // Must stay at the very top!
 
 import { enableScreens } from 'react-native-screens';
 enableScreens();
 
 import React from 'react';
-import { View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler'; 
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 
@@ -26,18 +26,17 @@ import { COLORS } from './src/constants/theme';
 
 export default function App() {
   return (
-    <View style={{ flex: 1, backgroundColor: COLORS.bg }}>
+    // 2. Replace <View> with <GestureHandlerRootView>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: COLORS.bg }}>
       <SafeAreaProvider>
         <StatusBar style="light" backgroundColor={COLORS.bg} />
         <AuthProvider>
           <RootNavigator />
         </AuthProvider>
       </SafeAreaProvider>
-    </View>
+    </GestureHandlerRootView>
   );
 }
 
 import { registerRootComponent } from 'expo';
-// Note: You don't need "import App from './App';" here because you are already inside App.js
-
 registerRootComponent(App);
