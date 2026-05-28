@@ -7,21 +7,16 @@ POST /auth/login           → verify credentials, return JWT
 GET  /auth/me              → validate token, return current user info
 POST /auth/change-password → change own password (requires current password)
 
-FIX S3a: Rate limiting on POST /auth/login — max 10 attempts per IP per minute.
-          Uses a simple in-process sliding-window counter (no Redis needed for
-          a single-process college deployment). Resets automatically over time.
-
-FIX S3b: Password change increments a token_version column in Users.
-          The JWT now embeds token_version; get_current_user rejects tokens
-          whose version is stale, effectively invalidating all sessions issued
-          before the password change.
-
-  MIGRATION REQUIRED — run this before deploying:
-      ALTER TABLE Users ADD COLUMN token_version INT NOT NULL DEFAULT 0;
 """
 
 import time
 import threading
+import secrets
+import hashlib
+
+def _hash_token(raw: str) -> str:
+    """SHA-256 hash of reset token. DB stores hash; email carries raw token."""
+    return hashlib.sha256(raw.encode()).hexdigest()
 from collections import defaultdict
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -47,6 +42,27 @@ _LOGIN_WINDOW_SECONDS = 60
 _LOGIN_MAX_ATTEMPTS   = 10
 _login_attempts: dict[str, list[float]] = defaultdict(list)
 _login_lock = threading.Lock()
+
+_FORGOT_WINDOW_SECONDS = 300   # 5-minute window
+_FORGOT_MAX_ATTEMPTS   = 3     # 3 requests per IP per 5 minutes
+_forgot_attempts: dict[str, list[float]] = defaultdict(list)
+_forgot_lock = threading.Lock()
+
+
+def _check_forgot_rate_limit(ip: str) -> None:
+    now = time.monotonic()
+    with _forgot_lock:
+        _forgot_attempts[ip] = [
+            t for t in _forgot_attempts[ip]
+            if now - t < _FORGOT_WINDOW_SECONDS
+        ]
+        if len(_forgot_attempts[ip]) >= _FORGOT_MAX_ATTEMPTS:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Too many requests. Please wait 5 minutes before trying again.",
+                headers={"Retry-After": str(_FORGOT_WINDOW_SECONDS)},
+            )
+        _forgot_attempts[ip].append(now)
 
 
 def _check_login_rate_limit(ip: str) -> None:
@@ -231,3 +247,62 @@ def change_password(
         cur.close(); conn.close()
 
     return {"message": "Password changed successfully. All other sessions have been logged out."}
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token:            str
+    new_password:     str
+    confirm_password: str
+
+
+@router.post("/forgot-password")
+def forgot_password(body: ForgotPasswordRequest, request: Request):
+    """
+    Always returns 200 to prevent email enumeration.
+    Sends a 15-minute reset link to the registered email.
+    """
+    client_ip = request.client.host if request.client else "unknown"
+    _check_forgot_rate_limit(client_ip)
+    from datetime import datetime, timedelta, timezone
+    user = db.fetch_user_by_email(body.email)
+    if user:
+        token      = secrets.token_urlsafe(32)
+        token_hash = _hash_token(token)          # store hash, never raw
+        expires_at = (datetime.now(timezone.utc) + timedelta(minutes=15)).strftime("%Y-%m-%d %H:%M:%S")
+        db.create_reset_token(user["user_id"], token_hash, expires_at)
+        try:
+            from email_service import send_reset_email
+            send_reset_email(user["email"], user["name"], token)  # raw token goes to email only
+        except Exception as e:
+            # Log type only — full traceback can expose SMTP credentials
+            print(f"[email] Failed: {type(e).__name__}")
+    return {"message": "If that email is registered, a reset link has been sent."}
+
+
+@router.post("/reset-password")
+def reset_password_via_token(body: ResetPasswordRequest):
+    from datetime import datetime, timezone
+    if len(body.new_password) < 6:
+        raise HTTPException(400, "Password must be at least 6 characters.")
+    if body.new_password != body.confirm_password:
+        raise HTTPException(400, "Passwords do not match.")
+
+    row = db.get_reset_token(_hash_token(body.token))
+    if not row:
+        raise HTTPException(400, "Invalid or expired reset link.")
+    if row["used"]:
+        raise HTTPException(400, "This reset link has already been used.")
+
+    expires = row["expires_at"]
+    if hasattr(expires, "tzinfo") and expires.tzinfo is None:
+        from datetime import timezone
+        expires = expires.replace(tzinfo=timezone.utc)
+    if datetime.now(timezone.utc) > expires:
+        raise HTTPException(400, "Reset link has expired. Please request a new one.")
+
+    db.use_reset_token(body.token, row["user_id"], hash_password(body.new_password))
+    return {"message": "Password reset successfully. Please log in with your new password."}

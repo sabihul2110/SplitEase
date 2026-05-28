@@ -93,7 +93,7 @@ function MemberAvatar({ name, size = 26 }) {
 }
 
 // ─── Group Card — full-width list style ───────────────────────────────────────
-function GroupCard({ group, onPress }) {
+function GroupCard({ group, onPress, onLongPress }) {
   const date = group.created_at
     ? new Date(group.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
     : '';
@@ -102,7 +102,7 @@ function GroupCard({ group, onPress }) {
   const previewMembers = group.members?.slice(0, 3) || [];
 
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
+    <TouchableOpacity style={styles.card} onPress={onPress} onLongPress={onLongPress} delayLongPress={400} activeOpacity={0.7}>
       <View style={styles.cardInner}>
         {/* Left — avatar */}
         <GroupAvatar name={group.group_name} size={52} />
@@ -584,6 +584,7 @@ export default function GroupsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
+  const [longPressGroup, setLongPressGroup] = useState(null);
 
   useEffect(() => {
     if (route.params?.openCreate) {
@@ -634,6 +635,32 @@ export default function GroupsScreen() {
       setRefreshing(false);
     }
   }, []);
+
+  async function handleDeleteGroup(group, force = false) {
+    try {
+      await client.delete(`/groups/${group.group_id}${force ? '?force=true' : ''}`);
+      setGroups(prev => prev.filter(g => g.group_id !== group.group_id));
+      setLongPressGroup(null);
+    } catch (err) {
+      const s      = err?.response?.status;
+      const detail = err?.response?.data?.detail;
+      setLongPressGroup(null);
+      if (s === 409) {
+        Alert.alert(
+          'Unsettled Balances',
+          `${detail}\n\nDelete anyway? This cannot be undone.`,
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Delete Anyway', style: 'destructive', onPress: () => handleDeleteGroup(group, true) },
+          ]
+        );
+      } else if (s === 403) {
+        Alert.alert('Not Allowed', detail || 'Only the group creator or admin can delete this group.');
+      } else {
+        Alert.alert('Error', detail || 'Failed to delete group.');
+      }
+    }
+  }
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
@@ -689,6 +716,7 @@ export default function GroupsScreen() {
               groupId:   item.group_id,
               groupName: item.group_name,
             })}
+            onLongPress={() => setLongPressGroup(item)}
           />
         )}
       />
@@ -698,6 +726,62 @@ export default function GroupsScreen() {
         onClose={() => setShowCreate(false)}
         onCreated={handleCreated}
       />
+
+      {/* ── Long-press action sheet ── */}
+      <Modal
+        visible={!!longPressGroup}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setLongPressGroup(null)}
+      >
+        <TouchableOpacity
+          style={StyleSheet.absoluteFill}
+          onPress={() => setLongPressGroup(null)}
+          activeOpacity={1}
+        >
+          <View style={styles.actionSheet}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.actionSheetName} numberOfLines={1}>
+              {longPressGroup?.group_name}
+            </Text>
+            <TouchableOpacity
+              style={styles.actionSheetItem}
+              onPress={() => {
+                const g = longPressGroup;
+                setLongPressGroup(null);
+                navigation.navigate('GroupDetail', { groupId: g.group_id, groupName: g.group_name });
+              }}
+            >
+              <Icons.groups size={18} color={C.primary} />
+              <Text style={[styles.actionSheetItemText, { color: C.primary }]}>Open Group</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.actionSheetItem}
+              onPress={() => {
+                const g = longPressGroup;
+                setLongPressGroup(null);
+                Alert.alert(
+                  'Delete Group',
+                  `Delete "${g?.group_name}"? All expenses and payments will be permanently removed.`,
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Delete', style: 'destructive', onPress: () => handleDeleteGroup(g) },
+                  ]
+                );
+              }}
+            >
+              <Icons.trash size={18} color={C.danger} />
+              <Text style={[styles.actionSheetItemText, { color: C.danger }]}>Delete Group</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.actionSheetItem, { borderTopWidth: 1, borderTopColor: C.border, marginTop: SP.xs }]}
+              onPress={() => setLongPressGroup(null)}
+            >
+              <Text style={[styles.actionSheetItemText, { color: C.text2, flex: 1, textAlign: 'center' }]}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       <JoinGroupModal
         visible={showJoin}
@@ -891,6 +975,25 @@ const styles = StyleSheet.create({
     backgroundColor: C.primary,
   },
   createBtnText: { fontSize: F.md, fontWeight: W.bold, color: '#fff' },
+
+  actionSheet: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    backgroundColor: C.surface,
+    borderTopLeftRadius: R.xxl, borderTopRightRadius: R.xxl,
+    borderTopWidth: 1, borderLeftWidth: 1, borderRightWidth: 1, borderColor: C.border,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 16,
+    paddingTop: 4,
+  },
+  actionSheetName: {
+    fontSize: F.md, fontWeight: W.semibold, color: C.text2,
+    paddingHorizontal: SP.base, paddingVertical: SP.md,
+    borderBottomWidth: 1, borderBottomColor: C.border,
+  },
+  actionSheetItem: {
+    flexDirection: 'row', alignItems: 'center', gap: SP.md,
+    paddingHorizontal: SP.base, paddingVertical: SP.base,
+  },
+  actionSheetItemText: { fontSize: F.md, fontWeight: W.semibold },
 
   // ─── Header Join Pill ───
   headerJoinBtn: {

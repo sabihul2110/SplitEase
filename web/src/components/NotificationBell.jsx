@@ -39,6 +39,7 @@ export default function NotificationBell() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [offset,      setOffset]      = useState(0);
   const [hasMore,     setHasMore]     = useState(false);
+  const [hoveredId,   setHoveredId]   = useState(null);
   const ref = useRef(null);
 
   const fetchCount = useCallback(async () => {
@@ -85,6 +86,25 @@ export default function NotificationBell() {
       setHasMore(data.length === LIMIT);
       setOffset(prev => prev + LIMIT);
     } catch {} finally { setLoadingMore(false); }
+  }
+
+  async function deleteNotif(e, id) {
+    e.stopPropagation();
+    try {
+      await api.delete(`/notifications/${id}`);
+      setNotifs(prev => prev.filter(n => n.notification_id !== id));
+      setCount(prev => {
+        const wasUnread = notifs.find(n => n.notification_id === id && !n.is_read);
+        return wasUnread ? Math.max(0, prev - 1) : prev;
+      });
+    } catch {}
+  }
+
+  async function deleteReadNotifs() {
+    try {
+      await api.delete('/notifications/read');
+      setNotifs(prev => prev.filter(n => !n.is_read));
+    } catch {}
   }
 
   async function markAllRead() {
@@ -163,14 +183,21 @@ export default function NotificationBell() {
               Notifications
               {count > 0 && <span style={{ color: "var(--danger)", marginLeft: 6 }}>({count})</span>}
             </span>
-            {count > 0 && (
-              <button
-                onClick={markAllRead}
-                style={{ fontSize: 12, color: "var(--primary-h)", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}
-              >
-                Mark all read
-              </button>
-            )}
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              {count > 0 && (
+                <button onClick={markAllRead} style={{ fontSize: 12, color: "var(--primary-h)", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}>
+                  Mark all
+                </button>
+              )}
+              {notifs.some(n => n.is_read) && (
+                <button
+                  onClick={() => { if (window.confirm('Delete all read notifications?')) deleteReadNotifs(); }}
+                  style={{ fontSize: 12, color: "var(--danger)", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}
+                >
+                  Clear read
+                </button>
+              )}
+            </div>
           </div>
 
           <div style={{ maxHeight: 360, overflowY: "auto" }}>
@@ -189,16 +216,18 @@ export default function NotificationBell() {
                   <div
                     key={n.notification_id}
                     onClick={() => handleNotifClick(n)}
+                    onMouseEnter={() => setHoveredId(n.notification_id)}
+                    onMouseLeave={() => setHoveredId(null)}
                     style={{
                       padding: "12px 16px",
                       cursor: n.group_id ? "pointer" : "default",
-                      background: n.is_read ? "transparent" : "rgba(37,99,235,0.05)",
+                      background: hoveredId === n.notification_id
+                        ? "rgba(255,255,255,0.03)"
+                        : n.is_read ? "transparent" : "rgba(37,99,235,0.05)",
                       borderBottom: "1px solid var(--border)",
-                      display: "flex", gap: 10,
+                      display: "flex", gap: 10, position: "relative",
                       transition: "background 0.1s",
                     }}
-                    onMouseEnter={e => n.group_id && (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
-                    onMouseLeave={e => (e.currentTarget.style.background = n.is_read ? "transparent" : "rgba(37,99,235,0.05)")}
                   >
                     <div style={{
                       width: 30, height: 30, borderRadius: 8, flexShrink: 0,
@@ -220,6 +249,20 @@ export default function NotificationBell() {
                         )}
                       </div>
                     </div>
+                    {hoveredId === n.notification_id && (
+                      <button
+                        onClick={e => deleteNotif(e, n.notification_id)}
+                        style={{
+                          position: "absolute", top: 8, right: 8,
+                          width: 20, height: 20, borderRadius: 4,
+                          background: "var(--surface3)", border: "1px solid var(--border2)",
+                          color: "var(--text3)", cursor: "pointer",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          fontSize: 10, lineHeight: 1,
+                        }}
+                        title="Delete"
+                      >✕</button>
+                    )}
                   </div>
                 ))}
 

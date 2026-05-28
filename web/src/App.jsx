@@ -18,6 +18,8 @@ import Profile  from "./pages/Profile";
 import Settings from "./pages/Settings";
 import Expenses from "./pages/Expenses";
 import Loans    from "./pages/Loans";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 
 // Admin
 import AdminLayout       from "./components/AdminLayout";
@@ -45,6 +47,10 @@ export default function App() {
       {/* Public */}
       <Route path="/login"       element={<Login />} />
       <Route path="/signup"      element={<Signup />} />
+
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password"  element={<ResetPassword />} />
+
       <Route path="/join/:token" element={<JoinGroup />} />
 
       {/* User app — every page is a flat, independent route */}

@@ -160,6 +160,34 @@ def mark_all_read(current_user: dict = Depends(get_current_user)):
     cur.close(); conn.close()
     return {"message": "All marked as read."}
 
+@router.delete("/notifications/read")
+def delete_read_notifications(current_user: dict = Depends(get_current_user)):
+    """Bulk delete all read notifications for the current user."""
+    conn = db.get_connection()
+    cur  = conn.cursor()
+    cur.execute(
+        "DELETE FROM Notifications WHERE user_id = %s AND is_read = 1",
+        (current_user["user_id"],),
+    )
+    count = cur.rowcount
+    conn.commit()
+    cur.close(); conn.close()
+    return {"message": f"Deleted {count} read notifications."}
+
+
+@router.delete("/notifications/{notification_id}")
+def delete_notification(notification_id: int, current_user: dict = Depends(get_current_user)):
+    """Delete a single notification."""
+    conn = db.get_connection()
+    cur  = conn.cursor()
+    cur.execute(
+        "DELETE FROM Notifications WHERE notification_id = %s AND user_id = %s",
+        (notification_id, current_user["user_id"]),
+    )
+    conn.commit()
+    cur.close(); conn.close()
+    return {"message": "Notification deleted."}
+
 
 # ── Send Reminder ─────────────────────────────────────────────────────────────
 

@@ -19,7 +19,7 @@ import LoansScreen         from '../screens/loans/LoansScreen';
 import ActivityScreen      from '../screens/activity/ActivityScreen';
 import SettlementsScreen   from '../screens/settlements/SettlementsScreen';
 import NotificationsScreen from '../screens/notifications/NotificationsScreen';
-import AccountScreen       from '../screens/account/AccountScreen'; // new merged screen
+import AccountScreen       from '../screens/account/AccountScreen';
 import MoreScreen          from '../screens/more/MoreScreen';
 
 // ── Tab Icons ──────────────────────────────────────────────────────────────

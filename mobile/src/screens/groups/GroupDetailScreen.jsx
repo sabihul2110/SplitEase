@@ -562,6 +562,30 @@ export default function GroupDetailScreen() {
     } finally { setReminding(''); }
   }
 
+  async function handleDeleteGroup(force = false) {
+    try {
+      await client.delete(`/groups/${groupId}${force ? '?force=true' : ''}`);
+      navigation.goBack();
+    } catch (err) {
+      const s      = err?.response?.status;
+      const detail = err?.response?.data?.detail;
+      if (s === 409) {
+        Alert.alert(
+          'Unsettled Balances',
+          `${detail}\n\nDelete anyway?`,
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Delete Anyway', style: 'destructive', onPress: () => handleDeleteGroup(true) },
+          ]
+        );
+      } else if (s === 403) {
+        Alert.alert('Not Allowed', detail || 'Only the group creator or admin can do this.');
+      } else {
+        Alert.alert('Error', detail || 'Failed to delete group.');
+      }
+    }
+  }
+
   async function handleLeaveGroup() {
     try {
       await client.delete(`/groups/${groupId}/members/${user.user_id}`);
@@ -690,6 +714,23 @@ export default function GroupDetailScreen() {
         >
           <Icons.trash size={15} color={C.danger} />
           <Text style={styles.leaveBtnText}>Leave Group</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.deleteGroupBtn}
+          onPress={() =>
+            Alert.alert(
+              'Delete Group',
+              `Permanently delete "${groupName}" and all its data?`,
+              [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Delete', style: 'destructive', onPress: () => handleDeleteGroup() },
+              ]
+            )
+          }
+        >
+          <Icons.trash size={14} color={C.danger} />
+          <Text style={styles.deleteGroupBtnText}>Delete Group</Text>
         </TouchableOpacity>
       </>
     );
@@ -1066,4 +1107,12 @@ const styles = StyleSheet.create({
     backgroundColor: C.dangerLo,
   },
   leaveBtnText: { color: C.danger, fontSize: F.md, fontWeight: W.bold },
+
+  deleteGroupBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
+    marginTop: SP.sm, borderWidth: 1, borderColor: C.danger + '18',
+    borderRadius: R.xl, paddingVertical: 12,
+    opacity: 0.6,
+  },
+  deleteGroupBtnText: { color: C.danger, fontSize: F.sm, fontWeight: W.medium },
 });

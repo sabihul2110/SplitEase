@@ -83,17 +83,27 @@ def update_members(group_id: int, body: UpdateMembersRequest, current_user: dict
     return {"message": "Members updated."}
 
 
-# @router.delete("/{group_id}")
-# def delete_group(group_id: int, current_user: dict = Depends(require_admin)):
-#     db.delete_group(group_id)
-#     return {"message": "Group deleted."}
-
 @router.delete("/{group_id}")
-def delete_group(group_id: int, current_user: dict = Depends(get_current_user)):
+def delete_group(
+    group_id: int,
+    force:    bool = False,
+    current_user: dict = Depends(get_current_user),
+):
     is_admin   = current_user.get("role") == "admin"
     creator_id = db.fetch_group_creator(group_id)
     if not is_admin and current_user["user_id"] != creator_id:
-        raise HTTPException(status_code=403, detail="Only the group creator can delete this group.")
+        raise HTTPException(status_code=403, detail="Only the group creator or an admin can delete this group.")
+
+    if not force:
+        balances   = db.fetch_settlements_for_groups([group_id])
+        group_rows = balances.get(group_id, [])
+        has_debt   = any(abs(float(r.get("net_balance", 0))) > 0.01 for r in group_rows)
+        if has_debt:
+            raise HTTPException(
+                status_code=409,
+                detail="This group has unsettled balances. Settle up first, or force-delete.",
+            )
+
     db.delete_group(group_id)
     return {"message": "Group deleted."}
 

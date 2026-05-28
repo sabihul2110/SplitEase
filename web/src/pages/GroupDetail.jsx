@@ -111,11 +111,38 @@ export default function GroupDetail() {
     return `upi://pay?pa=${m.upi_id}&am=${amount}&cu=INR&tn=SplitEase`;
   }
 
+  async function handleLeaveGroup() {
+    if (!window.confirm('Leave this group? You must have a zero balance.')) return;
+    try {
+      await api.delete(`/groups/${id}/members/${user.user_id}`);
+      navigate('/groups');
+    } catch (err) {
+      alert(err?.response?.data?.detail || 'Failed to leave group. Settle your balance first.');
+    }
+  }
+
+  async function handleDeleteGroup(force = false) {
+    const msg = force
+      ? 'Group has unsettled balances. Delete anyway? This cannot be undone.'
+      : `Permanently delete this group and all its data?`;
+    if (!window.confirm(msg)) return;
+    try {
+      await api.delete(`/groups/${id}${force ? '?force=true' : ''}`);
+      navigate('/groups');
+    } catch (err) {
+      const status = err?.response?.status;
+      const detail = err?.response?.data?.detail;
+      if (status === 409) handleDeleteGroup(true);
+      else if (status === 403) alert(detail || 'Only the group creator or admin can delete this group.');
+      else alert(detail || 'Failed to delete group.');
+    }
+  }
+
   async function sendReminder(s) {
     setReminding(s.from);
     try {
       await api.post(`/groups/${id}/remind`, {
-        debtor_name: s.from,
+        debtor_user_id: s.from_user_id,
         amount: s.amount,
       });
       showToast(`✓ Reminder sent to ${s.from} — they'll see it in their notifications.`);
@@ -188,14 +215,6 @@ export default function GroupDetail() {
   const totalSpent = expenses.reduce((s, e) => s + Number(e.total_amount), 0);
   const myBalance  = settlements.find(s => s.user_name === user?.name);
   const myNet      = myBalance ? Number(myBalance.net_balance) : null;
-
-  // const actions = (
-  //   <>
-  //     <button className="btn btn-ghost btn-sm" onClick={generateInvite}>⊕ Invite</button>
-  //     <Link to={`/groups/${id}/add-payment`} className="btn btn-ghost btn-sm">+ Payment</Link>
-  //     <Link to={`/groups/${id}/add-expense`} className="btn btn-primary btn-sm">+ Expense</Link>
-  //   </>
-  // );
 
   const actions = (
     <>
@@ -374,16 +393,7 @@ export default function GroupDetail() {
                   <button className="btn btn-ghost btn-sm" onClick={() => handleTab("settlements")}>Calculate →</button>
                 )}
               </div>
-              {/* <div className="card card-p">
-                <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text3)", marginBottom: 12 }}>
-                  Quick Actions
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  <Link to={`/groups/${id}/add-expense`} className="btn btn-primary" style={{ justifyContent: "center" }}>+ Add Expense</Link>
-                  <Link to={`/groups/${id}/add-payment`} className="btn btn-ghost" style={{ justifyContent: "center" }}>+ Record Payment</Link>
-                  <button className="btn btn-ghost" style={{ justifyContent: "center" }} onClick={generateInvite}>⊕ Invite Member</button>
-                </div>
-              </div> */}
+
               <div className="card card-p">
                 <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text3)", marginBottom: 12 }}>
                   Quick Actions
@@ -408,6 +418,22 @@ export default function GroupDetail() {
                   >
                     <UserPlusIcon /> Invite Member
                   </button>
+                  <div style={{ borderTop: "1px solid var(--border)", marginTop: 4, paddingTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
+                    <button
+                      className="btn"
+                      onClick={handleLeaveGroup}
+                      style={{ justifyContent: "center", color: "var(--danger)", border: "1px solid rgba(239,68,68,0.25)", background: "rgba(239,68,68,0.06)" }}
+                    >
+                      Leave Group
+                    </button>
+                    <button
+                      className="btn"
+                      onClick={() => handleDeleteGroup()}
+                      style={{ justifyContent: "center", color: "var(--text3)", border: "1px solid var(--border)", background: "transparent", fontSize: 12, opacity: 0.7 }}
+                    >
+                      Delete Group
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

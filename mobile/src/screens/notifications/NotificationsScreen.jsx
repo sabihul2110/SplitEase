@@ -33,36 +33,8 @@ function timeAgo(dateStr) {
   return 'Just now';
 }
 
-// function NotifItem({ item, onRead, onNavigate }) {
-//   const isUnread = !item.is_read;
-//   const icon = item.type === 'reminder' ? '🔔'
-//     : item.type === 'payment'  ? '✅'
-//     : item.type === 'expense'  ? '💸' : '📢';
 
-//   return (
-//     <TouchableOpacity
-//       style={[styles.item, isUnread && styles.itemUnread]}
-//       onPress={() => {
-//         if (!item.is_read) onRead(item.notification_id);
-//         if (item.group_id) onNavigate(item.group_id, item.group_name);
-//       }}
-//       activeOpacity={0.7}
-//     >
-//       <View style={styles.itemIcon}>
-//         <Text style={{ fontSize: 20 }}>{icon}</Text>
-//         {isUnread && <View style={styles.unreadDot} />}
-//       </View>
-//       <View style={styles.itemContent}>
-//         <Text style={[styles.itemMsg, isUnread && styles.itemMsgBold]}>
-//           {item.message}
-//         </Text>
-//         <Text style={styles.itemTime}>{timeAgo(item.created_at)}</Text>
-//       </View>
-//     </TouchableOpacity>
-//   );
-// }
-
-function NotifItem({ item, onRead, onNavigate }) {
+function NotifItem({ item, onRead, onNavigate, onDelete }) {
   const isUnread = !item.is_read;
   
   // Determine icon and colors based on notification type
@@ -87,6 +59,15 @@ function NotifItem({ item, onRead, onNavigate }) {
         if (!item.is_read) onRead(item.notification_id);
         if (item.group_id) onNavigate(item.group_id, item.group_name);
       }}
+      onLongPress={() => Alert.alert(
+        'Delete Notification',
+        'Remove this notification?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Delete', style: 'destructive', onPress: () => onDelete(item.notification_id) },
+        ]
+      )}
+      delayLongPress={400}
       activeOpacity={0.7}
     >
       <View style={[styles.itemIconBox, { backgroundColor: iconBg }]}>
@@ -134,6 +115,20 @@ export default function NotificationsScreen() {
     } catch {}
   }
 
+  async function deleteNotif(id) {
+    try {
+      await client.delete(ENDPOINTS.delNotif(id));
+      setNotifs(prev => prev.filter(n => n.notification_id !== id));
+    } catch {}
+  }
+
+  async function deleteReadNotifs() {
+    try {
+      await client.delete(ENDPOINTS.delReadNotifs);
+      setNotifs(prev => prev.filter(n => !n.is_read));
+    } catch {}
+  }
+
   async function markAllRead() {
     try {
       await client.post(ENDPOINTS.readAll);
@@ -150,10 +145,24 @@ export default function NotificationsScreen() {
       <ScreenHeader
         title="Notifications"
         rightElement={
-          unreadCount > 0 ? (
-            <TouchableOpacity onPress={markAllRead}>
-              <Text style={styles.markAll}>Mark all read</Text>
-            </TouchableOpacity>
+          notifs.length > 0 ? (
+            <View style={{ flexDirection: 'row', gap: 14, alignItems: 'center' }}>
+              {unreadCount > 0 && (
+                <TouchableOpacity onPress={markAllRead}>
+                  <Text style={styles.markAll}>Mark all</Text>
+                </TouchableOpacity>
+              )}
+              {notifs.some(n => n.is_read) && (
+                <TouchableOpacity onPress={() =>
+                  Alert.alert('Clear Read', 'Delete all read notifications?', [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Clear', style: 'destructive', onPress: deleteReadNotifs },
+                  ])
+                }>
+                  <Text style={[styles.markAll, { color: COLORS.danger }]}>Clear read</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           ) : null
         }
       />
@@ -188,6 +197,7 @@ export default function NotificationsScreen() {
           <NotifItem
             item={item}
             onRead={markRead}
+            onDelete={deleteNotif}
             onNavigate={(groupId, groupName) =>
               navigation.navigate('Groups', {
                 screen: 'GroupDetail',

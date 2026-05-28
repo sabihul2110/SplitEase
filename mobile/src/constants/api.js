@@ -23,6 +23,7 @@ export const ENDPOINTS = {
   subcategories:     (catId) => `/groups/subcategories/${catId}`,
   membersBulk:       '/groups/members-bulk',
   hasExpensesBulk:   '/groups/has-expenses-bulk',
+  deleteGroup:       (id) => `/groups/${id}`,
 
   // Expenses
   expenses:    (groupId) => `/expenses/${groupId}`,
@@ -47,6 +48,9 @@ export const ENDPOINTS = {
   notifs:     '/notifications/',
   readNotif:  (id) => `/notifications/read/${id}`,
   readAll:    '/notifications/read-all',
+
+  delNotif:       (id) => `/notifications/${id}`,
+  delReadNotifs:  '/notifications/read',
 
   // Users / Profile
   users:      '/users/',

@@ -233,7 +233,7 @@ function RemindPopover({ groupId, onClose }) {
   );
 }
 
-function GroupCard({ group, enriched, idx, memberDetails }) {
+function GroupCard({ group, enriched, idx, memberDetails, onDelete }) {
   const navigate = useNavigate();
   const [showRemind, setShowRemind] = useState(false);
 
@@ -275,7 +275,29 @@ function GroupCard({ group, enriched, idx, memberDetails }) {
             <span className={`gc-badge-dot${badge.pulse?" pulse":""}`}/>
             {badge.label}
           </div>
-          {isLoading?<span className="skel" style={{width:70,height:24,borderRadius:20}}/>:<MemberAvatars members={memberDetails||[]} max={4}/>}
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            {isLoading
+              ? <span className="skel" style={{width:70,height:24,borderRadius:20}}/>
+              : <MemberAvatars members={memberDetails||[]} max={4}/>
+            }
+            <button
+              onClick={e => {
+                e.stopPropagation();
+                if (window.confirm(`Delete "${group.group_name}"?\nAll expenses and payments will be permanently removed.`)) {
+                  onDelete(group);
+                }
+              }}
+              title="Delete group"
+              style={{
+                width:24,height:24,borderRadius:6,border:"1px solid var(--border)",
+                background:"transparent",color:"var(--text3)",cursor:"pointer",
+                display:"flex",alignItems:"center",justifyContent:"center",
+                fontSize:11,opacity:0.5,transition:"all 0.12s",flexShrink:0,
+              }}
+              onMouseEnter={e=>{e.currentTarget.style.opacity="1";e.currentTarget.style.color="var(--danger)";e.currentTarget.style.borderColor="rgba(239,68,68,0.4)";}}
+              onMouseLeave={e=>{e.currentTarget.style.opacity="0.5";e.currentTarget.style.color="var(--text3)";e.currentTarget.style.borderColor="var(--border)";}}
+            >✕</button>
+          </div>
         </div>
 
         <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20}}>
@@ -440,6 +462,26 @@ export default function Groups() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  async function handleDeleteGroup(group, force = false) {
+    try {
+      await api.delete(`/groups/${group.group_id}${force ? '?force=true' : ''}`);
+      setGroups(prev => prev.filter(g => g.group_id !== group.group_id));
+      setEnrichedMap(prev => { const n = {...prev}; delete n[group.group_id]; return n; });
+    } catch (err) {
+      const status = err?.response?.status;
+      const detail = err?.response?.data?.detail;
+      if (status === 409) {
+        if (window.confirm(`${detail}\n\nDelete anyway? This cannot be undone.`)) {
+          handleDeleteGroup(group, true);
+        }
+      } else if (status === 403) {
+        alert(detail || 'Only the group creator or admin can delete this group.');
+      } else {
+        alert(detail || 'Failed to delete group.');
+      }
+    }
+  }
+
   async function openModal() {
     setName(""); setPicked([]); setErr("");
     try { const { data } = await api.get("/users/"); setAllUsers(data); } catch { setAllUsers([]); }
@@ -580,7 +622,7 @@ export default function Groups() {
           ):(
             <div className="gc-grid">
               {filtered.map((g,i)=>(
-                <GroupCard key={g.group_id} group={g} enriched={enrichedMap[g.group_id]??null} memberDetails={memberMap[g.group_id]??[]} idx={i}/>
+                <GroupCard key={g.group_id} group={g} enriched={enrichedMap[g.group_id]??null} memberDetails={memberMap[g.group_id]??[]} idx={i} onDelete={handleDeleteGroup}/>
               ))}
               <NewGroupCard onClick={openModal}/>
             </div>

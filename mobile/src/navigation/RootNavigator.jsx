@@ -18,6 +18,9 @@ import { COLORS } from '../constants/theme';
 import LoginScreen    from '../screens/auth/LoginScreen';
 import SignupScreen   from '../screens/auth/SignupScreen';
 
+import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
+import ResetPasswordScreen  from '../screens/auth/ResetPasswordScreen';
+
 // Main navigator (tabs + nested stacks)
 import MainNavigator  from './MainNavigator';
 
@@ -53,6 +56,10 @@ export default function RootNavigator() {
           <Stack.Group>
             <Stack.Screen name="Login"  component={LoginScreen}  />
             <Stack.Screen name="Signup" component={SignupScreen} />
+
+            <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+            <Stack.Screen name="ResetPassword"  component={ResetPasswordScreen}  />
+            
           </Stack.Group>
         )}
       </Stack.Navigator>

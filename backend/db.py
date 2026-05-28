@@ -1842,3 +1842,49 @@ def remove_group_member(group_id: int, user_id: int) -> None:
         raise
     finally:
         cur.close(); conn.close()
+
+
+def create_reset_token(user_id: int, token: str, expires_at: str) -> None:
+    conn = get_connection()
+    cur  = conn.cursor()
+    try:
+        conn.start_transaction()
+        cur.execute(
+            "UPDATE PasswordResetTokens SET used=1 WHERE user_id=%s AND used=0",
+            (user_id,)
+        )
+        cur.execute(
+            "INSERT INTO PasswordResetTokens (user_id, token, expires_at) VALUES (%s,%s,%s)",
+            (user_id, token, expires_at),
+        )
+        conn.commit()
+    except Exception:
+        conn.rollback(); raise
+    finally:
+        cur.close(); conn.close()
+
+
+def get_reset_token(token: str) -> dict | None:
+    conn = get_connection()
+    cur  = conn.cursor(dictionary=True)
+    cur.execute("SELECT * FROM PasswordResetTokens WHERE token=%s", (token,))
+    row = cur.fetchone()
+    cur.close(); conn.close()
+    return row
+
+
+def use_reset_token(token: str, user_id: int, new_hash: str) -> None:
+    conn = get_connection()
+    cur  = conn.cursor()
+    try:
+        conn.start_transaction()
+        cur.execute("UPDATE PasswordResetTokens SET used=1 WHERE token=%s", (token,))
+        cur.execute(
+            "UPDATE Users SET password_hash=%s, token_version=token_version+1 WHERE user_id=%s",
+            (new_hash, user_id),
+        )
+        conn.commit()
+    except Exception:
+        conn.rollback(); raise
+    finally:
+        cur.close(); conn.close()
