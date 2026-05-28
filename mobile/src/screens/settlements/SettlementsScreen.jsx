@@ -18,6 +18,7 @@ import { ENDPOINTS } from '../../constants/api';
 import { useAuth } from '../../context/AuthContext';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS } from '../../constants/theme';
 import { Avatar, EmptyState, LoadingState, Badge, Card } from '../../components/common/ui';
+import { Icons } from '../../constants/icons';
 import ScreenHeader from '../../components/layout/ScreenHeader';
 
 // ── Settlement card ────────────────────────────────────────────────────────
@@ -32,7 +33,7 @@ function SettlementCard({ groupName, groupId, settlements, currentUserId, curren
       <TouchableOpacity style={styles.groupCardHeader} onPress={onGoToGroup} activeOpacity={0.7}>
         <Avatar name={groupName} size={32} />
         <Text style={styles.groupCardName} numberOfLines={1}>{groupName}</Text>
-        <Text style={styles.groupCardArrow}>›</Text>
+        <Icons.chevronRight size={16} color={COLORS.text3} />
       </TouchableOpacity>
 
       {relevant.map((s, i) => {
@@ -115,7 +116,14 @@ export default function SettlementsScreen() {
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  if (loading) return <LoadingState label="Loading settlements…" />;
+  if (loading) return (
+    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+        <Icons.settlements size={32} color={COLORS.text3} />
+        <Text style={{ fontSize: FONT_SIZE.base, color: COLORS.text3 }}>Calculating balances…</Text>
+      </View>
+    </SafeAreaView>
+  );
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
@@ -136,14 +144,20 @@ export default function SettlementsScreen() {
         ListHeaderComponent={() => (
           <View style={styles.summary}>
             <View style={styles.summaryCard}>
-              <Text style={styles.summaryLabel}>You are owed</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                <Icons.income size={12} color={COLORS.success} />
+                <Text style={styles.summaryLabel}>You are owed</Text>
+              </View>
               <Text style={[styles.summaryAmt, { color: COLORS.success }]}>
                 ₹{totalOwed.toFixed(2)}
               </Text>
             </View>
             <View style={styles.summaryDivider} />
             <View style={styles.summaryCard}>
-              <Text style={styles.summaryLabel}>You owe</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                <Icons.lendMoney size={12} color={COLORS.danger} />
+                <Text style={styles.summaryLabel}>You owe</Text>
+              </View>
               <Text style={[styles.summaryAmt, { color: COLORS.danger }]}>
                 ₹{totalOwe.toFixed(2)}
               </Text>
@@ -151,11 +165,22 @@ export default function SettlementsScreen() {
           </View>
         )}
         ListEmptyComponent={() => (
-          <EmptyState
-            icon="✅"
-            title="All settled up!"
-            subtitle="No outstanding balances across any of your groups."
-          />
+          <View style={{ alignItems: 'center', paddingTop: 64, gap: 12 }}>
+            <View style={{
+              width: 72, height: 72, borderRadius: 20,
+              backgroundColor: 'rgba(16,185,129,0.10)',
+              borderWidth: 1, borderColor: 'rgba(16,185,129,0.25)',
+              alignItems: 'center', justifyContent: 'center',
+            }}>
+              <Icons.checkCircle size={34} color={COLORS.success} />
+            </View>
+            <Text style={{ fontSize: FONT_SIZE.lg, fontWeight: FONT_WEIGHT.bold, color: COLORS.text }}>
+              All settled up!
+            </Text>
+            <Text style={{ fontSize: FONT_SIZE.base, color: COLORS.text3, textAlign: 'center', paddingHorizontal: 32 }}>
+              No outstanding balances across any of your groups.
+            </Text>
+          </View>
         )}
         renderItem={({ item }) => (
           <SettlementCard

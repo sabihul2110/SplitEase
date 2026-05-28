@@ -10,6 +10,8 @@
  * react-native-screens must be enabled before NavigationContainer renders.
  */
 
+import 'react-native-gesture-handler';
+
 import { enableScreens } from 'react-native-screens';
 enableScreens();
 
@@ -34,3 +36,8 @@ export default function App() {
     </View>
   );
 }
+
+import { registerRootComponent } from 'expo';
+// Note: You don't need "import App from './App';" here because you are already inside App.js
+
+registerRootComponent(App);

@@ -23,6 +23,7 @@ import { ENDPOINTS } from '../../constants/api';
 import { useAuth } from '../../context/AuthContext';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS } from '../../constants/theme';
 import { EmptyState, LoadingState } from '../../components/common/ui';
+import { Icons } from '../../constants/icons';
 import ScreenHeader from '../../components/layout/ScreenHeader';
 
 // Matches web TYPE_META exactly
@@ -38,14 +39,14 @@ const TYPE_META = {
 };
 
 const TYPE_ICON = {
-  group_expense:       '📄',
-  group_expense_owed:  '📄',
-  personal_expense:    '💸',
-  income:              '📈',
-  loan_given:          '🤝',
-  loan_taken:          '🏦',
-  settlement_received: '✅',
-  settlement_sent:     '✅',
+  group_expense:       Icons.groupExpense,
+  group_expense_owed:  Icons.receipt,
+  personal_expense:    Icons.personalExpense,
+  income:              Icons.income,
+  loan_given:          Icons.lendMoney,
+  loan_taken:          Icons.borrowMoney,
+  settlement_received: Icons.checkCircle,
+  settlement_sent:     Icons.settlement,
 };
 
 // Matches web tabMatches()
@@ -79,7 +80,7 @@ function ActivityRow({ item, onPress }) {
   const inflow   = isInflow(item.type);
   const canNav   = !!item.group_id;
   const amount   = Number(item.amount || 0);
-  const icon     = TYPE_ICON[item.type] || '💰';
+  const IconComp = TYPE_ICON[item.type] || Icons.receipt;
 
   return (
     <TouchableOpacity
@@ -88,7 +89,7 @@ function ActivityRow({ item, onPress }) {
       activeOpacity={canNav ? 0.7 : 1}
     >
       <View style={[styles.rowIcon, { backgroundColor: meta.bg }]}>
-        <Text style={{ fontSize: 16 }}>{icon}</Text>
+        <IconComp size={18} color={meta.color} />
       </View>
       <View style={styles.rowBody}>
         <Text style={styles.rowLabel} numberOfLines={1}>{item.label}</Text>
@@ -168,7 +169,14 @@ export default function ActivityScreen() {
     .reverse()
     .map(date => ({ title: dateLabel(date), data: grouped[date] }));
 
-  if (loading) return <LoadingState label="Loading activity…" />;
+  if (loading) return (
+    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+      <View style={[styles.listHeader, { flex: 1, alignItems: 'center', justifyContent: 'center' }]}>
+        <Icons.activity size={32} color={COLORS.text3} />
+        <Text style={{ fontSize: FONT_SIZE.base, color: COLORS.text3, marginTop: 10 }}>Loading activity…</Text>
+      </View>
+    </SafeAreaView>
+  );
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
@@ -209,7 +217,7 @@ export default function ActivityScreen() {
 
             {/* Search */}
             <View style={styles.searchWrap}>
-              <Text style={styles.searchIcon}>🔍</Text>
+              <Icons.search size={14} color={COLORS.text3} />
               <TextInput
                 style={styles.searchInput}
                 value={search}
@@ -238,14 +246,25 @@ export default function ActivityScreen() {
           </View>
         )}
         ListEmptyComponent={() => (
-          <EmptyState
-            icon="📋"
-            title={search ? `No results for "${search}"` : 'No activity yet'}
-            subtitle={!search ? 'Expenses, payments, and income will appear here.' : ''}
-          />
+          <View style={{ alignItems: 'center', paddingTop: 64, gap: 12 }}>
+            <View style={{
+              width: 72, height: 72, borderRadius: 20,
+              backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border,
+              alignItems: 'center', justifyContent: 'center',
+            }}>
+              <Icons.activity size={32} color={COLORS.text3} />
+            </View>
+            <Text style={{ fontSize: FONT_SIZE.lg, fontWeight: FONT_WEIGHT.bold, color: COLORS.text }}>
+              {search ? 'No results' : 'No activity yet'}
+            </Text>
+            <Text style={{ fontSize: FONT_SIZE.base, color: COLORS.text3, textAlign: 'center', paddingHorizontal: SPACING.xl }}>
+              {search ? `Nothing matches "${search}"` : 'Expenses, payments, and income will appear here.'}
+            </Text>
+          </View>
         )}
         renderSectionHeader={({ section: { title } }) => (
           <View style={styles.dateHead}>
+            <Icons.calendarDays size={11} color={COLORS.text3} />
             <Text style={styles.dateHeadText}>{title}</Text>
           </View>
         )}
@@ -301,6 +320,7 @@ const styles = StyleSheet.create({
   countText:      { fontSize: FONT_SIZE.xs, color: COLORS.text3 },
 
   dateHead: {
+    flexDirection: 'row', alignItems: 'center', gap: 7,
     paddingHorizontal: SPACING.base, paddingVertical: 10,
     backgroundColor: COLORS.surface2,
     borderBottomWidth: 1, borderBottomColor: COLORS.border,
