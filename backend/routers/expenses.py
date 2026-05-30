@@ -87,6 +87,12 @@ def add_expense(group_id: int, body: AddExpenseRequest, current_user: dict = Dep
     return {"expense_id": expense_id, "message": "Expense added."}
 
 
+@router.get("/{expense_id}/splits")
+def get_expense_splits(expense_id: int, current_user: dict = Depends(get_current_user)):
+    splits = db.fetch_expense_splits(expense_id)
+    return splits    
+
+
 @router.delete("/{expense_id}")
 def delete_expense(expense_id: int, current_user: dict = Depends(get_current_user)):
     # Batch 1 fix retained

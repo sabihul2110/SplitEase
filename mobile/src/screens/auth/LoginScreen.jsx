@@ -108,9 +108,13 @@ export default function LoginScreen({ navigation }) {
               />
             </View>
 
-            <TouchableOpacity
+            {/* <TouchableOpacity
               onPress={() => navigation.navigate('ForgotPassword')}
               style={{ alignSelf: 'flex-end' }}
+            > */}
+            <TouchableOpacity
+              onPress={() => navigation.navigate('ForgotPassword')}
+              style={{ alignSelf: 'flex-end', marginTop: -SPACING.sm }}
             >
               <Text style={{ fontSize: FONT_SIZE.sm, color: COLORS.primary, fontWeight: FONT_WEIGHT.medium }}>
                 Forgot password?
@@ -177,9 +181,13 @@ const styles = StyleSheet.create({
     color:      COLORS.text,
     letterSpacing: 0.5,
   },
+  // tagline: {
+  //   fontSize: FONT_SIZE.base,
+  //   color:    COLORS.text3,
+  // },
   tagline: {
     fontSize: FONT_SIZE.base,
-    color:    COLORS.text3,
+    color:    COLORS.text2, // Boosted from text3 for better readability against dark bg
   },
   card: {
     backgroundColor: COLORS.surface,

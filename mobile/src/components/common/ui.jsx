@@ -11,6 +11,7 @@ import {
   View, Text, StyleSheet, ActivityIndicator, TouchableOpacity,
 } from 'react-native';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS } from '../../constants/theme';
+import { Icons } from '../../constants/icons';
 
 // ── Card ──────────────────────────────────────────────────────────────────
 export function Card({ children, style, onPress, padding = true }) {
@@ -51,10 +52,13 @@ export function Divider({ style }) {
 }
 
 // ── EmptyState ────────────────────────────────────────────────────────────
-export function EmptyState({ icon = '📭', title, subtitle, action }) {
+export function EmptyState({ icon = 'inboxZero', title, subtitle, action }) {
+  // Resolve the icon component from the dictionary, fallback to inboxZero
+  const IconComponent = Icons[icon] || Icons.inboxZero;
+
   return (
     <View style={styles.empty}>
-      <Text style={styles.emptyIcon}>{icon}</Text>
+      <IconComponent size={48} color={COLORS.text3} />
       {title    && <Text style={styles.emptyTitle}>{title}</Text>}
       {subtitle && <Text style={styles.emptySub}>{subtitle}</Text>}
       {action}

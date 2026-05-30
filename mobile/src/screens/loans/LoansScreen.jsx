@@ -224,7 +224,7 @@ function AddLoanModal({ visible, onClose, isLent, onSuccess }) {
   const personLabel   = isLent ? 'BORROWER NAME' : 'LENDER NAME';
   const personPHolder = isLent ? 'e.g. Rahul, Priya…' : 'e.g. Amit, Mom…';
   const submitLabel   = isLent ? 'Record Loan' : 'Record Borrow';
-  const IconComp      = isLent ? Icons.lendMoney : Icons.borrowMoney;
+  const IconComp      = isLent ? Icons.sendMoney : Icons.receiveMoney;
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
@@ -584,8 +584,8 @@ export default function LoansScreen() {
                 borderColor:     isLent ? 'rgba(245,158,11,0.25)' : 'rgba(129,140,248,0.25)',
               }]}>
                 {isLent
-                  ? <Icons.lendMoney  size={36} color="#f59e0b" />
-                  : <Icons.borrowMoney size={36} color="#818cf8" />
+                  ? <Icons.sendMoney  size={36} color="#f59e0b" />
+                  : <Icons.receiveMoney size={36} color="#818cf8" />
                 }
               </View>
               <Text style={styles.emptyTitle}>

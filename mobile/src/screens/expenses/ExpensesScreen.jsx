@@ -596,12 +596,22 @@ export default function ExpensesScreen() {
         ListHeaderComponent={
           <>
             {/* Page sub-title */}
-            <Text style={styles.subtitle}>
+            {/* <Text style={styles.subtitle}>
               Financial summary for{" "}
               <Text style={{ color: COLORS.text2, fontWeight: FONT_WEIGHT.semibold }}>
                 {monthDisplayLabel}
               </Text>
-            </Text>
+            </Text> */}
+
+            <View style={{ marginBottom: 20, marginTop: 4 }}>
+              <Text style={styles.pageTitle}>Expenses</Text>
+              <Text style={styles.subtitle}>
+                Financial summary for{" "}
+                <Text style={{ color: COLORS.text, fontWeight: FONT_WEIGHT.semibold }}>
+                  {monthDisplayLabel}
+                </Text>
+              </Text>
+            </View>
 
             {/* Summary cards — 2×2 grid */}
             <View style={styles.sumGrid}>
@@ -673,7 +683,7 @@ export default function ExpensesScreen() {
             {/* Empty state */}
             {!loading && visible.length === 0 && (
               <View style={styles.empty}>
-                <Text style={styles.emptyIcon}>📭</Text>
+                <Icons.inboxZero size={48} color={COLORS.text3} />
                 <Text style={styles.emptyTitle}>
                   {search
                     ? `No results for "${search}"`
@@ -793,7 +803,7 @@ const styles = StyleSheet.create({
     borderRadius: 7,
   },
   tabActive: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.primary,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.3,
@@ -1046,7 +1056,6 @@ const styles = StyleSheet.create({
     paddingVertical: 56,
     paddingHorizontal: 24,
   },
-  emptyIcon: { fontSize: 40, marginBottom: 14, opacity: 0.35 },
   emptyTitle: {
     fontSize: 16,
     fontWeight: FONT_WEIGHT.semibold,
@@ -1142,5 +1151,18 @@ const styles = StyleSheet.create({
   pickerMonthTextSelected: {
     color: '#fff',
     fontWeight: '700',
+  },
+
+  pageTitle: {
+    fontSize: 28,
+    fontWeight: FONT_WEIGHT.extrabold,
+    color: COLORS.text,
+    letterSpacing: -0.5,
+    lineHeight: 32,
+  },
+  subtitle: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.text3,
+    marginTop: 2,   // tight — subtitle cuddles under title
   },
 });

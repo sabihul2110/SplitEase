@@ -51,6 +51,13 @@ export default function ResetPasswordScreen({ navigation }) {
     <SafeAreaView style={styles.safe}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+          {/* Logo */}
+          <View style={styles.logoWrap}>
+            <View style={styles.logoBox}>
+              <Text style={styles.logoText}>S</Text>
+            </View>
+            <Text style={styles.appName}>SplitEase</Text>
+          </View>
           <View style={styles.card}>
             {done ? (
               <View style={{ alignItems: 'center', gap: SPACING.md }}>
@@ -106,6 +113,13 @@ export default function ResetPasswordScreen({ navigation }) {
 const styles = StyleSheet.create({
   safe:    { flex: 1, backgroundColor: COLORS.bg },
   scroll:  { flexGrow: 1, padding: SPACING.base, justifyContent: 'center' },
+  logoWrap:  { alignItems: 'center', gap: SPACING.sm, marginBottom: SPACING.xl },
+  logoBox:   {
+    width: 64, height: 64, backgroundColor: COLORS.primary,
+    borderRadius: 18, alignItems: 'center', justifyContent: 'center',
+  },
+  logoText:  { fontSize: 32, fontWeight: FONT_WEIGHT.extrabold, color: COLORS.white },
+  appName:   { fontSize: FONT_SIZE['2xl'], fontWeight: FONT_WEIGHT.extrabold, color: COLORS.text, letterSpacing: 0.5 },
   card: {
     backgroundColor: COLORS.surface, borderRadius: RADIUS.xl,
     borderWidth: 1, borderColor: COLORS.border,

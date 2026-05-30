@@ -389,15 +389,152 @@ export const Icons = {
       <Polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
     </Svg>
   ),
+
+  close: ({ size = 24, color = "currentColor" }) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
+      <Line x1="18" y1="6" x2="6" y2="18" />
+      <Line x1="6" y1="6" x2="18" y2="18" />
+    </Svg>
+  ),
+
+  // sendMoney: ({ size = 24, color = "currentColor" }) => (
+  //   <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
+  //     {/* Outer card with gap at the top right */}
+  //     <Path d="M12 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-6" />
+      
+  //     {/* Upward outgoing arrow */}
+  //     <Path d="M18 9V2" />
+  //     <Polyline points="14 6 18 2 22 6" />
+      
+  //     {/* Indian Rupee Symbol */}
+  //     <Path d="M7 8h6" />
+  //     <Path d="M7 12h5" />
+  //     <Path d="M9 8c3 0 3 5 0 5H7l4.5 4.5" />
+  //   </Svg>
+  // ),
+
+  sendMoney: ({ size = 24, color = "currentColor" }) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
+      {/* Expanded box with top-right gap */}
+      <Path d="M14 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5" />
+      
+      {/* Outward/Upward Arrow (Detached) */}
+      <Path d="M19 10V2" />
+      <Polyline points="15 6 19 2 23 6" />
+      
+      {/* Centered Rupee with spacious padding */}
+      <Path d="M8 8.5h6" />
+      <Path d="M8 11.5h4.5" />
+      <Path d="M9.5 8.5c3 0 3 3 0 3" />
+      <Path d="M9.5 11.5l4 4.5" />
+    </Svg>
+  ),
+
+  // receiveMoney: ({ size = 24, color = "currentColor" }) => (
+  //   <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
+  //     {/* Outer card with gap at the top right */}
+  //     <Path d="M12 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-6" />
+      
+  //     {/* Downward incoming arrow */}
+  //     <Path d="M18 2v9" />
+  //     <Polyline points="14 7 18 11 22 7" />
+      
+  //     {/* Indian Rupee Symbol */}
+  //     <Path d="M7 8h6" />
+  //     <Path d="M7 12h5" />
+  //     <Path d="M9 8c3 0 3 5 0 5H7l4.5 4.5" />
+  //   </Svg>
+  // ),
+
+  receiveMoney: ({ size = 24, color = "currentColor" }) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
+      {/* Expanded box with top-right gap */}
+      <Path d="M14 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5" />
+      
+      {/* Inward/Downward Arrow (Detached) */}
+      <Path d="M19 2v8" />
+      <Polyline points="15 6 19 10 23 6" />
+      
+      {/* Centered Rupee with spacious padding */}
+      <Path d="M8 8.5h6" />
+      <Path d="M8 11.5h4.5" />
+      <Path d="M9.5 8.5c3 0 3 3 0 3" />
+      <Path d="M9.5 11.5l4 4.5" />
+    </Svg>
+  ),
+
+  paymentSettled: ({ size = 24, color = "currentColor" }) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
+      {/* Outer scalloped badge */}
+      <Path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.76 4 4 0 0 1-4.78 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.78 4 4 0 0 1 0-6.76Z" />
+      
+      {/* Inner circle */}
+      <Circle cx="12" cy="12" r="5.5" />
+      
+      {/* Checkmark */}
+      <Polyline points="10 12 11.5 13.5 14.5 10.5" />
+    </Svg>
+  ),
+
+  paymentSettledFilled: ({ size = 24, color = "currentColor", bgColor = "#0f172a" }) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      {/* Solid filled badge */}
+      <Path 
+        d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.76 4 4 0 0 1-4.78 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.78 4 4 0 0 1 0-6.76Z" 
+        fill={color} 
+      />
+      
+      {/* Inverted inner circle */}
+      <Circle 
+        cx="12" cy="12" r="5.8" 
+        fill="none" stroke={bgColor} strokeWidth="2" 
+      />
+      
+      {/* Inverted checkmark */}
+      <Polyline 
+        points="10 12 11.5 13.5 14.5 10.5" 
+        fill="none" stroke={bgColor} strokeWidth="2" 
+        strokeLinecap="round" strokeLinejoin="round" 
+      />
+    </Svg>
+  ),
+
+  sortAsc: ({ size = 20, color = "currentColor" }) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
+      <Line x1="3" y1="6" x2="21" y2="6" />
+      <Line x1="3" y1="12" x2="15" y2="12" />
+      <Line x1="3" y1="18" x2="9" y2="18" />
+      <Path d="M18 15l3-3 3 3" />
+      <Line x1="21" y1="12" x2="21" y2="21" />
+    </Svg>
+  ),
+  sortDesc: ({ size = 20, color = "currentColor" }) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
+      <Line x1="3" y1="6" x2="21" y2="6" />
+      <Line x1="3" y1="12" x2="15" y2="12" />
+      <Line x1="3" y1="18" x2="9" y2="18" />
+      <Path d="M18 21l3-3 3 3" />
+      <Line x1="21" y1="12" x2="21" y2="3" />
+    </Svg>
+  ),
+
+  info: ({ size = 20, color = "currentColor" }) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
+      <Circle cx="12" cy="12" r="10" />
+      <Line x1="12" y1="8" x2="12" y2="8" strokeWidth="2.5" strokeLinecap="round" />
+      <Line x1="12" y1="12" x2="12" y2="16" />
+    </Svg>
+  ),
+
 };
 
 export const TYPE_ICONS = {
   personal_expense:    { Icon: Icons.personalExpense, bg: "rgba(239,68,68,0.12)",   color: "#f87171" },
   group_expense:       { Icon: Icons.groupExpense,    bg: "rgba(37,99,235,0.12)",   color: "#f87171" },
   group_expense_owed:  { Icon: Icons.groupExpense,    bg: "rgba(37,99,235,0.12)",   color: "#f87171" },
-  settlement_sent:     { Icon: Icons.settlement,      bg: "rgba(239,68,68,0.10)",   color: "#f87171" },
+  settlement_sent:     { Icon: Icons.paymentSettled,      bg: "rgba(239,68,68,0.10)",   color: "#f87171" },
   income:              { Icon: Icons.income,          bg: "rgba(16,185,129,0.12)",  color: "#10b981" },
-  settlement_received: { Icon: Icons.settlement,      bg: "rgba(99,102,241,0.12)",  color: "#10b981" },
+  settlement_received: { Icon: Icons.paymentSettled,      bg: "rgba(99,102,241,0.12)",  color: "#10b981" },
   loan_given:          { Icon: Icons.lendMoney,       bg: "rgba(245,158,11,0.12)",  color: "#f59e0b" },
   loan_taken:          { Icon: Icons.borrowMoney,     bg: "rgba(99,102,241,0.12)",  color: "#818cf8" },
 };

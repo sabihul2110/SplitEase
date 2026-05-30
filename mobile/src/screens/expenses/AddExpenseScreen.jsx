@@ -19,6 +19,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import client from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { Icons, CATEGORY_ICONS } from '../../constants/icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS } from '../../constants/theme';
 import { Avatar } from '../../components/common/ui';
 import Input  from '../../components/common/Input';
@@ -59,10 +60,21 @@ export default function AddExpenseScreen() {
   const [subcategoryId, setSubcategoryId] = useState(null);
   const [splitType,     setSplitType]     = useState(editExpense?.split_type    || 'equal');
   const [expenseDate,   setExpenseDate]   = useState(editExpense?.expense_date  || todayStr());
-  const [participants,  setParticipants]  = useState(members.map(m => m.user_id));
-  const [customAmounts, setCustomAmounts] = useState({});
+  // const [participants,  setParticipants]  = useState(members.map(m => m.user_id));
+  // const [customAmounts, setCustomAmounts] = useState({});
+  const editSplits = editExpense?.splits || [];
+  const initialParticipants = editSplits.length > 0
+    ? editSplits.map(s => s.user_id)
+    : members.map(m => m.user_id);
+  const initialCustomAmounts = editSplits.length > 0
+    ? Object.fromEntries(editSplits.map(s => [s.user_id, String(s.amount_owed)]))
+    : {};
+
+  const [participants,  setParticipants]  = useState(initialParticipants);
+  const [customAmounts, setCustomAmounts] = useState(initialCustomAmounts);
   const [loading,       setLoading]       = useState(false);
   const [errors,        setErrors]        = useState({});
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   // Category data
   const [categories, setCategories] = useState(FALLBACK_CATEGORIES);
@@ -333,15 +345,35 @@ export default function AddExpenseScreen() {
 
             {/* Date */}
             <View style={styles.field}>
-              <Input
-                label="DATE"
-                value={expenseDate}
-                onChangeText={v => { setExpenseDate(v); setErrors(p => ({...p, date: null})); }}
-                placeholder="YYYY-MM-DD"
-                keyboardType="numbers-and-punctuation"
-                autoCapitalize="none"
-                error={errors.date}
-              />
+              <Text style={styles.fieldLabel}>DATE</Text>
+              <TouchableOpacity
+                style={styles.datePickerBtn}
+                onPress={() => setShowDatePicker(true)}
+                activeOpacity={0.7}
+              >
+                <Icons.calendarDays size={16} color={COLORS.text2} />
+                <Text style={styles.datePickerText}>
+                  {new Date(expenseDate).toLocaleDateString('en-IN', {
+                    day: 'numeric', month: 'long', year: 'numeric'
+                  })}
+                </Text>
+              </TouchableOpacity>
+              {showDatePicker && (
+                <DateTimePicker
+                  value={new Date(expenseDate)}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  maximumDate={new Date()}
+                  onChange={(event, selectedDate) => {
+                    setShowDatePicker(Platform.OS === 'ios');
+                    if (selectedDate) {
+                      setExpenseDate(selectedDate.toISOString().split('T')[0]);
+                      setErrors(p => ({ ...p, date: null }));
+                    }
+                  }}
+                />
+              )}
+              {!!errors.date && <Text style={styles.err}>{errors.date}</Text>}
             </View>
           </View>
 
@@ -356,7 +388,7 @@ export default function AddExpenseScreen() {
                   onPress={() => setSplitType(type)}
                 >
                   <Text style={[styles.splitBtnText, splitType === type && styles.splitBtnTextActive]}>
-                    {type === 'equal' ? '⚖️  Equal' : '✏️  Custom'}
+                    {type === 'equal' ? ' Equal' : '️  Custom'}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -613,4 +645,13 @@ const styles = StyleSheet.create({
   previewTotalAmt:   { fontSize: 18, fontWeight: FONT_WEIGHT.heavy, color: COLORS.text },
 
   err: { fontSize: FONT_SIZE.sm, color: COLORS.danger },
+  datePickerBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: COLORS.surface2, borderRadius: RADIUS.lg,
+    borderWidth: 1, borderColor: COLORS.border,
+    paddingHorizontal: SPACING.md, paddingVertical: 13,
+  },
+  datePickerText: {
+    fontSize: FONT_SIZE.md, color: COLORS.text, fontWeight: FONT_WEIGHT.medium,
+  },
 });

@@ -196,7 +196,8 @@ function PaymentRow({ item, currentUserName, onDelete }) {
   return (
     <View style={[styles.ledgerRow, { opacity: 0.75 }]}>
       <View style={[styles.ledgerIcon, { backgroundColor: C.successLo }]}>
-        <Icons.settlement size={20} color={C.success} />
+        {/* <Icons.paymentSettledFilled size={30} color={C.success} /> */}
+        <Icons.checkCircle size={30} color={C.success} />
       </View>
       <View style={styles.ledgerMid}>
         <Text style={[styles.ledgerDesc, { fontStyle: 'italic', color: C.text2 }]} numberOfLines={1}>
@@ -414,8 +415,8 @@ function BalanceBanner({ netBalances, currentUserName }) {
         </Text>
       </View>
       {isOwed
-        ? <Icons.income size={28} color={C.success} />
-        : <Icons.lendMoney size={28} color={C.danger} />
+        ? <Icons.receiveMoney size={28} color={C.success} /> // can use Icons.wallet
+        : <Icons.sendMoney size={28} color={C.danger} />
       }
     </View>
   );
@@ -455,6 +456,7 @@ export default function GroupDetailScreen() {
   const [settLoaded,  setSettLoaded]  = useState(false);
   const [reminding,   setReminding]   = useState('');
   const [toast,       setToast]       = useState('');
+  const [ledgerAsc,   setLedgerAsc]   = useState(false);
   const [inviting, setInviting] = useState(false);
 
   function showToast(msg) {
@@ -615,28 +617,128 @@ export default function GroupDetailScreen() {
   const totalSpent = expenses.reduce((s, e) => s + Number(e.total_amount), 0);
 
   // ── Tab content ──────────────────────────────────────────────────────────
-  function renderLedger() {
-    const combined = [
-      ...expenses.map(e => ({ ...e, _type: 'expense', _date: e.expense_date })),
-      ...payments.map(p => ({ ...p, _type: 'payment', _date: p.payment_date })),
-    ].sort((a, b) => new Date(b._date) - new Date(a._date));
+  // function renderLedger() {
+  //   const combined = [
+  //     ...expenses.map(e => ({ ...e, _type: 'expense', _date: e.expense_date })),
+  //     ...payments.map(p => ({ ...p, _type: 'payment', _date: p.payment_date })),
+  //   ].sort((a, b) => new Date(b._date) - new Date(a._date));
 
-    if (!combined.length) return (
-      <Empty
-        icon={Icons.receipt}
-        iconColor={C.text3}
-        title="No transactions yet"
-        subtitle="Add the first expense for this group."
-      />
-    );
-    return combined.map(item =>
-      item._type === 'expense' ? (
-        <ExpenseRow key={`e-${item.expense_id}`} item={item} currentUserName={userName} onDelete={handleDelete} onEdit={(exp) => navigation.navigate('AddExpense', { groupId, groupName, members, editExpense: exp })} />
-      ) : (
-        <PaymentRow key={`p-${item.payment_id}`} item={item} currentUserName={userName} onDelete={handleDelete} />
-      )
-    );
-  }
+  //   if (!combined.length) return (
+  //     <Empty
+  //       icon={Icons.receipt}
+  //       iconColor={C.text3}
+  //       title="No transactions yet"
+  //       subtitle="Add the first expense for this group."
+  //     />
+  //   );
+  //   return combined.map(item =>
+  //     item._type === 'expense' ? (
+  //       <ExpenseRow key={`e-${item.expense_id}`} item={item} currentUserName={userName} onDelete={handleDelete} onEdit={(exp) => navigation.navigate('AddExpense', { groupId, groupName, members, editExpense: exp })} />
+  //     ) : (
+  //       <PaymentRow key={`p-${item.payment_id}`} item={item} currentUserName={userName} onDelete={handleDelete} />
+  //     )
+  //   );
+  // }
+
+  function renderLedger() {
+  const combined = [
+    // ...expenses.map(e => ({ ...e, _type: 'expense', _date: e.expense_date })),
+    ...expenses.map(e => ({ ...e, _type: 'expense', _date: e.expense_date, created_at: e.created_at })),
+    // ...payments.map(p => ({ ...p, _type: 'payment', _date: p.payment_date })),
+    ...payments.map(p => ({ ...p, _type: 'payment', _date: p.payment_date, created_at: p.created_at })),
+  // ].sort((a, b) =>
+  //   ledgerAsc
+  //     ? new Date(a._date) - new Date(b._date)
+  //     : new Date(b._date) - new Date(a._date)
+  // );
+  ].sort((a, b) => {
+    const aTime = a.created_at ? new Date(a.created_at) : new Date(a._date);
+    const bTime = b.created_at ? new Date(b.created_at) : new Date(b._date);
+    return ledgerAsc ? aTime - bTime : bTime - aTime;
+  });
+
+  if (!combined.length) return (
+    <Empty
+      icon={Icons.receipt}
+      iconColor={C.text3}
+      title="No transactions yet"
+      subtitle="Add the first expense for this group."
+    />
+  );
+
+  // Group by Month Year e.g. "May 2026"
+  const groups = [];
+  let currentMonth = null;
+  combined.forEach(item => {
+    const d = new Date(item._date);
+    const label = d.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+    if (label !== currentMonth) {
+      currentMonth = label;
+      groups.push({ type: 'header', label });
+    }
+    groups.push(item);
+  });
+
+  return (
+    <>
+      {/* Sort toggle */}
+      <TouchableOpacity
+        onPress={() => setLedgerAsc(p => !p)}
+        style={styles.sortToggle}
+        activeOpacity={0.7}
+      >
+        {ledgerAsc
+          ? <Icons.sortAsc size={13} color={C.primary} />
+          : <Icons.sortDesc size={13} color={C.primary} />
+        }
+        <Text style={styles.sortToggleText}>
+          {ledgerAsc ? 'Oldest first' : 'Newest first'}
+        </Text>
+      </TouchableOpacity>
+
+      {groups.map((item, idx) => {
+        if (item.type === 'header') {
+          return (
+            <View key={`header-${item.label}`} style={styles.monthHeader}>
+              <Text style={styles.monthHeaderText}>{item.label}</Text>
+              <View style={styles.monthHeaderLine} />
+            </View>
+          );
+        }
+        return item._type === 'expense' ? (
+          <ExpenseRow
+            key={`e-${item.expense_id}`}
+            item={item}
+            currentUserName={userName}
+            onDelete={handleDelete}
+            // onEdit={(exp) => navigation.navigate('AddExpense', { groupId, groupName, members, editExpense: exp })}
+            onEdit={async (exp) => {
+              try {
+                const { data } = await client.get(`/expenses/${exp.expense_id}/splits`);
+                navigation.navigate('AddExpense', {
+                  groupId,
+                  groupName,
+                  members,
+                  editExpense: { ...exp, splits: data || [] },
+                });
+              } catch {
+                // fallback: navigate without splits, AddExpense will handle gracefully
+                navigation.navigate('AddExpense', { groupId, groupName, members, editExpense: exp });
+              }
+            }}
+          />
+        ) : (
+          <PaymentRow
+            key={`p-${item.payment_id}`}
+            item={item}
+            currentUserName={userName}
+            onDelete={handleDelete}
+          />
+        );
+      })}
+    </>
+  );
+}
 
   function renderSettlements() {
     if (settLoading) return (
@@ -712,7 +814,7 @@ export default function GroupDetailScreen() {
             ])
           }
         >
-          <Icons.trash size={15} color={C.danger} />
+          <Icons.logout size={15} color={C.danger} />
           <Text style={styles.leaveBtnText}>Leave Group</Text>
         </TouchableOpacity>
 
@@ -754,7 +856,7 @@ export default function GroupDetailScreen() {
       <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <Icons.back size={22} color={C.text2} />
+            <Icons.close size={22} color={C.text2} />
           </TouchableOpacity>
           <Text style={styles.headerTitle} numberOfLines={1}>{groupName}</Text>
           <View style={{ width: 32 }} />
@@ -772,7 +874,7 @@ export default function GroupDetailScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-          <Icons.back size={22} color={C.text2} />
+          <Icons.close size={22} color={C.text2} />
         </TouchableOpacity>
         
         <Text style={styles.headerTitle} numberOfLines={1}>{groupName}</Text>
@@ -797,7 +899,7 @@ export default function GroupDetailScreen() {
           style={styles.payBtn}
           onPress={() => navigation.navigate('AddPayment', { groupId, groupName, members })}
         >
-          <Icons.settlements size={13} color={C.success} />
+          <Icons.sendMoney size={13} color={C.success} />
           <Text style={styles.payBtnText}>Pay</Text>
         </TouchableOpacity>
       </View>
@@ -909,7 +1011,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: C.border,
     paddingVertical: 10, paddingHorizontal: 6, alignItems: 'center',
   },
-  statLabel: { fontSize: 10, color: C.text3, fontWeight: W.medium, marginBottom: 4, textAlign: 'center' },
+  statLabel: { fontSize: 11, color: C.text3, fontWeight: W.medium, marginBottom: 4, textAlign: 'center' },
   statVal:   { fontSize: F.lg, fontWeight: W.heavy, color: C.text },
 
   // ── Tab bar — single indicator approach ──────────────────────────────────
@@ -1048,7 +1150,7 @@ const styles = StyleSheet.create({
 
   // Toast
   toast: {
-    position: 'absolute', bottom: 120, left: SP.xl, right: SP.xl, zIndex: 999,
+    position: 'absolute', top: 90, left: SP.xl, right: SP.xl, zIndex: 999, // was bottom:120
     flexDirection: 'row', alignItems: 'center', gap: 8,
     backgroundColor: C.surface2, borderRadius: R.xl,
     borderWidth: 1, borderColor: C.border,
@@ -1115,4 +1217,29 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   deleteGroupBtnText: { color: C.danger, fontSize: F.sm, fontWeight: W.medium },
+
+  sortToggle: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    alignSelf: 'flex-end',
+    paddingHorizontal: 10, paddingVertical: 5,
+    backgroundColor: C.primaryLo,
+    borderRadius: R.full,
+    borderWidth: 1, borderColor: C.primary + '30',
+    marginBottom: SP.sm,
+  },
+  sortToggleText: {
+    fontSize: F.xs, fontWeight: W.semibold, color: C.primary,
+  },
+  monthHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: SP.sm,
+    marginTop: SP.md, marginBottom: SP.xs,
+  },
+  monthHeaderText: {
+    fontSize: F.xs, fontWeight: W.bold,
+    color: C.text3, textTransform: 'uppercase', letterSpacing: 1,
+    flexShrink: 0,
+  },
+  monthHeaderLine: {
+    flex: 1, height: 1, backgroundColor: C.border,
+  },
 });
