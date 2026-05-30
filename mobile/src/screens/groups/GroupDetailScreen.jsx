@@ -150,8 +150,31 @@ function CategoryIcon({ categoryName, size = 40 }) {
 }
 
 // ─── Expense row ──────────────────────────────────────────────────────────────
-function ExpenseRow({ item, currentUserName, onDelete, onEdit }) {
+// function ExpenseRow({ item, currentUserName, onDelete, onEdit }) {
+//   const isPayer = item.payer_name === currentUserName;
+//   return (
+//     <View style={styles.ledgerRow}>
+//       <CategoryIcon categoryName={item.category_name} />
+//       <View style={styles.ledgerMid}>
+//         <Text style={styles.ledgerDesc} numberOfLines={1}>{item.description}</Text>
+//         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3, flexWrap: 'wrap' }}>
+//           <Text style={styles.ledgerMeta}>
+//             {isPayer ? 'You paid' : `${item.payer_name} paid`} · {fmtDate(item.expense_date)}
+//           </Text>
+//           <Badge label={item.split_type || 'equal'} variant={item.split_type === 'equal' ? 'success' : 'primary'} />
+//         </View>
+//       </View>
+
+function ExpenseRow({ item, currentUserName, onDelete, onEdit, settlementBadge }) {
   const isPayer = item.payer_name === currentUserName;
+
+  const badgeMap = {
+    settled: { label: '✓ Settled', variant: 'success' },
+    partial: { label: '⚡ Partial', variant: 'warning' },
+    pending: { label: '⏳ Pending', variant: 'neutral' },
+  };
+  const badge = settlementBadge ? badgeMap[settlementBadge] : null;
+
   return (
     <View style={styles.ledgerRow}>
       <CategoryIcon categoryName={item.category_name} />
@@ -159,9 +182,10 @@ function ExpenseRow({ item, currentUserName, onDelete, onEdit }) {
         <Text style={styles.ledgerDesc} numberOfLines={1}>{item.description}</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3, flexWrap: 'wrap' }}>
           <Text style={styles.ledgerMeta}>
-            {isPayer ? 'You paid' : `${item.payer_name} paid`} · {fmtDate(item.expense_date)}
+            {isPayer ? 'You paid' : `${item.payer_name} paid`}
           </Text>
           <Badge label={item.split_type || 'equal'} variant={item.split_type === 'equal' ? 'success' : 'primary'} />
+          {badge && <Badge label={badge.label} variant={badge.variant} />}
         </View>
       </View>
       <View style={styles.ledgerRight}>
@@ -445,11 +469,12 @@ export default function GroupDetailScreen() {
   const userName = user?.name || user?.email || '';
 
   const [tab,         setTab]         = useState('Ledger');
-  const [expenses,    setExpenses]    = useState([]);
-  const [payments,    setPayments]    = useState([]);
-  const [members,     setMembers]     = useState([]);
-  const [simplified,  setSimplified]  = useState([]);
-  const [netBalances, setNetBalances] = useState([]);
+  const [expenses,         setExpenses]         = useState([]);
+  const [payments,         setPayments]         = useState([]);
+  const [members,          setMembers]          = useState([]);
+  const [simplified,       setSimplified]       = useState([]);
+  const [netBalances,      setNetBalances]       = useState([]);
+  const [splitStatuses,    setSplitStatuses]    = useState([]);
   const [loading,     setLoading]     = useState(true);
   const [settLoading, setSettLoading] = useState(false);
   const [refreshing,  setRefreshing]  = useState(false);
@@ -458,6 +483,21 @@ export default function GroupDetailScreen() {
   const [toast,       setToast]       = useState('');
   const [ledgerAsc,   setLedgerAsc]   = useState(false);
   const [inviting, setInviting] = useState(false);
+
+  function getExpenseBadge(expenseId, payerName) {
+    // payer's own split doesn't count toward settlement status
+    const payerMember = members.find(m => m.name === payerName);
+    const payerId = payerMember?.user_id;
+    const splits = splitStatuses.filter(
+      s => s.expense_id === expenseId && s.user_id !== payerId
+    );
+    if (splits.length === 0) return null;
+    const allSettled = splits.every(s => s.status === 'settled');
+    const anyPartial = splits.some(s => s.status === 'partial' || s.status === 'settled');
+    if (allSettled) return 'settled';
+    if (anyPartial) return 'partial';
+    return 'pending';
+  }
 
   function showToast(msg) {
     setToast(msg);
@@ -469,14 +509,25 @@ export default function GroupDetailScreen() {
     else setLoading(true);
     try {
       setSettLoaded(false);
-      const [expRes, payRes, memRes] = await Promise.all([
+      // const [expRes, payRes, memRes] = await Promise.all([
+      //   client.get(`/expenses/${groupId}`),
+      //   client.get(`/payments/${groupId}`),
+      //   client.get(`/groups/${groupId}/members`),
+      // ]);
+      // setExpenses(expRes.data  || []);
+      // setPayments(payRes.data  || []);
+      // setMembers(memRes.data   || []);
+
+      const [expRes, payRes, memRes, statusRes] = await Promise.all([
         client.get(`/expenses/${groupId}`),
         client.get(`/payments/${groupId}`),
         client.get(`/groups/${groupId}/members`),
+        client.get(`/expenses/${groupId}/settlement-status`),
       ]);
-      setExpenses(expRes.data  || []);
-      setPayments(payRes.data  || []);
-      setMembers(memRes.data   || []);
+      setExpenses(expRes.data      || []);
+      setPayments(payRes.data      || []);
+      setMembers(memRes.data       || []);
+      setSplitStatuses(statusRes.data || []);
     } catch (err) {
       Alert.alert('Failed to load',
         err?.response?.data?.detail || err?.message || 'Check your connection.');
@@ -705,24 +756,42 @@ export default function GroupDetailScreen() {
             </View>
           );
         }
+        // return item._type === 'expense' ? (
+        //   <ExpenseRow
+        //     key={`e-${item.expense_id}`}
+        //     item={item}
+        //     currentUserName={userName}
+        //     onDelete={handleDelete}
+        //     onEdit={async (exp) => {
+        //       try {
+        //         const { data } = await client.get(`/expenses/${exp.expense_id}/splits`);
+        //         navigation.navigate('AddExpense', {
+        //           groupId,
+        //           groupName,
+        //           members,
+        //           editExpense: { ...exp, splits: data || [] },
+        //         });
+        //       } catch {
+        //         // fallback: navigate without splits, AddExpense will handle gracefully
+        //         navigation.navigate('AddExpense', { groupId, groupName, members, editExpense: exp });
+        //       }
+        //     }}
+        //   />
         return item._type === 'expense' ? (
           <ExpenseRow
             key={`e-${item.expense_id}`}
             item={item}
             currentUserName={userName}
             onDelete={handleDelete}
-            // onEdit={(exp) => navigation.navigate('AddExpense', { groupId, groupName, members, editExpense: exp })}
+            settlementBadge={getExpenseBadge(item.expense_id, item.payer_name)}
             onEdit={async (exp) => {
               try {
                 const { data } = await client.get(`/expenses/${exp.expense_id}/splits`);
                 navigation.navigate('AddExpense', {
-                  groupId,
-                  groupName,
-                  members,
+                  groupId, groupName, members,
                   editExpense: { ...exp, splits: data || [] },
                 });
               } catch {
-                // fallback: navigate without splits, AddExpense will handle gracefully
                 navigation.navigate('AddExpense', { groupId, groupName, members, editExpense: exp });
               }
             }}

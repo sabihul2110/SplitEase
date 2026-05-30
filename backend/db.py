@@ -513,6 +513,162 @@ def fetch_expense_group_id(expense_id: int) -> int | None:
 #  PAYMENTS
 # ─────────────────────────────────────────────
 
+def fetch_pending_splits_between(group_id: int, debtor_id: int, creditor_id: int) -> list[dict]:
+    """
+    Returns all expense splits where debtor_id owes creditor_id money
+    in this group, along with how much has already been allocated via
+    Payment_Allocations. Used to pre-populate the AddPayment screen.
+    """
+    conn = get_connection()
+    cur  = conn.cursor(dictionary=True)
+    cur.execute(
+        """
+        SELECT
+            e.expense_id,
+            e.description,
+            e.expense_date,
+            es.amount_owed,
+            IFNULL(SUM(pa.allocated_amt), 0) AS already_paid,
+            (es.amount_owed - IFNULL(SUM(pa.allocated_amt), 0)) AS remaining
+        FROM   Expense_Splits es
+        JOIN   Expenses e ON e.expense_id = es.expense_id
+        LEFT JOIN Payment_Allocations pa ON pa.expense_id = es.expense_id
+            AND pa.payment_id IN (
+                SELECT payment_id FROM Payments
+                WHERE group_id = %s AND payer_id = %s AND payee_id = %s
+            )
+        WHERE  es.user_id  = %s
+          AND  e.payer_id  = %s
+          AND  e.group_id  = %s
+        GROUP  BY e.expense_id, e.description, e.expense_date, es.amount_owed
+        HAVING remaining > 0.005
+        ORDER  BY e.expense_date ASC, e.expense_id ASC
+        """,
+        (group_id, debtor_id, creditor_id, debtor_id, creditor_id, group_id),
+    )
+    rows = cur.fetchall()
+    cur.close(); conn.close()
+    for r in rows:
+        r["expense_date"]  = str(r["expense_date"])
+        r["amount_owed"]   = float(r["amount_owed"])
+        r["already_paid"]  = float(r["already_paid"])
+        r["remaining"]     = float(r["remaining"])
+    return rows
+
+
+def insert_payment_with_allocations(
+    group_id: int,
+    payer_id: int,
+    payee_id: int,
+    amount: float,
+    note: str | None,
+    payment_date: str,
+    allocations: list[dict],  # [{"expense_id": int, "allocated_amt": float}]
+) -> int:
+    conn = get_connection()
+    cur  = conn.cursor()
+    try:
+        conn.start_transaction()
+        cur.execute(
+            """
+            INSERT INTO Payments
+                (group_id, payer_id, payee_id, amount, note, payment_date)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            """,
+            (group_id, payer_id, payee_id, round(amount, 2), note or None, payment_date),
+        )
+        payment_id = cur.lastrowid
+        if allocations:
+            cur.executemany(
+                """
+                INSERT INTO Payment_Allocations (payment_id, expense_id, allocated_amt)
+                VALUES (%s, %s, %s)
+                """,
+                [(payment_id, a["expense_id"], round(float(a["allocated_amt"]), 2))
+                 for a in allocations],
+            )
+        conn.commit()
+        return payment_id
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close(); conn.close()
+
+
+def fetch_expense_settlement_status(group_id: int) -> list[dict]:
+    """
+    For every expense in the group, returns per-split settlement status.
+    Used to show settled/partial/pending badges on expense rows.
+
+    Returns list of:
+    {
+        expense_id: int,
+        user_id: int,
+        amount_owed: float,
+        allocated: float,
+        status: "settled" | "partial" | "pending"
+    }
+    """
+    conn = get_connection()
+    cur  = conn.cursor(dictionary=True)
+    cur.execute(
+        """
+        SELECT
+            es.expense_id,
+            es.user_id,
+            es.amount_owed,
+            IFNULL(SUM(pa.allocated_amt), 0) AS allocated
+        FROM   Expense_Splits es
+        JOIN   Expenses e ON e.expense_id = es.expense_id
+        LEFT JOIN Payment_Allocations pa ON pa.expense_id = es.expense_id
+            AND pa.payment_id IN (
+                SELECT payment_id FROM Payments WHERE group_id = %s
+            )
+        WHERE  e.group_id = %s
+        GROUP  BY es.expense_id, es.user_id, es.amount_owed
+        """,
+        (group_id, group_id),
+    )
+    rows = cur.fetchall()
+    cur.close(); conn.close()
+    for r in rows:
+        r["amount_owed"] = float(r["amount_owed"])
+        r["allocated"]   = float(r["allocated"])
+        if r["allocated"] >= r["amount_owed"] - 0.005:
+            r["status"] = "settled"
+        elif r["allocated"] > 0.005:
+            r["status"] = "partial"
+        else:
+            r["status"] = "pending"
+    return rows
+
+
+def fetch_payment_allocations(payment_id: int) -> list[dict]:
+    """Which expenses a specific payment covers. For detail view."""
+    conn = get_connection()
+    cur  = conn.cursor(dictionary=True)
+    cur.execute(
+        """
+        SELECT
+            pa.expense_id,
+            pa.allocated_amt,
+            e.description,
+            e.expense_date
+        FROM   Payment_Allocations pa
+        JOIN   Expenses e ON e.expense_id = pa.expense_id
+        WHERE  pa.payment_id = %s
+        ORDER  BY e.expense_date ASC
+        """,
+        (payment_id,),
+    )
+    rows = cur.fetchall()
+    cur.close(); conn.close()
+    for r in rows:
+        r["expense_date"]  = str(r["expense_date"])
+        r["allocated_amt"] = float(r["allocated_amt"])
+    return rows
+
 def fetch_group_payments(group_id: int, user_id: int) -> list[dict]:
     """All payments for a group — only if user is a member."""
     conn = get_connection()
