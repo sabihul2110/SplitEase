@@ -220,7 +220,7 @@ export default function AddPaymentScreen() {
     .reduce((sum, s) => sum + s.remaining, 0);
 
   const amt = parseFloat(amount) || 0;
-  const isPartial = amt < selectedTotal - 0.005 && amt > 0;
+  const isPartial = netOwed > 0 && amt < netOwed - 0.005 && amt > 0;
 
   return (
     <SafeAreaView style={s.safe} edges={['top', 'left', 'right']}>
@@ -356,7 +356,7 @@ export default function AddPaymentScreen() {
               <View style={s.partialBanner}>
                 <Icons.info size={14} color={C.warning} />
                 <Text style={s.partialBannerText}>
-                  Partial payment — ₹{(selectedTotal - amt).toFixed(2)} will remain unpaid
+                  Partial payment — ₹{(netOwed - amt).toFixed(2)} still owed after this
                 </Text>
               </View>
             )}

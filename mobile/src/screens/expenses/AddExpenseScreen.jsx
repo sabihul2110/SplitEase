@@ -633,12 +633,20 @@ const styles = StyleSheet.create({
   amountCard: {
     backgroundColor: COLORS.surface, borderRadius: RADIUS.xl,
     borderWidth: 1, borderColor: COLORS.border,
-    padding: SPACING.base,
+    paddingHorizontal: SPACING.base,
+    paddingVertical: SPACING.lg,
   },
   amountLabel:  { fontSize: FONT_SIZE.xs, fontWeight: FONT_WEIGHT.semibold, color: COLORS.text3, letterSpacing: 1, marginBottom: 8 },
   amountRow:    { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  amountSymbol: { fontSize: 28, color: COLORS.text3 },
-  amountInput:  { flex: 1, fontSize: 32, fontWeight: FONT_WEIGHT.heavy, color: COLORS.text, padding: 0 },
+  amountSymbol: { fontSize: 36, color: COLORS.text3, fontWeight: FONT_WEIGHT.bold },
+  amountInput: {
+    flex: 1,
+    fontSize: 40,
+    fontWeight: FONT_WEIGHT.extrabold,
+    color: COLORS.text,
+    padding: 0,
+    letterSpacing: -1,
+  },
 
   // Generic card
   card: {
