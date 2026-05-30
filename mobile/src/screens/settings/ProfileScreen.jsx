@@ -14,7 +14,7 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Alert, Modal, KeyboardAvoidingView, Platform,
+  Alert, Modal, KeyboardAvoidingView, Platform, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -182,6 +182,104 @@ function DetailRow({ label, value, last, icon: IconComp }) {
   );
 }
 
+function AdminWipeButton({ client }) {
+  const [step, setStep]       = useState(0);
+  const [loading, setLoading] = useState(false);
+
+  if (step === 0) {
+    return (
+      <TouchableOpacity
+        style={adminStyles.wipeBtn}
+        onPress={() => setStep(1)}
+      >
+        <Icons.trash size={14} color="#ef4444" />
+        <Text style={adminStyles.wipeBtnText}>Reset Entire App</Text>
+      </TouchableOpacity>
+    );
+  }
+
+  if (step === 1) {
+    return (
+      <View style={adminStyles.wipeConfirm}>
+        <Text style={adminStyles.wipeWarn}>⚠️ This deletes ALL users, groups, expenses and payments permanently.</Text>
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <TouchableOpacity style={adminStyles.wipeCancelBtn} onPress={() => setStep(0)}>
+            <Text style={adminStyles.wipeCancelText}>Cancel</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={adminStyles.wipeConfirmBtn} onPress={() => setStep(2)}>
+            <Text style={adminStyles.wipeConfirmText}>I understand, continue</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  if (step === 2) {
+    return (
+      <View style={adminStyles.wipeConfirm}>
+        <Text style={adminStyles.wipeWarn}>Final confirmation — tap below to wipe everything.</Text>
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <TouchableOpacity style={adminStyles.wipeCancelBtn} onPress={() => setStep(0)}>
+            <Text style={adminStyles.wipeCancelText}>Cancel</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[adminStyles.wipeConfirmBtn, loading && { opacity: 0.5 }]}
+            disabled={loading}
+            onPress={async () => {
+              setLoading(true);
+              try {
+                await client.post('/users/admin/wipe-app');
+                setStep(0);
+                Alert.alert('Done', 'All app data wiped. You remain logged in.');
+              } catch (err) {
+                Alert.alert('Error', err?.response?.data?.detail || 'Wipe failed.');
+                setStep(0);
+              } finally {
+                setLoading(false);
+              }
+            }}
+          >
+            {loading
+              ? <ActivityIndicator size="small" color="#fff" />
+              : <Text style={adminStyles.wipeConfirmText}>Wipe Everything Now</Text>
+            }
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  return null;
+}
+
+const adminStyles = StyleSheet.create({
+  wipeBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
+    marginTop: 8, borderWidth: 1, borderColor: 'rgba(239,68,68,0.25)',
+    borderRadius: 14, paddingVertical: 12,
+    backgroundColor: 'rgba(239,68,68,0.06)',
+  },
+  wipeBtnText: { color: '#ef4444', fontSize: 13, fontWeight: '600' },
+  wipeConfirm: {
+    borderWidth: 1, borderColor: 'rgba(239,68,68,0.35)',
+    borderRadius: 14, padding: 14, gap: 12,
+    backgroundColor: 'rgba(239,68,68,0.08)',
+    marginTop: 8,
+  },
+  wipeWarn: { fontSize: 12, color: '#fca5a5', lineHeight: 18 },
+  wipeCancelBtn: {
+    flex: 1, paddingVertical: 10, borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    alignItems: 'center',
+  },
+  wipeCancelText: { fontSize: 13, color: '#9095a8' },
+  wipeConfirmBtn: {
+    flex: 2, paddingVertical: 10, borderRadius: 10,
+    backgroundColor: '#ef4444', alignItems: 'center',
+  },
+  wipeConfirmText: { fontSize: 13, fontWeight: '700', color: '#fff' },
+});
+
 // ── Main screen ────────────────────────────────────────────────────────────
 export default function ProfileScreen() {
   const { user, updateUser } = useAuth();
@@ -311,6 +409,19 @@ export default function ProfileScreen() {
           <DetailRow label="UPI ID"       value={user?.upi_id} icon={Icons.upi} />
           <DetailRow label="Role"         value={user?.role}   icon={Icons.check} last />
         </View>
+
+        {user?.role === 'admin' && (
+          <View style={{ marginTop: 8 }}>
+            <Text style={{
+              fontSize: 11, fontWeight: '700', color: COLORS.text3,
+              textTransform: 'uppercase', letterSpacing: 1,
+              marginBottom: 8, marginLeft: 2,
+            }}>
+              Admin Tools
+            </Text>
+            <AdminWipeButton client={client} />
+          </View>
+        )}
 
       </ScrollView>
 

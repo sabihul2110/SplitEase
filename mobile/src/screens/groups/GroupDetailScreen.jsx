@@ -177,11 +177,15 @@ function ExpenseRow({ item, currentUserName, onDelete, onEdit, settlementBadge, 
               backgroundColor: myStatus === 'settled' ? C.successLo : C.surface3,
               borderRadius: R.full, paddingHorizontal: 6, paddingVertical: 2,
             }}>
+              {myStatus === 'settled'
+                ? <Icons.check size={9} color={C.success} />
+                : <Icons.clockPending size={9} color={C.text3} />
+              }
               <Text style={{
                 fontSize: F.xs, fontWeight: W.bold,
                 color: myStatus === 'settled' ? C.success : C.text3,
               }}>
-                {myStatus === 'settled' ? 'You: ✓' : 'You: ⏳'}
+                You
               </Text>
             </View>
           )}
@@ -241,7 +245,7 @@ function ExpenseRow({ item, currentUserName, onDelete, onEdit, settlementBadge, 
 function PaymentRow({ item, currentUserName, onDelete }) {
   const isPayer = item.payer_name === currentUserName;
   return (
-    <View style={[styles.ledgerRow, { opacity: 0.75 }]}>
+    <View style={[styles.ledgerRow, { opacity: 0.65, backgroundColor: 'transparent' }]}>
       <View style={[styles.ledgerIcon, { backgroundColor: C.successLo }]}>
         {/* <Icons.paymentSettledFilled size={30} color={C.success} /> */}
         <Icons.checkCircle size={30} color={C.success} />
@@ -251,8 +255,7 @@ function PaymentRow({ item, currentUserName, onDelete }) {
           Settlement{item.note ? ` — ${item.note}` : ''}
         </Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }}>
-          <Text style={styles.ledgerMeta}>{item.payer_name}</Text>
-          <Badge label="payment" variant="success" />
+          <Text style={styles.ledgerMeta}>{item.payer_name} paid</Text>
         </View>
       </View>
       <View style={styles.ledgerRight}>
@@ -289,73 +292,68 @@ function SettlementRow({ item, currentUserName, members, onRemind, reminding }) 
 
   return (
     <View style={[styles.settleCard, { borderColor: cardBorder, backgroundColor: cardBg }]}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: SP.sm }}>
 
-      {/* ── Who → Who row ── */}
-      <View style={styles.settleFlow}>
-        {/* From */}
-        <View style={styles.settleParty}>
-          <Avatar name={item.from} size={38} variant={isDebtor ? 'danger' : 'auto'} />
-          <Text style={[styles.settlePartyName, isDebtor && { color: C.text, fontWeight: W.bold }]} numberOfLines={1}>
-            {isDebtor ? 'You' : item.from.split(' ')[0]}
+        {/* Avatars + arrow inline */}
+        <Avatar name={item.from} size={32} variant={isDebtor ? 'danger' : 'auto'} />
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Text style={{ fontSize: F.sm, fontWeight: W.bold, color: isDebtor ? C.text : C.text2 }} numberOfLines={1}>
+              {isDebtor ? 'You' : item.from.split(' ')[0]}
+            </Text>
+            <Icons.chevronRight size={11} color={C.text3} />
+            <Text style={{ fontSize: F.sm, fontWeight: W.bold, color: isCreditor ? C.text : C.text2 }} numberOfLines={1}>
+              {isCreditor ? 'You' : item.to.split(' ')[0]}
+            </Text>
+          </View>
+          <Text style={{ fontSize: F.xs, color: isDebtor ? C.danger : isCreditor ? C.success : C.text3, marginTop: 2 }}>
+            {isDebtor ? 'you owe' : isCreditor ? 'you receive' : 'no action needed'}
           </Text>
-          <Text style={[styles.settlePartyRole, { color: isDebtor ? C.danger : C.text3 }]}>pays</Text>
         </View>
 
-        {/* Directional arrow — always left-to-right (from=debtor, to=creditor) */}
-        <View style={styles.settleArrow}>
-          <View style={styles.settleArrowLine} />
-          <Icons.chevronRight size={14} color={C.text3} />
-        </View>
+        <Avatar name={item.to} size={32} variant={isCreditor ? 'success' : 'auto'} />
 
-        {/* To */}
-        <View style={[styles.settleParty, { alignItems: 'flex-end' }]}>
-          <Avatar name={item.to} size={38} variant={isCreditor ? 'success' : 'auto'} />
-          <Text style={[styles.settlePartyName, isCreditor && { color: C.text, fontWeight: W.bold }]} numberOfLines={1}>
-            {isCreditor ? 'You' : item.to.split(' ')[0]}
-          </Text>
-          <Text style={[styles.settlePartyRole, { color: isCreditor ? C.success : C.text3 }]}>receives</Text>
-        </View>
-      </View>
-
-      {/* ── Amount + Action ── */}
-      <View style={styles.settleFooter}>
+        {/* Amount */}
         <Text style={[styles.settleAmt, {
-          color: isDebtor ? C.danger : isCreditor ? C.success : C.text2
+          color: isDebtor ? C.danger : isCreditor ? C.success : C.text2,
+          fontSize: F.md,
         }]}>
           {isDebtor ? '−' : isCreditor ? '+' : ''}₹{fmtAmount(item.amount)}
         </Text>
-
-        {isDebtor && upiLink && (
-          <TouchableOpacity
-            style={[styles.actionBtn, { backgroundColor: C.primaryLo, borderColor: C.primary + '40' }]}
-            onPress={() => Linking.openURL(upiLink).catch(() => Alert.alert('UPI app not found'))}
-          >
-            <Icons.upi size={13} color={C.primary} />
-            <Text style={[styles.actionBtnText, { color: C.primary }]}>Pay via UPI</Text>
-          </TouchableOpacity>
-        )}
-        {isDebtor && !upiLink && (
-          <Text style={styles.noUpi}>No UPI set</Text>
-        )}
-        {isCreditor && (
-          <TouchableOpacity
-            style={[styles.actionBtn, { backgroundColor: C.warningLo, borderColor: C.warning + '40' }]}
-            onPress={() => {
-              const fromMember = members.find(m => m.name === item.from);
-              onRemind({ ...item, from_user_id: fromMember?.user_id });
-            }}
-            disabled={reminding === item.from}
-          >
-            {reminding === item.from
-              ? <ActivityIndicator size="small" color={C.warning} />
-              : <><Icons.bell size={13} color={C.warning} /><Text style={[styles.actionBtnText, { color: C.warning }]}>Remind</Text></>
-            }
-          </TouchableOpacity>
-        )}
-        {!isDebtor && !isCreditor && (
-          <Text style={styles.noUpi}>No action needed</Text>
-        )}
       </View>
+
+      {/* Action row — only if there's something to do */}
+      {(isDebtor || isCreditor) && (
+        <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 6 }}>
+          {isDebtor && upiLink && (
+            <TouchableOpacity
+              style={[styles.actionBtn, { backgroundColor: C.primaryLo, borderColor: C.primary + '40' }]}
+              onPress={() => Linking.openURL(upiLink).catch(() => Alert.alert('UPI app not found'))}
+            >
+              <Icons.upi size={13} color={C.primary} />
+              <Text style={[styles.actionBtnText, { color: C.primary }]}>Pay via UPI</Text>
+            </TouchableOpacity>
+          )}
+          {isDebtor && !upiLink && (
+            <Text style={styles.noUpi}>No UPI ID set for {item.to.split(' ')[0]}</Text>
+          )}
+          {isCreditor && (
+            <TouchableOpacity
+              style={[styles.actionBtn, { backgroundColor: C.warningLo, borderColor: C.warning + '40' }]}
+              onPress={() => {
+                const fromMember = members.find(m => m.name === item.from);
+                onRemind({ ...item, from_user_id: fromMember?.user_id });
+              }}
+              disabled={reminding === item.from}
+            >
+              {reminding === item.from
+                ? <ActivityIndicator size="small" color={C.warning} />
+                : <><Icons.bell size={13} color={C.warning} /><Text style={[styles.actionBtnText, { color: C.warning }]}>Remind</Text></>
+              }
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
     </View>
   );
 }
@@ -835,6 +833,28 @@ export default function GroupDetailScreen() {
   );
 }
 
+  function NetBalancesSection({ netBalances, currentUserName }) {
+    const [open, setOpen] = React.useState(false);
+    return (
+      <View style={{ marginTop: SP.sm }}>
+        <TouchableOpacity
+          onPress={() => setOpen(p => !p)}
+          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: SP.sm }}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.sectionTitle}>Net Balances</Text>
+          <Icons.chevronRight
+            size={14} color={C.text3}
+            style={{ transform: [{ rotate: open ? '90deg' : '0deg' }] }}
+          />
+        </TouchableOpacity>
+        {open && netBalances.map((item, i) => (
+          <NetRow key={i} item={item} currentUserName={userName} />
+        ))}
+      </View>
+    );
+  }
+
   function renderSettlements() {
     if (settLoading) return (
       <View style={styles.centred}>
@@ -842,6 +862,13 @@ export default function GroupDetailScreen() {
         <Text style={styles.centredText}>Calculating…</Text>
       </View>
     );
+    // return (
+    //   <>
+    //     {netBalances.length > 0 && (
+    //       <BalanceBanner netBalances={netBalances} currentUserName={userName} />
+    //     )}
+    //     <SectionHead
+
     return (
       <>
         {netBalances.length > 0 && (
@@ -873,13 +900,16 @@ export default function GroupDetailScreen() {
             />
           ))
         )}
-        {netBalances.length > 0 && (
+        {/* {netBalances.length > 0 && (
           <>
             <SectionHead title="Net Balances" />
             {netBalances.map((item, i) => (
               <NetRow key={i} item={item} currentUserName={userName} />
             ))}
           </>
+        )} */}
+        {netBalances.length > 0 && (
+          <NetBalancesSection netBalances={netBalances} currentUserName={userName} />
         )}
       </>
     );
@@ -1138,9 +1168,10 @@ const styles = StyleSheet.create({
   // Ledger rows
   ledgerRow: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: C.surface, borderRadius: R.xl,
-    borderWidth: 1, borderColor: C.border,
-    padding: SP.md, gap: SP.md,
+    backgroundColor: 'transparent',
+    borderBottomWidth: 1, borderBottomColor: C.border,
+    paddingVertical: SP.md, paddingHorizontal: 2,
+    gap: SP.md,
   },
   ledgerIcon: {
     width: 42, height: 42, borderRadius: R.md,
