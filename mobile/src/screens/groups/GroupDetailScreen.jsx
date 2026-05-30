@@ -196,7 +196,8 @@ function PaymentRow({ item, currentUserName, onDelete }) {
   return (
     <View style={[styles.ledgerRow, { opacity: 0.75 }]}>
       <View style={[styles.ledgerIcon, { backgroundColor: C.successLo }]}>
-        <Icons.settlement size={20} color={C.success} />
+        {/* <Icons.paymentSettledFilled size={30} color={C.success} /> */}
+        <Icons.checkCircle size={30} color={C.success} />
       </View>
       <View style={styles.ledgerMid}>
         <Text style={[styles.ledgerDesc, { fontStyle: 'italic', color: C.text2 }]} numberOfLines={1}>
@@ -414,8 +415,8 @@ function BalanceBanner({ netBalances, currentUserName }) {
         </Text>
       </View>
       {isOwed
-        ? <Icons.income size={28} color={C.success} />
-        : <Icons.lendMoney size={28} color={C.danger} />
+        ? <Icons.receiveMoney size={28} color={C.success} /> // can use Icons.wallet
+        : <Icons.sendMoney size={28} color={C.danger} />
       }
     </View>
   );
@@ -712,7 +713,7 @@ export default function GroupDetailScreen() {
             ])
           }
         >
-          <Icons.trash size={15} color={C.danger} />
+          <Icons.logout size={15} color={C.danger} />
           <Text style={styles.leaveBtnText}>Leave Group</Text>
         </TouchableOpacity>
 
@@ -754,7 +755,7 @@ export default function GroupDetailScreen() {
       <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <Icons.back size={22} color={C.text2} />
+            <Icons.close size={22} color={C.text2} />
           </TouchableOpacity>
           <Text style={styles.headerTitle} numberOfLines={1}>{groupName}</Text>
           <View style={{ width: 32 }} />
@@ -772,7 +773,7 @@ export default function GroupDetailScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-          <Icons.back size={22} color={C.text2} />
+          <Icons.close size={22} color={C.text2} />
         </TouchableOpacity>
         
         <Text style={styles.headerTitle} numberOfLines={1}>{groupName}</Text>
@@ -797,7 +798,7 @@ export default function GroupDetailScreen() {
           style={styles.payBtn}
           onPress={() => navigation.navigate('AddPayment', { groupId, groupName, members })}
         >
-          <Icons.settlements size={13} color={C.success} />
+          <Icons.sendMoney size={13} color={C.success} />
           <Text style={styles.payBtnText}>Pay</Text>
         </TouchableOpacity>
       </View>
@@ -909,7 +910,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: C.border,
     paddingVertical: 10, paddingHorizontal: 6, alignItems: 'center',
   },
-  statLabel: { fontSize: 10, color: C.text3, fontWeight: W.medium, marginBottom: 4, textAlign: 'center' },
+  statLabel: { fontSize: 11, color: C.text3, fontWeight: W.medium, marginBottom: 4, textAlign: 'center' },
   statVal:   { fontSize: F.lg, fontWeight: W.heavy, color: C.text },
 
   // ── Tab bar — single indicator approach ──────────────────────────────────
@@ -1048,7 +1049,7 @@ const styles = StyleSheet.create({
 
   // Toast
   toast: {
-    position: 'absolute', bottom: 120, left: SP.xl, right: SP.xl, zIndex: 999,
+    position: 'absolute', top: 90, left: SP.xl, right: SP.xl, zIndex: 999, // was bottom:120
     flexDirection: 'row', alignItems: 'center', gap: 8,
     backgroundColor: C.surface2, borderRadius: R.xl,
     borderWidth: 1, borderColor: C.border,

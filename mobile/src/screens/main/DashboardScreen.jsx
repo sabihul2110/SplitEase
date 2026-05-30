@@ -44,7 +44,15 @@ function TopBar({ initials, unreadCount = 0, onAvatar, onBell }) {
             </View>
           )}
         </TouchableOpacity>
-        <TouchableOpacity style={styles.topBarAvatar} onPress={onAvatar}>
+        {/* <TouchableOpacity style={styles.topBarAvatar} onPress={onAvatar}>
+          <Text style={styles.topBarAvatarText}>{initials}</Text>
+        </TouchableOpacity> */}
+        <TouchableOpacity 
+          style={styles.topBarAvatar} 
+          onPress={onAvatar}
+          activeOpacity={0.7}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
           <Text style={styles.topBarAvatarText}>{initials}</Text>
         </TouchableOpacity>
       </View>
@@ -306,10 +314,19 @@ export default function DashboardScreen() {
             </View>
           </View>
         )}
+        // ListEmptyComponent={() => (
+        //   <View style={{ padding: SPACING.base }}>
+        //     <EmptyState
+        //       icon="🏘️"
+        //       title="No groups yet"
+        //       subtitle="Create a group to start splitting."
+        //     />
+        //   </View>
+        // )}
         ListEmptyComponent={() => (
           <View style={{ padding: SPACING.base }}>
             <EmptyState
-              icon="🏘️"
+              icon="usersPlus"
               title="No groups yet"
               subtitle="Create a group to start splitting."
             />

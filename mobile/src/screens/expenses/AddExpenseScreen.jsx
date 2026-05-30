@@ -356,7 +356,7 @@ export default function AddExpenseScreen() {
                   onPress={() => setSplitType(type)}
                 >
                   <Text style={[styles.splitBtnText, splitType === type && styles.splitBtnTextActive]}>
-                    {type === 'equal' ? '⚖️  Equal' : '✏️  Custom'}
+                    {type === 'equal' ? ' Equal' : '️  Custom'}
                   </Text>
                 </TouchableOpacity>
               ))}

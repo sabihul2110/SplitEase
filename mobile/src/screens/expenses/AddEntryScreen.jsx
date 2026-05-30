@@ -118,10 +118,14 @@ function DateInput({ value, onChangeText }) {
   );
 }
 
+// function SubmitBtn({ label, color, loading, onPress, disabled }) {
+//   return (
+//     <TouchableOpacity
+//       style={[styles.submitBtn, { backgroundColor: color }, (disabled || loading) && { opacity: 0.55 }]}
 function SubmitBtn({ label, color, loading, onPress, disabled }) {
   return (
     <TouchableOpacity
-      style={[styles.submitBtn, { backgroundColor: color }, (disabled || loading) && { opacity: 0.55 }]}
+      style={[styles.submitBtn, { backgroundColor: color, shadowColor: color }, (disabled || loading) && { opacity: 0.55 }]}
       onPress={onPress}
       disabled={disabled || loading}
       activeOpacity={0.85}
@@ -278,8 +282,13 @@ function LendForm({ onSuccess }) {
 
   return (
     <View style={styles.form}>
-      <View style={styles.infoBox}>
+      {/* <View style={styles.infoBox}>
         <Text style={styles.infoText}>💡 Record money you lent to someone. Track repayments from the Expenses timeline.</Text>
+      </View> */}
+      <View style={styles.infoBox}>
+        <Icons.inboxZero size={14} color={C.warning} style={{ marginRight: 6 }} />
+        {/* or use a generic info/lightbulb — add to icons.jsx: */}
+        <Text style={styles.infoText}>Record money you lent to someone. Track repayments from the Expenses timeline.</Text>
       </View>
       <Field label="Borrower Name" error={errs.borrower}>
         <StyledInput value={borrower} onChangeText={v => { setBorrower(v); setErrs(p => ({...p, borrower: null})); }} placeholder="e.g. Rahul, Priya…" />
@@ -370,7 +379,7 @@ export default function AddEntryScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       {/* Header */}
-      <View style={styles.header}>
+      {/* <View style={styles.header}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -380,6 +389,25 @@ export default function AddEntryScreen() {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Add Entry</Text>
         <View style={{ width: 32 }} />
+      </View> */}
+
+      <View style={styles.header}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          style={styles.backBtn}
+        >
+          <Icons.back size={20} color={C.text2} />
+        </TouchableOpacity>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.headerTitle}>Add Entry</Text>
+          <Text style={styles.headerSub}>
+            {activeTab === 'personal' && 'Personal Expense'}
+            {activeTab === 'income'   && 'Income'}
+            {activeTab === 'lend'     && 'Lend Money'}
+            {activeTab === 'borrow'   && 'Borrow Money'}
+          </Text>
+        </View>
       </View>
 
       {/* Tab bar */}
@@ -407,7 +435,7 @@ export default function AddEntryScreen() {
       </View>
 
       {/* Active tab description */}
-      <View style={[styles.tabDesc, { borderLeftColor: activeCfg.color }]}>
+      <View style={[styles.tabDesc, { backgroundColor: activeCfg.colorLo, borderColor: activeCfg.color + '40' }]}>
         <Text style={[styles.tabDescText, { color: activeCfg.color }]}>
           {activeTab === 'personal' && 'Track a personal expense not linked to a group'}
           {activeTab === 'income'   && 'Record salary, freelance, or any money received'}
@@ -439,15 +467,36 @@ export default function AddEntryScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: C.bg },
 
+  // header: {
+  //   flexDirection: 'row', alignItems: 'center',
+  //   paddingHorizontal: S.base, paddingVertical: 12,
+  //   backgroundColor: C.surface,
+  //   borderBottomWidth: 1, borderBottomColor: C.border,
+  //   gap: 12,
+  // },
+  backBtn:     { padding: 2, justifyContent: 'center', alignItems: 'center' },
+  // headerTitle: { flex: 1, fontSize: F.lg, fontWeight: W.bold, color: C.text, textAlign: 'center' },
+
   header: {
     flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: S.base, paddingVertical: 12,
+    paddingHorizontal: S.base, paddingTop: 14, paddingBottom: 12,
     backgroundColor: C.surface,
     borderBottomWidth: 1, borderBottomColor: C.border,
-    gap: 12,
+    gap: 10,
   },
-  backBtn:     { padding: 2, justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { flex: 1, fontSize: F.lg, fontWeight: W.bold, color: C.text, textAlign: 'center' },
+  headerTitle: { 
+    fontSize: F.xl,           // was F.lg (16) → now 20
+    fontWeight: W.heavy,      // was bold → now heavy
+    color: C.text, 
+    textAlign: 'left',        // left-aligned
+    lineHeight: 24,
+  },
+  headerSub: {
+    fontSize: F.xs,
+    color: C.text3,
+    marginTop: 1,
+    fontWeight: W.medium,
+  },
 
   // Tabs
   tabBar: {
@@ -465,12 +514,22 @@ const styles = StyleSheet.create({
   tabLabel: { fontSize: F.xs, fontWeight: W.medium, color: C.text3, textAlign: 'center' },
 
   // Tab description strip
+  // tabDesc: {
+  //   borderLeftWidth: 3, marginHorizontal: S.base,
+  //   marginTop: S.md, marginBottom: S.xs,
+  //   paddingLeft: S.sm, paddingVertical: 2,
+  // },
+  // tabDescText: { fontSize: F.sm, fontWeight: W.medium },
+
   tabDesc: {
-    borderLeftWidth: 3, marginHorizontal: S.base,
+    marginHorizontal: S.base,
     marginTop: S.md, marginBottom: S.xs,
-    paddingLeft: S.sm, paddingVertical: 2,
-  },
-  tabDescText: { fontSize: F.sm, fontWeight: W.medium },
+    paddingHorizontal: S.md, paddingVertical: 7,
+    borderRadius: R.full,
+    borderWidth: 1,
+    alignSelf: 'flex-start',      // pill hugs content width
+    },
+  tabDescText: { fontSize: F.xs, fontWeight: W.semibold },
 
   scroll: { padding: S.base, paddingBottom: 60, gap: S.base },
 
@@ -489,28 +548,50 @@ const styles = StyleSheet.create({
     fontSize: F.md, color: C.text,
   },
 
+  // amountWrap: {
+  //   flexDirection: 'row', alignItems: 'center',
+  //   backgroundColor: C.surface2,
+  //   borderWidth: 1, borderColor: C.border,
+  //   borderRadius: R.md,
+  //   paddingHorizontal: S.md,
+  // },
+  // amountSymbol: { fontSize: F.xl, color: C.text3, marginRight: 6 },
+  // amountInput:  { flex: 1, fontSize: 22, fontWeight: W.heavy, color: C.text, paddingVertical: 10 },
+
   amountWrap: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: C.surface2,
-    borderWidth: 1, borderColor: C.border,
-    borderRadius: R.md,
-    paddingHorizontal: S.md,
+    borderWidth: 1, borderColor: C.border2,
+    borderRadius: R.lg,              // slightly more rounded — feels premium
+    paddingHorizontal: S.base,
+    paddingVertical: 4,
+    marginBottom: 2,
   },
-  amountSymbol: { fontSize: F.xl, color: C.text3, marginRight: 6 },
-  amountInput:  { flex: 1, fontSize: 22, fontWeight: W.heavy, color: C.text, paddingVertical: 10 },
+  amountSymbol: { fontSize: 26, color: C.text3, marginRight: 4, fontWeight: W.medium },
+  amountInput:  { flex: 1, fontSize: 28, fontWeight: W.heavy, color: C.text, paddingVertical: 12 },
+
+  // infoBox: {
+  //   backgroundColor: C.surface2, borderRadius: R.md,
+  //   borderWidth: 1, borderColor: C.border2,
+  //   padding: S.md,
+  // },
+  // infoText: { fontSize: F.sm, color: C.text2, lineHeight: 18 },
 
   infoBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
     backgroundColor: C.surface2, borderRadius: R.md,
     borderWidth: 1, borderColor: C.border2,
     padding: S.md,
   },
-  infoText: { fontSize: F.sm, color: C.text2, lineHeight: 18 },
+  infoText: { flex: 1, fontSize: F.sm, color: C.text2, lineHeight: 18 },
 
   submitBtn: {
     borderRadius: R.lg, paddingVertical: 15,
     alignItems: 'center', marginTop: S.sm,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35, shadowRadius: 10, elevation: 8,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.45, shadowRadius: 12, elevation: 6,
   },
   submitBtnText: { color: C.white, fontSize: F.md, fontWeight: W.bold, letterSpacing: 0.3 },
 });

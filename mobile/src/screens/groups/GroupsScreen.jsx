@@ -249,7 +249,7 @@ function CreateGroupModal({ visible, onClose, onCreated }) {
               onPress={onClose}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Icons.back size={20} color={C.text2} />
+              <Icons.close size={20} color={C.text2} />
             </TouchableOpacity>
           </View>
 
@@ -462,7 +462,7 @@ function JoinGroupModal({ visible, onClose, onJoined }) {
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Join via Invite</Text>
             <TouchableOpacity style={styles.modalClose} onPress={onClose}>
-              <Icons.back size={20} color={C.text2} />
+              <Icons.close size={20} color={C.text2} />
             </TouchableOpacity>
           </View>
 
@@ -851,7 +851,7 @@ const styles = StyleSheet.create({
   // Empty state
   emptyWrap: {
     flex: 1, alignItems: 'center', justifyContent: 'center',
-    paddingHorizontal: SP.xl, paddingTop: 60,
+    paddingHorizontal: SP.xl, paddingTop: 0,
   },
   emptyIconBox: {
     width: 88, height: 88, borderRadius: R.xxl,

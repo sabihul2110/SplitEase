@@ -8,6 +8,15 @@ import { useNavigation } from '@react-navigation/native';
 import { COLORS, FONT_SIZE, SPACING } from '../../constants/theme';
 import { Icons } from '../../constants/icons';
 
+// export default function ScreenHeader({
+//   title,
+//   subtitle,
+//   showBack = false,
+//   onBack,
+//   actions,
+//   transparent = false,
+// }) {
+
 export default function ScreenHeader({
   title,
   subtitle,
@@ -15,6 +24,7 @@ export default function ScreenHeader({
   onBack,
   actions,
   transparent = false,
+  compact = false,   // ← ADD: true for detail/settings screens
 }) {
   const nav = useNavigation();
 
@@ -42,7 +52,7 @@ export default function ScreenHeader({
         )}
 
         <View style={styles.titleWrapper}>
-          <Text style={styles.title} numberOfLines={1}>{title}</Text>
+          <Text style={[styles.title, compact && styles.titleCompact]} numberOfLines={1}>{title}</Text>
           {subtitle && <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text>}
         </View>
 
@@ -80,6 +90,15 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     justifyContent: 'center',
   },
+  // title: {
+  //   fontSize: 28,
+  //   fontWeight: '800',
+  //   color: COLORS.text,
+  //   letterSpacing: -0.5,
+  //   includeFontPadding: false,
+  //   textAlignVertical: 'center',
+  // },
+
   title: {
     fontSize: 28,
     fontWeight: '800',
@@ -87,6 +106,12 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
     includeFontPadding: false,
     textAlignVertical: 'center',
+  },
+  titleCompact: {
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: 0.1,
+    textAlign: 'center',
   },
   subtitle: {
     fontSize: FONT_SIZE.xs,
