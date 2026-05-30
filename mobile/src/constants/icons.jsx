@@ -499,22 +499,22 @@ export const Icons = {
     </Svg>
   ),
 
-  sortAsc: ({ size = 20, color = "currentColor" }) => (
+  sortNewest: ({ size = 20, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
-      <Line x1="3" y1="6" x2="21" y2="6" />
-      <Line x1="3" y1="12" x2="15" y2="12" />
+      <Line x1="3" y1="6" x2="13" y2="6" />
+      <Line x1="3" y1="12" x2="11" y2="12" />
       <Line x1="3" y1="18" x2="9" y2="18" />
-      <Path d="M18 15l3-3 3 3" />
-      <Line x1="21" y1="12" x2="21" y2="21" />
+      <Path d="M17 3v18" />
+      <Path d="M13 7l4-4 4 4" />
     </Svg>
   ),
-  sortDesc: ({ size = 20, color = "currentColor" }) => (
+  sortOldest: ({ size = 20, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
-      <Line x1="3" y1="6" x2="21" y2="6" />
-      <Line x1="3" y1="12" x2="15" y2="12" />
+      <Line x1="3" y1="6" x2="13" y2="6" />
+      <Line x1="3" y1="12" x2="11" y2="12" />
       <Line x1="3" y1="18" x2="9" y2="18" />
-      <Path d="M18 21l3-3 3 3" />
-      <Line x1="21" y1="12" x2="21" y2="3" />
+      <Path d="M17 3v18" />
+      <Path d="M13 17l4 4 4-4" />
     </Svg>
   ),
 

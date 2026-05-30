@@ -688,8 +688,8 @@ export default function GroupDetailScreen() {
         activeOpacity={0.7}
       >
         {ledgerAsc
-          ? <Icons.sortAsc size={13} color={C.primary} />
-          : <Icons.sortDesc size={13} color={C.primary} />
+          ? <Icons.sortOldest size={14} color={C.primary} />
+          : <Icons.sortNewest size={14} color={C.primary} />
         }
         <Text style={styles.sortToggleText}>
           {ledgerAsc ? 'Oldest first' : 'Newest first'}
