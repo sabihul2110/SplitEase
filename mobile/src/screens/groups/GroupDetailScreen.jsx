@@ -168,12 +168,12 @@ function CategoryIcon({ categoryName, size = 40 }) {
 function ExpenseRow({ item, currentUserName, onDelete, onEdit, settlementBadge }) {
   const isPayer = item.payer_name === currentUserName;
 
-  const badgeMap = {
-    settled: { label: '✓ Settled', variant: 'success' },
-    partial: { label: '⚡ Partial', variant: 'warning' },
-    pending: { label: '⏳ Pending', variant: 'neutral' },
+  const badgeCfg = {
+    settled: { label: 'Settled',  variant: 'success', Icon: Icons.checkCircle, color: C.success },
+    partial: { label: 'Partial',  variant: 'warning', Icon: Icons.zap,         color: C.warning },
+    pending: { label: 'Pending',  variant: 'neutral', Icon: Icons.clockPending, color: C.text3  },
   };
-  const badge = settlementBadge ? badgeMap[settlementBadge] : null;
+  const badge = settlementBadge ? badgeCfg[settlementBadge] : null;
 
   return (
     <View style={styles.ledgerRow}>
@@ -185,7 +185,18 @@ function ExpenseRow({ item, currentUserName, onDelete, onEdit, settlementBadge }
             {isPayer ? 'You paid' : `${item.payer_name} paid`}
           </Text>
           <Badge label={item.split_type || 'equal'} variant={item.split_type === 'equal' ? 'success' : 'primary'} />
-          {badge && <Badge label={badge.label} variant={badge.variant} />}
+          {badge && (
+            <View style={{
+              flexDirection: 'row', alignItems: 'center', gap: 3,
+              backgroundColor: badge.color + '18',
+              borderRadius: R.full, paddingHorizontal: 6, paddingVertical: 2,
+            }}>
+              <badge.Icon size={10} color={badge.color} />
+              <Text style={{ fontSize: F.xs, fontWeight: W.semibold, color: badge.color }}>
+                {badge.label}
+              </Text>
+            </View>
+          )}
         </View>
       </View>
       <View style={styles.ledgerRight}>
