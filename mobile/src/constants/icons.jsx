@@ -518,6 +518,18 @@ export const Icons = {
     </Svg>
   ),
 
+  clockPending: ({ size = 20, color = "currentColor" }) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
+      <Circle cx="12" cy="12" r="10" />
+      <Polyline points="12 6 12 12 16 14" />
+    </Svg>
+  ),
+  zap: ({ size = 20, color = "currentColor" }) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
+      <Polyline points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+    </Svg>
+  ),
+
   info: ({ size = 20, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
       <Circle cx="12" cy="12" r="10" />
