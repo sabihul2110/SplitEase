@@ -1888,3 +1888,14 @@ def use_reset_token(token: str, user_id: int, new_hash: str) -> None:
         conn.rollback(); raise
     finally:
         cur.close(); conn.close()
+
+
+def fetch_expense_splits(expense_id):
+    with get_connection() as conn:
+        with conn.cursor(dictionary=True) as cur:
+            cur.execute(
+                "SELECT split_id, expense_id, user_id, amount_owed, share_pct "
+                "FROM Expense_Splits WHERE expense_id = %s",
+                (expense_id,)
+            )
+            return cur.fetchall()
