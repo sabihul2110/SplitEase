@@ -93,6 +93,14 @@ def get_expense_splits(expense_id: int, current_user: dict = Depends(get_current
     return splits    
 
 
+@router.get("/{group_id}/settlement-status")
+def settlement_status(group_id: int, current_user: dict = Depends(get_current_user)):
+    """Per-split settlement status for all expenses in a group."""
+    if not db.is_group_member(group_id, current_user["user_id"]) and current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Not a member of this group.")
+    return db.fetch_expense_settlement_status(group_id)
+
+
 @router.delete("/{expense_id}")
 def delete_expense(expense_id: int, current_user: dict = Depends(get_current_user)):
     # Batch 1 fix retained
