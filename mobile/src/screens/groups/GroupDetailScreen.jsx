@@ -165,7 +165,7 @@ function CategoryIcon({ categoryName, size = 40 }) {
 //         </View>
 //       </View>
 
-function ExpenseRow({ item, currentUserName, onDelete, onEdit, settlementBadge }) {
+function ExpenseRow({ item, currentUserName, onDelete, onEdit, settlementBadge, participantCount, totalMembers }) {
   const isPayer = item.payer_name === currentUserName;
 
   const badgeCfg = {
@@ -185,6 +185,18 @@ function ExpenseRow({ item, currentUserName, onDelete, onEdit, settlementBadge }
             {isPayer ? 'You paid' : `${item.payer_name} paid`}
           </Text>
           <Badge label={item.split_type || 'equal'} variant={item.split_type === 'equal' ? 'success' : 'primary'} />
+          {participantCount > 0 && participantCount < totalMembers && (
+            <View style={{
+              flexDirection: 'row', alignItems: 'center', gap: 3,
+              backgroundColor: C.surface3,
+              borderRadius: R.full, paddingHorizontal: 6, paddingVertical: 2,
+            }}>
+              <Icons.users size={10} color={C.text3} />
+              <Text style={{ fontSize: F.xs, color: C.text3, fontWeight: W.medium }}>
+                {participantCount}/{totalMembers}
+              </Text>
+            </View>
+          )}
           {badge && (
             <View style={{
               flexDirection: 'row', alignItems: 'center', gap: 3,
@@ -728,15 +740,22 @@ export default function GroupDetailScreen() {
     />
   );
 
-  // Group by Month Year e.g. "May 2026"
+  // Group by Day e.g. "30 May" with month separator when month changes
   const groups = [];
+  let currentDay   = null;
   let currentMonth = null;
   combined.forEach(item => {
-    const d = new Date(item._date);
-    const label = d.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
-    if (label !== currentMonth) {
-      currentMonth = label;
-      groups.push({ type: 'header', label });
+    const d          = new Date(item._date);
+    const dayLabel   = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+    const monthLabel = d.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+
+    if (monthLabel !== currentMonth) {
+      currentMonth = monthLabel;
+      groups.push({ type: 'month', label: monthLabel });
+    }
+    if (dayLabel !== currentDay) {
+      currentDay = dayLabel;
+      groups.push({ type: 'day', label: dayLabel });
     }
     groups.push(item);
   });
@@ -759,35 +778,21 @@ export default function GroupDetailScreen() {
       </TouchableOpacity>
 
       {groups.map((item, idx) => {
-        if (item.type === 'header') {
+        if (item.type === 'month') {
           return (
-            <View key={`header-${item.label}`} style={styles.monthHeader}>
+            <View key={`month-${item.label}`} style={styles.monthHeader}>
               <Text style={styles.monthHeaderText}>{item.label}</Text>
               <View style={styles.monthHeaderLine} />
             </View>
           );
         }
-        // return item._type === 'expense' ? (
-        //   <ExpenseRow
-        //     key={`e-${item.expense_id}`}
-        //     item={item}
-        //     currentUserName={userName}
-        //     onDelete={handleDelete}
-        //     onEdit={async (exp) => {
-        //       try {
-        //         const { data } = await client.get(`/expenses/${exp.expense_id}/splits`);
-        //         navigation.navigate('AddExpense', {
-        //           groupId,
-        //           groupName,
-        //           members,
-        //           editExpense: { ...exp, splits: data || [] },
-        //         });
-        //       } catch {
-        //         // fallback: navigate without splits, AddExpense will handle gracefully
-        //         navigation.navigate('AddExpense', { groupId, groupName, members, editExpense: exp });
-        //       }
-        //     }}
-        //   />
+        if (item.type === 'day') {
+          return (
+            <View key={`day-${item.label}-${idx}`} style={styles.dayHeader}>
+              <Text style={styles.dayHeaderText}>{item.label}</Text>
+            </View>
+          );
+        }
         return item._type === 'expense' ? (
           <ExpenseRow
             key={`e-${item.expense_id}`}
@@ -795,6 +800,8 @@ export default function GroupDetailScreen() {
             currentUserName={userName}
             onDelete={handleDelete}
             settlementBadge={getExpenseBadge(item.expense_id, item.payer_name)}
+            participantCount={splitStatuses.filter(s => s.expense_id === item.expense_id).length}
+            totalMembers={members.length}
             onEdit={async (exp) => {
               try {
                 const { data } = await client.get(`/expenses/${exp.expense_id}/splits`);
@@ -1321,5 +1328,16 @@ const styles = StyleSheet.create({
   },
   monthHeaderLine: {
     flex: 1, height: 1, backgroundColor: C.border,
+  },
+  dayHeader: {
+    paddingHorizontal: 2,
+    paddingVertical: 3,
+    marginTop: 4,
+  },
+  dayHeaderText: {
+    fontSize: F.xs,
+    fontWeight: W.bold,
+    color: C.text3,
+    letterSpacing: 0.3,
   },
 });
