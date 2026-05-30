@@ -149,23 +149,9 @@ function CategoryIcon({ categoryName, size = 40 }) {
   );
 }
 
-// ─── Expense row ──────────────────────────────────────────────────────────────
-// function ExpenseRow({ item, currentUserName, onDelete, onEdit }) {
-//   const isPayer = item.payer_name === currentUserName;
-//   return (
-//     <View style={styles.ledgerRow}>
-//       <CategoryIcon categoryName={item.category_name} />
-//       <View style={styles.ledgerMid}>
-//         <Text style={styles.ledgerDesc} numberOfLines={1}>{item.description}</Text>
-//         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3, flexWrap: 'wrap' }}>
-//           <Text style={styles.ledgerMeta}>
-//             {isPayer ? 'You paid' : `${item.payer_name} paid`} · {fmtDate(item.expense_date)}
-//           </Text>
-//           <Badge label={item.split_type || 'equal'} variant={item.split_type === 'equal' ? 'success' : 'primary'} />
-//         </View>
-//       </View>
+// Expense Row
 
-function ExpenseRow({ item, currentUserName, onDelete, onEdit, settlementBadge, participantCount, totalMembers }) {
+function ExpenseRow({ item, currentUserName, onDelete, onEdit, settlementBadge, myStatus, participantCount, totalMembers }) {
   const isPayer = item.payer_name === currentUserName;
 
   const badgeCfg = {
@@ -185,6 +171,20 @@ function ExpenseRow({ item, currentUserName, onDelete, onEdit, settlementBadge, 
             {isPayer ? 'You paid' : `${item.payer_name} paid`}
           </Text>
           <Badge label={item.split_type || 'equal'} variant={item.split_type === 'equal' ? 'success' : 'primary'} />
+          {!isPayer && myStatus && (
+            <View style={{
+              flexDirection: 'row', alignItems: 'center', gap: 3,
+              backgroundColor: myStatus === 'settled' ? C.successLo : C.surface3,
+              borderRadius: R.full, paddingHorizontal: 6, paddingVertical: 2,
+            }}>
+              <Text style={{
+                fontSize: F.xs, fontWeight: W.bold,
+                color: myStatus === 'settled' ? C.success : C.text3,
+              }}>
+                {myStatus === 'settled' ? 'You: ✓' : 'You: ⏳'}
+              </Text>
+            </View>
+          )}
           {participantCount > 0 && participantCount < totalMembers && (
             <View style={{
               flexDirection: 'row', alignItems: 'center', gap: 3,
@@ -251,7 +251,7 @@ function PaymentRow({ item, currentUserName, onDelete }) {
           Settlement{item.note ? ` — ${item.note}` : ''}
         </Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }}>
-          <Text style={styles.ledgerMeta}>{item.payer_name} · {fmtDate(item.payment_date)}</Text>
+          <Text style={styles.ledgerMeta}>{item.payer_name}</Text>
           <Badge label="payment" variant="success" />
         </View>
       </View>
@@ -506,6 +506,13 @@ export default function GroupDetailScreen() {
   const [toast,       setToast]       = useState('');
   const [ledgerAsc,   setLedgerAsc]   = useState(false);
   const [inviting, setInviting] = useState(false);
+
+  function getMyStatus(expenseId) {
+    const mySplit = splitStatuses.find(
+      s => s.expense_id === expenseId && s.user_id === user?.user_id
+    );
+    return mySplit?.status || null;
+  }
 
   function getExpenseBadge(expenseId, payerName) {
     // payer's own split doesn't count toward settlement status
@@ -800,6 +807,7 @@ export default function GroupDetailScreen() {
             currentUserName={userName}
             onDelete={handleDelete}
             settlementBadge={getExpenseBadge(item.expense_id, item.payer_name)}
+            myStatus={getMyStatus(item.expense_id)}
             participantCount={splitStatuses.filter(s => s.expense_id === item.expense_id).length}
             totalMembers={members.length}
             onEdit={async (exp) => {
