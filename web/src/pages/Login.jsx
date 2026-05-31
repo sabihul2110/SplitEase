@@ -34,7 +34,7 @@ export default function Login() {
   }
 
   return (
-    <div className="auth-wrap">
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--bg)', padding: '24px' }}>
       <div style={{ width: "100%", maxWidth: 380 }} className="fade-up">
         <div style={{ textAlign: "center", marginBottom: 28 }}>
           <div style={{ width: 44, height: 44, background: "var(--primary)", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 800, color: "#fff", margin: "0 auto 12px" }}>S</div>
@@ -42,7 +42,7 @@ export default function Login() {
           <div style={{ fontSize: 14, color: "var(--text2)", marginTop: 4 }}>College expense splitter</div>
         </div>
 
-        <div className="auth-card">
+        <div style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: 32, width: '100%' }}>
           <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 20, letterSpacing: "-0.01em" }}>Sign in</div>
           {next !== "/dashboard" && (
             <div className="alert alert-success" style={{ marginBottom: 16 }}>

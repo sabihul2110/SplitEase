@@ -305,7 +305,7 @@ function ExpenseRow({ item, currentUserName, onDelete, onEdit, settlementBadge, 
                     </Text>
                     <Text style={styles.splitAmt}>₹{fmtAmount(split.amount_owed)}</Text>
                     {isPyrl ? (
-                      <Text style={{ fontSize: F.xs, color: C.text3 }}>paid</Text>
+                      <Text style={{ fontSize: F.xs, color: C.text3 }}>own share</Text>
                     ) : split.status === 'settled' ? (
                       <Icons.check size={12} color={C.success} />
                     ) : split.status === 'partial' ? (
