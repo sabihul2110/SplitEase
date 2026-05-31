@@ -240,11 +240,9 @@ function ExpenseRow({ item, currentUserName, onDelete, onEdit, settlementBadge, 
             </>
           )}
           <TouchableOpacity onPress={() => setExpanded(p => !p)} hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}>
-            <Icons.chevronRight
-              size={14}
-              color={C.text3}
-              style={{ transform: [{ rotate: expanded ? '90deg' : '0deg' }] }}
-            />
+            <View style={{ transform: [{ rotate: expanded ? '90deg' : '0deg' }] }}>
+              <Icons.chevronRight size={14} color={C.text3} />
+            </View>
           </TouchableOpacity>
         </View>
       </View>
@@ -252,7 +250,30 @@ function ExpenseRow({ item, currentUserName, onDelete, onEdit, settlementBadge, 
       {/* Expanded detail */}
       {expanded && (
         <View style={styles.expandedPanel}>
+          {/* Payer summary */}
+          {isPayer && (
+            <View style={{ flexDirection: 'row', gap: SP.xl, backgroundColor: C.surface2, borderRadius: R.md, padding: SP.sm }}>
+              <View style={styles.expandedMetaItem}>
+                <Text style={styles.expandedMetaLabel}>You paid</Text>
+                <Text style={[styles.expandedMetaVal, { color: C.text }]}>₹{fmtAmount(item.total_amount)}</Text>
+              </View>
+              <View style={styles.expandedMetaItem}>
+                <Text style={styles.expandedMetaLabel}>Your share</Text>
+                <Text style={[styles.expandedMetaVal, { color: C.danger }]}>
+                  ₹{fmtAmount(mySplits.find(s => s.user_id === (members.find(m => m.name === currentUserName)?.user_id))?.amount_owed || 0)}
+                </Text>
+              </View>
+              <View style={styles.expandedMetaItem}>
+                <Text style={styles.expandedMetaLabel}>You are owed</Text>
+                <Text style={[styles.expandedMetaVal, { color: C.success }]}>
+                  ₹{fmtAmount(Number(item.total_amount) - (mySplits.find(s => s.user_id === (members.find(m => m.name === currentUserName)?.user_id))?.amount_owed || 0))}
+                </Text>
+              </View>
+            </View>
+          )}
+
           {/* Meta row */}
+          
           <View style={styles.expandedMeta}>
             <View style={styles.expandedMetaItem}>
               <Text style={styles.expandedMetaLabel}>Category</Text>
@@ -758,28 +779,6 @@ export default function GroupDetailScreen() {
   const totalSpent = expenses.reduce((s, e) => s + Number(e.total_amount), 0);
 
   // ── Tab content ──────────────────────────────────────────────────────────
-  // function renderLedger() {
-  //   const combined = [
-  //     ...expenses.map(e => ({ ...e, _type: 'expense', _date: e.expense_date })),
-  //     ...payments.map(p => ({ ...p, _type: 'payment', _date: p.payment_date })),
-  //   ].sort((a, b) => new Date(b._date) - new Date(a._date));
-
-  //   if (!combined.length) return (
-  //     <Empty
-  //       icon={Icons.receipt}
-  //       iconColor={C.text3}
-  //       title="No transactions yet"
-  //       subtitle="Add the first expense for this group."
-  //     />
-  //   );
-  //   return combined.map(item =>
-  //     item._type === 'expense' ? (
-  //       <ExpenseRow key={`e-${item.expense_id}`} item={item} currentUserName={userName} onDelete={handleDelete} onEdit={(exp) => navigation.navigate('AddExpense', { groupId, groupName, members, editExpense: exp })} />
-  //     ) : (
-  //       <PaymentRow key={`p-${item.payment_id}`} item={item} currentUserName={userName} onDelete={handleDelete} />
-  //     )
-  //   );
-  // }
 
   function renderLedger() {
   const combined = [

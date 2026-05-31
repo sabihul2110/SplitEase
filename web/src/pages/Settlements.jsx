@@ -4,9 +4,11 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import AppShell from "../components/AppShell";
+import { useAuth } from "../context/AuthContext";
 
 export default function Settlements() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [groups,   setGroups]   = useState([]);
   const [selected, setSelected] = useState(null);
   const [simple,   setSimple]   = useState([]);
@@ -105,17 +107,14 @@ export default function Settlements() {
                       </div>
                       <div className="settle-actions">
                         <span className="settle-amt">₹{Number(s.amount).toLocaleString("en-IN")}</span>
-                        {(() => {
-                          const m = raw.find(r => r.user_name === s.to);
-                          return s.to_upi_id ? (
-                            <a
-                              href={`upi://pay?pa=${m.upi_id}&am=${s.amount}&cu=INR&tn=SplitEase`}
-                              className="upi-btn" target="_blank" rel="noreferrer"
-                            >
-                              Pay via UPI
-                            </a>
-                          ) : null;
-                        })()}
+                        {s.from?.trim() === user?.name?.trim() && s.to_upi_id && (
+                          <a
+                            href={`upi://pay?pa=${s.to_upi_id}&am=${s.amount}&cu=INR&tn=SplitEase`}
+                            className="upi-btn" target="_blank" rel="noreferrer"
+                          >
+                            Pay via UPI
+                          </a>
+                        )}
                       </div>
                     </div>
                   ))
