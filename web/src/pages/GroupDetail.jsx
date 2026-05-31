@@ -160,10 +160,12 @@ export default function GroupDetail() {
    * third party            → read-only amount
    */
   function settlementAction(s) {
-    const myName = user?.name;
+    const myName = user?.name?.trim();
+    const fromName = s.from?.trim();
+    const toName = s.to?.trim();
     const link   = upiLink(s.to, s.amount);
 
-    if (s.from === myName) {
+    if (fromName === myName) {
       // I owe money
       return (
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -181,7 +183,7 @@ export default function GroupDetail() {
       );
     }
 
-    if (s.to === myName) {
+    if (toName === myName) {
       // I am owed money — remind the debtor
       const isSending = reminding === s.from;
       return (
@@ -487,7 +489,7 @@ export default function GroupDetail() {
                 ) : (
                   simplified.map((s, i) => {
                     const myName     = user?.name;
-                    const isDebtor   = s.from === myName;
+                    const isDebtor   = fromName === myName;
                     const isCreditor = s.to   === myName;
                     return (
                       <div
