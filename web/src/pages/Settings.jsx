@@ -418,14 +418,8 @@ export default function Settings() {
       <div className="card" style={{ marginBottom: 4 }}>
         <SettingRow
           icon={Icon.user(15)}
-          label="Edit Profile"
-          sub="Update name, email, UPI ID"
-          onClick={() => navigate("/profile")}
-        />
-        <SettingRow
-          icon={Icon.lock(15)}
-          label="Change Password"
-          sub="Update your login credentials"
+          label="Profile & Password"
+          sub="Edit name, email, UPI ID, change password"
           onClick={() => navigate("/profile")}
           last
         />

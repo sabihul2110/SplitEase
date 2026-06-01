@@ -330,8 +330,7 @@ function PaymentRow({ item, currentUserName, onDelete }) {
   return (
     <View style={[styles.ledgerRow, { opacity: 0.65, backgroundColor: 'transparent' }]}>
       <View style={[styles.ledgerIcon, { backgroundColor: C.successLo }]}>
-        {/* <Icons.paymentSettledFilled size={30} color={C.success} /> */}
-        <Icons.checkCircle size={30} color={C.success} />
+        <Icons.checkCircle size={20} color={C.success} />
       </View>
       <View style={styles.ledgerMid}>
         <Text style={[styles.ledgerDesc, { fontStyle: 'italic', color: C.text2 }]} numberOfLines={1}>
@@ -1100,28 +1099,21 @@ export default function GroupDetailScreen() {
         refreshControl={refreshControl}
         contentContainerStyle={{ paddingBottom: 110 }}
       >
-        {/* Member strip */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.memberStrip}
-        >
-          {members.map((m, i) => (
-            <View key={i} style={styles.memberChip}>
-              <Avatar name={m.name} size={24} />
-              <Text style={styles.memberChipName} numberOfLines={1}>
-                {m.name === userName ? 'You' : m.name.split(' ')[0]}
-              </Text>
-            </View>
-          ))}
-        </ScrollView>
 
         {/* Stats */}
-        <View style={styles.statsRow}>
+        {/* <View style={styles.statsRow}>
           <StatCard label="Total Spent"  value={`₹${totalSpent.toLocaleString('en-IN')}`} color={C.primary} />
           <StatCard label="Expenses"     value={String(expenses.length)} />
           <StatCard label="Payments"     value={String(payments.length)} />
           <StatCard label="Members"      value={String(members.length)} />
+        </View> */}
+
+        {/* Stats */}
+        <View style={styles.statsRow}>
+          <StatCard label="Total"    value={`₹${totalSpent.toLocaleString('en-IN')}`} color={C.primary} />
+          <StatCard label="Expenses" value={`${expenses.length}`} />
+          <StatCard label="Payments" value={`${payments.length}`} />
+          <StatCard label="Members"  value={`${members.length}`} />
         </View>
 
         {/* Tab bar */}
@@ -1176,23 +1168,14 @@ const styles = StyleSheet.create({
   },
   payBtnText: { fontSize: F.sm, fontWeight: W.bold, color: C.success },
 
-  // Member strip
-  memberStrip: {
-    paddingHorizontal: SP.base, paddingVertical: SP.md, gap: 8,
-    flexDirection: 'row',
-  },
-  memberChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: C.surface2, borderRadius: R.full,
-    paddingHorizontal: 10, paddingVertical: 5,
-    borderWidth: 1, borderColor: C.border,
-  },
-  memberChipName: { fontSize: F.xs, color: C.text2, fontWeight: W.medium, maxWidth: 70 },
-
   // Stats
+  // statsRow: {
+  //   flexDirection: 'row', paddingHorizontal: SP.base,
+  //   gap: SP.sm, marginBottom: SP.sm,
+  // },
   statsRow: {
     flexDirection: 'row', paddingHorizontal: SP.base,
-    gap: SP.sm, marginBottom: SP.sm,
+    gap: SP.sm, marginBottom: SP.sm, marginTop: SP.sm,
   },
   statCard: {
     flex: 1, backgroundColor: C.surface, borderRadius: R.lg,
@@ -1414,7 +1397,7 @@ const styles = StyleSheet.create({
     backgroundColor: C.primaryLo,
     borderRadius: R.full,
     borderWidth: 1, borderColor: C.primary + '30',
-    marginBottom: SP.sm,
+    marginBottom: 2,
   },
   sortToggleText: {
     fontSize: F.xs, fontWeight: W.semibold, color: C.primary,
@@ -1431,16 +1414,29 @@ const styles = StyleSheet.create({
   monthHeaderLine: {
     flex: 1, height: 1, backgroundColor: C.border,
   },
+  // dayHeader: {
+  //   paddingHorizontal: 2,
+  //   paddingVertical: 3,
+  //   marginTop: 4,
+  // },
+  // dayHeaderText: {
+  //   fontSize: F.xs,
+  //   fontWeight: W.bold,
+  //   color: C.text3,
+  //   letterSpacing: 0.3,
+  // },
   dayHeader: {
     paddingHorizontal: 2,
     paddingVertical: 3,
-    marginTop: 4,
+    marginTop: SP.md,
+    marginBottom: 2,
   },
   dayHeaderText: {
     fontSize: F.xs,
     fontWeight: W.bold,
-    color: C.text3,
-    letterSpacing: 0.3,
+    color: C.text2,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
   ledgerRowExpanded: {
     flexWrap: 'wrap',

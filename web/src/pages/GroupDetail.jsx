@@ -50,12 +50,17 @@ export default function GroupDetail() {
   const loadAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [e, p, m] = await Promise.all([
+      const [e, p, m, g] = await Promise.all([
         api.get(`/expenses/${id}`),
         api.get(`/payments/${id}`),
         api.get(`/groups/${id}/members`),
+        api.get(`/groups/`),
       ]);
-      setExpenses(e.data); setPayments(p.data); setMembers(m.data);
+      setExpenses(e.data);
+      setPayments(p.data);
+      setMembers(m.data);
+      const thisGroup = (g.data || []).find(gr => gr.group_id === Number(id));
+      if (thisGroup) setGroupName(thisGroup.group_name);
     } catch { navigate("/groups"); }
     finally { setLoading(false); }
   }, [id, navigate]);
@@ -153,20 +158,13 @@ export default function GroupDetail() {
     }
   }
 
-  /**
-   * Context-aware settlement action.
-   * debtor (from === me)   → Pay via UPI
-   * creditor (to === me)   → Send Reminder (in-app notification)
-   * third party            → read-only amount
-   */
   function settlementAction(s) {
-    const myName = user?.name?.trim();
+    const myName   = user?.name?.trim();
     const fromName = s.from?.trim();
-    const toName = s.to?.trim();
-    const link   = upiLink(s.to, s.amount);
+    const toName   = s.to?.trim();
+    const link     = upiLink(s.to, s.amount);
 
     if (fromName === myName) {
-      // I owe money
       return (
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span style={{ fontSize: 17, fontWeight: 800, fontVariantNumeric: "tabular-nums", color: "var(--danger)" }}>
@@ -175,16 +173,13 @@ export default function GroupDetail() {
           {link ? (
             <a href={link} className="upi-btn" target="_blank" rel="noreferrer">Pay via UPI</a>
           ) : (
-            <span style={{ fontSize: 12, color: "var(--text3)", fontStyle: "italic" }}>
-              (No UPI ID set)
-            </span>
+            <span style={{ fontSize: 12, color: "var(--text3)", fontStyle: "italic" }}>(No UPI ID set)</span>
           )}
         </div>
       );
     }
 
     if (toName === myName) {
-      // I am owed money — remind the debtor
       const isSending = reminding === s.from;
       return (
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -206,7 +201,6 @@ export default function GroupDetail() {
       );
     }
 
-    // Third party — read-only
     return (
       <span style={{ fontSize: 15, fontWeight: 600, fontVariantNumeric: "tabular-nums", color: "var(--text2)" }}>
         ₹{Number(s.amount).toLocaleString("en-IN")}
@@ -220,18 +214,16 @@ export default function GroupDetail() {
 
   const actions = (
     <>
-      <button 
-        className="btn btn-sm" 
+      <button
+        className="btn btn-sm"
         onClick={generateInvite}
         style={{
-          display: "flex", 
-          alignItems: "center", 
-          gap: "6px",
-          background: "rgba(59, 130, 246, 0.15)", // Soft blue background
-          color: "var(--primary-h)",              // Bright blue text
+          display: "flex", alignItems: "center", gap: "6px",
+          background: "rgba(59, 130, 246, 0.15)",
+          color: "var(--primary-h)",
           border: "1px solid rgba(59, 130, 246, 0.25)",
-          borderRadius: "20px",                   // Pill shape
-          padding: "4px 12px"
+          borderRadius: "20px",
+          padding: "4px 12px",
         }}
       >
         <UserPlusIcon /> Invite
@@ -313,64 +305,69 @@ export default function GroupDetail() {
                   <div style={{ fontSize: 14, color: "var(--text2)" }}>Add an expense to get started</div>
                   <Link to={`/groups/${id}/add-expense`} className="btn btn-primary btn-sm mt-4">+ Add Expense</Link>
                 </div>
-              ) : (
-                <div className="table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Date</th><th>Description</th><th>Payer</th>
-                        <th>Category</th><th style={{ textAlign: "right" }}>Total</th>
-                        <th>Split</th><th></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {expenses.map(e => (
-                        <tr key={`e-${e.expense_id}`}>
-                          <td style={{ color: "var(--text3)", fontSize: 13 }}>
-                            {new Date(e.expense_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
-                          </td>
-                          <td style={{ fontWeight: 500 }}>{e.description}</td>
-                          <td style={{ color: "var(--text2)" }}>
-                            {e.payer_name}
-                            {e.payer_name === user?.name && <span style={{ color: "var(--text3)", fontSize: 11, marginLeft: 4 }}>·you</span>}
-                          </td>
-                          <td><span className="tag">{e.subcategory_name || e.category_name}</span></td>
-                          <td className="td-num" style={{ textAlign: "right" }}>
-                            ₹{Number(e.total_amount).toLocaleString("en-IN")}
-                          </td>
-                          <td>
-                            <span className={`badge ${e.split_type === "equal" ? "badge-success" : "badge-primary"}`}>
-                              {e.split_type}
-                            </span>
-                          </td>
-                          <td>
-                            <button className="btn btn-danger btn-xs" onClick={() => delExpense(e.expense_id)}>✕</button>
-                          </td>
+              ) : (() => {
+                const combined = [
+                  ...expenses.map(e => ({ ...e, _type: 'expense', _date: e.expense_date })),
+                  ...payments.map(p => ({ ...p, _type: 'payment', _date: p.payment_date })),
+                ].sort((a, b) => new Date(b._date) - new Date(a._date));
+                return (
+                  <div className="table-wrap">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Date</th><th>Description</th><th>Payer</th>
+                          <th>Category</th><th style={{ textAlign: "right" }}>Total</th>
+                          <th>Split</th><th></th>
                         </tr>
-                      ))}
-                      {payments.map(p => (
-                        <tr key={`p-${p.payment_id}`} style={{ opacity: 0.7 }}>
-                          <td style={{ color: "var(--text3)", fontSize: 13 }}>
-                            {new Date(p.payment_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
-                          </td>
-                          <td style={{ fontStyle: "italic", color: "var(--text2)" }}>
-                            Settlement{p.note ? ` — ${p.note}` : ""}
-                          </td>
-                          <td style={{ color: "var(--text2)" }}>{p.payer_name}</td>
-                          <td><span className="badge badge-success">payment</span></td>
-                          <td className="td-num c-success" style={{ textAlign: "right" }}>
-                            ₹{Number(p.amount).toLocaleString("en-IN")}
-                          </td>
-                          <td>—</td>
-                          <td>
-                            <button className="btn btn-danger btn-xs" onClick={() => delPayment(p.payment_id)}>✕</button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+                      </thead>
+                      <tbody>
+                        {combined.map(item => item._type === 'expense' ? (
+                          <tr key={`e-${item.expense_id}`}>
+                            <td style={{ color: "var(--text3)", fontSize: 13 }}>
+                              {new Date(item.expense_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                            </td>
+                            <td style={{ fontWeight: 500 }}>{item.description}</td>
+                            <td style={{ color: "var(--text2)" }}>
+                              {item.payer_name}
+                              {item.payer_name === user?.name && <span style={{ color: "var(--text3)", fontSize: 11, marginLeft: 4 }}>·you</span>}
+                            </td>
+                            <td><span className="tag">{item.subcategory_name || item.category_name}</span></td>
+                            <td className="td-num" style={{ textAlign: "right" }}>
+                              ₹{Number(item.total_amount).toLocaleString("en-IN")}
+                            </td>
+                            <td>
+                              <span className={`badge ${item.split_type === "equal" ? "badge-success" : "badge-primary"}`}>
+                                {item.split_type}
+                              </span>
+                            </td>
+                            <td>
+                              <button className="btn btn-danger btn-xs" onClick={() => delExpense(item.expense_id)}>✕</button>
+                            </td>
+                          </tr>
+                        ) : (
+                          <tr key={`p-${item.payment_id}`} style={{ opacity: 0.7 }}>
+                            <td style={{ color: "var(--text3)", fontSize: 13 }}>
+                              {new Date(item.payment_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                            </td>
+                            <td style={{ fontStyle: "italic", color: "var(--text2)" }}>
+                              Settlement{item.note ? ` — ${item.note}` : ""}
+                            </td>
+                            <td style={{ color: "var(--text2)" }}>{item.payer_name}</td>
+                            <td><span className="badge badge-success">payment</span></td>
+                            <td className="td-num c-success" style={{ textAlign: "right" }}>
+                              ₹{Number(item.amount).toLocaleString("en-IN")}
+                            </td>
+                            <td>—</td>
+                            <td>
+                              <button className="btn btn-danger btn-xs" onClick={() => delPayment(item.payment_id)}>✕</button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Right panel */}
@@ -403,19 +400,12 @@ export default function GroupDetail() {
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   <Link to={`/groups/${id}/add-expense`} className="btn btn-primary" style={{ justifyContent: "center" }}>+ Add Expense</Link>
                   <Link to={`/groups/${id}/add-payment`} className="btn btn-ghost" style={{ justifyContent: "center" }}>+ Record Payment</Link>
-                  
-                  {/* Upgraded Sidebar Invite Button */}
-                  <button 
-                    className="btn" 
+                  <button
+                    className="btn"
                     onClick={generateInvite}
-                    style={{ 
-                      justifyContent: "center", 
-                      display: "flex", 
-                      alignItems: "center", 
-                      gap: "8px",
-                      background: "var(--surface2)",
-                      border: "1px solid var(--border)",
-                      color: "var(--text2)"
+                    style={{
+                      justifyContent: "center", display: "flex", alignItems: "center", gap: "8px",
+                      background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text2)",
                     }}
                   >
                     <UserPlusIcon /> Invite Member
@@ -488,9 +478,9 @@ export default function GroupDetail() {
                   </div>
                 ) : (
                   simplified.map((s, i) => {
-                    const myName     = user?.name;
-                    const isDebtor   = fromName === myName;
-                    const isCreditor = s.to   === myName;
+                    const myName     = user?.name?.trim();
+                    const isDebtor   = s.from?.trim() === myName;
+                    const isCreditor = s.to?.trim()   === myName;
                     return (
                       <div
                         key={i}
