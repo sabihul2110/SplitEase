@@ -350,6 +350,16 @@ export default function AddExpenseScreen() {
             {/* Date */}
             <View style={styles.field}>
               <Text style={styles.fieldLabel}>DATE</Text>
+              {expenseDate !== todayStr() && (
+                <TouchableOpacity
+                  onPress={() => setExpenseDate(todayStr())}
+                  style={{ alignSelf: 'flex-start', marginBottom: 6 }}
+                >
+                  <Text style={{ fontSize: FONT_SIZE.xs, color: COLORS.primary, fontWeight: FONT_WEIGHT.semibold }}>
+                    Use today
+                  </Text>
+                </TouchableOpacity>
+              )}
               <TouchableOpacity
                 style={styles.datePickerBtn}
                 onPress={() => {

@@ -38,8 +38,13 @@ api.interceptors.response.use(
   error => {
     if (error.response?.status === 401) {
       // Don't redirect if we're already on auth pages
+      // const isAuthPage = window.location.pathname === "/login" ||
+      //                    window.location.pathname === "/signup" ||
+      //                    window.location.pathname.startsWith("/join/");
       const isAuthPage = window.location.pathname === "/login" ||
                          window.location.pathname === "/signup" ||
+                         window.location.pathname === "/forgot-password" ||
+                         window.location.pathname === "/reset-password" ||
                          window.location.pathname.startsWith("/join/");
       if (!isAuthPage) {
         localStorage.removeItem("expense_user");

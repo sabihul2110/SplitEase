@@ -174,47 +174,113 @@ function ExpenseRow({ item, currentUserName, onDelete, onEdit, settlementBadge, 
   return (
     <View style={[styles.ledgerRow, expanded && styles.ledgerRowExpanded]}>
       <TouchableOpacity
-        style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: SP.md }}
-        onPress={() => setExpanded(p => !p)}
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          flex: 1,
+          gap: SP.md,
+        }}
+        onPress={() => setExpanded((p) => !p)}
         activeOpacity={0.7}
       >
         <CategoryIcon categoryName={item.category_name} />
         <View style={styles.ledgerMid}>
-          <Text style={styles.ledgerDesc} numberOfLines={1}>{item.description}</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3, flexWrap: 'wrap' }}>
+          <Text style={styles.ledgerDesc} numberOfLines={1}>
+            {item.description}
+          </Text>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 6,
+              marginTop: 3,
+              flexWrap: "wrap",
+            }}
+          >
             <Text style={styles.ledgerMeta}>
-              {isPayer ? 'You paid' : `${item.payer_name} paid`}
+              {isPayer ? "You paid" : `${item.payer_name} paid`}
             </Text>
             {!isPayer && myStatus && (
-              <View style={{
-                flexDirection: 'row', alignItems: 'center', gap: 3,
-                backgroundColor: myStatus === 'settled' ? C.successLo : C.surface3,
-                borderRadius: R.full, paddingHorizontal: 6, paddingVertical: 2,
-              }}>
-                {myStatus === 'settled'
-                  ? <Icons.check size={9} color={C.success} />
-                  : <Icons.clockPending size={9} color={C.text3} />
-                }
-                <Text style={{ fontSize: F.xs, fontWeight: W.bold, color: myStatus === 'settled' ? C.success : C.text3 }}>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 3,
+                  backgroundColor:
+                    myStatus === "settled" ? C.successLo : C.surface3,
+                  borderRadius: R.full,
+                  paddingHorizontal: 6,
+                  paddingVertical: 2,
+                }}
+              >
+                {myStatus === "settled" ? (
+                  <Icons.check size={9} color={C.success} />
+                ) : (
+                  <Icons.clockPending size={9} color={C.text3} />
+                )}
+                <Text
+                  style={{
+                    fontSize: F.xs,
+                    fontWeight: W.bold,
+                    color: myStatus === "settled" ? C.success : C.text3,
+                  }}
+                >
                   You
                 </Text>
               </View>
             )}
             {participantCount > 0 && participantCount < totalMembers && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: C.surface3, borderRadius: R.full, paddingHorizontal: 6, paddingVertical: 2 }}>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 3,
+                  backgroundColor: C.surface3,
+                  borderRadius: R.full,
+                  paddingHorizontal: 6,
+                  paddingVertical: 2,
+                }}
+              >
                 <Icons.users size={10} color={C.text3} />
-                <Text style={{ fontSize: F.xs, color: C.text3, fontWeight: W.medium }}>{participantCount}/{totalMembers}</Text>
+                <Text
+                  style={{
+                    fontSize: F.xs,
+                    color: C.text3,
+                    fontWeight: W.medium,
+                  }}
+                >
+                  {participantCount}/{totalMembers}
+                </Text>
               </View>
             )}
-            {badgeCfg[settlementBadge] && (() => {
-              const b = badgeCfg[settlementBadge];
-              return (
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: b.color + '18', borderRadius: R.full, paddingHorizontal: 6, paddingVertical: 2 }}>
-                  <b.Icon size={10} color={b.color} />
-                  <Text style={{ fontSize: F.xs, fontWeight: W.semibold, color: b.color }}>{b.label}</Text>
-                </View>
-              );
-            })()}
+            {badgeCfg[settlementBadge] &&
+              (() => {
+                const b = badgeCfg[settlementBadge];
+                return (
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 3,
+                      backgroundColor: b.color + "18",
+                      borderRadius: R.full,
+                      paddingHorizontal: 6,
+                      paddingVertical: 2,
+                    }}
+                  >
+                    <b.Icon size={10} color={b.color} />
+                    <Text
+                      style={{
+                        fontSize: F.xs,
+                        fontWeight: W.semibold,
+                        color: b.color,
+                      }}
+                    >
+                      {b.label}
+                    </Text>
+                  </View>
+                );
+              })()}
           </View>
         </View>
       </TouchableOpacity>
@@ -222,25 +288,39 @@ function ExpenseRow({ item, currentUserName, onDelete, onEdit, settlementBadge, 
       {/* Right side — amount + actions + chevron */}
       <View style={styles.ledgerRight}>
         <Text style={styles.ledgerAmt}>₹{fmtAmount(item.total_amount)}</Text>
-        <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+        <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
           {isPayer && (
             <>
-              <TouchableOpacity hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} onPress={() => onEdit(item)}>
+              <TouchableOpacity
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                onPress={() => onEdit(item)}
+              >
                 <Icons.edit size={14} color={C.primary} />
               </TouchableOpacity>
               <TouchableOpacity
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                onPress={() => Alert.alert('Delete Expense', 'Remove this expense?', [
-                  { text: 'Cancel', style: 'cancel' },
-                  { text: 'Delete', style: 'destructive', onPress: () => onDelete('expense', item.expense_id) },
-                ])}
+                onPress={() =>
+                  Alert.alert("Delete Expense", "Remove this expense?", [
+                    { text: "Cancel", style: "cancel" },
+                    {
+                      text: "Delete",
+                      style: "destructive",
+                      onPress: () => onDelete("expense", item.expense_id),
+                    },
+                  ])
+                }
               >
                 <Icons.trash size={14} color={C.danger} />
               </TouchableOpacity>
             </>
           )}
-          <TouchableOpacity onPress={() => setExpanded(p => !p)} hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}>
-            <View style={{ transform: [{ rotate: expanded ? '90deg' : '0deg' }] }}>
+          <TouchableOpacity
+            onPress={() => setExpanded((p) => !p)}
+            hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
+          >
+            <View
+              style={{ transform: [{ rotate: expanded ? "90deg" : "0deg" }] }}
+            >
               <Icons.chevronRight size={14} color={C.text3} />
             </View>
           </TouchableOpacity>
@@ -252,38 +332,70 @@ function ExpenseRow({ item, currentUserName, onDelete, onEdit, settlementBadge, 
         <View style={styles.expandedPanel}>
           {/* Payer summary */}
           {isPayer && (
-            <View style={{ flexDirection: 'row', gap: SP.xl, backgroundColor: C.surface2, borderRadius: R.md, padding: SP.sm }}>
+            <View
+              style={{
+                flexDirection: "row",
+                gap: SP.xl,
+                backgroundColor: C.surface2,
+                borderRadius: R.md,
+                padding: SP.sm,
+              }}
+            >
               <View style={styles.expandedMetaItem}>
-                <Text style={styles.expandedMetaLabel}>You paid</Text>
-                <Text style={[styles.expandedMetaVal, { color: C.text }]}>₹{fmtAmount(item.total_amount)}</Text>
+                <Text style={styles.expandedMetaLabel}>Split</Text>
+                <Badge
+                  label={item.split_type || "equal"}
+                  variant={item.split_type === "custom" ? "primary" : "neutral"}
+                />
               </View>
               <View style={styles.expandedMetaItem}>
                 <Text style={styles.expandedMetaLabel}>Your share</Text>
                 <Text style={[styles.expandedMetaVal, { color: C.danger }]}>
-                  ₹{fmtAmount(mySplits.find(s => s.user_id === (members.find(m => m.name === currentUserName)?.user_id))?.amount_owed || 0)}
+                  ₹
+                  {fmtAmount(
+                    mySplits.find(
+                      (s) =>
+                        s.user_id ===
+                        members.find((m) => m.name === currentUserName)
+                          ?.user_id,
+                    )?.amount_owed || 0,
+                  )}
                 </Text>
               </View>
               <View style={styles.expandedMetaItem}>
                 <Text style={styles.expandedMetaLabel}>You are owed</Text>
                 <Text style={[styles.expandedMetaVal, { color: C.success }]}>
-                  ₹{fmtAmount(Number(item.total_amount) - (mySplits.find(s => s.user_id === (members.find(m => m.name === currentUserName)?.user_id))?.amount_owed || 0))}
+                  ₹
+                  {fmtAmount(
+                    Number(item.total_amount) -
+                      (mySplits.find(
+                        (s) =>
+                          s.user_id ===
+                          members.find((m) => m.name === currentUserName)
+                            ?.user_id,
+                      )?.amount_owed || 0),
+                  )}
                 </Text>
               </View>
             </View>
           )}
 
           {/* Meta row */}
-          
+
           <View style={styles.expandedMeta}>
             <View style={styles.expandedMetaItem}>
               <Text style={styles.expandedMetaLabel}>Category</Text>
               <Text style={styles.expandedMetaVal}>
-                {item.subcategory_name ? `${item.category_name} → ${item.subcategory_name}` : item.category_name}
+                {item.subcategory_name
+                  ? `${item.category_name} → ${item.subcategory_name}`
+                  : item.category_name}
               </Text>
             </View>
             <View style={styles.expandedMetaItem}>
               <Text style={styles.expandedMetaLabel}>Split</Text>
-              <Text style={styles.expandedMetaVal}>{item.split_type || 'equal'}</Text>
+              <Text style={styles.expandedMetaVal}>
+                {item.split_type || "equal"}
+              </Text>
             </View>
           </View>
 
@@ -291,24 +403,34 @@ function ExpenseRow({ item, currentUserName, onDelete, onEdit, settlementBadge, 
           {mySplits.length > 0 && (
             <>
               <Text style={styles.expandedSectionLabel}>Participants</Text>
-              {mySplits.map(split => {
-                const member = members.find(m => m.user_id === split.user_id);
-                const name   = member?.name || `User ${split.user_id}`;
-                const isMe   = name === currentUserName;
+              {mySplits.map((split) => {
+                const member = members.find((m) => m.user_id === split.user_id);
+                const name = member?.name || `User ${split.user_id}`;
+                const isMe = name === currentUserName;
                 const isPyrl = name === item.payer_name;
                 return (
                   <View key={split.user_id} style={styles.splitRow}>
                     <Avatar name={name} size={24} />
-                    <Text style={[styles.splitName, isMe && { color: C.text, fontWeight: W.bold }]} numberOfLines={1}>
-                      {isMe ? 'You' : name.split(' ')[0]}
-                      {isPyrl && !isMe ? ' (payer)' : ''}
+                    <Text
+                      style={[
+                        styles.splitName,
+                        isMe && { color: C.text, fontWeight: W.bold },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {isMe ? "You" : name.split(" ")[0]}
+                      {isPyrl && !isMe ? " (payer)" : ""}
                     </Text>
-                    <Text style={styles.splitAmt}>₹{fmtAmount(split.amount_owed)}</Text>
+                    <Text style={styles.splitAmt}>
+                      ₹{fmtAmount(split.amount_owed)}
+                    </Text>
                     {isPyrl ? (
-                      <Text style={{ fontSize: F.xs, color: C.text3 }}>own share</Text>
-                    ) : split.status === 'settled' ? (
+                      <Text style={{ fontSize: F.xs, color: C.text3 }}>
+                        own share
+                      </Text>
+                    ) : split.status === "settled" ? (
                       <Icons.check size={12} color={C.success} />
-                    ) : split.status === 'partial' ? (
+                    ) : split.status === "partial" ? (
                       <Icons.zap size={12} color={C.warning} />
                     ) : (
                       <Icons.clockPending size={12} color={C.text3} />

@@ -287,6 +287,7 @@ export default function GroupDetail() {
           {[
             { id: "ledger",      label: `Ledger (${expenses.length + payments.length})` },
             { id: "settlements", label: "Settlements" },
+            { id: "members",     label: `Members (${members.length})` },
           ].map(t => (
             <button key={t.id} className={`tab-btn ${tab === t.id ? "active" : ""}`} onClick={() => handleTab(t.id)}>
               {t.label}
@@ -561,6 +562,49 @@ export default function GroupDetail() {
               </div>
             </div>
           )
+        )}
+
+        {/* ── MEMBERS ── */}
+        {tab === "members" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {members.map(m => (
+              <div key={m.user_id} style={{
+                display: "flex", alignItems: "center", gap: 12,
+                background: "var(--surface)", border: "1px solid var(--border)",
+                borderRadius: 10, padding: "12px 16px",
+                ...(m.name === user?.name ? { borderColor: "rgba(37,99,235,0.3)", background: "rgba(37,99,235,0.04)" } : {}),
+              }}>
+                <div style={{
+                  width: 38, height: 38, borderRadius: "50%", flexShrink: 0,
+                  background: "var(--primary)", display: "flex", alignItems: "center",
+                  justifyContent: "center", fontSize: 13, fontWeight: 700, color: "#fff",
+                }}>
+                  {m.name.split(" ").map(w => w[0]).slice(0,2).join("")}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600 }}>
+                    {m.name}
+                    {m.name === user?.name && <span style={{ fontSize: 11, color: "var(--text3)", marginLeft: 6 }}>· you</span>}
+                  </div>
+                  {m.upi_id
+                    ? <div style={{ fontSize: 12, color: "var(--text3)", marginTop: 2 }}>{m.upi_id}</div>
+                    : <div style={{ fontSize: 12, color: "var(--text3)", marginTop: 2, fontStyle: "italic" }}>No UPI ID</div>
+                  }
+                </div>
+                {m.name === user?.name && (
+                  <span className="badge badge-primary" style={{ fontSize: 11 }}>you</span>
+                )}
+              </div>
+            ))}
+            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+              <button className="btn btn-ghost btn-sm" onClick={handleLeaveGroup} style={{ color: "var(--danger)", borderColor: "rgba(239,68,68,0.3)" }}>
+                Leave Group
+              </button>
+              <button className="btn btn-sm" onClick={() => handleDeleteGroup()} style={{ color: "var(--text3)", borderColor: "var(--border)", background: "transparent", fontSize: 12 }}>
+                Delete Group
+              </button>
+            </div>
+          </div>
         )}
       </AppShell>
 
