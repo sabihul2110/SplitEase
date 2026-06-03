@@ -24,16 +24,17 @@
     "plugins": [
       "expo-build-properties"
     ],
-    "extra": {
-      "eas": {
-        "projectId": "8846a54a-ec46-4abf-ab73-5cb4b9bda02a"
-      }
-    },
     "runtimeVersion": {
       "policy": "appVersion"
     },
     "updates": {
       "url": "https://u.expo.dev/8846a54a-ec46-4abf-ab73-5cb4b9bda02a"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "7644269a-572f-4859-adfa-294444863d68"
+      }
+    },
+    "owner": "sabihul2110"
   }
 }
