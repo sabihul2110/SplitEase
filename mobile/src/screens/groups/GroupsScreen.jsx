@@ -1,185 +1,760 @@
 // SplitEase/mobile/src/screens/groups/GroupsScreen.jsx
-//
-// Full redesign — modern card layout, SVG icons, no emojis,
-// professional aesthetic matching top finance apps.
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity, Modal,
-  Alert, RefreshControl, TextInput, KeyboardAvoidingView,
-  Platform, ScrollView, ActivityIndicator,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
-import client from '../../api/client';
-import { ENDPOINTS } from '../../constants/api';
-import { useAuth } from '../../context/AuthContext';
-import { Icons } from '../../constants/icons';
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  Modal,
+  Alert,
+  RefreshControl,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  ActivityIndicator,
+  Animated,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  useFocusEffect,
+  useNavigation,
+  useRoute,
+} from "@react-navigation/native";
+import client from "../../api/client";
+import { ENDPOINTS } from "../../constants/api";
+import { useAuth } from "../../context/AuthContext";
+import { Icons } from "../../constants/icons";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
-  bg:        '#0a0d14',
-  surface:   '#111520',
-  surface2:  '#171c2c',
-  surface3:  '#1e2438',
-  border:    '#242a3d',
-  border2:   '#2e3650',
-  primary:   '#3b82f6',
-  primaryLo: 'rgba(59,130,246,0.10)',
-  primaryMd: 'rgba(59,130,246,0.18)',
-  success:   '#10b981',
-  successLo: 'rgba(16,185,129,0.10)',
-  danger:    '#ef4444',
-  dangerLo:  'rgba(239,68,68,0.10)',
-  warning:   '#f59e0b',
-  text:      '#f0f4ff',
-  text2:     '#8892b0',
-  text3:     '#4a5578',
-  white:     '#ffffff',
+  bg: "#0a0d14",
+  surface: "#111520",
+  surface2: "#171c2c",
+  surface3: "#1e2438",
+  border: "#242a3d",
+  border2: "#2e3650",
+  primary: "#3b82f6",
+  primaryLo: "rgba(59,130,246,0.10)",
+  primaryMd: "rgba(59,130,246,0.18)",
+  success: "#10b981",
+  successLo: "rgba(16,185,129,0.10)",
+  successMd: "rgba(16,185,129,0.18)",
+  danger: "#ef4444",
+  dangerLo: "rgba(239,68,68,0.10)",
+  dangerMd: "rgba(239,68,68,0.18)",
+  warning: "#f59e0b",
+  warningLo: "rgba(245,158,11,0.10)",
+  neutral: "#6b7280",
+  neutralLo: "rgba(107,114,128,0.12)",
+  text: "#f0f4ff",
+  text2: "#8892b0",
+  text3: "#4a5578",
+  white: "#ffffff",
 };
-const F = { xs: 11, sm: 12, base: 13, md: 14, lg: 16, xl: 20, xxl: 26 };
-const W = { regular: '400', medium: '500', semibold: '600', bold: '700', heavy: '800' };
+const F = { xs: 10, sm: 12, base: 13, md: 14, lg: 16, xl: 20, xxl: 26 };
+const W = {
+  regular: "400",
+  medium: "500",
+  semibold: "600",
+  bold: "700",
+  heavy: "800",
+};
 const R = { sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, full: 999 };
 const SP = { xs: 4, sm: 8, md: 12, base: 16, lg: 20, xl: 24, xxl: 32 };
 
-// ─── Avatar with gradient-like initials ──────────────────────────────────────
-const AVATAR_COLORS = [
-  ['#6366f1', '#4f46e5'], // indigo
-  ['#3b82f6', '#2563eb'], // blue
-  ['#10b981', '#059669'], // emerald
-  ['#f59e0b', '#d97706'], // amber
-  ['#ec4899', '#db2777'], // pink
-  ['#8b5cf6', '#7c3aed'], // violet
-  ['#06b6d4', '#0891b2'], // cyan
-  ['#f97316', '#ea580c'], // orange
+// ─── Avatar helpers ───────────────────────────────────────────────────────────
+const AVATAR_PALETTE = [
+  "#6366f1",
+  "#3b82f6",
+  "#10b981",
+  "#f59e0b",
+  "#ec4899",
+  "#8b5cf6",
+  "#06b6d4",
+  "#f97316",
 ];
 
-function getAvatarColor(name = '') {
-  const idx = name.charCodeAt(0) % AVATAR_COLORS.length;
-  return AVATAR_COLORS[idx][0];
+function avatarColor(name = "") {
+  return AVATAR_PALETTE[name.charCodeAt(0) % AVATAR_PALETTE.length];
 }
 
-function initials(name = '') {
-  return name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
+function initials(name = "") {
+  return name
+    .split(" ")
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
 }
 
 function GroupAvatar({ name, size = 48 }) {
-  const bg = getAvatarColor(name);
+  const bg = avatarColor(name);
   return (
-    <View style={{
-      width: size, height: size, borderRadius: size * 0.28,
-      backgroundColor: bg, alignItems: 'center', justifyContent: 'center',
-    }}>
-      <Text style={{ fontSize: size * 0.36, fontWeight: W.bold, color: '#fff', letterSpacing: 0.5 }}>
+    <View
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size * 0.28,
+        backgroundColor: bg,
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <Text
+        style={{
+          fontSize: size * 0.35,
+          fontWeight: W.heavy,
+          color: "#fff",
+          letterSpacing: 0.4,
+        }}
+      >
         {initials(name)}
       </Text>
     </View>
   );
 }
 
-function MemberAvatar({ name, size = 26 }) {
-  const bg = getAvatarColor(name);
+function MemberBubble({ name, size = 26, borderColor = C.surface }) {
+  const bg = avatarColor(name);
   return (
-    <View style={{
-      width: size, height: size, borderRadius: size / 2,
-      backgroundColor: bg, alignItems: 'center', justifyContent: 'center',
-      borderWidth: 2, borderColor: C.surface,
-    }}>
-      <Text style={{ fontSize: size * 0.38, fontWeight: W.bold, color: '#fff' }}>
+    <View
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        backgroundColor: bg,
+        alignItems: "center",
+        justifyContent: "center",
+        borderWidth: 2,
+        borderColor,
+      }}
+    >
+      <Text
+        style={{ fontSize: size * 0.36, fontWeight: W.bold, color: "#fff" }}
+      >
         {initials(name)}
       </Text>
     </View>
   );
 }
 
-// ─── Group Card — full-width list style ───────────────────────────────────────
-function GroupCard({ group, onPress, onLongPress }) {
-  const date = group.created_at
-    ? new Date(group.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
-    : '';
-  // const memberCount = group.member_count ?? 0;
-  const memberCount = group.members?.length || group.member_count || 0;
-  const previewMembers = group.members?.slice(0, 3) || [];
-
+function MemberStack({
+  members = [],
+  total = 0,
+  size = 24,
+  borderColor = C.surface,
+}) {
+  const preview = members.slice(0, 3);
+  const extra = total - preview.length;
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress} onLongPress={onLongPress} delayLongPress={400} activeOpacity={0.7}>
-      <View style={styles.cardInner}>
-        {/* Left — avatar */}
-        <GroupAvatar name={group.group_name} size={52} />
-
-        {/* Mid — info */}
-        <View style={styles.cardBody}>
-          <Text style={styles.cardName} numberOfLines={1}>{group.group_name}</Text>
-          <View style={styles.cardMeta}>
-            <Icons.users size={11} color={C.text3} />
-            <Text style={styles.cardMetaText}>
-              {memberCount} {memberCount === 1 ? 'member' : 'members'}
-            </Text>
-            {date ? (
-              <>
-                <Text style={styles.cardDot}>·</Text>
-                <Text style={styles.cardMetaText}>{date}</Text>
-              </>
-            ) : null}
-          </View>
-
-          {/* Stacked member avatars */}
-          {previewMembers.length > 0 && (
-            <View style={styles.memberStack}>
-              {previewMembers.map((m, i) => (
-                <View key={i} style={[styles.memberStackItem, { marginLeft: i === 0 ? 0 : -8 }]}>
-                  <MemberAvatar name={m.name || m} size={22} />
-                </View>
-              ))}
-              {memberCount > 3 && (
-                <View style={[styles.memberStackMore, { marginLeft: -8 }]}>
-                  <Text style={styles.memberStackMoreText}>+{memberCount - 3}</Text>
-                </View>
-              )}
-            </View>
-          )}
+    <View style={{ flexDirection: "row", alignItems: "center" }}>
+      {preview.map((m, i) => (
+        <View
+          key={i}
+          style={{
+            marginLeft: i === 0 ? 0 : -size * 0.35,
+            zIndex: preview.length - i,
+          }}
+        >
+          <MemberBubble
+            name={m.name || m}
+            size={size}
+            borderColor={borderColor}
+          />
         </View>
+      ))}
+      {extra > 0 && (
+        <View
+          style={{
+            marginLeft: -size * 0.35,
+            width: size,
+            height: size,
+            borderRadius: size / 2,
+            backgroundColor: C.surface3,
+            borderWidth: 2,
+            borderColor,
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 0,
+          }}
+        >
+          <Text
+            style={{
+              fontSize: size * 0.32,
+              color: C.text2,
+              fontWeight: W.bold,
+            }}
+          >
+            +{extra}
+          </Text>
+        </View>
+      )}
+    </View>
+  );
+}
 
-        {/* Right — chevron */}
-        <Icons.chevronRight size={18} color={C.text3} />
+// ─── Last-activity formatter ──────────────────────────────────────────────────
+function formatActivity(ts) {
+  if (!ts) return null;
+  // If timestamp has no timezone info (no Z, no +), treat as UTC explicitly
+  let date;
+  if (typeof ts === "string" && !ts.endsWith("Z") && !ts.includes("+")) {
+    date = new Date(ts + "Z");
+  } else {
+    date = new Date(ts);
+  }
+  const diff = (Date.now() - date.getTime()) / 1000;
+  if (diff < 0) return "Just now";
+  if (diff < 60) return "Active just now";
+  if (diff < 3600) return `Active ${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `Active ${Math.floor(diff / 3600)}h ago`;
+  if (diff < 172800) return "Active yesterday";
+  if (diff < 604800) return "Active this week";
+  return `Active ${Math.floor(diff / 86400)}d ago`;
+}
+
+// ─── List Card ─────────────────────────────────────────────────────────────────
+
+function ListCard({ group, onPress, onLongPress, isFirst, isLast }) {
+  const memberCount = group.members?.length || group.member_count || 0;
+  const activity = formatActivity(
+    group.last_activity || group.updated_at || group.created_at,
+  );
+  // Check all possible field names the API might return
+  const rawBalance =
+    group.my_balance ??
+    group.balance ??
+    group.net_balance ??
+    group.user_balance ??
+    null;
+  const balance = rawBalance !== null ? parseFloat(rawBalance) : null;
+
+  let balColor = C.text2;
+  let balLabel = "STATUS";
+  let balAmount = "SETTLED";
+  let isSettled = true;
+
+  if (balance !== null && balance !== 0) {
+    isSettled = false;
+    if (balance > 0) {
+      balColor = C.success;
+      balLabel = "YOU ARE OWED";
+      balAmount = `₹${Math.abs(balance).toFixed(2)}`;
+    } else {
+      balColor = C.danger;
+      balLabel = "YOU OWE";
+      balAmount = `₹${Math.abs(balance).toFixed(2)}`;
+    }
+  }
+
+  return (
+    <TouchableOpacity
+      style={[
+        lcStyles.card,
+        isFirst && lcStyles.cardFirst,
+        isLast && lcStyles.cardLast,
+      ]}
+      onPress={onPress}
+      onLongPress={onLongPress}
+      delayLongPress={400}
+      activeOpacity={0.6}
+    >
+      <GroupAvatar name={group.group_name} size={42} />
+      <View style={lcStyles.info}>
+        <Text style={lcStyles.name} numberOfLines={1}>
+          {group.group_name}
+        </Text>
+        <View style={lcStyles.metaRow}>
+          <Text style={lcStyles.meta}>
+            {memberCount} {memberCount === 1 ? "member" : "members"}
+          </Text>
+          {activity && <Text style={lcStyles.dot}>·</Text>}
+          {activity && <Text style={lcStyles.meta}>{activity}</Text>}
+        </View>
+      </View>
+      <View style={lcStyles.balCol}>
+        <Text style={[lcStyles.balLabel, { color: isSettled ? C.text3 : balColor }]}>
+          {balLabel}
+        </Text>
+        <Text style={[
+          lcStyles.balAmt,
+          { color: balColor },
+          isSettled && lcStyles.balAmtSettled
+        ]}>
+          {balAmount}
+        </Text>
       </View>
     </TouchableOpacity>
   );
 }
 
-// ─── Empty state ──────────────────────────────────────────────────────────────
-function EmptyGroups({ onCreate }) {
+const lcStyles = StyleSheet.create({
+  card: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SP.md,
+    backgroundColor: C.surface,
+    paddingHorizontal: SP.base,
+    paddingVertical: SP.md,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderTopWidth: 1,
+    borderColor: C.border,
+  },
+  cardFirst: {
+    borderTopLeftRadius: R.xl,
+    borderTopRightRadius: R.xl,
+    borderTopWidth: 1,
+  },
+  cardLast: {
+    borderBottomLeftRadius: R.xl,
+    borderBottomRightRadius: R.xl,
+    borderBottomWidth: 1,
+  },
+  info: { flex: 1, gap: 3 },
+  name: {
+    fontSize: F.md,
+    fontWeight: W.bold,
+    color: C.text,
+    letterSpacing: -0.2,
+  },
+  metaRow: { flexDirection: "row", alignItems: "center", gap: 5 },
+  meta: { fontSize: F.xs, color: C.text3 },
+  dot: { fontSize: F.xs, color: C.text3 },
+balCol:  { alignItems: 'flex-end', gap: 2 },
+  balLabel:{ fontSize: F.xs, fontWeight: W.bold, letterSpacing: 0.8, textTransform: 'uppercase' },
+  balAmt:  { fontSize: F.xl, fontWeight: W.bold, letterSpacing: -0.5 },
+  balAmtSettled: { fontSize: F.sm, fontWeight: W.bold, letterSpacing: 0.5 },
+});
+
+
+
+// ─── Sort pill ────────────────────────────────────────────────────────────────
+
+function SortDropdown({ sort, onSort, visible, onOpen, onClose }) {
+  const current = SORT_OPTIONS.find((o) => o.key === sort) || SORT_OPTIONS[0];
   return (
-    <View style={styles.emptyWrap}>
-      <View style={styles.emptyIconBox}>
-        <Icons.usersPlus size={40} color={C.primary} />
-      </View>
-      <Text style={styles.emptyTitle}>No groups yet</Text>
-      <Text style={styles.emptySub}>
-        Create a group to start splitting expenses with friends, family, or colleagues.
-      </Text>
-      <TouchableOpacity style={styles.emptyBtn} onPress={onCreate} activeOpacity={0.85}>
-        <Icons.plus size={16} color="#fff" />
-        <Text style={styles.emptyBtnText}>Create your first group</Text>
+    <View>
+      <TouchableOpacity
+        style={sdStyles.trigger}
+        onPress={onOpen}
+        activeOpacity={0.75}
+      >
+        <Icons.settlements size={13} color={C.primary} />
+        <Text style={sdStyles.triggerPrefix}>Sort</Text>
+        <Icons.chevronRight
+          size={12}
+          color={C.text3}
+          style={{ transform: [{ rotate: visible ? "-90deg" : "90deg" }] }}
+        />
       </TouchableOpacity>
+
+      <Modal
+        visible={visible}
+        transparent
+        animationType="fade"
+        onRequestClose={onClose}
+      >
+        <TouchableOpacity
+          style={StyleSheet.absoluteFill}
+          onPress={onClose}
+          activeOpacity={1}
+        />
+        <View style={sdStyles.menu}>
+          <Text style={sdStyles.menuHeader}>SORT BY</Text>
+          {SORT_OPTIONS.map((o, i) => {
+            const active = sort === o.key;
+            const Icon = Icons[o.icon];
+            return (
+              <TouchableOpacity
+                key={o.key}
+                style={[
+                  sdStyles.menuItem,
+                  i < SORT_OPTIONS.length - 1 && sdStyles.menuItemBorder,
+                ]}
+                onPress={() => {
+                  onSort(o.key);
+                  onClose();
+                }}
+                activeOpacity={0.7}
+              >
+                <View
+                  style={[
+                    sdStyles.menuIconBox,
+                    active && { backgroundColor: C.primaryLo },
+                  ]}
+                >
+                  <Icon size={14} color={active ? C.primary : C.text3} />
+                </View>
+                <Text
+                  style={[
+                    sdStyles.menuLabel,
+                    active && { color: C.primary, fontWeight: W.bold },
+                  ]}
+                >
+                  {o.label}
+                </Text>
+                {active && <Icons.check size={14} color={C.primary} />}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </Modal>
     </View>
   );
 }
 
+const sdStyles = StyleSheet.create({
+  trigger: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: C.surface2,
+    borderRadius: R.full,
+    borderWidth: 1,
+    borderColor: C.border,
+    paddingHorizontal: SP.md,
+    paddingVertical: 7,
+  },
+  triggerPrefix: { fontSize: F.sm, color: C.primary, fontWeight: W.bold },
+  menu: {
+    position: "absolute",
+    top: 120,
+    right: SP.base,
+    backgroundColor: C.surface,
+    borderRadius: R.xl,
+    borderWidth: 1,
+    borderColor: C.border2,
+    minWidth: 220,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 16,
+    overflow: "hidden",
+  },
+  menuHeader: {
+    fontSize: F.xs,
+    fontWeight: W.heavy,
+    color: C.text3,
+    letterSpacing: 0.9,
+    textTransform: "uppercase",
+    paddingHorizontal: SP.md,
+    paddingVertical: SP.sm + 2,
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
+  },
+  menuItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SP.md,
+    paddingHorizontal: SP.md,
+    paddingVertical: 13,
+  },
+  menuItemBorder: { borderBottomWidth: 1, borderBottomColor: C.border },
+  menuIconBox: {
+    width: 28,
+    height: 28,
+    borderRadius: R.sm,
+    backgroundColor: C.surface3,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  menuLabel: { flex: 1, fontSize: F.md, color: C.text2, fontWeight: W.medium },
+});
+
+// ─── Search bar ───────────────────────────────────────────────────────────────
+function SearchBar({ value, onChange }) {
+  return (
+    <View style={sbStyles.wrap}>
+      <Icons.search size={15} color={C.text3} />
+      <TextInput
+        style={sbStyles.input}
+        value={value}
+        onChangeText={onChange}
+        placeholder="Search groups…"
+        placeholderTextColor={C.text3}
+        autoCapitalize="none"
+        autoCorrect={false}
+        returnKeyType="search"
+      />
+      {value.length > 0 && (
+        <TouchableOpacity
+          onPress={() => onChange("")}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Icons.close size={14} color={C.text3} />
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+}
+
+const sbStyles = StyleSheet.create({
+  wrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SP.sm,
+    backgroundColor: C.surface2,
+    borderRadius: R.full,
+    borderWidth: 1,
+    borderColor: C.border,
+    paddingHorizontal: SP.md,
+    paddingVertical: Platform.OS === "ios" ? 11 : 8,
+    flex: 1,
+  },
+  input: {
+    flex: 1,
+    fontSize: F.md,
+    color: C.text,
+    padding: 0,
+  },
+});
+
+// ─── Empty state ──────────────────────────────────────────────────────────────
+function EmptyGroups({ onCreate, isFiltered }) {
+  return (
+    <View style={emStyles.wrap}>
+      <View style={emStyles.iconBox}>
+        {isFiltered ? (
+          <Icons.search size={38} color={C.text3} />
+        ) : (
+          <Icons.usersPlus size={38} color={C.primary} />
+        )}
+      </View>
+      <Text style={emStyles.title}>
+        {isFiltered ? "No results found" : "No groups yet"}
+      </Text>
+      <Text style={emStyles.sub}>
+        {isFiltered
+          ? "Try a different search term or clear the filter."
+          : "Create a group to start splitting expenses with friends, family, or colleagues."}
+      </Text>
+      {!isFiltered && (
+        <TouchableOpacity
+          style={emStyles.btn}
+          onPress={onCreate}
+          activeOpacity={0.85}
+        >
+          <Icons.plus size={15} color="#fff" />
+          <Text style={emStyles.btnText}>Create your first group</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+}
+
+const emStyles = StyleSheet.create({
+  wrap: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: SP.xl,
+    paddingTop: SP.xxl,
+  },
+  iconBox: {
+    width: 80,
+    height: 80,
+    borderRadius: R.xxl,
+    backgroundColor: C.surface2,
+    borderWidth: 1,
+    borderColor: C.border,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: SP.lg,
+  },
+  title: {
+    fontSize: F.xl,
+    fontWeight: W.bold,
+    color: C.text,
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  sub: {
+    fontSize: F.base,
+    color: C.text2,
+    textAlign: "center",
+    lineHeight: 21,
+    marginBottom: SP.xl,
+  },
+  btn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: C.primary,
+    borderRadius: R.full,
+    paddingHorizontal: SP.xl,
+    paddingVertical: 12,
+  },
+  btnText: { fontSize: F.md, fontWeight: W.bold, color: "#fff" },
+});
+
+// ─── Header ───────────────────────────────────────────────────────────────────
+function Header({ groupCount, onCreate, onJoin }) {
+  return (
+    <View style={hStyles.wrap}>
+      <View>
+        <Text style={hStyles.title}>Groups</Text>
+        {groupCount > 0 && (
+          <Text style={hStyles.sub}>
+            {groupCount} active {groupCount === 1 ? "group" : "groups"}
+          </Text>
+        )}
+      </View>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: SP.sm }}>
+        <TouchableOpacity
+          style={hStyles.joinBtn}
+          onPress={onJoin}
+          activeOpacity={0.75}
+        >
+          <Icons.externalLink size={13} color={C.primary} />
+          <Text style={hStyles.joinText}>Join</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={hStyles.createBtn}
+          onPress={onCreate}
+          activeOpacity={0.85}
+        >
+          <Icons.plus size={14} color="#fff" />
+          <Text style={hStyles.createText}>New Group</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+const hStyles = StyleSheet.create({
+  wrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: SP.base,
+    paddingTop: SP.md,
+    paddingBottom: SP.md,
+  },
+  title: {
+    fontSize: F.xxl,
+    fontWeight: W.heavy,
+    color: C.text,
+    letterSpacing: -0.6,
+  },
+  sub: { fontSize: F.sm, color: C.text3, marginTop: 1, fontWeight: W.medium },
+  joinBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: C.primaryLo,
+    borderWidth: 1,
+    borderColor: C.primary + "40",
+    borderRadius: R.full,
+    paddingHorizontal: SP.md,
+    paddingVertical: 7,
+  },
+  joinText: { fontSize: F.sm, fontWeight: W.bold, color: C.primary },
+  createBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: C.primary,
+    borderRadius: R.full,
+    paddingHorizontal: SP.md,
+    paddingVertical: 8,
+  },
+  createText: { fontSize: F.sm, fontWeight: W.bold, color: "#fff" },
+});
+
+// ─── Summary strip ────────────────────────────────────────────────────────────
+function SummaryStrip({ groups }) {
+  let totalOwe = 0,
+    totalOwed = 0;
+  groups.forEach((g) => {
+    const b = parseFloat(g.my_balance || 0);
+    if (b > 0) totalOwed += b;
+    else totalOwe += Math.abs(b);
+  });
+
+  if (totalOwe === 0 && totalOwed === 0) return null;
+
+  return (
+    <View style={ssStyles.wrap}>
+      {totalOwed > 0 && (
+        <View
+          style={[
+            ssStyles.tile,
+            { backgroundColor: C.successLo, borderColor: C.success + "25" },
+          ]}
+        >
+          <Text style={[ssStyles.tileLabel, { color: C.success }]}>
+            TOTAL OWED TO YOU
+          </Text>
+          <Text style={[ssStyles.tileAmt, { color: C.success }]}>
+            ₹{totalOwed.toFixed(2)}
+          </Text>
+        </View>
+      )}
+      {totalOwe > 0 && (
+        <View
+          style={[
+            ssStyles.tile,
+            { backgroundColor: C.dangerLo, borderColor: C.danger + "25" },
+          ]}
+        >
+          <Text style={[ssStyles.tileLabel, { color: C.danger }]}>
+            TOTAL YOU OWE
+          </Text>
+          <Text style={[ssStyles.tileAmt, { color: C.danger }]}>
+            ₹{totalOwe.toFixed(2)}
+          </Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
+const ssStyles = StyleSheet.create({
+  wrap: {
+    flexDirection: "row",
+    gap: SP.sm,
+    paddingHorizontal: SP.base,
+    paddingBottom: SP.md,
+  },
+  tile: {
+    flex: 1,
+    borderRadius: R.lg,
+    borderWidth: 1,
+    paddingHorizontal: SP.md,
+    paddingVertical: SP.sm + 2,
+    gap: 2,
+  },
+  tileLabel: {
+    fontSize: F.xs,
+    fontWeight: W.heavy,
+    letterSpacing: 0.7,
+    textTransform: "uppercase",
+  },
+  tileAmt: { fontSize: F.xl, fontWeight: W.heavy, letterSpacing: -0.4 },
+});
+
 // ─── Create Group Modal ───────────────────────────────────────────────────────
 function CreateGroupModal({ visible, onClose, onCreated }) {
   const { user } = useAuth();
-  const [name,          setName]          = useState('');
-  const [loading,       setLoading]       = useState(false);
-  const [error,         setError]         = useState('');
-  const [allUsers,      setAllUsers]      = useState([]);
-  const [picked,        setPicked]        = useState([]);
+  const [name, setName] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [allUsers, setAllUsers] = useState([]);
+  const [picked, setPicked] = useState([]);
   const [fetchingUsers, setFetchingUsers] = useState(false);
-  const [search,        setSearch]        = useState('');
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     if (visible) {
-      setName(''); setError(''); setPicked([]); setSearch('');
+      setName("");
+      setError("");
+      setPicked([]);
+      setSearch("");
       loadUsers();
     }
   }, [visible]);
@@ -187,9 +762,8 @@ function CreateGroupModal({ visible, onClose, onCreated }) {
   async function loadUsers() {
     setFetchingUsers(true);
     try {
-      const { data } = await client.get('/users/');
-      const filtered = data.filter(u => u.user_id !== user?.user_id);
-      setAllUsers(filtered);
+      const { data } = await client.get("/users/");
+      setAllUsers(data.filter((u) => u.user_id !== user?.user_id));
     } catch {
       setAllUsers([]);
     } finally {
@@ -197,14 +771,15 @@ function CreateGroupModal({ visible, onClose, onCreated }) {
     }
   }
 
-  function toggleUser(userId) {
-    setPicked(prev =>
-      prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]
-    );
+  function toggleUser(id) {
+    setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
   }
 
   async function handleCreate() {
-    if (!name.trim()) { setError('Group name is required'); return; }
+    if (!name.trim()) {
+      setError("Group name is required");
+      return;
+    }
     setLoading(true);
     try {
       const ids = [...new Set([user.user_id, ...picked])];
@@ -215,10 +790,13 @@ function CreateGroupModal({ visible, onClose, onCreated }) {
       onCreated({ ...data, group_name: name.trim() });
       onClose();
     } catch (err) {
-      const detail = err.response?.data?.detail;
+      const d = err.response?.data?.detail;
       setError(
-        Array.isArray(detail) ? detail[0]?.msg :
-        typeof detail === 'string' ? detail : 'Failed to create group'
+        Array.isArray(d)
+          ? d[0]?.msg
+          : typeof d === "string"
+            ? d
+            : "Failed to create group",
       );
     } finally {
       setLoading(false);
@@ -226,47 +804,64 @@ function CreateGroupModal({ visible, onClose, onCreated }) {
   }
 
   const filteredUsers = search.trim()
-    ? allUsers.filter(u => (u.name || u.user_name || '').toLowerCase().includes(search.toLowerCase()))
+    ? allUsers.filter((u) =>
+        (u.name || u.user_name || "")
+          .toLowerCase()
+          .includes(search.toLowerCase()),
+      )
     : allUsers;
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent
+      onRequestClose={onClose}
+    >
       <KeyboardAvoidingView
-        style={styles.modalOverlay}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={modalS.overlay}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        <TouchableOpacity style={StyleSheet.absoluteFill} onPress={onClose} activeOpacity={1} />
-
-        <View style={styles.modalSheet}>
-          {/* Handle bar */}
-          <View style={styles.modalHandle} />
-
-          {/* Header */}
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>New Group</Text>
-            <TouchableOpacity
-              style={styles.modalClose}
-              onPress={onClose}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Icons.close size={20} color={C.text2} />
+        <TouchableOpacity
+          style={StyleSheet.absoluteFill}
+          onPress={onClose}
+          activeOpacity={1}
+        />
+        <View style={modalS.sheet}>
+          <View style={modalS.handle} />
+          <View style={modalS.header}>
+            <Text style={modalS.title}>New Group</Text>
+            <TouchableOpacity style={modalS.closeBtn} onPress={onClose}>
+              <Icons.close size={18} color={C.text2} />
             </TouchableOpacity>
           </View>
 
           <ScrollView
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
-            contentContainerStyle={styles.modalScroll}
+            contentContainerStyle={{
+              padding: SP.base,
+              gap: SP.lg,
+              paddingBottom: SP.lg,
+            }}
           >
             {/* Group name */}
-            <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>GROUP NAME</Text>
-              <View style={[styles.fieldInput, error && !name.trim() && styles.fieldInputError]}>
-                <Icons.groups size={16} color={C.text3} />
+            <View style={{ gap: SP.sm }}>
+              <Text style={modalS.label}>GROUP NAME</Text>
+              <View
+                style={[
+                  modalS.field,
+                  error && !name.trim() && modalS.fieldError,
+                ]}
+              >
+                <Icons.groups size={15} color={C.text3} />
                 <TextInput
-                  style={styles.fieldTextInput}
+                  style={modalS.fieldInput}
                   value={name}
-                  onChangeText={v => { setName(v); setError(''); }}
+                  onChangeText={(v) => {
+                    setName(v);
+                    setError("");
+                  }}
                   placeholder="e.g. Goa Trip 2025"
                   placeholderTextColor={C.text3}
                   autoCapitalize="words"
@@ -275,31 +870,38 @@ function CreateGroupModal({ visible, onClose, onCreated }) {
               </View>
             </View>
 
-            {/* Error */}
             {!!error && (
-              <View style={styles.errorBanner}>
-                <Icons.check size={13} color={C.danger} />
-                <Text style={styles.errorText}>{error}</Text>
+              <View style={modalS.errBanner}>
+                <Text style={modalS.errText}>{error}</Text>
               </View>
             )}
 
             {/* Members */}
-            <View style={styles.fieldGroup}>
-              <View style={styles.membersHeader}>
-                <Text style={styles.fieldLabel}>ADD MEMBERS</Text>
+            <View style={{ gap: SP.sm }}>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <Text style={modalS.label}>ADD MEMBERS</Text>
                 {picked.length > 0 && (
-                  <View style={styles.pickedBadge}>
-                    <Text style={styles.pickedBadgeText}>{picked.length} selected</Text>
+                  <View style={modalS.pickedBadge}>
+                    <Text style={modalS.pickedBadgeText}>
+                      {picked.length} selected
+                    </Text>
                   </View>
                 )}
               </View>
-              <Text style={styles.membersSub}>You're included automatically.</Text>
+              <Text style={modalS.labelSub}>
+                You're included automatically.
+              </Text>
 
-              {/* Search */}
-              <View style={styles.memberSearch}>
-                <Icons.search size={14} color={C.text3} />
+              <View style={modalS.search}>
+                <Icons.search size={13} color={C.text3} />
                 <TextInput
-                  style={styles.memberSearchInput}
+                  style={modalS.searchInput}
                   value={search}
                   onChangeText={setSearch}
                   placeholder="Search members…"
@@ -309,37 +911,69 @@ function CreateGroupModal({ visible, onClose, onCreated }) {
               </View>
 
               {fetchingUsers ? (
-                <View style={styles.membersLoading}>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 8,
+                    paddingVertical: SP.md,
+                  }}
+                >
                   <ActivityIndicator color={C.primary} size="small" />
-                  <Text style={styles.membersLoadingText}>Finding users…</Text>
+                  <Text style={{ fontSize: F.sm, color: C.text3 }}>
+                    Finding users…
+                  </Text>
                 </View>
               ) : filteredUsers.length === 0 ? (
-                <Text style={styles.membersEmpty}>
-                  {search ? 'No users match that search.' : 'No other users found.'}
+                <Text
+                  style={{
+                    fontSize: F.sm,
+                    color: C.text3,
+                    textAlign: "center",
+                    paddingVertical: SP.md,
+                  }}
+                >
+                  {search ? "No matches found." : "No other users found."}
                 </Text>
               ) : (
-                <View style={styles.memberList}>
-                  {filteredUsers.map(u => {
-                    const isSelected = picked.includes(u.user_id);
-                    const displayName = u.name || u.user_name || 'User';
+                <View style={{ gap: SP.xs }}>
+                  {filteredUsers.map((u) => {
+                    const sel = picked.includes(u.user_id);
+                    const name = u.name || u.user_name || "User";
                     return (
                       <TouchableOpacity
                         key={u.user_id}
-                        style={[styles.memberItem, isSelected && styles.memberItemActive]}
+                        style={[
+                          modalS.memberItem,
+                          sel && modalS.memberItemActive,
+                        ]}
                         onPress={() => toggleUser(u.user_id)}
                         activeOpacity={0.7}
                       >
-                        <MemberAvatar name={displayName} size={36} />
+                        <MemberBubble
+                          name={name}
+                          size={36}
+                          borderColor={C.surface2}
+                        />
                         <View style={{ flex: 1 }}>
-                          <Text style={[styles.memberItemName, isSelected && { color: C.text }]}>
-                            {displayName}
+                          <Text
+                            style={[
+                              modalS.memberName,
+                              sel && { color: C.text },
+                            ]}
+                          >
+                            {name}
                           </Text>
                           {u.email && (
-                            <Text style={styles.memberItemEmail} numberOfLines={1}>{u.email}</Text>
+                            <Text style={modalS.memberEmail} numberOfLines={1}>
+                              {u.email}
+                            </Text>
                           )}
                         </View>
-                        <View style={[styles.memberCheckbox, isSelected && styles.memberCheckboxOn]}>
-                          {isSelected && <Icons.check size={12} color="#fff" />}
+                        <View
+                          style={[modalS.checkbox, sel && modalS.checkboxOn]}
+                        >
+                          {sel && <Icons.check size={11} color="#fff" />}
                         </View>
                       </TouchableOpacity>
                     );
@@ -349,23 +983,26 @@ function CreateGroupModal({ visible, onClose, onCreated }) {
             </View>
           </ScrollView>
 
-          {/* Footer actions */}
-          <View style={styles.modalFooter}>
-            <TouchableOpacity style={styles.cancelBtn} onPress={onClose}>
-              <Text style={styles.cancelBtnText}>Cancel</Text>
+          <View style={modalS.footer}>
+            <TouchableOpacity style={modalS.cancelBtn} onPress={onClose}>
+              <Text style={modalS.cancelText}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.createBtn, (!name.trim() || loading) && { opacity: 0.55 }]}
+              style={[
+                modalS.createBtn,
+                (!name.trim() || loading) && { opacity: 0.5 },
+              ]}
               onPress={handleCreate}
               disabled={!name.trim() || loading}
             >
-              {loading
-                ? <ActivityIndicator color="#fff" size="small" />
-                : <>
-                    <Icons.plus size={16} color="#fff" />
-                    <Text style={styles.createBtnText}>Create Group</Text>
-                  </>
-              }
+              {loading ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <>
+                  <Icons.plus size={15} color="#fff" />
+                  <Text style={modalS.createText}>Create Group</Text>
+                </>
+              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -374,153 +1011,219 @@ function CreateGroupModal({ visible, onClose, onCreated }) {
   );
 }
 
-// ─── Header ───────────────────────────────────────────────────────────────────
-function Header({ groupCount, onCreate, onJoin }) {
-  return (
-    <View style={styles.header}>
-      <View>
-        <Text style={styles.headerTitle}>Groups</Text>
-        {groupCount > 0 && (
-          <Text style={styles.headerSub}>{groupCount} active {groupCount === 1 ? 'group' : 'groups'}</Text>
-        )}
-      </View>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: SP.sm }}>
-        
-        {/* 🔥 The New Web-Style Blue Pill Join Button */}
-        <TouchableOpacity
-          style={styles.headerJoinBtn}
-          onPress={onJoin}
-          activeOpacity={0.7}
-        >
-          <Icons.externalLink size={14} color={C.primary} />
-          <Text style={styles.headerJoinText}>Join</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.createHeaderBtn} onPress={onCreate} activeOpacity={0.85}>
-          <Icons.plus size={15} color="#fff" />
-          <Text style={styles.createHeaderBtnText}>New Group</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-}
-
+// ─── Join Group Modal ─────────────────────────────────────────────────────────
 function JoinGroupModal({ visible, onClose, onJoined }) {
   const { user } = useAuth();
-  const [input,     setInput]     = useState('');
-  const [step,      setStep]      = useState('input'); // input | preview | joining | success
+  const [input, setInput] = useState("");
+  const [step, setStep] = useState("input");
   const [groupInfo, setGroupInfo] = useState(null);
-  const [error,     setError]     = useState('');
-  const [loading,   setLoading]   = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (visible) { setInput(''); setStep('input'); setGroupInfo(null); setError(''); }
+    if (visible) {
+      setInput("");
+      setStep("input");
+      setGroupInfo(null);
+      setError("");
+    }
   }, [visible]);
 
-  // Accept full URL (https://splitease.app/join/TOKEN) or bare token
   function extractToken(text) {
-    const match = text.match(/\/join\/([a-zA-Z0-9_-]+)/);
-    return match ? match[1] : text.trim();
+    const m = text.match(/\/join\/([a-zA-Z0-9_-]+)/);
+    return m ? m[1] : text.trim();
   }
 
   async function handlePreview() {
     const token = extractToken(input);
-    if (!token) { setError('Please enter a valid invite link or token.'); return; }
-    setLoading(true); setError('');
+    if (!token) {
+      setError("Please enter a valid invite link or token.");
+      return;
+    }
+    setLoading(true);
+    setError("");
     try {
       const { data } = await client.get(`/invite/${token}`);
       setGroupInfo({ ...data, token });
-      setStep('preview');
+      setStep("preview");
     } catch (err) {
-      setError(err.response?.data?.detail || 'Invalid or expired invite link.');
+      setError(err.response?.data?.detail || "Invalid or expired invite link.");
     } finally {
       setLoading(false);
     }
   }
 
   async function handleJoin() {
-    setStep('joining');
+    setStep("joining");
     try {
       const { data } = await client.post(`/invite/${groupInfo.token}/join`);
-      setStep('success');
-      setTimeout(() => { onJoined(data); onClose(); }, 1200);
+      setStep("success");
+      setTimeout(() => {
+        onJoined(data);
+        onClose();
+      }, 1200);
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to join group.');
-      setStep('preview');
+      setError(err.response?.data?.detail || "Failed to join group.");
+      setStep("preview");
     }
   }
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent
+      onRequestClose={onClose}
+    >
       <KeyboardAvoidingView
-        style={styles.modalOverlay}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={modalS.overlay}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        <TouchableOpacity style={StyleSheet.absoluteFill} onPress={onClose} activeOpacity={1} />
-        <View style={styles.modalSheet}>
-          <View style={styles.modalHandle} />
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Join via Invite</Text>
-            <TouchableOpacity style={styles.modalClose} onPress={onClose}>
-              <Icons.close size={20} color={C.text2} />
+        <TouchableOpacity
+          style={StyleSheet.absoluteFill}
+          onPress={onClose}
+          activeOpacity={1}
+        />
+        <View style={modalS.sheet}>
+          <View style={modalS.handle} />
+          <View style={modalS.header}>
+            <Text style={modalS.title}>Join via Invite</Text>
+            <TouchableOpacity style={modalS.closeBtn} onPress={onClose}>
+              <Icons.close size={18} color={C.text2} />
             </TouchableOpacity>
           </View>
 
-          <View style={{ padding: SP.base, gap: SP.base, paddingBottom: SP.xl }}>
-
-            {/* ── Success ── */}
-            {step === 'success' && (
-              <View style={joinStyles.successBox}>
-                <View style={joinStyles.successIcon}>
+          <View style={{ padding: SP.base, gap: SP.md, paddingBottom: SP.xxl }}>
+            {step === "success" && (
+              <View
+                style={{
+                  alignItems: "center",
+                  paddingVertical: SP.xxl,
+                  gap: SP.md,
+                }}
+              >
+                <View
+                  style={{
+                    width: 72,
+                    height: 72,
+                    borderRadius: 22,
+                    backgroundColor: C.successLo,
+                    borderWidth: 1,
+                    borderColor: C.success + "40",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
                   <Icons.checkCircle size={32} color={C.success} />
                 </View>
-                <Text style={joinStyles.successTitle}>You're in!</Text>
-                <Text style={joinStyles.successSub}>Redirecting to group…</Text>
+                <Text
+                  style={{ fontSize: F.xl, fontWeight: W.bold, color: C.text }}
+                >
+                  You're in!
+                </Text>
+                <Text style={{ fontSize: F.base, color: C.text3 }}>
+                  Redirecting to group…
+                </Text>
               </View>
             )}
 
-            {/* ── Preview / Joining ── */}
-            {(step === 'preview' || step === 'joining') && (
+            {(step === "preview" || step === "joining") && (
               <>
-                <View style={joinStyles.previewCard}>
-                  <Text style={joinStyles.previewMeta}>YOU'RE JOINING</Text>
-                  <Text style={joinStyles.previewName}>{groupInfo?.group_name}</Text>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                <View
+                  style={{
+                    backgroundColor: C.surface2,
+                    borderRadius: R.lg,
+                    borderWidth: 1,
+                    borderColor: C.border,
+                    padding: SP.base,
+                    gap: 4,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: F.xs,
+                      fontWeight: W.heavy,
+                      color: C.text3,
+                      letterSpacing: 0.8,
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    YOU'RE JOINING
+                  </Text>
+                  <Text
+                    style={{
+                      fontSize: F.xl,
+                      fontWeight: W.heavy,
+                      color: C.text,
+                      letterSpacing: -0.3,
+                    }}
+                  >
+                    {groupInfo?.group_name}
+                  </Text>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 6,
+                      marginTop: 4,
+                    }}
+                  >
                     <Icons.users size={12} color={C.text3} />
-                    <Text style={joinStyles.previewAs}>Joining as {user?.name}</Text>
+                    <Text style={{ fontSize: F.sm, color: C.text3 }}>
+                      Joining as {user?.name}
+                    </Text>
                   </View>
                 </View>
-                {!!error && <Text style={joinStyles.errorText}>{error}</Text>}
-                <View style={styles.modalFooter}>
-                  <TouchableOpacity style={[styles.cancelBtn, { flex: 1 }]} onPress={() => setStep('input')}>
-                    <Text style={styles.cancelBtnText}>← Back</Text>
+                {!!error && (
+                  <Text style={{ fontSize: F.sm, color: C.danger }}>
+                    {error}
+                  </Text>
+                )}
+                <View style={modalS.footer}>
+                  <TouchableOpacity
+                    style={[modalS.cancelBtn, { flex: 1 }]}
+                    onPress={() => setStep("input")}
+                  >
+                    <Text style={modalS.cancelText}>← Back</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.createBtn, { flex: 2 }, step === 'joining' && { opacity: 0.7 }]}
+                    style={[
+                      modalS.createBtn,
+                      { flex: 2 },
+                      step === "joining" && { opacity: 0.7 },
+                    ]}
                     onPress={handleJoin}
-                    disabled={step === 'joining'}
+                    disabled={step === "joining"}
                   >
-                    {step === 'joining'
-                      ? <ActivityIndicator color="#fff" size="small" />
-                      : <><Icons.check size={15} color="#fff" /><Text style={styles.createBtnText}>Join Group</Text></>
-                    }
+                    {step === "joining" ? (
+                      <ActivityIndicator color="#fff" size="small" />
+                    ) : (
+                      <>
+                        <Icons.check size={14} color="#fff" />
+                        <Text style={modalS.createText}>Join Group</Text>
+                      </>
+                    )}
                   </TouchableOpacity>
                 </View>
               </>
             )}
 
-            {/* ── Input ── */}
-            {step === 'input' && (
+            {step === "input" && (
               <>
-                <Text style={joinStyles.hint}>
+                <Text
+                  style={{ fontSize: F.sm, color: C.text2, lineHeight: 19 }}
+                >
                   Paste the invite link or token shared by a group member.
                 </Text>
-                <View style={[styles.fieldInput, !!error && styles.fieldInputError]}>
-                  <Icons.externalLink size={16} color={C.text3} />
+                <View style={[modalS.field, !!error && modalS.fieldError]}>
+                  <Icons.externalLink size={15} color={C.text3} />
                   <TextInput
-                    style={styles.fieldTextInput}
+                    style={modalS.fieldInput}
                     value={input}
-                    onChangeText={v => { setInput(v); setError(''); }}
+                    onChangeText={(v) => {
+                      setInput(v);
+                      setError("");
+                    }}
                     placeholder="Paste link or token…"
                     placeholderTextColor={C.text3}
                     autoCapitalize="none"
@@ -528,20 +1231,38 @@ function JoinGroupModal({ visible, onClose, onJoined }) {
                     autoFocus
                   />
                 </View>
-                {!!error && <Text style={joinStyles.errorText}>{error}</Text>}
-                <View style={styles.modalFooter}>
-                  <TouchableOpacity style={[styles.cancelBtn, { flex: 1 }]} onPress={onClose}>
-                    <Text style={styles.cancelBtnText}>Cancel</Text>
+                {!!error && (
+                  <Text
+                    style={{
+                      fontSize: F.sm,
+                      color: C.danger,
+                      marginTop: -SP.sm,
+                    }}
+                  >
+                    {error}
+                  </Text>
+                )}
+                <View style={modalS.footer}>
+                  <TouchableOpacity
+                    style={[modalS.cancelBtn, { flex: 1 }]}
+                    onPress={onClose}
+                  >
+                    <Text style={modalS.cancelText}>Cancel</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.createBtn, { flex: 2 }, (!input.trim() || loading) && { opacity: 0.55 }]}
+                    style={[
+                      modalS.createBtn,
+                      { flex: 2 },
+                      (!input.trim() || loading) && { opacity: 0.5 },
+                    ]}
                     onPress={handlePreview}
                     disabled={!input.trim() || loading}
                   >
-                    {loading
-                      ? <ActivityIndicator color="#fff" size="small" />
-                      : <Text style={styles.createBtnText}>Continue →</Text>
-                    }
+                    {loading ? (
+                      <ActivityIndicator color="#fff" size="small" />
+                    ) : (
+                      <Text style={modalS.createText}>Continue →</Text>
+                    )}
                   </TouchableOpacity>
                 </View>
               </>
@@ -553,38 +1274,431 @@ function JoinGroupModal({ visible, onClose, onJoined }) {
   );
 }
 
-// JoinGroupModal-specific styles (small, no overlap with existing styles)
-const joinStyles = StyleSheet.create({
-  hint:         { fontSize: F.sm, color: C.text2, lineHeight: 19 },
-  errorText:    { fontSize: F.sm, color: C.danger, marginTop: -SP.sm },
-  previewCard:  {
-    backgroundColor: C.surface2, borderRadius: R.lg,
-    borderWidth: 1, borderColor: C.border,
-    padding: SP.base, gap: 4,
+// Shared modal styles
+const modalS = StyleSheet.create({
+  overlay: { flex: 1, justifyContent: "flex-end" },
+  sheet: {
+    backgroundColor: C.surface,
+    borderTopLeftRadius: R.xxl,
+    borderTopRightRadius: R.xxl,
+    borderTopWidth: 1,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderColor: C.border,
+    maxHeight: "90%",
+    paddingBottom: Platform.OS === "ios" ? 34 : 0,
   },
-  previewMeta:  { fontSize: F.xs, fontWeight: W.bold, color: C.text3, letterSpacing: 0.8, textTransform: 'uppercase' },
-  previewName:  { fontSize: F.xl, fontWeight: W.heavy, color: C.text, letterSpacing: -0.3 },
-  previewAs:    { fontSize: F.sm, color: C.text3 },
-  successBox:   { alignItems: 'center', paddingVertical: SP.xl, gap: SP.md },
-  successIcon:  {
-    width: 72, height: 72, borderRadius: 22,
-    backgroundColor: C.successLo, borderWidth: 1, borderColor: C.success + '40',
-    alignItems: 'center', justifyContent: 'center',
+  handle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: C.border2,
+    alignSelf: "center",
+    marginTop: 12,
+    marginBottom: 4,
   },
-  successTitle: { fontSize: F.xl, fontWeight: W.bold, color: C.text },
-  successSub:   { fontSize: F.base, color: C.text3 },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: SP.base,
+    paddingVertical: SP.md,
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
+  },
+  title: { fontSize: F.xl, fontWeight: W.bold, color: C.text },
+  closeBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: R.full,
+    backgroundColor: C.surface3,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  label: {
+    fontSize: F.xs,
+    fontWeight: W.heavy,
+    color: C.text3,
+    letterSpacing: 0.9,
+    textTransform: "uppercase",
+  },
+  labelSub: { fontSize: F.xs, color: C.text3, marginTop: -2 },
+  field: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SP.sm,
+    backgroundColor: C.surface2,
+    borderRadius: R.lg,
+    borderWidth: 1,
+    borderColor: C.border2,
+    paddingHorizontal: SP.md,
+    paddingVertical: 13,
+  },
+  fieldError: { borderColor: C.danger + "60" },
+  fieldInput: { flex: 1, fontSize: F.md, color: C.text, padding: 0 },
+  search: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: C.surface2,
+    borderRadius: R.md,
+    borderWidth: 1,
+    borderColor: C.border,
+    paddingHorizontal: SP.md,
+    paddingVertical: 9,
+  },
+  searchInput: { flex: 1, fontSize: F.base, color: C.text, padding: 0 },
+  memberItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SP.md,
+    backgroundColor: C.surface2,
+    borderRadius: R.lg,
+    borderWidth: 1,
+    borderColor: C.border,
+    paddingHorizontal: SP.md,
+    paddingVertical: SP.md,
+  },
+  memberItemActive: {
+    borderColor: C.primary + "50",
+    backgroundColor: C.primaryLo,
+  },
+  memberName: { fontSize: F.md, fontWeight: W.semibold, color: C.text2 },
+  memberEmail: { fontSize: F.xs, color: C.text3, marginTop: 2 },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: R.sm,
+    borderWidth: 2,
+    borderColor: C.border2,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  checkboxOn: { backgroundColor: C.primary, borderColor: C.primary },
+  pickedBadge: {
+    backgroundColor: C.primaryLo,
+    borderRadius: R.full,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  pickedBadgeText: { fontSize: F.xs, fontWeight: W.bold, color: C.primary },
+  errBanner: {
+    backgroundColor: C.dangerLo,
+    borderRadius: R.md,
+    borderWidth: 1,
+    borderColor: C.danger + "30",
+    paddingHorizontal: SP.md,
+    paddingVertical: 10,
+    marginTop: -SP.sm,
+  },
+  errText: { fontSize: F.sm, color: C.danger },
+  footer: {
+    flexDirection: "row",
+    gap: SP.sm,
+    paddingHorizontal: SP.base,
+    paddingVertical: SP.md,
+    borderTopWidth: 1,
+    borderTopColor: C.border,
+  },
+  cancelBtn: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: R.lg,
+    backgroundColor: C.surface2,
+    borderWidth: 1,
+    borderColor: C.border,
+    alignItems: "center",
+  },
+  cancelText: { fontSize: F.md, fontWeight: W.semibold, color: C.text2 },
+  createBtn: {
+    flex: 2,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    paddingVertical: 13,
+    borderRadius: R.lg,
+    backgroundColor: C.primary,
+  },
+  createText: { fontSize: F.md, fontWeight: W.bold, color: "#fff" },
 });
 
-// ─── Main screen ──────────────────────────────────────────────────────────────
+// ─── Sort / filter helpers ────────────────────────────────────────────────────
+
+const SORT_OPTIONS = [
+  { key: "activity", label: "Last Activity", icon: "clockPending" },
+  { key: "name_asc", label: "Name (A → Z)", icon: "sortOldest" },
+  { key: "name_desc", label: "Name (Z → A)", icon: "sortNewest" },
+  { key: "created_new", label: "Newest First", icon: "sortNewest" },
+  { key: "created_old", label: "Oldest First", icon: "sortOldest" },
+  { key: "balance", label: "Balance", icon: "settlements" },
+];
+
+function applySort(groups, sort) {
+  const copy = [...groups];
+  switch (sort) {
+    case "name_asc":
+      copy.sort((a, b) =>
+        (a.group_name || "").localeCompare(b.group_name || ""),
+      );
+      break;
+    case "name_desc":
+      copy.sort((a, b) =>
+        (b.group_name || "").localeCompare(a.group_name || ""),
+      );
+      break;
+    case "created_new":
+      copy.sort(
+        (a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0),
+      );
+      break;
+    case "created_old":
+      copy.sort(
+        (a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0),
+      );
+      break;
+    case "balance":
+      copy.sort(
+        (a, b) =>
+          Math.abs(parseFloat(b.my_balance || 0)) -
+          Math.abs(parseFloat(a.my_balance || 0)),
+      );
+      break;
+    default: // activity
+      copy.sort((a, b) => {
+        const ta = new Date(
+          a.last_activity || a.updated_at || a.created_at || 0,
+        ).getTime();
+        const tb = new Date(
+          b.last_activity || b.updated_at || b.created_at || 0,
+        ).getTime();
+        return tb - ta;
+      });
+  }
+  return copy;
+}
+
+// ─── Main Screen ──────────────────────────────────────────────────────────────
+// ─── Delete Confirm Modal ─────────────────────────────────────────────────────
+function DeleteConfirmModal({ group, onConfirm, onCancel }) {
+  if (!group) return null;
+  return (
+    <Modal visible transparent animationType="fade" onRequestClose={onCancel}>
+      <View style={dcStyles.overlay}>
+        <View style={dcStyles.box}>
+          <Text style={dcStyles.title}>Delete Group</Text>
+          <Text style={dcStyles.body}>
+            {group._forbidden || group._error
+              ? group._message
+              : group._force
+              ? `${group._message}\n\nDelete anyway? This cannot be undone.`
+              : <>Delete <Text style={{ color: C.text, fontWeight: W.bold }}>"{group.group_name}"</Text>? All expenses and payments will be permanently removed.</>
+            }
+          </Text>
+          <View style={dcStyles.row}>
+            <TouchableOpacity style={dcStyles.cancelBtn} onPress={onCancel} activeOpacity={0.75}>
+              <Text style={dcStyles.cancelText}>Cancel</Text>
+            </TouchableOpacity>
+            {group._forbidden || group._error ? (
+              <TouchableOpacity style={dcStyles.okBtn} onPress={onConfirm} activeOpacity={0.8}>
+                <Text style={dcStyles.deleteText}>OK</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity style={dcStyles.deleteBtn} onPress={onConfirm} activeOpacity={0.8}>
+                <Text style={dcStyles.deleteText}>{group._force ? "Delete Anyway" : "Delete"}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+const dcStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: SP.xl,
+  },
+  box: {
+    backgroundColor: C.surface2,
+    borderRadius: R.xl,
+    borderWidth: 1,
+    borderColor: C.border,
+    paddingHorizontal: SP.xl,
+    paddingVertical: SP.lg,
+    width: "100%",
+    gap: SP.sm,
+    alignItems: "center",
+  },
+  iconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: R.md,
+    backgroundColor: C.surface3,
+    borderWidth: 1,
+    borderColor: C.border2,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 2,
+  },
+  title: {
+    fontSize: F.lg,
+    fontWeight: W.bold,
+    color: C.text,
+    letterSpacing: -0.2,
+  },
+  body: {
+    fontSize: F.sm,
+    color: C.text2,
+    textAlign: "center",
+    lineHeight: 20,
+    paddingHorizontal: SP.sm,
+  },
+  row: {
+    flexDirection: "row",
+    gap: SP.sm,
+    marginTop: SP.sm,
+    width: "100%",
+  },
+  cancelBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: R.lg,
+    backgroundColor: C.surface3,
+    borderWidth: 1,
+    borderColor: C.border2,
+    alignItems: "center",
+  },
+  cancelText: { fontSize: F.base, fontWeight: W.medium, color: C.text2 },
+  okBtn: {
+    flex: 2,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+    borderRadius: R.lg,
+    backgroundColor: C.surface3,
+    borderWidth: 1,
+    borderColor: C.border2,
+  },
+  deleteBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 12,
+    borderRadius: R.lg,
+    backgroundColor: "rgba(239,68,68,0.15)",
+    borderWidth: 1,
+    borderColor: "rgba(239,68,68,0.30)",
+  },
+  deleteText: { fontSize: F.base, fontWeight: W.semibold, color: C.danger },
+});
+
+// const dcStyles = StyleSheet.create({
+//   overlay: {
+//     flex: 1,
+//     backgroundColor: "rgba(0,0,0,0.65)",
+//     alignItems: "center",
+//     justifyContent: "center",
+//     paddingHorizontal: SP.xl,
+//   },
+//   box: {
+//     backgroundColor: C.surface,
+//     borderRadius: R.xl,
+//     borderWidth: 1,
+//     borderColor: C.border2,
+//     padding: SP.xl,
+//     width: "100%",
+//     gap: SP.md,
+//     alignItems: "center",
+//   },
+//   iconWrap: {
+//     width: 52,
+//     height: 52,
+//     borderRadius: R.lg,
+//     backgroundColor: C.dangerLo,
+//     borderWidth: 1,
+//     borderColor: C.danger + "30",
+//     alignItems: "center",
+//     justifyContent: "center",
+//     marginBottom: SP.xs,
+//   },
+//   title: {
+//     fontSize: F.xl,
+//     fontWeight: W.bold,
+//     color: C.text,
+//     letterSpacing: -0.3,
+//   },
+//   body: {
+//     fontSize: F.base,
+//     color: C.text2,
+//     textAlign: "center",
+//     lineHeight: 21,
+//   },
+//   row: {
+//     flexDirection: "row",
+//     gap: SP.sm,
+//     marginTop: SP.xs,
+//     width: "100%",
+//   },
+//   cancelBtn: {
+//     flex: 1,
+//     paddingVertical: 13,
+//     borderRadius: R.lg,
+//     backgroundColor: C.surface2,
+//     borderWidth: 1,
+//     borderColor: C.border,
+//     alignItems: "center",
+//   },
+//   cancelText: { fontSize: F.md, fontWeight: W.semibold, color: C.text2 },
+//   // deleteBtn: {
+//   //   flex: 1,
+//   okBtn: {
+//     flex: 2,
+//     flexDirection: "row",
+//     alignItems: "center",
+//     justifyContent: "center",
+//     paddingVertical: 13,
+//     borderRadius: R.lg,
+//     backgroundColor: C.primary,
+//   },
+//   deleteBtn: {
+//     flex: 1,
+//     flexDirection: "row",
+//     alignItems: "center",
+//     justifyContent: "center",
+//     gap: 7,
+//     paddingVertical: 13,
+//     borderRadius: R.lg,
+//     backgroundColor: C.danger,
+//   },
+//   deleteText: { fontSize: F.md, fontWeight: W.bold, color: "#fff" },
+// });
+
+// ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function GroupsScreen() {
-  const navigation   = useNavigation();
-  const route        = useRoute();
-  const [groups,     setGroups]     = useState([]);
-  const [loading,    setLoading]    = useState(true);
+  const { user }     = useAuth();
+  const navigation = useNavigation();
+  const route = useRoute();
+  const [groups, setGroups] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
-  const [longPressGroup, setLongPressGroup] = useState(null);
+  // const [longPress, setLongPress] = useState(null);
+  const [longPress, setLongPress] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+
+  // UI state
+  const [search, setSearch] = useState("");
+  const [sort, setSort] = useState("activity");
+  const [showSortMenu, setShowSortMenu] = useState(false);
 
   useEffect(() => {
     if (route.params?.openCreate) {
@@ -596,106 +1710,186 @@ export default function GroupsScreen() {
   const load = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
-    
     try {
-      // 1. Fetch the user's groups
       const { data: fetchedGroups } = await client.get(ENDPOINTS.groups);
-      
-      if (!fetchedGroups || fetchedGroups.length === 0) {
+      if (!fetchedGroups?.length) {
         setGroups([]);
         return;
       }
 
-      // 2. Extract the group IDs
-      const groupIds = fetchedGroups.map(g => g.group_id);
-
-      // 3. Hit your new bulk endpoint to get the members
-      // (Make sure ENDPOINTS.membersBulk exists in your api constants, or use the literal string)
-      const { data: membersBulkData } = await client.post('/groups/members-bulk', {
-        group_ids: groupIds
+      const groupIds = fetchedGroups.map((g) => g.group_id);
+      const { data: membersBulk } = await client.post("/groups/members-bulk", {
+        group_ids: groupIds,
       });
 
-      // 4. Stitch the members into the group objects
-      const fullyLoadedGroups = fetchedGroups.map(group => {
-        const groupMembers = membersBulkData[group.group_id] || [];
-        return {
-          ...group,
-          members: groupMembers,
-          member_count: groupMembers.length
-        };
+      // const merged = fetchedGroups.map((g) => ({
+      //   ...g,
+      //   members: membersBulk[g.group_id] || [],
+      //   member_count: (membersBulk[g.group_id] || []).length,
+      // }));
+
+      // // check
+      // //   setGroups(merged);
+      // // } catch (err) {
+      // //   console.error('Failed to load groups:', err);
+      // setGroups(merged);
+      // if (merged.length > 0) {
+      //   console.log("[Groups] first group keys:", Object.keys(merged[0]));
+      //   console.log("[Groups] first group balance fields:", {
+      //     my_balance: merged[0].my_balance,
+      //     balance: merged[0].balance,
+      //     net_balance: merged[0].net_balance,
+      //     user_balance: merged[0].user_balance,
+      //   });
+      // }
+      const merged = fetchedGroups.map((g) => ({
+        ...g,
+        members: membersBulk[g.group_id] || [],
+        member_count: (membersBulk[g.group_id] || []).length,
+      }));
+
+      // Fetch balances for all groups in parallel
+      const balanceResults = await Promise.allSettled(
+        merged.map((g) =>
+          client.get(`/settlements/${g.group_id}`).then((r) => ({
+            group_id: g.group_id,
+            data: r.data,
+          }))
+        )
+      );
+
+      const balanceMap = {};
+      balanceResults.forEach((result) => {
+        if (result.status === "fulfilled") {
+          const { group_id, data } = result.value;
+          // data is an array of { user_id, net_balance } or similar
+          // find the current user's balance
+          const mine = Array.isArray(data)
+            ? data.find((row) => row.user_id === user?.user_id)
+            : null;
+          balanceMap[group_id] = mine ? parseFloat(mine.net_balance ?? mine.balance ?? 0) : 0;
+        }
       });
 
-      setGroups(fullyLoadedGroups);
+      const withBalances = merged.map((g) => ({
+        ...g,
+        my_balance: balanceMap[g.group_id] ?? g.my_balance ?? null,
+      }));
 
+      setGroups(withBalances);
     } catch (err) {
-      console.error("Failed to load groups or members:", err);
-      Alert.alert('Error', 'Failed to load groups');
+      console.error("Failed to load groups:", err);
+      Alert.alert("Error", "Failed to load groups");
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   }, []);
 
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load]),
+  );
+
   async function handleDeleteGroup(group, force = false) {
     try {
-      await client.delete(`/groups/${group.group_id}${force ? '?force=true' : ''}`);
-      setGroups(prev => prev.filter(g => g.group_id !== group.group_id));
-      setLongPressGroup(null);
+      await client.delete(
+        `/groups/${group.group_id}${force ? "?force=true" : ""}`,
+      );
+      setGroups((p) => p.filter((g) => g.group_id !== group.group_id));
+      setLongPress(null);
     } catch (err) {
-      const s      = err?.response?.status;
-      const detail = err?.response?.data?.detail;
-      setLongPressGroup(null);
+      const s = err?.response?.status;
+      const d = err?.response?.data?.detail;
+      setLongPress(null);
       if (s === 409) {
-        Alert.alert(
-          'Unsettled Balances',
-          `${detail}\n\nDelete anyway? This cannot be undone.`,
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Delete Anyway', style: 'destructive', onPress: () => handleDeleteGroup(group, true) },
-          ]
-        );
+        // Re-use the modal but with a force-confirm callback
+        setDeleteTarget({ ...group, _force: true, _message: d });
       } else if (s === 403) {
-        Alert.alert('Not Allowed', detail || 'Only the group creator or admin can delete this group.');
+        setDeleteTarget({ ...group, _forbidden: true, _message: d });
       } else {
-        Alert.alert('Error', detail || 'Failed to delete group.');
+        setDeleteTarget({ ...group, _error: true, _message: d || "Failed to delete group." });
       }
     }
   }
 
-  useFocusEffect(useCallback(() => { load(); }, [load]));
-
   function handleCreated(newGroup) {
-    // setGroups(prev => [newGroup, ...prev]);
-    load(); // let load() rebuild the full list with members
-    navigation.navigate('GroupDetail', {
-      groupId:   newGroup.group_id,
+    load();
+    navigation.navigate("GroupDetail", {
+      groupId: newGroup.group_id,
       groupName: newGroup.group_name,
+    });
+  }
+
+  // Derived data
+  const filtered = groups.filter(
+    (g) =>
+      !search.trim() ||
+      (g.group_name || "").toLowerCase().includes(search.toLowerCase()),
+  );
+  const sorted = applySort(filtered, sort);
+
+  function navigateGroup(g) {
+    navigation.navigate("GroupDetail", {
+      groupId: g.group_id,
+      groupName: g.group_name,
     });
   }
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
-        <Header groupCount={groups.length} onCreate={() => setShowCreate(true)} onJoin={() => setShowJoin(true)} />
-        <View style={styles.loadingWrap}>
+      <SafeAreaView style={s.safe} edges={["top", "left", "right"]}>
+        <Header
+          groupCount={0}
+          onCreate={() => setShowCreate(true)}
+          onJoin={() => setShowJoin(true)}
+        />
+        <View
+          style={{
+            flex: 1,
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 12,
+          }}
+        >
           <ActivityIndicator color={C.primary} size="large" />
-          <Text style={styles.loadingText}>Loading groups…</Text>
+          <Text style={{ fontSize: F.base, color: C.text3 }}>
+            Loading groups…
+          </Text>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
-      <Header groupCount={groups.length} onCreate={() => setShowCreate(true)} onJoin={() => setShowJoin(true)} />
+    <SafeAreaView style={s.safe} edges={["top", "left", "right"]}>
+      <Header
+        groupCount={groups.length}
+        onCreate={() => setShowCreate(true)}
+        onJoin={() => setShowJoin(true)}
+      />
 
+      {/* Search + sort row */}
+      <View style={s.toolRow}>
+        <SearchBar value={search} onChange={setSearch} />
+        <SortDropdown
+          sort={sort}
+          onSort={setSort}
+          visible={showSortMenu}
+          onOpen={() => setShowSortMenu(true)}
+          onClose={() => setShowSortMenu(false)}
+        />
+      </View>
+
+      {/* Summary strip (only when not filtering) */}
+      {!search && groups.length > 0 && <SummaryStrip groups={groups} />}
+
+      {/* List */}
       <FlatList
-        data={groups}
-        keyExtractor={g => String(g.group_id)}
-        contentContainerStyle={[
-          styles.list,
-          groups.length === 0 && styles.listEmpty,
-        ]}
+        data={sorted}
+        keyExtractor={(g) => String(g.group_id)}
+        contentContainerStyle={[s.list, sorted.length === 0 && s.listEmpty]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -706,310 +1900,193 @@ export default function GroupsScreen() {
           />
         }
         ListEmptyComponent={
-          <EmptyGroups onCreate={() => setShowCreate(true)} />
+          <EmptyGroups
+            onCreate={() => setShowCreate(true)}
+            isFiltered={!!search.trim()}
+          />
         }
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
-        renderItem={({ item }) => (
-          <GroupCard
+        renderItem={({ item, index }) => (
+          <ListCard
             group={item}
-            onPress={() => navigation.navigate('GroupDetail', {
-              groupId:   item.group_id,
-              groupName: item.group_name,
-            })}
-            onLongPress={() => setLongPressGroup(item)}
+            onPress={() => navigateGroup(item)}
+            onLongPress={() => setLongPress(item)}
+            isFirst={index === 0}
+            isLast={index === sorted.length - 1}
           />
         )}
       />
 
+      {/* Modals */}
       <CreateGroupModal
         visible={showCreate}
         onClose={() => setShowCreate(false)}
         onCreated={handleCreated}
       />
-
-      {/* ── Long-press action sheet ── */}
-      <Modal
-        visible={!!longPressGroup}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setLongPressGroup(null)}
-      >
-        <TouchableOpacity
-          style={StyleSheet.absoluteFill}
-          onPress={() => setLongPressGroup(null)}
-          activeOpacity={1}
-        >
-          <View style={styles.actionSheet}>
-            <View style={styles.modalHandle} />
-            <Text style={styles.actionSheetName} numberOfLines={1}>
-              {longPressGroup?.group_name}
-            </Text>
-            <TouchableOpacity
-              style={styles.actionSheetItem}
-              onPress={() => {
-                const g = longPressGroup;
-                setLongPressGroup(null);
-                navigation.navigate('GroupDetail', { groupId: g.group_id, groupName: g.group_name });
-              }}
-            >
-              <Icons.groups size={18} color={C.primary} />
-              <Text style={[styles.actionSheetItemText, { color: C.primary }]}>Open Group</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.actionSheetItem}
-              onPress={() => {
-                const g = longPressGroup;
-                setLongPressGroup(null);
-                Alert.alert(
-                  'Delete Group',
-                  `Delete "${g?.group_name}"? All expenses and payments will be permanently removed.`,
-                  [
-                    { text: 'Cancel', style: 'cancel' },
-                    { text: 'Delete', style: 'destructive', onPress: () => handleDeleteGroup(g) },
-                  ]
-                );
-              }}
-            >
-              <Icons.trash size={18} color={C.danger} />
-              <Text style={[styles.actionSheetItemText, { color: C.danger }]}>Delete Group</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.actionSheetItem, { borderTopWidth: 1, borderTopColor: C.border, marginTop: SP.xs }]}
-              onPress={() => setLongPressGroup(null)}
-            >
-              <Text style={[styles.actionSheetItemText, { color: C.text2, flex: 1, textAlign: 'center' }]}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
-
       <JoinGroupModal
         visible={showJoin}
         onClose={() => setShowJoin(false)}
         onJoined={(data) => {
-          load(); // refresh groups list
-          navigation.navigate('GroupDetail', {
-            groupId:   data.group_id,
+          load();
+          navigation.navigate("GroupDetail", {
+            groupId: data.group_id,
             groupName: data.group_name || data.message,
           });
+        }}
+      />
+
+      {/* Long-press action sheet */}
+      <Modal
+        visible={!!longPress}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setLongPress(null)}
+      >
+        <TouchableOpacity
+          style={StyleSheet.absoluteFill}
+          onPress={() => setLongPress(null)}
+          activeOpacity={1}
+        >
+          <View style={s.sheet}>
+            <View style={modalS.handle} />
+            <View
+              style={{
+                paddingHorizontal: SP.base,
+                paddingVertical: SP.md,
+                borderBottomWidth: 1,
+                borderBottomColor: C.border,
+              }}
+            >
+              <Text
+                style={{ fontSize: F.md, fontWeight: W.bold, color: C.text }}
+                numberOfLines={1}
+              >
+                {longPress?.group_name}
+              </Text>
+              <Text style={{ fontSize: F.xs, color: C.text3, marginTop: 2 }}>
+                {longPress?.members?.length || 0} members
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              style={s.sheetItem}
+              onPress={() => {
+                const g = longPress;
+                setLongPress(null);
+                navigateGroup(g);
+              }}
+            >
+              <View style={[s.sheetIconBox, { backgroundColor: C.primaryLo }]}>
+                <Icons.groups size={16} color={C.primary} />
+              </View>
+              <Text style={[s.sheetItemText, { color: C.text }]}>
+                Open Group
+              </Text>
+              <Icons.chevronRight size={14} color={C.text3} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={s.sheetItem}
+              onPress={() => {
+                const g = longPress;
+                setLongPress(null);
+                setDeleteTarget(g);
+              }}
+            >
+              <View style={[s.sheetIconBox, { backgroundColor: C.dangerLo }]}>
+                <Icons.trash size={16} color={C.danger} />
+              </View>
+              <Text style={[s.sheetItemText, { color: C.danger }]}>
+                Delete Group
+              </Text>
+              <Icons.chevronRight size={14} color={C.text3} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                s.sheetItem,
+                {
+                  borderTopWidth: 1,
+                  borderTopColor: C.border,
+                  marginTop: SP.xs,
+                },
+              ]}
+              onPress={() => setLongPress(null)}
+            >
+              <Text
+                style={{
+                  fontSize: F.md,
+                  fontWeight: W.semibold,
+                  color: C.text2,
+                  flex: 1,
+                  textAlign: "center",
+                }}
+              >
+                Cancel
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    <DeleteConfirmModal
+        group={deleteTarget}
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={() => {
+          if (deleteTarget?._forbidden || deleteTarget?._error) {
+            setDeleteTarget(null);
+            return;
+          }
+          const g = deleteTarget;
+          setDeleteTarget(null);
+          handleDeleteGroup(g, !!g._force);
         }}
       />
     </SafeAreaView>
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
-const styles = StyleSheet.create({
+// ─── Root styles ──────────────────────────────────────────────────────────────
+const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: C.bg },
-
-  // Header
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: SP.base, paddingTop: SP.md, paddingBottom: SP.base,
-    borderBottomWidth: 1, borderBottomColor: C.border,
+  toolRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SP.sm,
+    paddingHorizontal: SP.base,
+    paddingBottom: SP.md,
   },
-  headerTitle: { fontSize: F.xxl, fontWeight: W.heavy, color: C.text, letterSpacing: -0.5 },
-  headerSub:   { fontSize: F.sm, color: C.text3, marginTop: 2, fontWeight: W.medium },
-  createHeaderBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: C.primary, borderRadius: R.full,
-    paddingHorizontal: SP.md, paddingVertical: 8,
-  },
-  createHeaderBtnText: { fontSize: F.sm, fontWeight: W.bold, color: '#fff' },
 
-  // List
-  list:      { padding: SP.base, paddingBottom: 40 },
+  list: { paddingHorizontal: SP.base, paddingBottom: 40 },
   listEmpty: { flex: 1 },
-  separator: { height: SP.sm },
 
-  // Card
-  card: {
-    backgroundColor: C.surface, borderRadius: R.xl,
-    borderWidth: 1, borderColor: C.border,
-    overflow: 'hidden',
-  },
-  cardInner: {
-    flexDirection: 'row', alignItems: 'center',
-    padding: SP.base, gap: SP.md,
-  },
-  cardBody:     { flex: 1, gap: 4 },
-  cardName:     { fontSize: F.lg, fontWeight: W.bold, color: C.text, letterSpacing: -0.2 },
-  cardMeta:     { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  cardMetaText: { fontSize: F.xs, color: C.text3, fontWeight: W.medium },
-  cardDot:      { fontSize: F.xs, color: C.text3 },
-
-  // Stacked member avatars
-  memberStack: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
-  memberStackItem: { borderRadius: 999 },
-  memberStackMore: {
-    width: 22, height: 22, borderRadius: 11,
-    backgroundColor: C.surface3, borderWidth: 2, borderColor: C.surface,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  memberStackMoreText: { fontSize: 8, color: C.text2, fontWeight: W.bold },
-
-  // Empty state
-  emptyWrap: {
-    flex: 1, alignItems: 'center', justifyContent: 'center',
-    paddingHorizontal: SP.xl, paddingTop: 0,
-  },
-  emptyIconBox: {
-    width: 88, height: 88, borderRadius: R.xxl,
-    backgroundColor: C.primaryLo, borderWidth: 1, borderColor: C.primaryMd,
-    alignItems: 'center', justifyContent: 'center', marginBottom: SP.lg,
-  },
-  emptyTitle: { fontSize: F.xl, fontWeight: W.bold, color: C.text, marginBottom: 8, textAlign: 'center' },
-  emptySub:   { fontSize: F.base, color: C.text2, textAlign: 'center', lineHeight: 21, marginBottom: SP.xl },
-  emptyBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: C.primary, borderRadius: R.full,
-    paddingHorizontal: SP.xl, paddingVertical: 13,
-  },
-  emptyBtnText: { fontSize: F.md, fontWeight: W.bold, color: '#fff' },
-
-  // Loading
-  loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
-  loadingText: { fontSize: F.base, color: C.text3 },
-
-  // Modal
-  modalOverlay: { flex: 1, justifyContent: 'flex-end' },
-  modalSheet: {
-    backgroundColor: C.surface, borderTopLeftRadius: R.xxl, borderTopRightRadius: R.xxl,
-    borderTopWidth: 1, borderLeftWidth: 1, borderRightWidth: 1, borderColor: C.border,
-    maxHeight: '90%',
-    paddingBottom: Platform.OS === 'ios' ? 34 : 0,
-  },
-  modalHandle: {
-    width: 36, height: 4, borderRadius: 2, backgroundColor: C.border2,
-    alignSelf: 'center', marginTop: 12, marginBottom: 4,
-  },
-  modalHeader: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: SP.base, paddingVertical: SP.md,
-    borderBottomWidth: 1, borderBottomColor: C.border,
-  },
-  modalTitle: { fontSize: F.xl, fontWeight: W.bold, color: C.text },
-  modalClose: {
-    width: 32, height: 32, borderRadius: R.full,
-    backgroundColor: C.surface3, alignItems: 'center', justifyContent: 'center',
-  },
-  modalScroll: { padding: SP.base, gap: SP.lg, paddingBottom: SP.lg },
-
-  // Form fields
-  fieldGroup:  { gap: SP.sm },
-  fieldLabel: {
-    fontSize: F.xs, fontWeight: W.bold, color: C.text3,
-    letterSpacing: 0.9, textTransform: 'uppercase',
-  },
-  fieldInput: {
-    flexDirection: 'row', alignItems: 'center', gap: SP.sm,
-    backgroundColor: C.surface2, borderRadius: R.lg,
-    borderWidth: 1, borderColor: C.border2,
-    paddingHorizontal: SP.md, paddingVertical: 13,
-  },
-  fieldInputError: { borderColor: C.danger + '60' },
-  fieldTextInput: {
-    flex: 1, fontSize: F.md, color: C.text, padding: 0,
-  },
-
-  // Error
-  errorBanner: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: C.dangerLo, borderRadius: R.md,
-    borderWidth: 1, borderColor: C.danger + '30',
-    paddingHorizontal: SP.md, paddingVertical: 10,
-    marginTop: -SP.sm,
-  },
-  errorText: { fontSize: F.sm, color: C.danger, flex: 1 },
-
-  // Members section
-  membersHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  membersSub:    { fontSize: F.xs, color: C.text3, marginTop: -4 },
-  pickedBadge:   { backgroundColor: C.primaryLo, borderRadius: R.full, paddingHorizontal: 8, paddingVertical: 3 },
-  pickedBadgeText: { fontSize: F.xs, fontWeight: W.bold, color: C.primary },
-
-  memberSearch: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: C.surface2, borderRadius: R.md,
-    borderWidth: 1, borderColor: C.border,
-    paddingHorizontal: SP.md, paddingVertical: 9,
-  },
-  memberSearchInput: { flex: 1, fontSize: F.base, color: C.text, padding: 0 },
-
-  membersLoading:     { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: SP.md },
-  membersLoadingText: { fontSize: F.sm, color: C.text3 },
-  membersEmpty:       { fontSize: F.sm, color: C.text3, paddingVertical: SP.md, textAlign: 'center' },
-
-  memberList: { gap: SP.xs },
-  memberItem: {
-    flexDirection: 'row', alignItems: 'center', gap: SP.md,
-    backgroundColor: C.surface2, borderRadius: R.lg,
-    borderWidth: 1, borderColor: C.border,
-    paddingHorizontal: SP.md, paddingVertical: SP.md,
-  },
-  memberItemActive:  { borderColor: C.primary + '50', backgroundColor: C.primaryLo },
-  memberItemName:    { fontSize: F.md, fontWeight: W.semibold, color: C.text2 },
-  memberItemEmail:   { fontSize: F.xs, color: C.text3, marginTop: 2 },
-  memberCheckbox: {
-    width: 22, height: 22, borderRadius: R.sm,
-    borderWidth: 2, borderColor: C.border2,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  memberCheckboxOn: { backgroundColor: C.primary, borderColor: C.primary },
-
-  // Footer
-  modalFooter: {
-    flexDirection: 'row', gap: SP.sm,
-    paddingHorizontal: SP.base, paddingVertical: SP.md,
-    borderTopWidth: 1, borderTopColor: C.border,
-  },
-  cancelBtn: {
-    flex: 1, paddingVertical: 13, borderRadius: R.lg,
-    backgroundColor: C.surface2, borderWidth: 1, borderColor: C.border,
-    alignItems: 'center',
-  },
-  cancelBtnText: { fontSize: F.md, fontWeight: W.semibold, color: C.text2 },
-  createBtn: {
-    flex: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 7, paddingVertical: 13, borderRadius: R.lg,
-    backgroundColor: C.primary,
-  },
-  createBtnText: { fontSize: F.md, fontWeight: W.bold, color: '#fff' },
-
-  actionSheet: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
+  // Action sheet
+  sheet: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
     backgroundColor: C.surface,
-    borderTopLeftRadius: R.xxl, borderTopRightRadius: R.xxl,
-    borderTopWidth: 1, borderLeftWidth: 1, borderRightWidth: 1, borderColor: C.border,
-    paddingBottom: Platform.OS === 'ios' ? 34 : 16,
+    borderTopLeftRadius: R.xxl,
+    borderTopRightRadius: R.xxl,
+    borderTopWidth: 1,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderColor: C.border,
+    paddingBottom: Platform.OS === "ios" ? 34 : 16,
     paddingTop: 4,
   },
-  actionSheetName: {
-    fontSize: F.md, fontWeight: W.semibold, color: C.text2,
-    paddingHorizontal: SP.base, paddingVertical: SP.md,
-    borderBottomWidth: 1, borderBottomColor: C.border,
+  sheetItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SP.md,
+    paddingHorizontal: SP.base,
+    paddingVertical: SP.md,
   },
-  actionSheetItem: {
-    flexDirection: 'row', alignItems: 'center', gap: SP.md,
-    paddingHorizontal: SP.base, paddingVertical: SP.base,
+  sheetIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: R.md,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  actionSheetItemText: { fontSize: F.md, fontWeight: W.semibold },
-
-  // ─── Header Join Pill ───
-  headerJoinBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: C.primaryLo,            
-    borderWidth: 1,
-    borderColor: C.primary + '40',                
-    borderRadius: R.full,                    
-    paddingHorizontal: 12,
-    paddingVertical: 7, // Matches the height of the New Group button perfectly
-  },
-  headerJoinText: {
-    fontSize: F.sm,                        
-    fontWeight: W.bold,
-    color: C.primary,
-  },
+  sheetItemText: { flex: 1, fontSize: F.md, fontWeight: W.semibold },
 });

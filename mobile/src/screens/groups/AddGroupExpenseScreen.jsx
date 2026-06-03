@@ -1,4 +1,4 @@
-// SplitEase/mobile/src/screens/expenses/AddExpenseScreen.jsx
+// SplitEase/mobile/src/screens/groups/AddGroupExpenseScreen.jsx
 //
 // Fixed vs original:
 //   • Endpoint: client.post(`/expenses/${groupId}`, ...) — matches web exactly
@@ -45,7 +45,7 @@ function todayStr() {
   return new Date().toISOString().split('T')[0];
 }
 
-export default function AddExpenseScreen() {
+export default function AddGroupExpenseScreen() {
   const { user }   = useAuth();
   const navigation = useNavigation();
   const route      = useRoute();

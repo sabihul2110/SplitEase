@@ -8,13 +8,14 @@ import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   TextInput, Alert, KeyboardAvoidingView, Platform,
-  ActivityIndicator,
+  ActivityIndicator, Modal
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import client from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { Icons } from '../../constants/icons';
+import DatePickerInput from '../../components/common/DatePickerInput';
 
 // ─── Design tokens (same as GroupDetailScreen) ────────────────────────────────
 const C = {
@@ -104,24 +105,6 @@ function AmountInput({ value, onChangeText, placeholder = '0.00' }) {
   );
 }
 
-function DateInput({ value, onChangeText }) {
-  // Simple text input for date — RN DatePicker is platform-specific
-  // Shows YYYY-MM-DD and validates on submit
-  return (
-    <StyledInput
-      value={value}
-      onChangeText={onChangeText}
-      placeholder="YYYY-MM-DD"
-      keyboardType="numbers-and-punctuation"
-      autoCapitalize="none"
-    />
-  );
-}
-
-// function SubmitBtn({ label, color, loading, onPress, disabled }) {
-//   return (
-//     <TouchableOpacity
-//       style={[styles.submitBtn, { backgroundColor: color }, (disabled || loading) && { opacity: 0.55 }]}
 function SubmitBtn({ label, color, loading, onPress, disabled }) {
   return (
     <TouchableOpacity
@@ -189,7 +172,7 @@ function PersonalForm({ onSuccess }) {
         <AmountInput value={amount} onChangeText={v => { setAmount(v); setErrs(p => ({...p, amount: null})); }} />
       </Field>
       <Field label="Date" error={errs.date}>
-        <DateInput value={date} onChangeText={v => { setDate(v); setErrs(p => ({...p, date: null})); }} />
+        <DatePickerInput value={date} onChange={v => { setDate(v); setErrs(p => ({...p, date: null})); }} accentColor={C.danger} />
       </Field>
       <Field label="Note" optional>
         <StyledInput value={note} onChangeText={setNote} placeholder="Any extra details…" multiline />
@@ -239,7 +222,7 @@ function IncomeForm({ onSuccess }) {
         <AmountInput value={amount} onChangeText={v => { setAmount(v); setErrs(p => ({...p, amount: null})); }} />
       </Field>
       <Field label="Date" error={errs.date}>
-        <DateInput value={date} onChangeText={v => { setDate(v); setErrs(p => ({...p, date: null})); }} />
+        <DatePickerInput value={date} onChange={v => { setDate(v); setErrs(p => ({...p, date: null})); }} accentColor={C.success} />
       </Field>
       <Field label="Note" optional>
         <StyledInput value={note} onChangeText={setNote} placeholder="Any extra details…" multiline />
@@ -282,9 +265,6 @@ function LendForm({ onSuccess }) {
 
   return (
     <View style={styles.form}>
-      {/* <View style={styles.infoBox}>
-        <Text style={styles.infoText}>💡 Record money you lent to someone. Track repayments from the Expenses timeline.</Text>
-      </View> */}
       <View style={styles.infoBox}>
         <Icons.inboxZero size={14} color={C.warning} style={{ marginRight: 6 }} />
         {/* or use a generic info/lightbulb — add to icons.jsx: */}
@@ -297,7 +277,7 @@ function LendForm({ onSuccess }) {
         <AmountInput value={amount} onChangeText={v => { setAmount(v); setErrs(p => ({...p, amount: null})); }} />
       </Field>
       <Field label="Date" error={errs.date}>
-        <DateInput value={date} onChangeText={v => { setDate(v); setErrs(p => ({...p, date: null})); }} />
+        <DatePickerInput value={date} onChange={v => { setDate(v); setErrs(p => ({...p, date: null})); }} accentColor={C.warning} />
       </Field>
       <Field label="Note" optional>
         <StyledInput value={note} onChangeText={setNote} placeholder="Purpose, terms…" multiline />
@@ -350,7 +330,7 @@ function BorrowForm({ onSuccess }) {
         <AmountInput value={amount} onChangeText={v => { setAmount(v); setErrs(p => ({...p, amount: null})); }} />
       </Field>
       <Field label="Date" error={errs.date}>
-        <DateInput value={date} onChangeText={v => { setDate(v); setErrs(p => ({...p, date: null})); }} />
+        <DatePickerInput value={date} onChange={v => { setDate(v); setErrs(p => ({...p, date: null})); }} accentColor={C.purple} />
       </Field>
       <Field label="Note" optional>
         <StyledInput value={note} onChangeText={setNote} placeholder="Purpose, terms…" multiline />
@@ -379,18 +359,6 @@ export default function AddEntryScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       {/* Header */}
-      {/* <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          style={styles.backBtn}
-        >
-          <Icons.back size={22} color={C.text2} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Add Entry</Text>
-        <View style={{ width: 32 }} />
-      </View> */}
-
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
@@ -467,15 +435,7 @@ export default function AddEntryScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: C.bg },
 
-  // header: {
-  //   flexDirection: 'row', alignItems: 'center',
-  //   paddingHorizontal: S.base, paddingVertical: 12,
-  //   backgroundColor: C.surface,
-  //   borderBottomWidth: 1, borderBottomColor: C.border,
-  //   gap: 12,
-  // },
   backBtn:     { padding: 2, justifyContent: 'center', alignItems: 'center' },
-  // headerTitle: { flex: 1, fontSize: F.lg, fontWeight: W.bold, color: C.text, textAlign: 'center' },
 
   header: {
     flexDirection: 'row', alignItems: 'center',
@@ -513,14 +473,6 @@ const styles = StyleSheet.create({
   },
   tabLabel: { fontSize: F.xs, fontWeight: W.medium, color: C.text3, textAlign: 'center' },
 
-  // Tab description strip
-  // tabDesc: {
-  //   borderLeftWidth: 3, marginHorizontal: S.base,
-  //   marginTop: S.md, marginBottom: S.xs,
-  //   paddingLeft: S.sm, paddingVertical: 2,
-  // },
-  // tabDescText: { fontSize: F.sm, fontWeight: W.medium },
-
   tabDesc: {
     marginHorizontal: S.base,
     marginTop: S.md, marginBottom: S.xs,
@@ -548,16 +500,6 @@ const styles = StyleSheet.create({
     fontSize: F.md, color: C.text,
   },
 
-  // amountWrap: {
-  //   flexDirection: 'row', alignItems: 'center',
-  //   backgroundColor: C.surface2,
-  //   borderWidth: 1, borderColor: C.border,
-  //   borderRadius: R.md,
-  //   paddingHorizontal: S.md,
-  // },
-  // amountSymbol: { fontSize: F.xl, color: C.text3, marginRight: 6 },
-  // amountInput:  { flex: 1, fontSize: 22, fontWeight: W.heavy, color: C.text, paddingVertical: 10 },
-
   amountWrap: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: C.surface2,
@@ -569,13 +511,6 @@ const styles = StyleSheet.create({
   },
   amountSymbol: { fontSize: 26, color: C.text3, marginRight: 4, fontWeight: W.medium },
   amountInput:  { flex: 1, fontSize: 28, fontWeight: W.heavy, color: C.text, paddingVertical: 12 },
-
-  // infoBox: {
-  //   backgroundColor: C.surface2, borderRadius: R.md,
-  //   borderWidth: 1, borderColor: C.border2,
-  //   padding: S.md,
-  // },
-  // infoText: { fontSize: F.sm, color: C.text2, lineHeight: 18 },
 
   infoBox: {
     flexDirection: 'row',

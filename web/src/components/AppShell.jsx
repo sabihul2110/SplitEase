@@ -25,22 +25,49 @@ const Icons = {
     </svg>
   ),
   // Loans — two people with arrow between (money flow between 2)
+  // loans: (
+  //   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  //     <circle cx="5" cy="8" r="3"/>
+  //     <circle cx="19" cy="8" r="3"/>
+  //     <path d="M9 20H5a2 2 0 0 1-2-2v-1a4 4 0 0 1 4-4h1"/>
+  //     <path d="M15 20h4a2 2 0 0 0 2-2v-1a4 4 0 0 0-4-4h-1"/>
+  //     <path d="M12 12v6m-2-2 2 2 2-2"/>
+  //   </svg>
+  // ),
   loans: (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="5" cy="8" r="3"/>
-      <circle cx="19" cy="8" r="3"/>
-      <path d="M9 20H5a2 2 0 0 1-2-2v-1a4 4 0 0 1 4-4h1"/>
-      <path d="M15 20h4a2 2 0 0 0 2-2v-1a4 4 0 0 0-4-4h-1"/>
-      <path d="M12 12v6m-2-2 2 2 2-2"/>
+    <svg width="16" height="16" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="22" cy="14" r="8" />
+      <path d="M8 35c0-7.7 6.3-14 14-14 7.7 0 14 6.3 14 14v2H8v-2z" />
+      <circle cx="78" cy="62" r="8" />
+      <path d="M64 83c0-7.7 6.3-14 14-14 7.7 0 14 6.3 14 14v2H64v-2z" />
+      <circle cx="50" cy="50" r="16" />
+      {/* Rupee symbol */}
+      <path d="M44 44h12" />
+      <path d="M44 49h10" />
+      <path d="M46 44c6 0 6 5 0 5" />
+      <path d="M46 49l8 9" />
+      {/* Down-right arrow */}
+      <path d="M68 18 Q82 18 82 32" />
+      <polyline points="78,28 82,32 86,28" />
+      {/* Up-left arrow */}
+      <path d="M32 82 Q18 82 18 68" />
+      <polyline points="22,72 18,68 14,72" />
     </svg>
   ),
   // Groups — three people (distinct from Loans which is 2)
   groups: (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="9" cy="7" r="3"/>
-      <path d="M3 20v-1a6 6 0 0 1 6-6"/>
-      <circle cx="17" cy="7" r="3"/>
-      <path d="M21 20v-1a6 6 0 0 0-6-6H9a6 6 0 0 0-6 6v1"/>
+      {/* Left person (behind) */}
+      <circle cx="5" cy="8" r="2" />
+      <path d="M1 19v-1a4 4 0 0 1 4-4h1" />
+
+      {/* Right person (behind) */}
+      <circle cx="19" cy="8" r="2" />
+      <path d="M23 19v-1a4 4 0 0 0-4-4h-1" />
+
+      {/* Center person (front, larger) */}
+      <circle cx="12" cy="7" r="3" />
+      <path d="M6 21v-1a6 6 0 0 1 12 0v1" />
     </svg>
   ),
   // Settlements — two arrows opposite directions
@@ -104,9 +131,9 @@ const Icons = {
 
 const NAV_ITEMS = [
   { to: "/dashboard",   label: "Dashboard",   icon: "dashboard"   },
+  { to: "/groups",      label: "Groups",       icon: "groups"      },
   { to: "/expenses",    label: "Expenses",     icon: "expenses"    },
   { to: "/loans",       label: "Loans",        icon: "loans"       },
-  { to: "/groups",      label: "Groups",       icon: "groups"      },
   { to: "/settlements", label: "Settlements",  icon: "settlements" },
   { to: "/activity",    label: "Activity",     icon: "activity"    },
   { to: "/settings",    label: "Settings",     icon: "settings"    },
@@ -208,79 +235,6 @@ function ProfileDropdown({ user, onLogout }) {
     </div>
   );
 }
-
-// ─────────────────────────────────────────────
-//  AppShell
-// ─────────────────────────────────────────────
-// export default function AppShell({ children, title, actions }) {
-//   const { user, logout } = useAuth();
-//   const navigate = useNavigate();
-
-//   return (
-//     <div className="shell">
-//       <aside className="sidebar">
-//         <div className="sb-logo">
-//           <div className="sb-logo-mark">S</div>
-//           <span className="sb-logo-text">Split<em>Ease</em></span>
-//         </div>
-
-//         <nav className="sb-nav">
-//           {NAV_ITEMS.map(item => (
-//             <NavLink
-//               key={item.to}
-//               to={item.to}
-//               className={({ isActive }) => `sb-item ${isActive ? "active" : ""}`}
-//             >
-//               <span className="sb-icon" style={{ display: "flex" }}>{Icons[item.icon]}</span>
-//               {item.label}
-//             </NavLink>
-//           ))}
-
-//           {user?.role === "admin" && (
-//             <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid var(--border)" }}>
-//               <span className="sb-label">System</span>
-//               <NavLink to="/admin" className={({ isActive }) => `sb-item ${isActive ? "active" : ""}`}>
-//                 <span className="sb-icon" style={{ display: "flex" }}>{Icons.admin}</span>
-//                 Admin Panel
-//               </NavLink>
-//             </div>
-//           )}
-//         </nav>
-
-//         <div className="sb-footer">
-//           <button className="sb-signout" onClick={() => { logout(); navigate("/login"); }}>
-//             <span style={{ display: "flex" }}>{Icons.signout}</span>
-//             Sign out
-//           </button>
-//         </div>
-//       </aside>
-
-//       <div className="shell-main">
-//         <header className="topbar">
-//           <span className="topbar-title">{title}</span>
-//           <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: "auto" }}>
-//             {actions && (
-//               <div style={{ display: "flex", gap: 8, alignItems: "center", marginRight: 4 }}>
-//                 {actions}
-//               </div>
-//             )}
-//             <NotificationBell />
-//             <ProfileDropdown user={user} onLogout={() => { logout(); navigate("/login"); }} />
-//           </div>
-//         </header>
-
-//         <main className="page-area">
-//           <div className="page-inner fade-up">{children}</div>
-//         </main>
-//       </div>
-//     </div>
-//   );
-// }
-
-
-
-
-
 
 export default function AppShell({ children, title, actions }) {
   const { user, logout } = useAuth();

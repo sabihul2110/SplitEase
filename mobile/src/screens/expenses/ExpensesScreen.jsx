@@ -595,16 +595,7 @@ export default function ExpensesScreen() {
         stickyHeaderIndices={[]}
         ListHeaderComponent={
           <>
-            {/* Page sub-title */}
-            {/* <Text style={styles.subtitle}>
-              Financial summary for{" "}
-              <Text style={{ color: COLORS.text2, fontWeight: FONT_WEIGHT.semibold }}>
-                {monthDisplayLabel}
-              </Text>
-            </Text> */}
-
             <View style={{ marginBottom: 20, marginTop: 4 }}>
-              <Text style={styles.pageTitle}>Expenses</Text>
               <Text style={styles.subtitle}>
                 Financial summary for{" "}
                 <Text style={{ color: COLORS.text, fontWeight: FONT_WEIGHT.semibold }}>
@@ -1152,17 +1143,9 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '700',
   },
-
-  pageTitle: {
-    fontSize: 28,
-    fontWeight: FONT_WEIGHT.extrabold,
-    color: COLORS.text,
-    letterSpacing: -0.5,
-    lineHeight: 32,
-  },
   subtitle: {
     fontSize: FONT_SIZE.sm,
     color: COLORS.text3,
-    marginTop: 2,   // tight — subtitle cuddles under title
+    marginTop: 2,
   },
 });

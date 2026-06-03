@@ -1,4 +1,4 @@
-// SplitEase/mobile/src/screens/expenses/AddPaymentScreen.jsx
+// SplitEase/mobile/src/screens/groups/AddGroupPaymentScreen.jsx
 //
 // Rebuilt for Option E settlement architecture:
 //   - Shows unpaid splits from payer → payee
@@ -65,7 +65,7 @@ function MemberAvatar({ name, size = 38 }) {
   );
 }
 
-export default function AddPaymentScreen() {
+export default function AddGroupPaymentScreen() {
   const { user }   = useAuth();
   const navigation = useNavigation();
   const route      = useRoute();

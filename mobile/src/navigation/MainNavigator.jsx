@@ -12,8 +12,8 @@ import DashboardScreen from "../screens/main/DashboardScreen";
 import GroupsScreen from "../screens/groups/GroupsScreen";
 import GroupDetailScreen from "../screens/groups/GroupDetailScreen";
 import ExpensesScreen from "../screens/expenses/ExpensesScreen";
-import AddExpenseScreen from "../screens/expenses/AddExpenseScreen";
-import AddPaymentScreen from "../screens/expenses/AddPaymentScreen";
+import AddGroupExpenseScreen from "../screens/groups/AddGroupExpenseScreen";
+import AddGroupPaymentScreen from "../screens/groups/AddGroupPaymentScreen";
 import AddEntryScreen from "../screens/expenses/AddEntryScreen";
 import LoansScreen from "../screens/loans/LoansScreen";
 import ActivityScreen from "../screens/activity/ActivityScreen";
@@ -29,7 +29,7 @@ function TabIcon({ name, focused }) {
     Dashboard: Icons.dashboard,
     Expenses: Icons.expenses,
     Groups: Icons.groups,
-    Loans: Icons.loans,
+    Loans: Icons.loansRupee,
     More: Icons.more,
   };
   const IconComponent = iconMap[name];
@@ -79,8 +79,8 @@ function GroupsStack() {
     <GroupStack.Navigator screenOptions={{ headerShown: false }}>
       <GroupStack.Screen name="GroupsList" component={GroupsScreen} />
       <GroupStack.Screen name="GroupDetail" component={GroupDetailScreen} />
-      <GroupStack.Screen name="AddExpense" component={AddExpenseScreen} />
-      <GroupStack.Screen name="AddPayment" component={AddPaymentScreen} />
+      <GroupStack.Screen name="AddExpense" component={AddGroupExpenseScreen} />
+      <GroupStack.Screen name="AddPayment" component={AddGroupPaymentScreen} />
     </GroupStack.Navigator>
   );
 }

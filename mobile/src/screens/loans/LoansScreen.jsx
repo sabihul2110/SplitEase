@@ -13,6 +13,7 @@ import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS } from '../../constants
 import { EmptyState, LoadingState } from '../../components/common/ui';
 import ScreenHeader from '../../components/layout/ScreenHeader';
 import { Icons } from '../../constants/icons';
+import DatePickerInput from '../../components/common/DatePickerInput';
 
 function fmt(n) {
   return Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
@@ -172,12 +173,12 @@ function LoanCard({ item, isLent, onRefresh, idx }) {
 }
 
 function AddLoanModal({ visible, onClose, isLent, onSuccess }) {
-  const [personName, setPersonName] = useState('');
-  const [amount,     setAmount]     = useState('');
-  const [date,       setDate]       = useState(new Date().toISOString().split('T')[0]);
-  const [note,       setNote]       = useState('');
-  const [error,      setError]      = useState('');
-  const [saving,     setSaving]     = useState(false);
+  const [personName,  setPersonName]  = useState('');
+  const [amount,      setAmount]      = useState('');
+  const [date,        setDate]        = useState(new Date().toISOString().split('T')[0]);
+  const [note,        setNote]        = useState('');
+  const [error,       setError]       = useState('');
+  const [saving,      setSaving]      = useState(false);
 
   useEffect(() => {
     if (visible) {
@@ -244,7 +245,7 @@ function AddLoanModal({ visible, onClose, isLent, onSuccess }) {
             <Text style={addStyles.title}>{isLent ? 'Record a Loan' : 'Record a Borrow'}</Text>
             <TouchableOpacity style={addStyles.closeBtn} onPress={onClose}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Icons.back size={20} color={COLORS.text2} />
+              <Icons.close size={16} color={COLORS.text2} />
             </TouchableOpacity>
           </View>
 
@@ -295,18 +296,11 @@ function AddLoanModal({ visible, onClose, isLent, onSuccess }) {
             {/* Date */}
             <View style={addStyles.field}>
               <Text style={addStyles.label}>DATE</Text>
-              <View style={addStyles.inputRow}>
-                <Icons.activity size={15} color={COLORS.text3} />
-                <TextInput
-                  style={addStyles.inputText}
-                  value={date}
-                  onChangeText={v => { setDate(v); setError(''); }}
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor={COLORS.text3}
-                  keyboardType="numbers-and-punctuation"
-                  autoCapitalize="none"
-                />
-              </View>
+              <DatePickerInput
+                value={date}
+                onChange={v => { setDate(v); setError(''); }}
+                accentColor={accentColor}
+              />
             </View>
 
             {/* Note */}
@@ -418,7 +412,7 @@ const addStyles = StyleSheet.create({
   },
   cancelBtn: {
     flex: 1, paddingVertical: 13, borderRadius: RADIUS.lg,
-    backgroundColor: COLORS.surface2, borderWidth: 1, borderColor: COLORS.border,
+    backgroundColor: 'transparent', borderWidth: 1, borderColor: COLORS.border2,
     alignItems: 'center',
   },
   cancelText:  { fontSize: FONT_SIZE.md, fontWeight: FONT_WEIGHT.semibold, color: COLORS.text2 },

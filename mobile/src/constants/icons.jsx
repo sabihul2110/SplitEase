@@ -26,21 +26,58 @@ export const Icons = {
       <Line x1="9" y1="17" x2="13" y2="17" />
     </Svg>
   ),
-  loans: ({ size = 24, color = "currentColor" }) => (
-    <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
-      <Circle cx="5" cy="8" r="3" />
-      <Circle cx="19" cy="8" r="3" />
-      <Path d="M9 20H5a2 2 0 0 1-2-2v-1a4 4 0 0 1 4-4h1" />
-      <Path d="M15 20h4a2 2 0 0 0 2-2v-1a4 4 0 0 0-4-4h-1" />
-      <Path d="M12 12v6m-2-2 2 2 2-2" />
-    </Svg>
-  ),
   groups: ({ size = 24, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
-      <Circle cx="9" cy="7" r="3" />
-      <Path d="M3 20v-1a6 6 0 0 1 6-6" />
-      <Circle cx="17" cy="7" r="3" />
-      <Path d="M21 20v-1a6 6 0 0 0-6-6H9a6 6 0 0 0-6 6v1" />
+      {/* Left person (behind) */}
+      <Circle cx="5" cy="8" r="2" />
+      <Path d="M1 19v-1a4 4 0 0 1 4-4h1" />
+
+      {/* Right person (behind) */}
+      <Circle cx="19" cy="8" r="2" />
+      <Path d="M23 19v-1a4 4 0 0 0-4-4h-1" />
+
+      {/* Center person (front, larger) */}
+      <Circle cx="12" cy="7" r="3" />
+      <Path d="M6 21v-1a6 6 0 0 1 12 0v1" />
+    </Svg>
+  ),
+  loansRupee: ({ size = 24, color = "currentColor" }) => (
+    <Svg width={size} height={size} viewBox="0 0 100 100" {...S(color, "3")}>
+      <Circle cx="22" cy="14" r="8" />
+      <Path d="M8 35c0-7.7 6.3-14 14-14 7.7 0 14 6.3 14 14v2H8v-2z" />
+      <Circle cx="78" cy="62" r="8" />
+      <Path d="M64 83c0-7.7 6.3-14 14-14 7.7 0 14 6.3 14 14v2H64v-2z" />
+      <Circle cx="50" cy="50" r="16" />
+      {/* Rupee symbol */}
+      <Path d="M44 44h12" />
+      <Path d="M44 49h10" />
+      <Path d="M46 44c6 0 6 5 0 5" />
+      <Path d="M46 49l8 9" />
+      {/* Down-right arrow */}
+      <Path d="M68 18 Q82 18 82 32" />
+      <Polyline points="78,28 82,32 86,28" />
+      {/* Up-left arrow */}
+      <Path d="M32 82 Q18 82 18 68" />
+      <Polyline points="22,72 18,68 14,72" />
+    </Svg>
+  ),
+  // dollar variant - unused for now.
+  loansDollar: ({ size = 24, color = "currentColor" }) => (
+    <Svg width={size} height={size} viewBox="0 0 100 100" {...S(color, "3")}>
+      <Circle cx="22" cy="14" r="8" />
+      <Path d="M8 35c0-7.7 6.3-14 14-14 7.7 0 14 6.3 14 14v2H8v-2z" />
+      <Circle cx="78" cy="62" r="8" />
+      <Path d="M64 83c0-7.7 6.3-14 14-14 7.7 0 14 6.3 14 14v2H64v-2z" />
+      <Circle cx="50" cy="50" r="16" />
+      {/* Dollar symbol */}
+      <Path d="M50 38v24" />
+      <Path d="M55 42c0-2.2-2.2-4-5-4s-5 1.8-5 4 2.2 4 5 4 5 1.8 5 4-2.2 4-5 4-5-1.8-5-4" />
+      {/* Down-right arrow */}
+      <Path d="M68 18 Q82 18 82 32" />
+      <Polyline points="78,28 82,32 86,28" />
+      {/* Up-left arrow */}
+      <Path d="M32 82 Q18 82 18 68" />
+      <Polyline points="22,72 18,68 14,72" />
     </Svg>
   ),
   settlements: ({ size = 24, color = "currentColor" }) => (
@@ -152,6 +189,12 @@ export const Icons = {
       <Path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
       <Polyline points="16 17 21 12 16 7" />
       <Line x1="21" y1="12" x2="9" y2="12" />
+    </Svg>
+  ),
+  profile: ({ size = 24, color = "currentColor" }) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
+      <Circle cx="12" cy="8" r="4" />
+      <Path d="M4 20v-1a8 8 0 0 1 16 0v1" />
     </Svg>
   ),
 
@@ -529,7 +572,24 @@ export const Icons = {
       <Polyline points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
     </Svg>
   ),
-
+  list: ({ size = 20, color = "currentColor" }) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
+      <Line x1="8" y1="6" x2="21" y2="6" />
+      <Line x1="8" y1="12" x2="21" y2="12" />
+      <Line x1="8" y1="18" x2="21" y2="18" />
+      <Line x1="3" y1="6" x2="3.01" y2="6" strokeWidth="2.5" strokeLinecap="round" />
+      <Line x1="3" y1="12" x2="3.01" y2="12" strokeWidth="2.5" strokeLinecap="round" />
+      <Line x1="3" y1="18" x2="3.01" y2="18" strokeWidth="2.5" strokeLinecap="round" />
+    </Svg>
+  ),
+  grid: ({ size = 20, color = "currentColor" }) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
+      <Rect x="3" y="3" width="7" height="7" rx="1" />
+      <Rect x="14" y="3" width="7" height="7" rx="1" />
+      <Rect x="3" y="14" width="7" height="7" rx="1" />
+      <Rect x="14" y="14" width="7" height="7" rx="1" />
+    </Svg>
+  ),
   info: ({ size = 20, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
       <Circle cx="12" cy="12" r="10" />

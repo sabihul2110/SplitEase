@@ -288,7 +288,6 @@ export default function SettingsScreen() {
           {[
             { label: 'App',     value: 'SplitEase' },
             { label: 'Version', value: '2.1.0' },
-            { label: 'Stack',   value: 'React Native + Expo' },
           ].map((row, i, arr) => (
             <View key={row.label} style={[styles.aboutRow, i < arr.length - 1 && styles.aboutRowBorder]}>
               <Text style={styles.rowSub}>{row.label}</Text>
