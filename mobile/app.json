@@ -11,10 +11,8 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "backgroundColor": "#13141c",
+        "foregroundImage": "./assets/adaptive-icon.png"
       },
       "package": "com.splitease.app"
     },
@@ -28,7 +26,7 @@
       "policy": "appVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/8846a54a-ec46-4abf-ab73-5cb4b9bda02a"
+      "url": "https://u.expo.dev/7644269a-572f-4859-adfa-294444863d68"
     },
     "extra": {
       "eas": {
