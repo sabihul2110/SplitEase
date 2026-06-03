@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "mobile",
-    "slug": "mobile",
+    "name": "SplitEase",
+    "slug": "splitease",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -28,6 +28,12 @@
       "eas": {
         "projectId": "8846a54a-ec46-4abf-ab73-5cb4b9bda02a"
       }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/8846a54a-ec46-4abf-ab73-5cb4b9bda02a"
     }
   }
 }

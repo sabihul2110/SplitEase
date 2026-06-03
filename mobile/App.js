@@ -23,6 +23,7 @@ import { StatusBar } from 'expo-status-bar';
 import { AuthProvider } from './src/context/AuthContext';
 import RootNavigator    from './src/navigation/RootNavigator';
 import { COLORS } from './src/constants/theme';
+import { UpdateChecker } from './src/components/global/UpdateChecker';
 
 export default function App() {
   return (
@@ -32,6 +33,7 @@ export default function App() {
         <StatusBar style="light" backgroundColor={COLORS.bg} />
         <AuthProvider>
           <RootNavigator />
+          <UpdateChecker />
         </AuthProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
