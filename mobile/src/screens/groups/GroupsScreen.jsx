@@ -27,6 +27,7 @@ import client from "../../api/client";
 import { ENDPOINTS } from "../../config/api";
 import { useAuth } from "../../context/AuthContext";
 import { Icons } from "../../components/icons/icons";
+import { TAB_BAR_HEIGHT } from '../../constants/theme';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -1820,7 +1821,7 @@ export default function GroupsScreen() {
       <FlatList
         data={sorted}
         keyExtractor={(g) => String(g.group_id)}
-        contentContainerStyle={[s.list, sorted.length === 0 && s.listEmpty]}
+        contentContainerStyle={[s.list, sorted.length === 0 && s.listEmpty, { paddingBottom: TAB_BAR_HEIGHT }]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl

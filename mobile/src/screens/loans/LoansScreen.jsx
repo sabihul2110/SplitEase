@@ -26,6 +26,7 @@ import {
   FONT_WEIGHT,
   SPACING,
   RADIUS,
+  TAB_BAR_HEIGHT,
 } from "../../constants/theme";
 import { EmptyState, LoadingState } from "../../components/common/Ui";
 import ScreenHeader from "../../components/layout/ScreenHeader";
@@ -891,7 +892,7 @@ export default function LoansScreen() {
         renderItem={({ item, index }) => (
           <LoanCard item={item} isLent={isLent} onRefresh={load} idx={index} />
         )}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, { paddingBottom: TAB_BAR_HEIGHT }]}
       />
       <AddLoanModal
         visible={showAdd}

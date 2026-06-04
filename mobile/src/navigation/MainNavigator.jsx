@@ -102,20 +102,68 @@ export default function MainNavigator() {
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
+        // tabBarStyle: {
+        //   backgroundColor: COLORS.surface,
+        //   borderTopColor: COLORS.border,
+        //   borderTopWidth: 1,
+        //   height: Platform.OS === "ios" ? 84 : 62,
+        //   paddingBottom: Platform.OS === "ios" ? 24 : 8,
+        //   paddingTop: 8,
+        // },
         tabBarStyle: {
           backgroundColor: COLORS.surface,
-          borderTopColor: COLORS.border,
-          borderTopWidth: 1,
-          height: Platform.OS === "ios" ? 84 : 62,
-          paddingBottom: Platform.OS === "ios" ? 24 : 8,
-          paddingTop: 8,
+          borderTopColor:  COLORS.border,
+          borderTopWidth:  1,
+          height:          Platform.OS === 'ios' ? 88 : 68,
+          paddingBottom:   Platform.OS === 'ios' ? 26 : 10,
+          paddingTop:      8,
+          // Floating card look
+          marginHorizontal: 12,
+          marginBottom:     Platform.OS === 'ios' ? 20 : 10,
+          borderRadius:     20,
+          borderWidth:      1,
+          position:         'absolute',
+          elevation:        12,
+          shadowColor:      '#000',
+          shadowOffset:     { width: 0, height: -2 },
+          shadowOpacity:    0.18,
+          shadowRadius:     12,
         },
         tabBarActiveTintColor: COLORS.primary,
         tabBarInactiveTintColor: COLORS.text3,
-        tabBarLabelStyle: {
-          fontSize: 10,
-          fontWeight: "500",
-          marginTop: 2,
+        // tabBarLabelStyle: {
+        //   fontSize: 10,
+        //   fontWeight: "500",
+        //   marginTop: 2,
+        // },
+        // tabBarLabelStyle: {
+        //   fontSize:   10,
+        //   fontWeight: '600',
+        //   marginTop:  2,
+        //   letterSpacing: 0.2,
+        // },
+        tabBarStyle: {
+          backgroundColor: COLORS.surface,
+          borderTopColor:  COLORS.border,
+          borderTopWidth:  1,
+          height:          Platform.OS === 'ios' ? 88 : 68,
+          paddingBottom:   Platform.OS === 'ios' ? 26 : 10,
+          paddingTop:      8,
+          
+          // Docked look with top rounded edges
+          borderTopLeftRadius:  24,
+          borderTopRightRadius: 24,
+          position: 'absolute',
+          bottom: 0,
+          left:   0,
+          right:  0,
+          
+          // Shadows
+          elevation:        12,
+          shadowColor:      '#000',
+          shadowOffset:     { width: 0, height: -4 }, // slightly higher shadow for the docked look
+          shadowOpacity:    0.15,
+          shadowRadius:     12,
         },
         tabBarIcon: ({ focused }) => (
           <TabIcon name={route.name} focused={focused} />

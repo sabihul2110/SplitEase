@@ -17,7 +17,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Alert,
   Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -39,7 +38,8 @@ export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState({});
+  const [errors,   setErrors]   = useState({});
+  const [authError, setAuthError] = useState('');
 
   function validate() {
     const e = {};
@@ -69,11 +69,7 @@ export default function LoginScreen({ navigation }) {
       });
       // Navigation happens automatically via RootNavigator
     } catch (err) {
-      
-      const msg =
-        err.response?.data?.detail ||
-        "Login failed. Please check your credentials.";
-      Alert.alert("Login Failed", msg);
+      setAuthError(err.response?.data?.detail || 'Incorrect email or password.');
     } finally {
       setLoading(false);
     }
@@ -106,14 +102,17 @@ export default function LoginScreen({ navigation }) {
             <Text style={styles.heading}>Welcome back</Text>
             <Text style={styles.subheading}>Sign in to your account</Text>
 
+            {!!authError && (
+              <View style={styles.errorBanner}>
+                <Text style={styles.errorBannerText}>{authError}</Text>
+              </View>
+            )}
+
             <View style={styles.fields}>
               <Input
                 label="Email"
                 value={email}
-                onChangeText={(v) => {
-                  setEmail(v);
-                  setErrors((e) => ({ ...e, email: null }));
-                }}
+                onChangeText={v => { setEmail(v); setAuthError(''); setErrors(e => ({ ...e, email: null })); }}
                 placeholder="you@example.com"
                 keyboardType="email-address"
                 error={errors.email}
@@ -122,10 +121,7 @@ export default function LoginScreen({ navigation }) {
               <Input
                 label="Password"
                 value={password}
-                onChangeText={(v) => {
-                  setPassword(v);
-                  setErrors((e) => ({ ...e, password: null }));
-                }}
+                onChangeText={v => { setPassword(v); setAuthError(''); setErrors(e => ({ ...e, password: null })); }}
                 placeholder="Your password"
                 secureTextEntry
                 error={errors.password}
@@ -238,6 +234,20 @@ const styles = StyleSheet.create({
   footerText: {
     fontSize: FONT_SIZE.base,
     color: COLORS.text2,
+  },
+  errorBanner: {
+    backgroundColor: 'rgba(239,68,68,0.10)',
+    borderRadius:    RADIUS.md,
+    borderWidth:     1,
+    borderColor:     'rgba(239,68,68,0.30)',
+    paddingHorizontal: SPACING.md,
+    paddingVertical:   10,
+  },
+  errorBannerText: {
+    fontSize:   FONT_SIZE.sm,
+    color:      COLORS.danger,
+    fontWeight: FONT_WEIGHT.medium,
+    lineHeight: 18,
   },
   footerLink: {
     fontSize: FONT_SIZE.base,

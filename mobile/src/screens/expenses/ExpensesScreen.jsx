@@ -17,7 +17,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import client from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
-import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS } from "../../constants/theme";
+import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS, TAB_BAR_HEIGHT } from "../../constants/theme";
 import { Icons, TYPE_ICONS, TYPE_CFG } from "../../components/icons/icons";
 import ScreenHeader from "../../components/layout/ScreenHeader";
 
@@ -565,7 +565,12 @@ export default function ExpensesScreen() {
         entry={item.entry}
         deleting={deleting}
         onDelete={handleDelete}
-        onNavigateGroup={gid => navigation.navigate("GroupDetail", { groupId: gid })}
+        onNavigateGroup={(gid) =>
+          navigation.navigate("Groups", {
+            screen: "GroupDetail",
+            params: { groupId: gid },
+          })
+        }
       />
     );
   }
@@ -589,7 +594,7 @@ export default function ExpensesScreen() {
         data={listData}
         keyExtractor={item => item.key}
         renderItem={renderItem}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, { paddingBottom: TAB_BAR_HEIGHT }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         stickyHeaderIndices={[]}

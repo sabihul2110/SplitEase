@@ -1151,7 +1151,12 @@ export default function GroupDetailScreen() {
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+        <TouchableOpacity 
+          onPress={() => {
+            navigation.popToTop();
+          }} 
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
           <Icons.close size={22} color={C.text2} />
         </TouchableOpacity>
         

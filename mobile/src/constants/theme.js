@@ -6,6 +6,11 @@
  * Mirrors the web app's CSS variables exactly.
  */
 
+import { Platform } from 'react-native';
+
+
+export const TAB_BAR_HEIGHT = Platform.OS === 'ios' ? 108 : 78;
+
 export const COLORS = {
   // Backgrounds
   bg:       '#0d0e14',

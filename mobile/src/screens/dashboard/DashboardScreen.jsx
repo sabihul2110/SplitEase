@@ -8,6 +8,7 @@ import {
   FlatList,
   TouchableOpacity,
   RefreshControl,
+  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
@@ -20,6 +21,7 @@ import {
   FONT_WEIGHT,
   SPACING,
   RADIUS,
+  TAB_BAR_HEIGHT,
 } from "../../constants/theme";
 import { Avatar, LoadingState, EmptyState } from "../../components/common/Ui";
 import { Icons } from "../../components/icons/icons";
@@ -35,7 +37,16 @@ function fmt(n) {
 function TopBar({ initials, unreadCount = 0, onAvatar, onBell }) {
   return (
     <View style={styles.topBar}>
-      <Text style={styles.topBarBrand}>SplitEase</Text>
+      <View style={styles.brandWrap}>
+        <Image 
+          source={require('../../../assets/adaptive-icon.png')} 
+          style={styles.brandLogo} 
+          resizeMode="contain"
+        />
+        <Text style={styles.topBarBrand}>
+          Split<Text style={{ color: COLORS.primary }}>Ease</Text>
+        </Text>
+      </View>
       <View style={styles.topBarRight}>
         <TouchableOpacity
           style={styles.topBarIconBtn}
@@ -392,7 +403,7 @@ export default function DashboardScreen() {
             }
           />
         )}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, { paddingBottom: TAB_BAR_HEIGHT }]}
       />
     </SafeAreaView>
   );
@@ -402,14 +413,22 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg },
   list: { paddingBottom: SPACING["2xl"] },
   header: { gap: SPACING.md, paddingTop: SPACING.sm },
-
-  // ── Top bar ──
+  
   topBar: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: SPACING.base,
     paddingVertical: SPACING.sm,
+  },
+  brandWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  brandLogo: {
+    width: 28,
+    height: 28,
   },
   topBarBrand: {
     fontSize: FONT_SIZE.lg,
