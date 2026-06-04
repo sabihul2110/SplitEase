@@ -16,6 +16,7 @@ import client from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { Icons } from '../../components/icons/icons';
 import DatePickerInput from '../../components/common/DatePickerInput';
+import { TAB_BAR_HEIGHT } from "../../constants/theme";
 
 // ─── Design tokens (same as GroupDetailScreen) ────────────────────────────────
 const C = {

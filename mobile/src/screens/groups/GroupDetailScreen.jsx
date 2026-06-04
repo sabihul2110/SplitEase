@@ -16,6 +16,7 @@ import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/nativ
 import client from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { Icons, CATEGORY_ICONS } from '../../components/icons/icons';
+import { TAB_BAR_HEIGHT } from '../../constants/theme';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -1193,7 +1194,7 @@ export default function GroupDetailScreen() {
         style={styles.scroll}
         showsVerticalScrollIndicator={false}
         refreshControl={refreshControl}
-        contentContainerStyle={{ paddingBottom: 110 }}
+        contentContainerStyle={{ paddingBottom: 110 + TAB_BAR_HEIGHT }}
       >
 
         {/* Stats */}
@@ -1431,10 +1432,9 @@ const styles = StyleSheet.create({
   // Centred loader
   centred:     { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80, gap: 12 },
   centredText: { fontSize: F.base, color: C.text3 },
-
   // FAB
   fabArea: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
+    position: 'absolute', bottom: 60, left: 0, right: 0,
     paddingHorizontal: SP.base, paddingBottom: SP.lg, paddingTop: SP.sm,
   },
   fab: {

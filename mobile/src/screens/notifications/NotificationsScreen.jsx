@@ -25,6 +25,7 @@ import {
   FONT_WEIGHT,
   SPACING,
   RADIUS,
+  TAB_BAR_HEIGHT,
 } from "../../constants/theme";
 import { Icons } from "../../components/icons/icons";
 

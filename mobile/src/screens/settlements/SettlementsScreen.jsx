@@ -27,6 +27,7 @@ import {
   FONT_WEIGHT,
   SPACING,
   RADIUS,
+  TAB_BAR_HEIGHT,
 } from "../../constants/theme";
 import { Avatar, Badge } from "../../components/common/Ui";
 import { Icons } from "../../components/icons/icons";

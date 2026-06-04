@@ -33,6 +33,7 @@ import {
   FONT_WEIGHT,
   SPACING,
   RADIUS,
+  TAB_BAR_HEIGHT,
 } from "../../constants/theme";
 import ScreenHeader from "../../components/layout/ScreenHeader";
 import { useOTAUpdate } from "../../hooks/useOTAUpdate";

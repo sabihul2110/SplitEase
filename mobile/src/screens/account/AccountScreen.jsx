@@ -27,10 +27,12 @@ import {
   FONT_WEIGHT,
   SPACING,
   RADIUS,
+  TAB_BAR_HEIGHT,
 } from "../../constants/theme";
 import Input from "../../components/common/Input";
 import Button from "../../components/common/Button";
 import { Icons } from "../../components/icons/icons";
+import { useOTAUpdate } from "../../hooks/useOTAUpdate"; // <-- ADD THIS
 
 // ─── Local design tokens ──────────────────────────────────────────────────────
 const C = {
@@ -620,6 +622,7 @@ function DangerZone() {
 export default function AccountScreen() {
   const { user, logout, updateUser } = useAuth();
   const navigation = useNavigation();
+  const { checkForUpdate, isChecking } = useOTAUpdate();
   const [groups, setGroups] = useState([]);
   const [netBalance, setNetBalance] = useState(null);
   const [showEdit, setShowEdit] = useState(false);
@@ -705,7 +708,7 @@ export default function AccountScreen() {
       <ScrollView
         style={styles.scroll}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 48 }}
+        contentContainerStyle={{ paddingBottom: 48 + TAB_BAR_HEIGHT }}
       >
         {/* ── Hero — centered, on raw bg ── */}
         <View style={styles.hero}>
@@ -818,6 +821,15 @@ export default function AccountScreen() {
                 <Text style={styles.badgeText}>Dark</Text>
               </View>
             }
+          />
+          <Row
+            IconComp={Icons.refresh}
+            iconBg={C.iconBlue}
+            iconColor={C.primary}
+            label="Check for Updates"
+            sub={isChecking ? "Checking for bundle..." : "Download latest version if available"}
+            onPress={isChecking ? undefined : checkForUpdate}
+            last
           />
         </View>
 

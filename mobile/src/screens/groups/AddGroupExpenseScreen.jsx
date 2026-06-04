@@ -20,7 +20,7 @@ import client from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { Icons, CATEGORY_ICONS } from '../../components/icons/icons';
 import { Modal } from 'react-native';
-import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS } from '../../constants/theme';
+import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS, TAB_BAR_HEIGHT } from '../../constants/theme';
 import { Avatar } from '../../components/common/Ui';
 import Input  from '../../components/common/Input';
 import Button from '../../components/common/Button';
@@ -635,7 +635,7 @@ export default function AddGroupExpenseScreen() {
 
 const styles = StyleSheet.create({
   safe:   { flex: 1, backgroundColor: COLORS.bg },
-  scroll: { padding: SPACING.base, gap: SPACING.md, paddingBottom: 60 },
+  scroll: { padding: SPACING.base, gap: SPACING.md, paddingBottom: 60 + TAB_BAR_HEIGHT },
 
   // Amount hero
   amountCard: {

@@ -16,6 +16,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import client from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { Icons } from '../../components/icons/icons';
+import { TAB_BAR_HEIGHT } from "../../constants/theme";
 
 const C = {
   bg:        '#0a0d14',
@@ -233,7 +234,7 @@ export default function AddGroupPaymentScreen() {
         <Text style={s.headerSub}>{groupName}</Text>
       </View>
 
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: 100 }}
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: 100 + TAB_BAR_HEIGHT }}
         showsVerticalScrollIndicator={false}>
 
         {/* From → To */}

@@ -35,6 +35,7 @@ import {
 } from "../../constants/theme";
 import { Icons } from "../../components/icons/icons";
 import ScreenHeader from "../../components/layout/ScreenHeader";
+import { TAB_BAR_HEIGHT } from "../../constants/theme";
 
 // Matches web TYPE_META exactly
 const TYPE_META = {
@@ -410,7 +411,7 @@ export default function ActivityScreen() {
             }
           />
         )}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, { paddingBottom: TAB_BAR_HEIGHT }]}
         stickySectionHeadersEnabled={false}
       />
     </SafeAreaView>
