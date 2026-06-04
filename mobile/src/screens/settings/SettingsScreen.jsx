@@ -1,16 +1,12 @@
 // SplitEase/mobile/src/screens/settings/SettingsScreen.jsx
-
-/**
- * SettingsScreen.jsx
- *
- * Matches web Settings.jsx:
- * - Profile summary card with "View Profile" link
- * - Appearance section (dark only on mobile — no CSS vars to toggle)
- * - Account: Edit Profile, Change Password → navigate to ProfileScreen
- * - Session: Sign Out with confirm
- * - Danger Zone: Reset My Data with backend flow
- * - About section
- */
+//
+// Industry-standard Settings screen.
+// Follows the iOS Settings / Linear / Vercel aesthetic:
+//   • Minimal hero — avatar + name + email only
+//   • Full-bleed grouped list sections, hairline dividers
+//   • No duplicate Account editing — "View Account" navigates there
+//   • Sections: Profile → App → Notifications → Session → About
+//   • Danger zone deferred to AccountScreen (single source of truth)
 
 import React, { useState } from "react";
 import {
@@ -19,14 +15,12 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
+  Switch,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
-import client from "../../api/client";
-import { ENDPOINTS } from "../../config/api";
-import { Icons } from "../../components/icons/icons";
 import { useAuth } from "../../context/AuthContext";
+import { Icons } from "../../components/icons/icons";
 import {
   COLORS,
   FONT_SIZE,
@@ -36,538 +30,429 @@ import {
   TAB_BAR_HEIGHT,
 } from "../../constants/theme";
 import ScreenHeader from "../../components/layout/ScreenHeader";
-import { useOTAUpdate } from "../../hooks/useOTAUpdate";
 
-// ── Section header ────────────────────────────────────────────────────────
-function SectionHeader({ title }) {
-  return <Text style={styles.sectionTitle}>{title}</Text>;
-}
-
-// ── Setting row ────────────────────────────────────────────────────────────
-function SettingRow({
-  icon: IconComp,
-  iconColor,
-  label,
-  sub,
-  onPress,
-  danger,
-  last,
-  rightElement,
-}) {
-  const Wrapper = onPress ? TouchableOpacity : View;
-  return (
-    <Wrapper
-      style={[styles.row, last && styles.rowLast]}
-      onPress={onPress}
-      activeOpacity={0.7}
-    >
-      <View style={[styles.rowIcon, danger && styles.rowIconDanger]}>
-        {IconComp && (
-          <IconComp
-            size={17}
-            color={danger ? COLORS.danger : iconColor || COLORS.text2}
-          />
-        )}
-      </View>
-      <View style={styles.rowContent}>
-        <Text style={[styles.rowLabel, danger && { color: COLORS.danger }]}>
-          {label}
-        </Text>
-        {sub && <Text style={styles.rowSub}>{sub}</Text>}
-      </View>
-      {rightElement ||
-        (onPress && !rightElement && <Text style={styles.chevron}>›</Text>)}
-    </Wrapper>
-  );
-}
-
-// ── Danger zone with reset flow (matches web DangerZone component) ─────────
-function DangerZone() {
-  const { logout } = useAuth();
-  const navigation = useNavigation();
-  const [step, setStep] = useState("idle"); // idle | confirm | pending | force_confirm | done
-  const [pending, setPending] = useState([]);
-  const [loading, setLoading] = useState(false);
-
-  async function handleReset() {
-    setLoading(true);
-    try {
-      const r = await client.post(ENDPOINTS.resetData);
-      if (r.data.status === "pending_settlements") {
-        setPending(r.data.pending || []);
-        setStep("pending");
-      } else {
-        setStep("done");
-      }
-    } catch (e) {
-      Alert.alert("Error", e.response?.data?.detail || "Something went wrong.");
-      setStep("idle");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleForceReset() {
-    setLoading(true);
-    try {
-      await client.post(ENDPOINTS.resetData + "/force");
-      setStep("done");
-    } catch (e) {
-      Alert.alert("Error", e.response?.data?.detail || "Something went wrong.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  if (step === "done")
-    return (
-      <View style={[styles.card, { borderColor: COLORS.success + "50" }]}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-          <Icons.check size={14} color={COLORS.success} />
-          <Text style={[styles.rowLabel, { color: COLORS.success }]}>
-            Data reset complete
-          </Text>
-        </View>
-        <Text style={[styles.rowSub, { marginTop: 4 }]}>
-          Your financial data has been cleared.
-        </Text>
-        <TouchableOpacity
-          style={[styles.textBtn, { marginTop: SPACING.md }]}
-          onPress={() => {
-            logout();
-          }}
-        >
-          <Text
-            style={{ color: COLORS.primary, fontWeight: FONT_WEIGHT.semibold }}
-          >
-            Sign out now
-          </Text>
-        </TouchableOpacity>
-      </View>
-    );
-
-  if (step === "pending")
-    return (
-      <View style={[styles.card, { borderColor: COLORS.warning + "50" }]}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-          <Icons.info size={14} color={COLORS.warning} />
-          <Text style={[styles.rowLabel, { color: COLORS.warning }]}>
-            Unsettled balances
-          </Text>
-        </View>
-        <Text
-          style={[styles.rowSub, { marginTop: 4, marginBottom: SPACING.sm }]}
-        >
-          Resetting will remove your data from these groups:
-        </Text>
-        {pending.map((g) => (
-          <View key={g.group_id} style={styles.pendingRow}>
-            <Text style={styles.rowSub}>{g.group_name}</Text>
-            <Text
-              style={{
-                color: g.net_balance > 0 ? COLORS.success : COLORS.danger,
-                fontWeight: FONT_WEIGHT.bold,
-              }}
-            >
-              {g.net_balance > 0 ? "+" : ""}₹
-              {Math.abs(g.net_balance).toFixed(2)}
-            </Text>
-          </View>
-        ))}
-        <View style={styles.dangerActions}>
-          <TouchableOpacity
-            style={styles.ghostBtn}
-            onPress={() => setStep("idle")}
-          >
-            <Text style={styles.ghostBtnText}>Cancel</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.dangerBtn}
-            onPress={() => setStep("force_confirm")}
-          >
-            <Text style={styles.dangerBtnText}>Reset anyway</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-
-  if (step === "force_confirm")
-    return (
-      <View style={[styles.card, { borderColor: COLORS.danger + "50" }]}>
-        <Text style={[styles.rowLabel, { color: COLORS.danger }]}>
-          This cannot be undone. Are you sure?
-        </Text>
-        <View style={[styles.dangerActions, { marginTop: SPACING.md }]}>
-          <TouchableOpacity
-            style={styles.ghostBtn}
-            onPress={() => setStep("idle")}
-          >
-            <Text style={styles.ghostBtnText}>Cancel</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.dangerBtn}
-            onPress={handleForceReset}
-            disabled={loading}
-          >
-            <Text style={styles.dangerBtnText}>
-              {loading ? "Resetting…" : "Yes, wipe my data"}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-
-  if (step === "confirm")
-    return (
-      <View style={[styles.card, { borderColor: COLORS.danger + "50" }]}>
-        <Text style={[styles.rowLabel, { color: COLORS.danger }]}>
-          Reset all your data?
-        </Text>
-        <Text
-          style={[styles.rowSub, { marginTop: 4, marginBottom: SPACING.md }]}
-        >
-          This permanently deletes all your expenses, income, loans, and
-          borrows. Your account stays active.
-        </Text>
-        <View style={styles.dangerActions}>
-          <TouchableOpacity
-            style={styles.ghostBtn}
-            onPress={() => setStep("idle")}
-          >
-            <Text style={styles.ghostBtnText}>Cancel</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.dangerBtn}
-            onPress={handleReset}
-            disabled={loading}
-          >
-            <Text style={styles.dangerBtnText}>
-              {loading ? "Checking…" : "Reset my data"}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-
-  return (
-    <View style={[styles.card, { borderColor: COLORS.danger + "22" }]}>
-      <SettingRow
-        icon={Icons.trash}
-        label="Reset My Data"
-        sub="Delete all your expenses, income, loans and group data"
-        onPress={() => setStep("confirm")}
-        danger
-        last
-      />
-    </View>
-  );
-}
-
-// ── Main screen ────────────────────────────────────────────────────────────
-export default function SettingsScreen() {
-  const { user, logout } = useAuth();
-  const navigation = useNavigation();
-  const [logoutConfirm, setLogoutConfirm] = useState(false);
-  const { checkForUpdate, isChecking } = useOTAUpdate();
-
-  const initials = (user?.name || "?")
+// ─── Avatar ────────────────────────────────────────────────────────────────────
+function Avatar({ name, size = 44 }) {
+  const initials = (name || "?")
     .split(" ")
     .map((w) => w[0])
     .slice(0, 2)
     .join("")
     .toUpperCase();
+  return (
+    <View
+      style={[
+        styles.avatar,
+        { width: size, height: size, borderRadius: Math.round(size * 0.28) },
+      ]}
+    >
+      <Text style={[styles.avatarText, { fontSize: Math.round(size * 0.38) }]}>
+        {initials}
+      </Text>
+    </View>
+  );
+}
 
-  function handleLogout() {
-    logout();
+// ─── Section label ─────────────────────────────────────────────────────────────
+function SectionLabel({ title }) {
+  return (
+    <Text style={styles.sectionLabel}>{title}</Text>
+  );
+}
+
+// ─── Row ───────────────────────────────────────────────────────────────────────
+function Row({
+  icon: IconComp,
+  iconBg,
+  iconColor,
+  label,
+  sub,
+  value,
+  onPress,
+  danger,
+  last,
+  right,
+  noChevron,
+}) {
+  const Wrap = onPress ? TouchableOpacity : View;
+  return (
+    <>
+      <Wrap
+        style={[styles.row, danger && styles.rowDanger]}
+        onPress={onPress}
+        activeOpacity={0.6}
+      >
+        {IconComp && (
+          <View
+            style={[
+              styles.iconWrap,
+              { backgroundColor: iconBg || COLORS.surface2 },
+            ]}
+          >
+            <IconComp
+              size={16}
+              color={danger ? COLORS.danger : iconColor || COLORS.text2}
+            />
+          </View>
+        )}
+        <View style={styles.rowContent}>
+          <Text
+            style={[
+              styles.rowLabel,
+              danger && { color: COLORS.danger },
+            ]}
+          >
+            {label}
+          </Text>
+          {sub ? <Text style={styles.rowSub}>{sub}</Text> : null}
+        </View>
+        {right !== undefined ? (
+          right
+        ) : value ? (
+          <Text style={styles.rowValue}>{value}</Text>
+        ) : onPress && !noChevron ? (
+          <Icons.chevronRight size={14} color={COLORS.text3} />
+        ) : null}
+      </Wrap>
+      {!last && <View style={styles.separator} />}
+    </>
+  );
+}
+
+// ─── Group (full-bleed bordered section) ──────────────────────────────────────
+function Group({ children, danger }) {
+  return (
+    <View style={[styles.group, danger && styles.groupDanger]}>
+      {children}
+    </View>
+  );
+}
+
+// ─── Sign-out confirm ─────────────────────────────────────────────────────────
+function SignOutRow() {
+  const { logout } = useAuth();
+  const [confirm, setConfirm] = useState(false);
+
+  if (confirm) {
+    return (
+      <View style={styles.confirmBlock}>
+        <View>
+          <Text style={[styles.rowLabel, { color: COLORS.danger }]}>
+            Sign out of SplitEase?
+          </Text>
+          <Text style={[styles.rowSub, { marginTop: 3 }]}>
+            You'll need to log in again.
+          </Text>
+        </View>
+        <View style={styles.confirmActions}>
+          <TouchableOpacity
+            style={styles.ghostBtn}
+            onPress={() => setConfirm(false)}
+          >
+            <Text style={styles.ghostBtnText}>Cancel</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.dangerBtn} onPress={logout}>
+            <Text style={styles.dangerBtnText}>Sign Out</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
   }
+
+  return (
+    <Row
+      icon={Icons.logout}
+      iconBg="rgba(239,68,68,0.10)"
+      label="Sign Out"
+      onPress={() => setConfirm(true)}
+      danger
+      last
+    />
+  );
+}
+
+// ─── Main ─────────────────────────────────────────────────────────────────────
+export default function SettingsScreen() {
+  const { user } = useAuth();
+  const navigation = useNavigation();
 
   return (
     <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
       <ScreenHeader title="Settings" />
+
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingBottom: TAB_BAR_HEIGHT + SPACING["2xl"] },
+        ]}
       >
-        {/* Profile summary — matches web Settings profile card */}
-        <View style={styles.profileCard}>
-          <View style={styles.profileAvatar}>
-            <Text style={styles.profileAvatarText}>{initials}</Text>
+        {/* ── Profile hero ── */}
+        <TouchableOpacity
+          style={styles.profileHero}
+          onPress={() => navigation.navigate("Account")}
+          activeOpacity={0.7}
+        >
+          <Avatar name={user?.name} size={52} />
+          <View style={styles.profileText}>
+            <Text style={styles.profileName}>{user?.name || "—"}</Text>
+            <Text style={styles.profileEmail}>{user?.email || ""}</Text>
           </View>
-          <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>{user?.name}</Text>
-            <Text style={styles.profileEmail}>{user?.email}</Text>
+          <View style={styles.profileChevronWrap}>
+            <Icons.chevronRight size={15} color={COLORS.text3} />
           </View>
-          <TouchableOpacity
-            style={styles.viewProfileBtn}
-            onPress={() => navigation.navigate("Account")}
-          >
-            <Text style={styles.viewProfileText}>View Account</Text>
-          </TouchableOpacity>
+        </TouchableOpacity>
+
+        <View style={styles.heroNote}>
+          <Text style={styles.heroNoteText}>
+            Tap to view account, edit profile, or change password
+          </Text>
         </View>
 
-        {/* Appearance */}
-        <SectionHeader title="APPEARANCE" />
-        <View style={styles.card}>
-          <View style={styles.row}>
-            <View style={styles.rowIcon}>
-              <Icons.moon size={17} color={COLORS.text2} />
-            </View>
-            <View style={styles.rowContent}>
-              <Text style={styles.rowLabel}>Theme</Text>
-              <Text style={styles.rowSub}>
-                Dark mode (mobile always uses dark)
-              </Text>
-            </View>
-            <View style={[styles.themeBadge]}>
-              <Text style={styles.themeBadgeText}>Dark</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Account */}
-        <SectionHeader title="ACCOUNT" />
-        <View style={styles.card}>
-          <SettingRow
-            icon={Icons.edit}
-            label="Edit Profile"
-            sub="Update name, email, UPI ID"
-            onPress={() => navigation.navigate("Account")}
-          />
-          <SettingRow
-            icon={Icons.lock}
-            label="Change Password"
-            sub="Update your login credentials"
-            onPress={() => navigation.navigate("Account")}
+        {/* ── App ── */}
+        <SectionLabel title="APP" />
+        <Group>
+          <Row
+            icon={Icons.moon}
+            iconBg={COLORS.surface2}
+            iconColor={COLORS.text2}
+            label="Theme"
+            right={
+              <View style={styles.themePill}>
+                <Text style={styles.themePillText}>Dark</Text>
+              </View>
+            }
+            noChevron
             last
           />
-        </View>
+        </Group>
 
-        {/* Notifications shortcut */}
-        <SectionHeader title="NOTIFICATIONS" />
-        <View style={styles.card}>
-          <SettingRow
+        {/* ── Notifications ── */}
+        <SectionLabel title="NOTIFICATIONS" />
+        <Group>
+          <Row
             icon={Icons.bell}
+            iconBg="rgba(239,68,68,0.10)"
+            iconColor="#f87171"
             label="Notifications"
-            sub="View all your alerts"
+            sub="Reminders and alerts"
             onPress={() => navigation.navigate("Notifications")}
             last
           />
-        </View>
+        </Group>
 
-        {/* Session */}
-        <SectionHeader title="SESSION" />
-        <View style={styles.card}>
-          {!logoutConfirm ? (
-            <SettingRow
-              icon={Icons.logout}
-              label="Sign Out"
-              sub="Sign out of this device"
-              onPress={() => setLogoutConfirm(true)}
-              danger
-              last
-            />
-          ) : (
-            <View style={[styles.row, styles.rowLast]}>
-              <View style={styles.rowContent}>
-                <Text style={[styles.rowLabel, { color: COLORS.danger }]}>
-                  Confirm sign out?
-                </Text>
-                <Text style={styles.rowSub}>You'll need to log in again.</Text>
-                <View style={[styles.dangerActions, { marginTop: SPACING.md }]}>
-                  <TouchableOpacity
-                    style={styles.ghostBtn}
-                    onPress={() => setLogoutConfirm(false)}
-                  >
-                    <Text style={styles.ghostBtnText}>Cancel</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.dangerBtn}
-                    onPress={handleLogout}
-                  >
-                    <Text style={styles.dangerBtnText}>Sign Out</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-          )}
-        </View>
-
-        {/* Danger zone */}
-        <SectionHeader title="DANGER ZONE" />
-        <DangerZone />
-
-        {/* About */}
-        <SectionHeader title="ABOUT" />
-        <View style={styles.card}>
-          {[
-            { label: "App", value: "SplitEase" },
-            { label: "Version", value: "2.1.0" },
-          ].map((row, i, arr) => (
-            <View
-              key={row.label}
-              style={[
-                styles.aboutRow,
-                i < arr.length - 1 && styles.aboutRowBorder,
-              ]}
-            >
-              <Text style={styles.rowSub}>{row.label}</Text>
-              <Text style={styles.rowLabel}>{row.value}</Text>
-            </View>
-          ))}
-        </View>
-        <View style={[styles.card, { marginTop: SPACING.sm }]}>
-          <SettingRow
-            icon={Icons.refresh}
-            label="Check for Updates"
-            sub={isChecking ? 'Checking…' : 'Download latest version if available'}
-            onPress={isChecking ? undefined : () => checkForUpdate(true)}
+        {/* ── Account links ── */}
+        <SectionLabel title="ACCOUNT" />
+        <Group>
+          <Row
+            icon={Icons.edit}
+            iconBg="rgba(37,99,235,0.12)"
+            iconColor={COLORS.primaryH}
+            label="Edit Profile"
+            sub="Name, email, UPI ID"
+            onPress={() => navigation.navigate("Account")}
+          />
+          <Row
+            icon={Icons.lock}
+            iconBg="rgba(124,58,237,0.12)"
+            iconColor="#a78bfa"
+            label="Change Password"
+            sub="Update login credentials"
+            onPress={() => navigation.navigate("Account")}
+          />
+          <Row
+            icon={Icons.trash}
+            iconBg="rgba(239,68,68,0.10)"
+            iconColor={COLORS.danger}
+            label="Reset My Data"
+            sub="Delete all expenses, income and group data"
+            onPress={() => navigation.navigate("Account")}
+            danger
             last
           />
-        </View>
+        </Group>
+
+        {/* ── Session ── */}
+        <SectionLabel title="SESSION" />
+        <Group danger>
+          <SignOutRow />
+        </Group>
+
+        {/* ── About ── */}
+        <SectionLabel title="ABOUT" />
+        <Group>
+          <Row label="App" value="SplitEase" noChevron />
+          <Row label="Version" value="2.1.0" noChevron last />
+        </Group>
+
+        <Text style={styles.footer}>
+          Made with care · SplitEase © 2025
+        </Text>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
+// ─── Styles ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg },
+
   scroll: {
-    padding: SPACING.base,
-    gap: SPACING.sm,
-    paddingBottom: SPACING["3xl"],
-  },
-
-  sectionTitle: {
-    fontSize: FONT_SIZE.xs,
-    fontWeight: FONT_WEIGHT.bold,
-    letterSpacing: 0.9,
-    textTransform: "uppercase",
-    color: COLORS.text3,
     paddingTop: SPACING.base,
-    paddingBottom: SPACING.sm,
-    paddingHorizontal: SPACING.xs,
   },
 
-  profileCard: {
+  // ── Profile hero
+  profileHero: {
+    marginHorizontal: SPACING.base,
     backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.xl,
     borderWidth: 1,
     borderColor: COLORS.border,
-    padding: SPACING.base,
+    borderRadius: RADIUS.xl,
     flexDirection: "row",
     alignItems: "center",
+    paddingHorizontal: SPACING.base,
+    paddingVertical: SPACING.md + 2,
     gap: SPACING.md,
   },
-  profileAvatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 14,
+  avatar: {
     backgroundColor: COLORS.primary,
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
   },
-  profileAvatarText: {
-    fontSize: 18,
-    fontWeight: FONT_WEIGHT.extrabold,
+  avatarText: {
     color: COLORS.white,
+    fontWeight: FONT_WEIGHT.extrabold,
+    letterSpacing: 0.3,
   },
-  profileInfo: { flex: 1 },
+  profileText: { flex: 1, gap: 3 },
   profileName: {
     fontSize: FONT_SIZE.md,
     fontWeight: FONT_WEIGHT.bold,
     color: COLORS.text,
+    letterSpacing: -0.2,
   },
-  profileEmail: { fontSize: FONT_SIZE.xs, color: COLORS.text3, marginTop: 2 },
-  viewProfileBtn: {
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: 6,
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.surface2,
-  },
-  viewProfileText: {
+  profileEmail: {
     fontSize: FONT_SIZE.xs,
-    color: COLORS.text2,
-    fontWeight: FONT_WEIGHT.medium,
+    color: COLORS.text3,
   },
-
-  card: {
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.xl,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    overflow: "hidden",
-  },
-
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.md,
-    padding: SPACING.md,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  rowLast: { borderBottomWidth: 0 },
-  rowIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 8,
-    flexShrink: 0,
+  profileChevronWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: RADIUS.md,
     backgroundColor: COLORS.surface2,
     borderWidth: 1,
     borderColor: COLORS.border,
     alignItems: "center",
     justifyContent: "center",
   },
-  rowIconDanger: {
-    backgroundColor: "rgba(239,68,68,0.1)",
-    borderColor: "rgba(239,68,68,0.2)",
+
+  heroNote: {
+    paddingHorizontal: SPACING.base + 4,
+    paddingTop: SPACING.xs,
+    paddingBottom: SPACING.sm,
+  },
+  heroNoteText: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.text3,
+  },
+
+  // ── Section label
+  sectionLabel: {
+    fontSize: FONT_SIZE.xs,
+    fontWeight: FONT_WEIGHT.bold,
+    letterSpacing: 0.9,
+    textTransform: "uppercase",
+    color: COLORS.text3,
+    paddingHorizontal: SPACING.base + 4,
+    paddingTop: SPACING.lg,
+    paddingBottom: SPACING.xs + 2,
+  },
+
+  // ── Group
+  group: {
+    backgroundColor: COLORS.surface,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: COLORS.border,
+  },
+  groupDanger: {
+    borderColor: "rgba(239,68,68,0.18)",
+  },
+
+  // ── Row
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: SPACING.base,
+    paddingVertical: 13,
+    gap: SPACING.md,
+    minHeight: 52,
+  },
+  rowDanger: {},
+  separator: {
+    height: 1,
+    backgroundColor: COLORS.border,
+    marginLeft: SPACING.base + 36 + SPACING.md,
+  },
+  iconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
   },
   rowContent: { flex: 1 },
   rowLabel: {
-    fontSize: FONT_SIZE.md,
+    fontSize: FONT_SIZE.base,
     fontWeight: FONT_WEIGHT.medium,
     color: COLORS.text,
   },
-  rowSub: { fontSize: FONT_SIZE.xs, color: COLORS.text3, marginTop: 2 },
-  chevron: { color: COLORS.text3, fontSize: FONT_SIZE.lg },
+  rowSub: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.text3,
+    marginTop: 2,
+    lineHeight: 16,
+  },
+  rowValue: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.text2,
+    fontWeight: FONT_WEIGHT.medium,
+  },
 
-  themeBadge: {
-    backgroundColor: "rgba(37,99,235,0.12)",
+  // ── Theme pill
+  themePill: {
+    backgroundColor: "rgba(37,99,235,0.10)",
     borderRadius: RADIUS.full,
     paddingHorizontal: 10,
     paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: "rgba(37,99,235,0.22)",
   },
-  themeBadgeText: {
-    color: COLORS.primaryH,
+  themePillText: {
     fontSize: FONT_SIZE.xs,
     fontWeight: FONT_WEIGHT.semibold,
+    color: COLORS.primaryH,
   },
 
-  aboutRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    padding: SPACING.md,
+  // ── Sign out confirm
+  confirmBlock: {
+    paddingHorizontal: SPACING.base,
+    paddingVertical: SPACING.base,
+    gap: SPACING.md,
   },
-  aboutRowBorder: { borderBottomWidth: 1, borderBottomColor: COLORS.border },
-
-  textBtn: { alignSelf: "flex-start" },
-  pendingRow: {
+  confirmActions: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 6,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    gap: SPACING.sm,
   },
-  dangerActions: { flexDirection: "row", gap: SPACING.sm },
   ghostBtn: {
     paddingHorizontal: SPACING.md,
-    paddingVertical: 8,
+    paddingVertical: 9,
     borderRadius: RADIUS.md,
     borderWidth: 1,
     borderColor: COLORS.border,
+    backgroundColor: COLORS.surface2,
   },
   ghostBtnText: {
     color: COLORS.text2,
@@ -576,7 +461,7 @@ const styles = StyleSheet.create({
   },
   dangerBtn: {
     paddingHorizontal: SPACING.md,
-    paddingVertical: 8,
+    paddingVertical: 9,
     borderRadius: RADIUS.md,
     backgroundColor: COLORS.danger,
   },
@@ -584,5 +469,15 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontWeight: FONT_WEIGHT.semibold,
     fontSize: FONT_SIZE.sm,
+  },
+
+  // ── Footer
+  footer: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.text3,
+    textAlign: "center",
+    paddingTop: SPACING.xl,
+    paddingBottom: SPACING.sm,
+    letterSpacing: 0.2,
   },
 });

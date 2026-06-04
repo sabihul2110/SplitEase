@@ -1,7 +1,14 @@
 // SplitEase/mobile/src/navigation/MainNavigator.jsx
+//
+// FIX: SettingsScreen added to both MoreTabStack and DashStack
+// so it's reachable via navigation.navigate("Settings") from anywhere.
+// Industry pattern (Instagram, Linear):
+//   Profile tab = identity (your posts / your data)
+//   Settings = gear/hamburger → separate screen (not a tab)
+// Here: Settings is accessed from MenuScreen (More tab).
 
 import React from "react";
-import { View, Platform } from "react-native";
+import { Platform } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { COLORS } from "../constants/theme";
@@ -20,10 +27,10 @@ import ActivityScreen from "../screens/activity/ActivityScreen";
 import SettlementsScreen from "../screens/settlements/SettlementsScreen";
 import NotificationsScreen from "../screens/notifications/NotificationsScreen";
 import AccountScreen from "../screens/account/AccountScreen";
+import SettingsScreen from "../screens/settings/SettingsScreen";
 import MenuScreen from "../screens/menu/MenuScreen";
 
-// ── Tab Icons ──────────────────────────────────────────────────────────────
-
+// ── Tab icon component ──────────────────────────────────────────────────────
 function TabIcon({ name, focused }) {
   const iconMap = {
     Dashboard: Icons.dashboard,
@@ -37,16 +44,16 @@ function TabIcon({ name, focused }) {
   return <IconComponent size={24} color={focused ? COLORS.primary : COLORS.text3} />;
 }
 
-// ── Stacks ─────────────────────────────────────────────────────────────────
+// ── Stacks ──────────────────────────────────────────────────────────────────
 
 const DashStack = createNativeStackNavigator();
 function DashboardStack() {
   return (
     <DashStack.Navigator screenOptions={{ headerShown: false }}>
-      <DashStack.Screen name="DashboardHome" component={DashboardScreen} />
-      {/* Account and Notifications are pushed from the Dashboard header */}
-      <DashStack.Screen name="Account" component={AccountScreen} />
-      <DashStack.Screen name="Notifications" component={NotificationsScreen} />
+      <DashStack.Screen name="DashboardHome"  component={DashboardScreen} />
+      <DashStack.Screen name="Account"        component={AccountScreen} />
+      <DashStack.Screen name="Settings"       component={SettingsScreen} />
+      <DashStack.Screen name="Notifications"  component={NotificationsScreen} />
     </DashStack.Navigator>
   );
 }
@@ -56,7 +63,7 @@ function ExpensesStack() {
   return (
     <ExpensesTabStack.Navigator screenOptions={{ headerShown: false }}>
       <ExpensesTabStack.Screen name="ExpensesHome" component={ExpensesScreen} />
-      <ExpensesTabStack.Screen name="AddEntry" component={AddExpenseScreen} />
+      <ExpensesTabStack.Screen name="AddEntry"     component={AddExpenseScreen} />
     </ExpensesTabStack.Navigator>
   );
 }
@@ -65,10 +72,10 @@ const GroupStack = createNativeStackNavigator();
 function GroupsStack() {
   return (
     <GroupStack.Navigator screenOptions={{ headerShown: false }}>
-      <GroupStack.Screen name="GroupsList" component={GroupsScreen} />
+      <GroupStack.Screen name="GroupsList"  component={GroupsScreen} />
       <GroupStack.Screen name="GroupDetail" component={GroupDetailScreen} />
-      <GroupStack.Screen name="AddExpense" component={AddGroupExpenseScreen} />
-      <GroupStack.Screen name="AddPayment" component={AddGroupPaymentScreen} />
+      <GroupStack.Screen name="AddExpense"  component={AddGroupExpenseScreen} />
+      <GroupStack.Screen name="AddPayment"  component={AddGroupPaymentScreen} />
     </GroupStack.Navigator>
   );
 }
@@ -82,19 +89,22 @@ function LoansStack() {
   );
 }
 
-// More tab: Activity + Settle Up only — Profile/Settings/Notifications moved to Dashboard header
+// More tab — MenuScreen is the hub; Settings and Account are pushed from here
 const MoreStack = createNativeStackNavigator();
 function MoreTabStack() {
   return (
     <MoreStack.Navigator screenOptions={{ headerShown: false }}>
-      <MoreStack.Screen name="MoreHome" component={MenuScreen} />
-      <MoreStack.Screen name="Activity" component={ActivityScreen} />
-      <MoreStack.Screen name="Settlements" component={SettlementsScreen} />
+      <MoreStack.Screen name="MoreHome"      component={MenuScreen} />
+      <MoreStack.Screen name="Activity"      component={ActivityScreen} />
+      <MoreStack.Screen name="Settlements"   component={SettlementsScreen} />
+      <MoreStack.Screen name="Settings"      component={SettingsScreen} />
+      <MoreStack.Screen name="Account"       component={AccountScreen} />
+      <MoreStack.Screen name="Notifications" component={NotificationsScreen} />
     </MoreStack.Navigator>
   );
 }
 
-// ── Bottom Tab Navigator ───────────────────────────────────────────────────
+// ── Bottom Tab Navigator ────────────────────────────────────────────────────
 const Tab = createBottomTabNavigator();
 
 export default function MainNavigator() {
@@ -102,68 +112,33 @@ export default function MainNavigator() {
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
-        // tabBarStyle: {
-        //   backgroundColor: COLORS.surface,
-        //   borderTopColor: COLORS.border,
-        //   borderTopWidth: 1,
-        //   height: Platform.OS === "ios" ? 84 : 62,
-        //   paddingBottom: Platform.OS === "ios" ? 24 : 8,
-        //   paddingTop: 8,
-        // },
         tabBarStyle: {
           backgroundColor: COLORS.surface,
           borderTopColor:  COLORS.border,
           borderTopWidth:  1,
-          height:          Platform.OS === 'ios' ? 88 : 68,
-          paddingBottom:   Platform.OS === 'ios' ? 26 : 10,
+          height:          Platform.OS === "ios" ? 88 : 68,
+          paddingBottom:   Platform.OS === "ios" ? 26 : 10,
           paddingTop:      8,
-          // Floating card look
-          marginHorizontal: 12,
-          marginBottom:     Platform.OS === 'ios' ? 20 : 10,
-          borderRadius:     20,
-          borderWidth:      1,
-          position:         'absolute',
-          elevation:        12,
-          shadowColor:      '#000',
-          shadowOffset:     { width: 0, height: -2 },
-          shadowOpacity:    0.18,
-          shadowRadius:     12,
-        },
-        tabBarActiveTintColor: COLORS.primary,
-        tabBarInactiveTintColor: COLORS.text3,
-        // tabBarLabelStyle: {
-        //   fontSize: 10,
-        //   fontWeight: "500",
-        //   marginTop: 2,
-        // },
-        // tabBarLabelStyle: {
-        //   fontSize:   10,
-        //   fontWeight: '600',
-        //   marginTop:  2,
-        //   letterSpacing: 0.2,
-        // },
-        tabBarStyle: {
-          backgroundColor: COLORS.surface,
-          borderTopColor:  COLORS.border,
-          borderTopWidth:  1,
-          height:          Platform.OS === 'ios' ? 88 : 68,
-          paddingBottom:   Platform.OS === 'ios' ? 26 : 10,
-          paddingTop:      8,
-          
-          // Docked look with top rounded edges
+          // Docked with top rounded edges — clean modern look
           borderTopLeftRadius:  24,
           borderTopRightRadius: 24,
-          position: 'absolute',
+          position: "absolute",
           bottom: 0,
           left:   0,
           right:  0,
-          
-          // Shadows
-          elevation:        12,
-          shadowColor:      '#000',
-          shadowOffset:     { width: 0, height: -4 }, // slightly higher shadow for the docked look
-          shadowOpacity:    0.15,
-          shadowRadius:     12,
+          elevation:     12,
+          shadowColor:   "#000",
+          shadowOffset:  { width: 0, height: -4 },
+          shadowOpacity: 0.15,
+          shadowRadius:  12,
+        },
+        tabBarActiveTintColor:   COLORS.primary,
+        tabBarInactiveTintColor: COLORS.text3,
+        tabBarLabelStyle: {
+          fontSize:      10,
+          fontWeight:    "600",
+          marginTop:     2,
+          letterSpacing: 0.2,
         },
         tabBarIcon: ({ focused }) => (
           <TabIcon name={route.name} focused={focused} />
@@ -171,10 +146,10 @@ export default function MainNavigator() {
       })}
     >
       <Tab.Screen name="Dashboard" component={DashboardStack} />
-      <Tab.Screen name="Expenses" component={ExpensesStack} />
-      <Tab.Screen name="Groups" component={GroupsStack} />
-      <Tab.Screen name="Loans" component={LoansStack} />
-      <Tab.Screen name="More" component={MoreTabStack} />
+      <Tab.Screen name="Expenses"  component={ExpensesStack} />
+      <Tab.Screen name="Groups"    component={GroupsStack} />
+      <Tab.Screen name="Loans"     component={LoansStack} />
+      <Tab.Screen name="More"      component={MoreTabStack} />
     </Tab.Navigator>
   );
 }

@@ -1,22 +1,12 @@
 // SplitEase/mobile/src/context/AuthContext.jsx
-
-/**
- * AuthContext.jsx
- *
- * Global auth state for React Native.
- * Mirrors the web app's AuthContext but uses AsyncStorage instead of localStorage.
- *
- * Flow:
- * 1. App mounts → read from AsyncStorage
- * 2. If token found → call /auth/me to validate
- * 3. If valid → set user state (app shows main screens)
- * 4. If invalid → clear storage (app shows login)
- * 5. authChecked prevents flash of wrong screen while validating
- */
+//
+// Auth state + Instagram-style splash screen.
+// Splash: icon centered on full dark screen, no border radius, large.
+// Fades in on mount, fades out before revealing app.
 
 import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { View, Image, Animated } from 'react-native';
+import { View, Image, Animated, StyleSheet } from "react-native";
 import client from "../api/client";
 import { STORAGE_KEY, ENDPOINTS } from "../config/api";
 import { COLORS } from "../constants/theme";
@@ -26,12 +16,16 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [user,        setUser]        = useState(null);
   const [authChecked, setAuthChecked] = useState(false);
-  const splashOpacity = useRef(new Animated.Value(0)).current;
+
+  // Two-phase animation: fade in → hold → fade out
+  const fadeIn  = useRef(new Animated.Value(0)).current;
+  const fadeOut = useRef(new Animated.Value(1)).current; // overlay that covers children
 
   useEffect(() => {
-    Animated.timing(splashOpacity, {
-      toValue:         1,
-      duration:        400,
+    // Fade the icon in immediately
+    Animated.timing(fadeIn, {
+      toValue: 1,
+      duration: 300,
       useNativeDriver: true,
     }).start();
   }, []);
@@ -44,14 +38,11 @@ export function AuthProvider({ children }) {
     try {
       const saved = await AsyncStorage.getItem(STORAGE_KEY);
       if (!saved) return;
-
       const parsed = JSON.parse(saved);
       if (!parsed?.access_token) {
         await AsyncStorage.removeItem(STORAGE_KEY);
         return;
       }
-
-      // Validate with server
       const { data } = await client.get(ENDPOINTS.me);
       const freshUser = { ...parsed, ...data };
       setUser(freshUser);
@@ -80,35 +71,21 @@ export function AuthProvider({ children }) {
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   }
 
-  // Splash-like loading while we validate the token
-
+  // While checking auth, show full-screen splash
   if (!authChecked) {
     return (
-      <View style={{
-        flex:            1,
-        backgroundColor: COLORS.bg,
-        alignItems:      'center',
-        justifyContent:  'center',
-      }}>
-        <Animated.View style={{ opacity: splashOpacity }}>
-          <Image
-            source={require('../../assets/adaptive-icon.png')}
-            style={{
-              width:        96,
-              height:       96,
-              borderRadius: 22,
-            }}
-            resizeMode="contain"
-          />
-        </Animated.View>
+      <View style={styles.splash}>
+        <Animated.Image
+          source={require("../../assets/adaptive-icon.png")}
+          style={[styles.splashIcon, { opacity: fadeIn }]}
+          resizeMode="contain"
+        />
       </View>
     );
   }
 
   return (
-    <AuthContext.Provider
-      value={{ user, login, logout, updateUser, authChecked }}
-    >
+    <AuthContext.Provider value={{ user, login, logout, updateUser, authChecked }}>
       {children}
     </AuthContext.Provider>
   );
@@ -119,3 +96,18 @@ export function useAuth() {
   if (!ctx) throw new Error("useAuth must be used inside AuthProvider");
   return ctx;
 }
+
+const styles = StyleSheet.create({
+  splash: {
+    flex: 1,
+    backgroundColor: COLORS.bg,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  // Instagram uses ~140–160pt icon on a full screen.
+  // No border radius on the icon itself — the icon asset already has shape baked in.
+  splashIcon: {
+    width: 120,
+    height: 120,
+  },
+});
