@@ -45,12 +45,15 @@ export function UpdateChecker() {
     <Modal visible={updateAvailable} transparent animationType="fade">
       <View style={styles.overlay}>
         <View style={styles.box}>
-          <View style={styles.iconWrap}>
-            <Icons.activity size={24} color={COLORS.primary} />
-          </View>
+          {/* Logo */}
+          <Image 
+            source={require('../../../assets/icon.png')} 
+            style={styles.logoImage} 
+            resizeMode="cover"
+          />
           <Text style={styles.title}>Update Available</Text>
           <Text style={styles.body}>
-            A new version of SplitEase is available with bug fixes and UX improvements.
+            A new version of SplitEase is available.
           </Text>
           
           <View style={styles.row}>
