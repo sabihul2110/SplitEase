@@ -18,7 +18,7 @@ import { useNavigation } from "@react-navigation/native";
 import client from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS } from "../../constants/theme";
-import { Icons, TYPE_ICONS, TYPE_CFG } from "../../constants/icons";
+import { Icons, TYPE_ICONS, TYPE_CFG } from "../../components/icons/icons";
 import ScreenHeader from "../../components/layout/ScreenHeader";
 
 // ─────────────────────────────────────────────

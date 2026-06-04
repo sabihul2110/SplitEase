@@ -8,31 +8,44 @@
  * watches user state and swaps Auth ↔ Main stacks.
  */
 
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
-  View, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView,
-  Platform, ScrollView, Alert, Image
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import client from '../../api/client';
-import { ENDPOINTS } from '../../constants/api';
-import { useAuth } from '../../context/AuthContext';
-import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS } from '../../constants/theme';
-import Input  from '../../components/common/Input';
-import Button from '../../components/common/Button';
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Alert,
+  Image,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import client from "../../api/client";
+import { ENDPOINTS } from '../../config/api';
+import { useAuth } from "../../context/AuthContext";
+import {
+  COLORS,
+  FONT_SIZE,
+  FONT_WEIGHT,
+  SPACING,
+  RADIUS,
+} from "../../constants/theme";
+import Input from "../../components/common/Input";
+import Button from "../../components/common/Button";
 
 export default function LoginScreen({ navigation }) {
-  const { login }  = useAuth();
-  const [email,    setEmail]    = useState('');
-  const [password, setPassword] = useState('');
-  const [loading,  setLoading]  = useState(false);
-  const [errors,   setErrors]   = useState({});
+  const { login } = useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
 
   function validate() {
     const e = {};
-    if (!email.trim())    e.email    = 'Email is required';
-    if (!password)        e.password = 'Password is required';
-    if (email && !/\S+@\S+\.\S+/.test(email)) e.email = 'Enter a valid email';
+    if (!email.trim()) e.email = "Email is required";
+    if (!password) e.password = "Password is required";
+    if (email && !/\S+@\S+\.\S+/.test(email)) e.email = "Enter a valid email";
     setErrors(e);
     return Object.keys(e).length === 0;
   }
@@ -42,22 +55,25 @@ export default function LoginScreen({ navigation }) {
     setLoading(true);
     try {
       const { data } = await client.post(ENDPOINTS.login, {
-        email:    email.trim().toLowerCase(),
+        email: email.trim().toLowerCase(),
         password,
       });
 
       // Backend returns: { access_token, token_type, user_id, name, email, role }
       await login({
         access_token: data.access_token,
-        user_id:      data.user_id,
-        name:         data.name,
-        email:        data.email,
-        role:         data.role,
+        user_id: data.user_id,
+        name: data.name,
+        email: data.email,
+        role: data.role,
       });
       // Navigation happens automatically via RootNavigator
     } catch (err) {
-      const msg = err.response?.data?.detail || 'Login failed. Please check your credentials.';
-      Alert.alert('Login Failed', msg);
+      
+      const msg =
+        err.response?.data?.detail ||
+        "Login failed. Please check your credentials.";
+      Alert.alert("Login Failed", msg);
     } finally {
       setLoading(false);
     }
@@ -67,7 +83,7 @@ export default function LoginScreen({ navigation }) {
     <SafeAreaView style={styles.safe}>
       <KeyboardAvoidingView
         style={styles.kav}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView
           contentContainerStyle={styles.scroll}
@@ -76,9 +92,9 @@ export default function LoginScreen({ navigation }) {
         >
           {/* Logo */}
           <View style={styles.logoWrap}>
-            <Image 
-              source={require('../../../assets/adaptive-icon.png')} 
-              style={styles.logoImage} 
+            <Image
+              source={require("../../../assets/adaptive-icon.png")}
+              style={styles.logoImage}
               resizeMode="contain"
             />
             <Text style={styles.appName}>SplitEase</Text>
@@ -94,7 +110,10 @@ export default function LoginScreen({ navigation }) {
               <Input
                 label="Email"
                 value={email}
-                onChangeText={v => { setEmail(v); setErrors(e => ({ ...e, email: null })); }}
+                onChangeText={(v) => {
+                  setEmail(v);
+                  setErrors((e) => ({ ...e, email: null }));
+                }}
                 placeholder="you@example.com"
                 keyboardType="email-address"
                 error={errors.email}
@@ -103,28 +122,32 @@ export default function LoginScreen({ navigation }) {
               <Input
                 label="Password"
                 value={password}
-                onChangeText={v => { setPassword(v); setErrors(e => ({ ...e, password: null })); }}
+                onChangeText={(v) => {
+                  setPassword(v);
+                  setErrors((e) => ({ ...e, password: null }));
+                }}
                 placeholder="Your password"
                 secureTextEntry
                 error={errors.password}
               />
             </View>
-
-            {/* <TouchableOpacity
-              onPress={() => navigation.navigate('ForgotPassword')}
-              style={{ alignSelf: 'flex-end' }}
-            > */}
             <TouchableOpacity
-              onPress={() => navigation.navigate('ForgotPassword')}
-              style={{ alignSelf: 'flex-end', marginTop: -SPACING.sm }}
+              onPress={() => navigation.navigate("ForgotPassword")}
+              style={{ alignSelf: "flex-end", marginTop: -SPACING.sm }}
             >
-              <Text style={{ fontSize: FONT_SIZE.sm, color: COLORS.primary, fontWeight: FONT_WEIGHT.medium }}>
+              <Text
+                style={{
+                  fontSize: FONT_SIZE.sm,
+                  color: COLORS.primary,
+                  fontWeight: FONT_WEIGHT.medium,
+                }}
+              >
                 Forgot password?
               </Text>
             </TouchableOpacity>
 
             <Button
-              title={loading ? 'Signing in…' : 'Sign In'}
+              title={loading ? "Signing in…" : "Sign In"}
               onPress={handleLogin}
               loading={loading}
               fullWidth
@@ -136,7 +159,7 @@ export default function LoginScreen({ navigation }) {
           {/* Footer */}
           <View style={styles.footer}>
             <Text style={styles.footerText}>Don't have an account? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
+            <TouchableOpacity onPress={() => navigation.navigate("Signup")}>
               <Text style={styles.footerLink}>Sign up</Text>
             </TouchableOpacity>
           </View>
@@ -148,65 +171,57 @@ export default function LoginScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   safe: {
-    flex:            1,
+    flex: 1,
     backgroundColor: COLORS.bg,
   },
   kav: {
     flex: 1,
   },
   scroll: {
-    flexGrow:       1,
-    justifyContent: 'center',
-    padding:        SPACING.base,
-    gap:            SPACING.xl,
+    flexGrow: 1,
+    justifyContent: "center",
+    padding: SPACING.base,
+    gap: SPACING.xl,
   },
   logoWrap: {
-    alignItems: 'center',
-    gap:         SPACING.sm,
+    alignItems: "center",
+    gap: SPACING.sm,
   },
   logoImage: {
-    width:  80,
+    width: 80,
     height: 80,
   },
-  // logoBox: {
-  //   width:           64,
-  //   height:          64,
-  //   backgroundColor: COLORS.primary,
-  //   borderRadius:    18,
-  //   alignItems:      'center',
-  //   justifyContent:  'center',
-  // },
   logoText: {
-    fontSize:   32,
+    fontSize: 32,
     fontWeight: FONT_WEIGHT.extrabold,
-    color:      COLORS.white,
+    color: COLORS.white,
   },
   appName: {
-    fontSize:   FONT_SIZE['2xl'],
+    fontSize: FONT_SIZE["2xl"],
     fontWeight: FONT_WEIGHT.extrabold,
-    color:      COLORS.text,
+    color: COLORS.text,
     letterSpacing: 0.5,
   },
   tagline: {
     fontSize: FONT_SIZE.base,
-    color:    COLORS.text2, // Boosted from text3 for better readability against dark bg
+    color: COLORS.text2, // Boosted from text3 for better readability against dark bg
   },
   card: {
     backgroundColor: COLORS.surface,
-    borderRadius:    RADIUS.xl,
-    borderWidth:     1,
-    borderColor:     COLORS.border,
-    padding:         SPACING.xl,
-    gap:             SPACING.base,
+    borderRadius: RADIUS.xl,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: SPACING.xl,
+    gap: SPACING.base,
   },
   heading: {
-    fontSize:   FONT_SIZE.xl,
+    fontSize: FONT_SIZE.xl,
     fontWeight: FONT_WEIGHT.bold,
-    color:      COLORS.text,
+    color: COLORS.text,
   },
   subheading: {
-    fontSize:    FONT_SIZE.base,
-    color:       COLORS.text2,
+    fontSize: FONT_SIZE.base,
+    color: COLORS.text2,
     marginBottom: SPACING.sm,
   },
   fields: {
@@ -216,17 +231,17 @@ const styles = StyleSheet.create({
     marginTop: SPACING.sm,
   },
   footer: {
-    flexDirection:  'row',
-    justifyContent: 'center',
-    alignItems:     'center',
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
   },
   footerText: {
     fontSize: FONT_SIZE.base,
-    color:    COLORS.text2,
+    color: COLORS.text2,
   },
   footerLink: {
-    fontSize:   FONT_SIZE.base,
-    color:      COLORS.primary,
+    fontSize: FONT_SIZE.base,
+    color: COLORS.primary,
     fontWeight: FONT_WEIGHT.semibold,
   },
 });

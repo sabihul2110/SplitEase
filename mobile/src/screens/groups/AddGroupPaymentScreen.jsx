@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import client from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
-import { Icons } from '../../constants/icons';
+import { Icons } from '../../components/icons/icons';
 
 const C = {
   bg:        '#0a0d14',

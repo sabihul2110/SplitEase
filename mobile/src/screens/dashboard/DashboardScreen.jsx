@@ -1,4 +1,4 @@
-// SplitEase/mobile/src/screens/main/DashboardScreen.jsx
+// SplitEase/mobile/src/screens/dashboard/DashboardScreen.jsx
 
 import React, { useState, useCallback } from "react";
 import {

@@ -53,9 +53,6 @@ export default function ResetPasswordScreen({ navigation }) {
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           {/* Logo */}
           <View style={styles.logoWrap}>
-            <View style={styles.logoBox}>
-              <Text style={styles.logoText}>S</Text>
-            </View>
             <Text style={styles.appName}>SplitEase</Text>
           </View>
           <View style={styles.card}>

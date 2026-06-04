@@ -1,20 +1,11 @@
 // mobile/src/components/common/DatePickerInput.jsx
-//
-// Shared calendar date picker used across AddEntryScreen,
-// AddGroupExpenseScreen, AddGroupPaymentScreen, and LoansScreen.
-// Drop-in replacement for any YYYY-MM-DD text input.
-//
-// Props:
-//   value      — ISO date string "YYYY-MM-DD"
-//   onChange   — (isoString) => void
-//   accentColor — optional, defaults to COLORS.primary
 
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Modal,
 } from 'react-native';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SPACING } from '../../constants/theme';
-import { Icons } from '../../constants/icons';
+import { Icons } from '../icons/icons';
 
 export default function DatePickerInput({ value, onChange, accentColor }) {
   const accent = accentColor || COLORS.primary;

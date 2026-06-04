@@ -8,7 +8,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import client from '../../api/client';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS } from '../../constants/theme';
-import { Icons } from '../../constants/icons';
+import { Icons } from '../../components/icons/icons';
 import Input  from '../../components/common/Input';
 import Button from '../../components/common/Button';
 

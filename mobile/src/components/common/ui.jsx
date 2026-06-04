@@ -1,9 +1,13 @@
-// SplitEase/mobile/src/components/common/ui.jsx
+// SplitEase/mobile/src/components/common/Ui.jsx
 
 /**
- * ui.jsx
- * Small atomic UI components:
- *   Card, Badge, Divider, EmptyState, LoadingState, Avatar, AmountText
+ * Ui.jsx
+ * Atomic UI components: Card, Badge, Divider, EmptyState,
+ * LoadingState, Avatar, AmountText, SectionHeader
+ *
+ * NOTE: If this file grows beyond ~10 components, split into:
+ *   Card.jsx, Badge.jsx, Avatar.jsx, EmptyState.jsx, etc.
+ *   and re-export everything from an index.jsx barrel.
  */
 
 import React from 'react';
@@ -11,7 +15,7 @@ import {
   View, Text, StyleSheet, ActivityIndicator, TouchableOpacity,
 } from 'react-native';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS } from '../../constants/theme';
-import { Icons } from '../../constants/icons';
+import { Icons } from '../icons/icons';
 
 // ── Card ──────────────────────────────────────────────────────────────────
 export function Card({ children, style, onPress, padding = true }) {

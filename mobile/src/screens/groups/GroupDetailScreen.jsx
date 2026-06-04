@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import client from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
-import { Icons, CATEGORY_ICONS } from '../../constants/icons';
+import { Icons, CATEGORY_ICONS } from '../../components/icons/icons';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -741,15 +741,6 @@ export default function GroupDetailScreen() {
     else setLoading(true);
     try {
       setSettLoaded(false);
-      // const [expRes, payRes, memRes] = await Promise.all([
-      //   client.get(`/expenses/${groupId}`),
-      //   client.get(`/payments/${groupId}`),
-      //   client.get(`/groups/${groupId}/members`),
-      // ]);
-      // setExpenses(expRes.data  || []);
-      // setPayments(payRes.data  || []);
-      // setMembers(memRes.data   || []);
-
       const [expRes, payRes, memRes, statusRes] = await Promise.all([
         client.get(`/expenses/${groupId}`),
         client.get(`/payments/${groupId}`),
@@ -903,15 +894,8 @@ export default function GroupDetailScreen() {
 
   function renderLedger() {
   const combined = [
-    // ...expenses.map(e => ({ ...e, _type: 'expense', _date: e.expense_date })),
     ...expenses.map(e => ({ ...e, _type: 'expense', _date: e.expense_date, created_at: e.created_at })),
-    // ...payments.map(p => ({ ...p, _type: 'payment', _date: p.payment_date })),
     ...payments.map(p => ({ ...p, _type: 'payment', _date: p.payment_date, created_at: p.created_at })),
-  // ].sort((a, b) =>
-  //   ledgerAsc
-  //     ? new Date(a._date) - new Date(b._date)
-  //     : new Date(b._date) - new Date(a._date)
-  // );
   ].sort((a, b) => {
     const aTime = a.created_at ? new Date(a.created_at) : new Date(a._date);
     const bTime = b.created_at ? new Date(b.created_at) : new Date(b._date);
@@ -1046,13 +1030,6 @@ export default function GroupDetailScreen() {
         <Text style={styles.centredText}>Calculating…</Text>
       </View>
     );
-    // return (
-    //   <>
-    //     {netBalances.length > 0 && (
-    //       <BalanceBanner netBalances={netBalances} currentUserName={userName} />
-    //     )}
-    //     <SectionHead
-
     return (
       <>
         {netBalances.length > 0 && (
@@ -1084,14 +1061,6 @@ export default function GroupDetailScreen() {
             />
           ))
         )}
-        {/* {netBalances.length > 0 && (
-          <>
-            <SectionHead title="Net Balances" />
-            {netBalances.map((item, i) => (
-              <NetRow key={i} item={item} currentUserName={userName} />
-            ))}
-          </>
-        )} */}
         {netBalances.length > 0 && (
           <NetBalancesSection netBalances={netBalances} currentUserName={userName} />
         )}

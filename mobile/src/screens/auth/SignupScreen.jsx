@@ -5,7 +5,7 @@
  * New user registration. First user to sign up becomes admin automatically (backend handles this).
  */
 
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -17,35 +17,46 @@ import {
   Alert,
   Image,
 } from "react-native";
-import { SafeAreaView } from 'react-native-safe-area-context';
-import client from '../../api/client';
-import { ENDPOINTS } from '../../constants/api';
-import { useAuth } from '../../context/AuthContext';
-import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS } from '../../constants/theme';
-import Input  from '../../components/common/Input';
-import Button from '../../components/common/Button';
+import { SafeAreaView } from "react-native-safe-area-context";
+import client from "../../api/client";
+import { ENDPOINTS } from '../../config/api';
+import { useAuth } from "../../context/AuthContext";
+import {
+  COLORS,
+  FONT_SIZE,
+  FONT_WEIGHT,
+  SPACING,
+  RADIUS,
+} from "../../constants/theme";
+import Input from "../../components/common/Input";
+import Button from "../../components/common/Button";
 
 export default function SignupScreen({ navigation }) {
   const { login } = useAuth();
   const [form, setForm] = useState({
-    name: '', email: '', password: '', confirmPassword: '', upi_id: '',
+    name: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    upi_id: "",
   });
-  const [loading, setLoading]  = useState(false);
-  const [errors,  setErrors]   = useState({});
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
 
   function set(field, value) {
-    setForm(f => ({ ...f, [field]: value }));
-    setErrors(e => ({ ...e, [field]: null }));
+    setForm((f) => ({ ...f, [field]: value }));
+    setErrors((e) => ({ ...e, [field]: null }));
   }
 
   function validate() {
     const e = {};
-    if (!form.name.trim())               e.name     = 'Name is required';
-    if (!form.email.trim())              e.email    = 'Email is required';
-    if (!/\S+@\S+\.\S+/.test(form.email)) e.email  = 'Enter a valid email';
-    if (!form.password)                  e.password = 'Password is required';
-    if (form.password.length < 6)        e.password = 'Min 6 characters';
-    if (form.password !== form.confirmPassword) e.confirmPassword = 'Passwords do not match';
+    if (!form.name.trim()) e.name = "Name is required";
+    if (!form.email.trim()) e.email = "Email is required";
+    if (!/\S+@\S+\.\S+/.test(form.email)) e.email = "Enter a valid email";
+    if (!form.password) e.password = "Password is required";
+    if (form.password.length < 6) e.password = "Min 6 characters";
+    if (form.password !== form.confirmPassword)
+      e.confirmPassword = "Passwords do not match";
     setErrors(e);
     return Object.keys(e).length === 0;
   }
@@ -55,8 +66,8 @@ export default function SignupScreen({ navigation }) {
     setLoading(true);
     try {
       const payload = {
-        name:     form.name.trim(),
-        email:    form.email.trim().toLowerCase(),
+        name: form.name.trim(),
+        email: form.email.trim().toLowerCase(),
         password: form.password,
       };
       if (form.upi_id.trim()) payload.upi_id = form.upi_id.trim();
@@ -65,14 +76,15 @@ export default function SignupScreen({ navigation }) {
 
       await login({
         access_token: data.access_token,
-        user_id:      data.user_id,
-        name:         data.name,
-        email:        data.email,
-        role:         data.role,
+        user_id: data.user_id,
+        name: data.name,
+        email: data.email,
+        role: data.role,
       });
     } catch (err) {
-      const msg = err.response?.data?.detail || 'Signup failed. Please try again.';
-      Alert.alert('Signup Failed', msg);
+      const msg =
+        err.response?.data?.detail || "Signup failed. Please try again.";
+      Alert.alert("Signup Failed", msg);
     } finally {
       setLoading(false);
     }
@@ -89,14 +101,6 @@ export default function SignupScreen({ navigation }) {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Logo
-          <View style={styles.logoWrap}>
-            <View style={styles.logoBox}>
-              <Text style={styles.logoText}>S</Text>
-            </View>
-            <Text style={styles.appName}>SplitEase</Text>
-          </View> */}
-          {/* Logo */}
           <View style={styles.logoWrap}>
             <Image
               source={require("../../../assets/adaptive-icon.png")}
@@ -181,29 +185,54 @@ export default function SignupScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  safe:    { flex: 1, backgroundColor: COLORS.bg },
-  kav:     { flex: 1 },
-  scroll:  {
-    flexGrow: 1, justifyContent: 'center',
-    padding: SPACING.base, gap: SPACING.xl,
-    paddingVertical: SPACING['2xl'],
+  safe: { flex: 1, backgroundColor: COLORS.bg },
+  kav: { flex: 1 },
+  scroll: {
+    flexGrow: 1,
+    justifyContent: "center",
+    padding: SPACING.base,
+    gap: SPACING.xl,
+    paddingVertical: SPACING["2xl"],
   },
-  logoWrap:  { alignItems: 'center', gap: SPACING.sm },
+  logoWrap: { alignItems: "center", gap: SPACING.sm },
   logoImage: {
-    width:  80,
+    width: 80,
     height: 80,
   },
-  logoText:  { fontSize: 28, fontWeight: FONT_WEIGHT.extrabold, color: COLORS.white },
-  appName:   { fontSize: FONT_SIZE.xl, fontWeight: FONT_WEIGHT.extrabold, color: COLORS.text },
-  card:      {
-    backgroundColor: COLORS.surface, borderRadius: RADIUS.xl,
-    borderWidth: 1, borderColor: COLORS.border, padding: SPACING.xl, gap: SPACING.base,
+  appName: {
+    fontSize: FONT_SIZE.xl,
+    fontWeight: FONT_WEIGHT.extrabold,
+    color: COLORS.text,
   },
-  heading:   { fontSize: FONT_SIZE.xl, fontWeight: FONT_WEIGHT.bold, color: COLORS.text },
-  subheading:{ fontSize: FONT_SIZE.base, color: COLORS.text2, marginBottom: SPACING.sm },
-  fields:    { gap: SPACING.base },
+  card: {
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.xl,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: SPACING.xl,
+    gap: SPACING.base,
+  },
+  heading: {
+    fontSize: FONT_SIZE.xl,
+    fontWeight: FONT_WEIGHT.bold,
+    color: COLORS.text,
+  },
+  subheading: {
+    fontSize: FONT_SIZE.base,
+    color: COLORS.text2,
+    marginBottom: SPACING.sm,
+  },
+  fields: { gap: SPACING.base },
   submitBtn: { marginTop: SPACING.sm },
-  footer:    { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
-  footerText:{ fontSize: FONT_SIZE.base, color: COLORS.text2 },
-  footerLink:{ fontSize: FONT_SIZE.base, color: COLORS.primary, fontWeight: FONT_WEIGHT.semibold },
+  footer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  footerText: { fontSize: FONT_SIZE.base, color: COLORS.text2 },
+  footerLink: {
+    fontSize: FONT_SIZE.base,
+    color: COLORS.primary,
+    fontWeight: FONT_WEIGHT.semibold,
+  },
 });

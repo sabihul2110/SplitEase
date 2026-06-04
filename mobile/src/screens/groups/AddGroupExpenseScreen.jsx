@@ -18,10 +18,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import client from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
-import { Icons, CATEGORY_ICONS } from '../../constants/icons';
+import { Icons, CATEGORY_ICONS } from '../../components/icons/icons';
 import { Modal } from 'react-native';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS } from '../../constants/theme';
-import { Avatar } from '../../components/common/ui';
+import { Avatar } from '../../components/common/Ui';
 import Input  from '../../components/common/Input';
 import Button from '../../components/common/Button';
 import ScreenHeader from '../../components/layout/ScreenHeader';
@@ -60,8 +60,6 @@ export default function AddGroupExpenseScreen() {
   const [subcategoryId, setSubcategoryId] = useState(null);
   const [splitType,     setSplitType]     = useState(editExpense?.split_type    || 'equal');
   const [expenseDate,   setExpenseDate]   = useState(editExpense?.expense_date  || todayStr());
-  // const [participants,  setParticipants]  = useState(members.map(m => m.user_id));
-  // const [customAmounts, setCustomAmounts] = useState({});
   const editSplits = editExpense?.splits || [];
   const initialParticipants = editSplits.length > 0
     ? editSplits.map(s => s.user_id)

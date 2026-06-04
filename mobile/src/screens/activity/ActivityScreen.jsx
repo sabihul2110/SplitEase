@@ -11,75 +11,125 @@
  * - Grouped by date
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback } from "react";
 import {
-  View, Text, StyleSheet, SectionList, TouchableOpacity,
-  RefreshControl, TextInput,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import client from '../../api/client';
-import { ENDPOINTS } from '../../constants/api';
-import { useAuth } from '../../context/AuthContext';
-import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS } from '../../constants/theme';
-import { EmptyState, LoadingState } from '../../components/common/ui';
-import { Icons } from '../../constants/icons';
-import ScreenHeader from '../../components/layout/ScreenHeader';
+  View,
+  Text,
+  StyleSheet,
+  SectionList,
+  TouchableOpacity,
+  RefreshControl,
+  TextInput,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import client from "../../api/client";
+import { ENDPOINTS } from "../../config/api";
+import { useAuth } from "../../context/AuthContext";
+import {
+  COLORS,
+  FONT_SIZE,
+  FONT_WEIGHT,
+  SPACING,
+  RADIUS,
+} from "../../constants/theme";
+import { Icons } from "../../components/icons/icons";
+import ScreenHeader from "../../components/layout/ScreenHeader";
 
 // Matches web TYPE_META exactly
 const TYPE_META = {
-  group_expense:       { bg: 'rgba(59,130,246,0.12)',  color: '#60a5fa', label: 'Group expense'   },
-  group_expense_owed:  { bg: 'rgba(239,68,68,0.10)',   color: '#f87171', label: 'You owe'         },
-  personal_expense:    { bg: 'rgba(245,158,11,0.12)',  color: '#fbbf24', label: 'Personal'        },
-  income:              { bg: 'rgba(16,185,129,0.12)',  color: '#34d399', label: 'Income'          },
-  loan_given:          { bg: 'rgba(99,102,241,0.12)',  color: '#818cf8', label: 'Loan given'      },
-  loan_taken:          { bg: 'rgba(236,72,153,0.12)',  color: '#f472b6', label: 'Loan taken'      },
-  settlement_received: { bg: 'rgba(16,185,129,0.12)',  color: '#34d399', label: 'Received'        },
-  settlement_sent:     { bg: 'rgba(59,130,246,0.12)',  color: '#60a5fa', label: 'Sent'            },
+  group_expense: {
+    bg: "rgba(59,130,246,0.12)",
+    color: "#60a5fa",
+    label: "Group expense",
+  },
+  group_expense_owed: {
+    bg: "rgba(239,68,68,0.10)",
+    color: "#f87171",
+    label: "You owe",
+  },
+  personal_expense: {
+    bg: "rgba(245,158,11,0.12)",
+    color: "#fbbf24",
+    label: "Personal",
+  },
+  income: { bg: "rgba(16,185,129,0.12)", color: "#34d399", label: "Income" },
+  loan_given: {
+    bg: "rgba(99,102,241,0.12)",
+    color: "#818cf8",
+    label: "Loan given",
+  },
+  loan_taken: {
+    bg: "rgba(236,72,153,0.12)",
+    color: "#f472b6",
+    label: "Loan taken",
+  },
+  settlement_received: {
+    bg: "rgba(16,185,129,0.12)",
+    color: "#34d399",
+    label: "Received",
+  },
+  settlement_sent: {
+    bg: "rgba(59,130,246,0.12)",
+    color: "#60a5fa",
+    label: "Sent",
+  },
 };
 
 const TYPE_ICON = {
-  group_expense:       Icons.groupExpense,
-  group_expense_owed:  Icons.receipt,
-  personal_expense:    Icons.personalExpense,
-  income:              Icons.income,
-  loan_given:          Icons.lendMoney,
-  loan_taken:          Icons.borrowMoney,
+  group_expense: Icons.groupExpense,
+  group_expense_owed: Icons.receipt,
+  personal_expense: Icons.personalExpense,
+  income: Icons.income,
+  loan_given: Icons.lendMoney,
+  loan_taken: Icons.borrowMoney,
   settlement_received: Icons.checkCircle,
-  settlement_sent:     Icons.settlement,
+  settlement_sent: Icons.settlement,
 };
 
 // Matches web tabMatches()
 function tabMatches(tab, type) {
-  if (tab === 'all')      return true;
-  if (tab === 'group')    return type === 'group_expense' || type === 'group_expense_owed' || type.startsWith('settlement');
-  if (tab === 'personal') return type === 'personal_expense' || type === 'income';
-  if (tab === 'money')    return type === 'loan_given' || type === 'loan_taken';
+  if (tab === "all") return true;
+  if (tab === "group")
+    return (
+      type === "group_expense" ||
+      type === "group_expense_owed" ||
+      type.startsWith("settlement")
+    );
+  if (tab === "personal")
+    return type === "personal_expense" || type === "income";
+  if (tab === "money") return type === "loan_given" || type === "loan_taken";
   return true;
 }
 
 function isInflow(type) {
-  return type === 'income' || type === 'settlement_received' || type === 'loan_taken';
+  return (
+    type === "income" || type === "settlement_received" || type === "loan_taken"
+  );
 }
 
 function dateLabel(d) {
-  const today = new Date().toISOString().split('T')[0];
-  const yest  = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-  if (d === today) return 'Today';
-  if (d === yest)  return 'Yesterday';
-  return new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+  const today = new Date().toISOString().split("T")[0];
+  const yest = new Date(Date.now() - 86400000).toISOString().split("T")[0];
+  if (d === today) return "Today";
+  if (d === yest) return "Yesterday";
+  return new Date(d + "T00:00:00").toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
 }
 
 function fmt(n) {
-  return Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+  return Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 });
 }
 
 // ── Activity row ───────────────────────────────────────────────────────────
 function ActivityRow({ item, onPress }) {
-  const meta     = TYPE_META[item.type] || TYPE_META.group_expense;
-  const inflow   = isInflow(item.type);
-  const canNav   = !!item.group_id;
-  const amount   = Number(item.amount || 0);
+  const meta = TYPE_META[item.type] || TYPE_META.group_expense;
+  const inflow = isInflow(item.type);
+  const canNav = !!item.group_id;
+  const amount = Number(item.amount || 0);
   const IconComp = TYPE_ICON[item.type] || Icons.receipt;
 
   return (
@@ -92,19 +142,34 @@ function ActivityRow({ item, onPress }) {
         <IconComp size={18} color={meta.color} />
       </View>
       <View style={styles.rowBody}>
-        <Text style={styles.rowLabel} numberOfLines={1}>{item.label}</Text>
+        <Text style={styles.rowLabel} numberOfLines={1}>
+          {item.label}
+        </Text>
         <View style={styles.rowMeta}>
-          <View style={[styles.rowTag, { borderColor: meta.color + '40' }]}>
-            <Text style={[styles.rowTagText, { color: meta.color }]}>{meta.label}</Text>
+          <View style={[styles.rowTag, { borderColor: meta.color + "40" }]}>
+            <Text style={[styles.rowTagText, { color: meta.color }]}>
+              {meta.label}
+            </Text>
           </View>
-          {item.sub && <Text style={styles.rowSub} numberOfLines={1}>{item.sub}</Text>}
+          {item.sub && (
+            <Text style={styles.rowSub} numberOfLines={1}>
+              {item.sub}
+            </Text>
+          )}
           {item.group_name && (
-            <Text style={styles.rowGroup} numberOfLines={1}>{item.group_name}</Text>
+            <Text style={styles.rowGroup} numberOfLines={1}>
+              {item.group_name}
+            </Text>
           )}
         </View>
       </View>
-      <Text style={[styles.rowAmt, { color: inflow ? COLORS.success : COLORS.text }]}>
-        {inflow ? '+' : ''}₹{fmt(amount)}
+      <Text
+        style={[
+          styles.rowAmt,
+          { color: inflow ? COLORS.success : COLORS.text },
+        ]}
+      >
+        {inflow ? "+" : ""}₹{fmt(amount)}
       </Text>
     </TouchableOpacity>
   );
@@ -112,25 +177,25 @@ function ActivityRow({ item, onPress }) {
 
 // ── Main screen ────────────────────────────────────────────────────────────
 const TABS = [
-  { id: 'all',      label: 'All'      },
-  { id: 'group',    label: 'Group'    },
-  { id: 'personal', label: 'Personal' },
-  { id: 'money',    label: 'Money'    },
+  { id: "all", label: "All" },
+  { id: "group", label: "Group" },
+  { id: "personal", label: "Personal" },
+  { id: "money", label: "Money" },
 ];
 
 export default function ActivityScreen() {
-  const navigation   = useNavigation();
-  const [feed,       setFeed]       = useState([]);
-  const [loading,    setLoading]    = useState(true);
+  const navigation = useNavigation();
+  const [feed, setFeed] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [tab,        setTab]        = useState('all');
-  const [search,     setSearch]     = useState('');
+  const [tab, setTab] = useState("all");
+  const [search, setSearch] = useState("");
 
   const load = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
-    else           setLoading(true);
+    else setLoading(true);
     try {
-      const { data } = await client.get(ENDPOINTS.timeline + '?limit=200');
+      const { data } = await client.get(ENDPOINTS.timeline + "?limit=200");
       setFeed(data || []);
     } catch {
       setFeed([]);
@@ -140,19 +205,30 @@ export default function ActivityScreen() {
     }
   }, []);
 
-  useFocusEffect(useCallback(() => { load(); }, [load]));
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load]),
+  );
 
   // Summary chips — matches web
-  const groupSpend    = feed.filter(f => f.type === 'group_expense').reduce((s, e) => s + Number(e.amount || 0), 0);
-  const personalSpend = feed.filter(f => f.type === 'personal_expense').reduce((s, e) => s + Number(e.amount || 0), 0);
-  const settledCount  = feed.filter(f => f.type === 'settlement_sent' || f.type === 'settlement_received').length;
+  const groupSpend = feed
+    .filter((f) => f.type === "group_expense")
+    .reduce((s, e) => s + Number(e.amount || 0), 0);
+  const personalSpend = feed
+    .filter((f) => f.type === "personal_expense")
+    .reduce((s, e) => s + Number(e.amount || 0), 0);
+  const settledCount = feed.filter(
+    (f) => f.type === "settlement_sent" || f.type === "settlement_received",
+  ).length;
 
   // Filter
-  const visible = feed.filter(item => {
+  const visible = feed.filter((item) => {
     if (!tabMatches(tab, item.type)) return false;
     if (search) {
-      const q   = search.toLowerCase();
-      const hay = `${item.label || ''} ${item.sub || ''} ${item.group_name || ''}`.toLowerCase();
+      const q = search.toLowerCase();
+      const hay =
+        `${item.label || ""} ${item.sub || ""} ${item.group_name || ""}`.toLowerCase();
       if (!hay.includes(q)) return false;
     }
     return true;
@@ -160,26 +236,40 @@ export default function ActivityScreen() {
 
   // Group by date for SectionList
   const grouped = {};
-  visible.forEach(item => {
-    const d = item.date || 'Unknown';
+  visible.forEach((item) => {
+    const d = item.date || "Unknown";
     (grouped[d] = grouped[d] || []).push(item);
   });
   const sections = Object.keys(grouped)
     .sort()
     .reverse()
-    .map(date => ({ title: dateLabel(date), data: grouped[date] }));
+    .map((date) => ({ title: dateLabel(date), data: grouped[date] }));
 
-  if (loading) return (
-    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
-      <View style={[styles.listHeader, { flex: 1, alignItems: 'center', justifyContent: 'center' }]}>
-        <Icons.activity size={32} color={COLORS.text3} />
-        <Text style={{ fontSize: FONT_SIZE.base, color: COLORS.text3, marginTop: 10 }}>Loading activity…</Text>
-      </View>
-    </SafeAreaView>
-  );
+  if (loading)
+    return (
+      <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
+        <View
+          style={[
+            styles.listHeader,
+            { flex: 1, alignItems: "center", justifyContent: "center" },
+          ]}
+        >
+          <Icons.activity size={32} color={COLORS.text3} />
+          <Text
+            style={{
+              fontSize: FONT_SIZE.base,
+              color: COLORS.text3,
+              marginTop: 10,
+            }}
+          >
+            Loading activity…
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
       <ScreenHeader title="Activity" />
 
       <SectionList
@@ -196,21 +286,32 @@ export default function ActivityScreen() {
         }
         ListHeaderComponent={() => (
           <View style={styles.listHeader}>
-
             {/* Summary chips */}
             {feed.length > 0 && (
               <View style={styles.chips}>
                 <View style={styles.chip}>
-                  <View style={[styles.chipDot, { backgroundColor: '#3b82f6' }]} />
-                  <Text style={styles.chipText}>₹{fmt(groupSpend)} group spend</Text>
+                  <View
+                    style={[styles.chipDot, { backgroundColor: "#3b82f6" }]}
+                  />
+                  <Text style={styles.chipText}>
+                    ₹{fmt(groupSpend)} group spend
+                  </Text>
                 </View>
                 <View style={styles.chip}>
-                  <View style={[styles.chipDot, { backgroundColor: '#f59e0b' }]} />
-                  <Text style={styles.chipText}>₹{fmt(personalSpend)} personal</Text>
+                  <View
+                    style={[styles.chipDot, { backgroundColor: "#f59e0b" }]}
+                  />
+                  <Text style={styles.chipText}>
+                    ₹{fmt(personalSpend)} personal
+                  </Text>
                 </View>
                 <View style={styles.chip}>
-                  <View style={[styles.chipDot, { backgroundColor: '#10b981' }]} />
-                  <Text style={styles.chipText}>{settledCount} settlement{settledCount !== 1 ? 's' : ''}</Text>
+                  <View
+                    style={[styles.chipDot, { backgroundColor: "#10b981" }]}
+                  />
+                  <Text style={styles.chipText}>
+                    {settledCount} settlement{settledCount !== 1 ? "s" : ""}
+                  </Text>
                 </View>
               </View>
             )}
@@ -229,36 +330,65 @@ export default function ActivityScreen() {
 
             {/* Tabs */}
             <View style={styles.tabs}>
-              {TABS.map(t => (
+              {TABS.map((t) => (
                 <TouchableOpacity
                   key={t.id}
                   style={[styles.tabBtn, tab === t.id && styles.tabBtnActive]}
                   onPress={() => setTab(t.id)}
                 >
-                  <Text style={[styles.tabText, tab === t.id && styles.tabTextActive]}>
+                  <Text
+                    style={[
+                      styles.tabText,
+                      tab === t.id && styles.tabTextActive,
+                    ]}
+                  >
                     {t.label}
                   </Text>
                 </TouchableOpacity>
               ))}
             </View>
 
-            <Text style={styles.countText}>{visible.length} item{visible.length !== 1 ? 's' : ''}</Text>
+            <Text style={styles.countText}>
+              {visible.length} item{visible.length !== 1 ? "s" : ""}
+            </Text>
           </View>
         )}
         ListEmptyComponent={() => (
-          <View style={{ alignItems: 'center', paddingTop: 64, gap: 12 }}>
-            <View style={{
-              width: 72, height: 72, borderRadius: 20,
-              backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border,
-              alignItems: 'center', justifyContent: 'center',
-            }}>
+          <View style={{ alignItems: "center", paddingTop: 64, gap: 12 }}>
+            <View
+              style={{
+                width: 72,
+                height: 72,
+                borderRadius: 20,
+                backgroundColor: COLORS.surface,
+                borderWidth: 1,
+                borderColor: COLORS.border,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
               <Icons.activity size={32} color={COLORS.text3} />
             </View>
-            <Text style={{ fontSize: FONT_SIZE.lg, fontWeight: FONT_WEIGHT.bold, color: COLORS.text }}>
-              {search ? 'No results' : 'No activity yet'}
+            <Text
+              style={{
+                fontSize: FONT_SIZE.lg,
+                fontWeight: FONT_WEIGHT.bold,
+                color: COLORS.text,
+              }}
+            >
+              {search ? "No results" : "No activity yet"}
             </Text>
-            <Text style={{ fontSize: FONT_SIZE.base, color: COLORS.text3, textAlign: 'center', paddingHorizontal: SPACING.xl }}>
-              {search ? `Nothing matches "${search}"` : 'Expenses, payments, and income will appear here.'}
+            <Text
+              style={{
+                fontSize: FONT_SIZE.base,
+                color: COLORS.text3,
+                textAlign: "center",
+                paddingHorizontal: SPACING.xl,
+              }}
+            >
+              {search
+                ? `Nothing matches "${search}"`
+                : "Expenses, payments, and income will appear here."}
             </Text>
           </View>
         )}
@@ -271,10 +401,13 @@ export default function ActivityScreen() {
         renderItem={({ item }) => (
           <ActivityRow
             item={item}
-            onPress={() => item.group_id && navigation.navigate('Groups', {
-              screen: 'GroupDetail',
-              params: { groupId: item.group_id, groupName: item.group_name },
-            })}
+            onPress={() =>
+              item.group_id &&
+              navigation.navigate("Groups", {
+                screen: "GroupDetail",
+                params: { groupId: item.group_id, groupName: item.group_name },
+              })
+            }
           />
         )}
         contentContainerStyle={styles.list}
@@ -285,67 +418,133 @@ export default function ActivityScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe:       { flex: 1, backgroundColor: COLORS.bg },
-  list:       { paddingBottom: SPACING['2xl'] },
+  safe: { flex: 1, backgroundColor: COLORS.bg },
+  list: { paddingBottom: SPACING["2xl"] },
   listHeader: { padding: SPACING.base, gap: SPACING.base },
 
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
+  chips: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.sm },
   chip: {
-    flexDirection: 'row', alignItems: 'center', gap: 7,
-    paddingHorizontal: 13, paddingVertical: 7,
-    borderRadius: RADIUS.full, borderWidth: 1, borderColor: COLORS.border,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    paddingHorizontal: 13,
+    paddingVertical: 7,
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
+    borderColor: COLORS.border,
     backgroundColor: COLORS.surface,
   },
-  chipDot:  { width: 7, height: 7, borderRadius: 4 },
-  chipText: { fontSize: FONT_SIZE.xs, color: COLORS.text2, fontWeight: FONT_WEIGHT.medium },
+  chipDot: { width: 7, height: 7, borderRadius: 4 },
+  chipText: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.text2,
+    fontWeight: FONT_WEIGHT.medium,
+  },
 
   searchWrap: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: COLORS.surface2, borderRadius: RADIUS.md,
-    borderWidth: 1, borderColor: COLORS.border,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: COLORS.surface2,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
     paddingHorizontal: SPACING.md,
   },
-  searchIcon:  { fontSize: 13, marginRight: 6 },
-  searchInput: { flex: 1, paddingVertical: 9, color: COLORS.text, fontSize: FONT_SIZE.md },
+  searchIcon: { fontSize: 13, marginRight: 6 },
+  searchInput: {
+    flex: 1,
+    paddingVertical: 9,
+    color: COLORS.text,
+    fontSize: FONT_SIZE.md,
+  },
 
   tabs: {
-    flexDirection: 'row', gap: 4,
-    backgroundColor: COLORS.surface2, padding: 4,
-    borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border,
+    flexDirection: "row",
+    gap: 4,
+    backgroundColor: COLORS.surface2,
+    padding: 4,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
-  tabBtn:         { flex: 1, paddingVertical: 5, borderRadius: RADIUS.sm, alignItems: 'center' },
-  tabBtnActive:   { backgroundColor: COLORS.surface },
-  tabText:        { fontSize: FONT_SIZE.sm, color: COLORS.text2, fontWeight: FONT_WEIGHT.semibold },
-  tabTextActive:  { color: COLORS.text },
-  countText:      { fontSize: FONT_SIZE.xs, color: COLORS.text3 },
+  tabBtn: {
+    flex: 1,
+    paddingVertical: 5,
+    borderRadius: RADIUS.sm,
+    alignItems: "center",
+  },
+  tabBtnActive: { backgroundColor: COLORS.surface },
+  tabText: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.text2,
+    fontWeight: FONT_WEIGHT.semibold,
+  },
+  tabTextActive: { color: COLORS.text },
+  countText: { fontSize: FONT_SIZE.xs, color: COLORS.text3 },
 
   dateHead: {
-    flexDirection: 'row', alignItems: 'center', gap: 7,
-    paddingHorizontal: SPACING.base, paddingVertical: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    paddingHorizontal: SPACING.base,
+    paddingVertical: 10,
     backgroundColor: COLORS.surface2,
-    borderBottomWidth: 1, borderBottomColor: COLORS.border,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
   },
   dateHeadText: {
-    fontSize: FONT_SIZE.xs, fontWeight: FONT_WEIGHT.bold,
-    color: COLORS.text3, letterSpacing: 0.8, textTransform: 'uppercase',
+    fontSize: FONT_SIZE.xs,
+    fontWeight: FONT_WEIGHT.bold,
+    color: COLORS.text3,
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
   },
 
   row: {
-    flexDirection: 'row', alignItems: 'center', gap: 14,
-    paddingHorizontal: SPACING.base, paddingVertical: 14,
-    borderBottomWidth: 1, borderBottomColor: COLORS.border,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    paddingHorizontal: SPACING.base,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
   },
-  rowIcon:    { width: 38, height: 38, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  rowBody:    { flex: 1, gap: 4 },
-  rowLabel:   { fontSize: FONT_SIZE.md, fontWeight: FONT_WEIGHT.semibold, color: COLORS.text },
-  rowMeta:    { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
+  rowIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  rowBody: { flex: 1, gap: 4 },
+  rowLabel: {
+    fontSize: FONT_SIZE.md,
+    fontWeight: FONT_WEIGHT.semibold,
+    color: COLORS.text,
+  },
+  rowMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flexWrap: "wrap",
+  },
   rowTag: {
-    paddingHorizontal: 7, paddingVertical: 2,
-    borderRadius: RADIUS.full, borderWidth: 1,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
     backgroundColor: COLORS.surface2,
   },
-  rowTagText: { fontSize: 10, fontWeight: FONT_WEIGHT.semibold, letterSpacing: 0.4 },
-  rowSub:     { fontSize: FONT_SIZE.xs, color: COLORS.text3 },
-  rowGroup:   { fontSize: FONT_SIZE.xs, color: COLORS.primary, fontWeight: FONT_WEIGHT.semibold },
-  rowAmt:     { fontSize: FONT_SIZE.md, fontWeight: FONT_WEIGHT.extrabold },
+  rowTagText: {
+    fontSize: 10,
+    fontWeight: FONT_WEIGHT.semibold,
+    letterSpacing: 0.4,
+  },
+  rowSub: { fontSize: FONT_SIZE.xs, color: COLORS.text3 },
+  rowGroup: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.primary,
+    fontWeight: FONT_WEIGHT.semibold,
+  },
+  rowAmt: { fontSize: FONT_SIZE.md, fontWeight: FONT_WEIGHT.extrabold },
 });

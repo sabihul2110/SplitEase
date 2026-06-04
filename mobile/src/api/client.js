@@ -14,7 +14,7 @@
 
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { BASE_URL, STORAGE_KEY } from '../constants/api';
+import { BASE_URL, STORAGE_KEY } from '../config/api';
 
 // Navigation reference — set by RootNavigator on mount
 // so we can navigate from outside React components

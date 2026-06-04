@@ -1,13 +1,24 @@
-// SplitEase/mobile/src/constants/api.js
+// SplitEase/mobile/src/config/api.js
 
 /**
  * api.js
  * Central API config. Matches the real backend exactly.
  */
 
-export const BASE_URL    = 'https://splitease-4hcc.onrender.com';
-// export const BASE_URL    = 'http://192.168.29.115:8000';
+
+// 🎚️ TOGGLE THIS: Set to 'true' to use laptop's Python backend
+const USE_LOCAL_BACKEND = false; 
+
+export const BASE_URL = (__DEV__ && USE_LOCAL_BACKEND)
+  ? 'http://192.168.29.115:8000'
+  : 'https://splitease-4hcc.onrender.com';
+
 export const STORAGE_KEY = 'splitease_user';
+
+// export const BASE_URL = __DEV__
+//   ? 'http://192.168.29.115:8000'
+//   : 'https://splitease-4hcc.onrender.com';
+
 
 export const ENDPOINTS = {
   // Auth

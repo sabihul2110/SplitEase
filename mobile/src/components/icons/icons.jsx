@@ -1,4 +1,30 @@
-// SplitEase/mobile/src/constants/icons.jsx
+// SplitEase/mobile/src/components/icons/icons.jsx
+
+/**
+ * icons.jsx — full icon library + metadata maps
+ *
+ * Sections (use cmd+F to navigate):
+ *   ── Navigation ──────── dashboard, expenses, groups, settlements, activity, settings, more, bell, back
+ *   ── Actions ─────────── edit, trash, search, plus, refresh, copy, check, close, eye, chevron…
+ *   ── Entry types ──────── personalExpense, groupExpense, income, lendMoney, borrowMoney, sendMoney…
+ *   ── Categories ────────── travel, accommodation, foodDining, activities, utilities, groceries…
+ *   ── Misc ──────────────── inboxZero, sparkle, usersPlus, receipt, calendarDays, sortNewest…
+ *   ── Metadata maps ──── TYPE_ICONS, CATEGORY_ICONS, TYPE_CFG (exported at bottom)
+ *
+ * NOTE: When this file exceeds ~500 lines, split by section above
+ *   and barrel-export from icons/index.jsx.
+ */
+
+  // ─────────────────────────────────────────────────────────────────────────────
+// NAVIGATION TO SECTIONS:
+//   cmd+F  "── Navigation"     → tab bar icons
+//   cmd+F  "── Actions"        → edit, trash, search, etc.
+//   cmd+F  "── Empty state"    → inboxZero, sparkle, usersPlus, receipt
+//   cmd+F  "── Entry-type"     → personalExpense, groupExpense, sendMoney, etc.
+//   cmd+F  "── Category"       → travel, food, transport, etc.
+//   cmd+F  "── Metadata maps"  → TYPE_ICONS, CATEGORY_ICONS, TYPE_CFG
+// ─────────────────────────────────────────────────────────────────────────────
+
 
 import React from "react";
 import Svg, { Rect, Path, Circle, Polyline, Line, Ellipse, G, Defs, LinearGradient, Stop } from "react-native-svg";
@@ -9,7 +35,8 @@ const S = (color, w = "2") => ({
 });
 
 export const Icons = {
-  // ── Navigation ──────────────────────────────────────────────────────────
+
+  // ─── §NAV — Navigation ───────────────────────────────────────────────────
   dashboard: ({ size = 24, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
       <Rect x="3" y="3" width="7" height="7" rx="1" />
@@ -110,6 +137,9 @@ export const Icons = {
       <Path d="M13.73 21a2 2 0 0 1-3.46 0" />
     </Svg>
   ),
+
+  // ─── §ACTIONS — Buttons, inputs, utility ─────────────────────────────────
+
   edit: ({ size = 24, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
       <Path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
@@ -198,8 +228,7 @@ export const Icons = {
     </Svg>
   ),
 
-  // ── Empty state illustrations ─────────────────────────────────────────────
-  // Inbox zero — for empty ledger
+  // ─── §EMPTY — Empty-state illustrations ──────────────────────────────────
   inboxZero: ({ size = 24, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
       <Polyline points="22 12 16 12 14 15 10 15 8 12 2 12" />
@@ -231,7 +260,7 @@ export const Icons = {
     </Svg>
   ),
 
-  // ── Entry-type icons ──────────────────────────────────────────────────────
+  // ─── §ENTRY — Entry type icons ───────────────────────────────────────────
   personalExpense: ({ size = 20, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
       <Path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1Z" />
@@ -332,7 +361,7 @@ export const Icons = {
     </Svg>
   ),
 
-  // ── Category icons ────────────────────────────────────────────────────────
+  // ─── §CATEGORY — Expense categories ─────────────────────────────────────
   travel: ({ size = 20, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
       <Path d="M17.8 19.2 16 11l3.5-3.5C21 6 21 4 21 4s-2 0-3.5 1.5L14 9 5.8 7.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 3.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z" />
@@ -398,6 +427,9 @@ export const Icons = {
       <Line x1="17" y1="7" x2="22" y2="7" />
     </Svg>
   ),
+
+  // ─── §MISC — Everything else ─────────────────────────────────────────────
+
   bellOff: ({ size = 24, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
       <Path d="M13.73 21a2 2 0 0 1-3.46 0" />
@@ -597,8 +629,9 @@ export const Icons = {
       <Line x1="12" y1="12" x2="12" y2="16" />
     </Svg>
   ),
-
 };
+
+// ─── §MAPS — Metadata maps ───────────────────────────────────────────────────
 
 export const TYPE_ICONS = {
   personal_expense:    { Icon: Icons.personalExpense, bg: "rgba(239,68,68,0.12)",   color: "#f87171" },

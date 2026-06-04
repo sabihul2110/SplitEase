@@ -118,9 +118,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
-  iconWrap: {
-    marginRight: 4,
-  },
   label: {
     letterSpacing: 0.1,
   },

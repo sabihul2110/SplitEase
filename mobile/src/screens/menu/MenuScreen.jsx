@@ -1,4 +1,4 @@
-// SplitEase/mobile/src/screens/more/MoreScreen.jsx
+// SplitEase/mobile/src/screens/menu/MenuScreen.jsx
 
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS } from '../../constants/theme';
 import ScreenHeader from '../../components/layout/ScreenHeader';
-import { Icons } from '../../constants/icons';
+import { Icons } from '../../components/icons/icons';
 
 const ITEMS = [
   {
@@ -45,7 +45,7 @@ export default function MoreScreen() {
               <Text style={styles.label}>{item.label}</Text>
               <Text style={styles.sub}>{item.sub}</Text>
             </View>
-            <Text style={styles.chevron}>›</Text>
+            <Icons.chevronRight size={16} color={COLORS.text3} />
           </TouchableOpacity>
         ))}
       </ScrollView>
@@ -70,5 +70,4 @@ const styles = StyleSheet.create({
   info:    { flex: 1 },
   label:   { fontSize: FONT_SIZE.md, fontWeight: FONT_WEIGHT.semibold, color: COLORS.text },
   sub:     { fontSize: FONT_SIZE.xs, color: COLORS.text3, marginTop: 3 },
-  chevron: { fontSize: FONT_SIZE.lg, color: COLORS.text3 },
 });

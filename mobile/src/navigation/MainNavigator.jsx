@@ -5,48 +5,36 @@ import { View, Platform } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { COLORS } from "../constants/theme";
-import { Icons } from "../constants/icons";
+import { Icons } from "../components/icons/icons";
 
 // Screens
-import DashboardScreen from "../screens/main/DashboardScreen";
+import DashboardScreen from "../screens/dashboard/DashboardScreen";
 import GroupsScreen from "../screens/groups/GroupsScreen";
 import GroupDetailScreen from "../screens/groups/GroupDetailScreen";
 import ExpensesScreen from "../screens/expenses/ExpensesScreen";
 import AddGroupExpenseScreen from "../screens/groups/AddGroupExpenseScreen";
 import AddGroupPaymentScreen from "../screens/groups/AddGroupPaymentScreen";
-import AddEntryScreen from "../screens/expenses/AddEntryScreen";
+import AddExpenseScreen from "../screens/expenses/AddExpenseScreen";
 import LoansScreen from "../screens/loans/LoansScreen";
 import ActivityScreen from "../screens/activity/ActivityScreen";
 import SettlementsScreen from "../screens/settlements/SettlementsScreen";
 import NotificationsScreen from "../screens/notifications/NotificationsScreen";
 import AccountScreen from "../screens/account/AccountScreen";
-import MoreScreen from "../screens/more/MoreScreen";
+import MenuScreen from "../screens/menu/MenuScreen";
 
 // ── Tab Icons ──────────────────────────────────────────────────────────────
 
 function TabIcon({ name, focused }) {
   const iconMap = {
     Dashboard: Icons.dashboard,
-    Expenses: Icons.expenses,
-    Groups: Icons.groups,
-    Loans: Icons.loansRupee,
-    More: Icons.more,
+    Expenses:  Icons.expenses,
+    Groups:    Icons.groups,
+    Loans:     Icons.loansRupee,
+    More:      Icons.more,
   };
   const IconComponent = iconMap[name];
-  const color = focused ? COLORS.primary : COLORS.text3;
-  if (!IconComponent) {
-    return (
-      <View
-        style={{
-          width: 24,
-          height: 24,
-          backgroundColor: color,
-          borderRadius: 12,
-        }}
-      />
-    );
-  }
-  return <IconComponent size={24} color={color} />;
+  if (!IconComponent) return null;
+  return <IconComponent size={24} color={focused ? COLORS.primary : COLORS.text3} />;
 }
 
 // ── Stacks ─────────────────────────────────────────────────────────────────
@@ -68,7 +56,7 @@ function ExpensesStack() {
   return (
     <ExpensesTabStack.Navigator screenOptions={{ headerShown: false }}>
       <ExpensesTabStack.Screen name="ExpensesHome" component={ExpensesScreen} />
-      <ExpensesTabStack.Screen name="AddEntry" component={AddEntryScreen} />
+      <ExpensesTabStack.Screen name="AddEntry" component={AddExpenseScreen} />
     </ExpensesTabStack.Navigator>
   );
 }
@@ -99,7 +87,7 @@ const MoreStack = createNativeStackNavigator();
 function MoreTabStack() {
   return (
     <MoreStack.Navigator screenOptions={{ headerShown: false }}>
-      <MoreStack.Screen name="MoreHome" component={MoreScreen} />
+      <MoreStack.Screen name="MoreHome" component={MenuScreen} />
       <MoreStack.Screen name="Activity" component={ActivityScreen} />
       <MoreStack.Screen name="Settlements" component={SettlementsScreen} />
     </MoreStack.Navigator>

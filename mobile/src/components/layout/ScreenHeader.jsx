@@ -6,16 +6,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { COLORS, FONT_SIZE, SPACING } from '../../constants/theme';
-import { Icons } from '../../constants/icons';
-
-// export default function ScreenHeader({
-//   title,
-//   subtitle,
-//   showBack = false,
-//   onBack,
-//   actions,
-//   transparent = false,
-// }) {
+import { Icons } from '../../components/icons/icons';
 
 export default function ScreenHeader({
   title,
@@ -90,15 +81,6 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     justifyContent: 'center',
   },
-  // title: {
-  //   fontSize: 28,
-  //   fontWeight: '800',
-  //   color: COLORS.text,
-  //   letterSpacing: -0.5,
-  //   includeFontPadding: false,
-  //   textAlignVertical: 'center',
-  // },
-
   title: {
     fontSize: 28,
     fontWeight: '800',

@@ -1,4 +1,4 @@
-// SplitEase/mobile/src/screens/expenses/AddEntryScreen.jsx
+// SplitEase/mobile/src/screens/expenses/AddExpenseScreen.jsx
 //
 // Mobile port of web's AddEntryModal.
 // Four tabs: Personal Expense · Income · Lend · Borrow
@@ -14,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import client from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
-import { Icons } from '../../constants/icons';
+import { Icons } from '../../components/icons/icons';
 import DatePickerInput from '../../components/common/DatePickerInput';
 
 // ─── Design tokens (same as GroupDetailScreen) ────────────────────────────────
@@ -266,8 +266,7 @@ function LendForm({ onSuccess }) {
   return (
     <View style={styles.form}>
       <View style={styles.infoBox}>
-        <Icons.inboxZero size={14} color={C.warning} style={{ marginRight: 6 }} />
-        {/* or use a generic info/lightbulb — add to icons.jsx: */}
+        <Icons.info size={14} color={C.warning} />
         <Text style={styles.infoText}>Record money you lent to someone. Track repayments from the Expenses timeline.</Text>
       </View>
       <Field label="Borrower Name" error={errs.borrower}>
@@ -321,7 +320,8 @@ function BorrowForm({ onSuccess }) {
   return (
     <View style={styles.form}>
       <View style={styles.infoBox}>
-        <Text style={styles.infoText}>💡 Record money you borrowed from someone. Mark it repaid when you pay them back.</Text>
+        <Icons.info size={14} color={C.purple} />
+        <Text style={styles.infoText}>Record money you borrowed from someone. Mark it repaid when you pay them back.</Text>
       </View>
       <Field label="Lender Name" error={errs.lender}>
         <StyledInput value={lender} onChangeText={v => { setLender(v); setErrs(p => ({...p, lender: null})); }} placeholder="e.g. Amit, Mom…" />
@@ -341,7 +341,7 @@ function BorrowForm({ onSuccess }) {
 }
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
-export default function AddEntryScreen() {
+export default function AddExpenseScreen() {
   const navigation = useNavigation();
   const route      = useRoute();
 

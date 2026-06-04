@@ -8,7 +8,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity } from 'react-native';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
-import { Icons } from '../../constants/icons';
+import { Icons } from '../icons/icons';
 
 export default function Input({
   label,
@@ -74,20 +74,11 @@ export default function Input({
             style={styles.eyeBtn}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            {/* <Text style={styles.eyeText}>{showSecret ? '○' : '●'}</Text> */}
-            {secureTextEntry && (
-          <TouchableOpacity
-            onPress={() => setShowSecret(v => !v)}
-            style={styles.eyeBtn}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
             {showSecret ? (
               <Icons.eyeOff size={20} color={COLORS.text3} />
             ) : (
               <Icons.eye size={20} color={COLORS.text3} />
             )}
-          </TouchableOpacity>
-        )}
           </TouchableOpacity>
         )}
 
@@ -140,10 +131,6 @@ const styles = StyleSheet.create({
   },
   eyeBtn: {
     paddingLeft: SPACING.sm,
-  },
-  eyeText: {
-    color:    COLORS.text3,
-    fontSize: FONT_SIZE.sm,
   },
   rightEl: {
     paddingLeft: SPACING.sm,

@@ -1,56 +1,35 @@
-// SplitEase/mobile/src/components/global/UpdateChecker.jsx
+// SplitEase/mobile/src/components/global/OTAUpdateModal.jsx
 
-import React, { useState, useEffect } from 'react';
-import { View, Text, Modal, StyleSheet, ActivityIndicator } from 'react-native';
-import * as Updates from 'expo-updates';
-import { Icons } from '../../constants/icons';
+import React from 'react';
+import { View, Text, Modal, StyleSheet, Image } from 'react-native';
+import { useOTAUpdate } from '../../hooks/useOTAUpdate';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS } from '../../constants/theme';
 import Button from '../common/Button';
 
-export function UpdateChecker() {
-  const [updateAvailable, setUpdateAvailable] = useState(false);
-  const [isDownloading, setIsDownloading] = useState(false);
+export function OTAUpdateModal() {
+  // 1. Pull the logic from your custom hook
+  const { 
+    updateAvailable, 
+    isDownloading, 
+    downloadAndInstallUpdate, 
+    dismissUpdate 
+  } = useOTAUpdate();
 
-  useEffect(() => {
-    async function checkForUpdates() {
-      if (__DEV__) return; // Don't check in development
-      
-      try {
-        const update = await Updates.checkForUpdateAsync();
-        if (update.isAvailable) {
-          setUpdateAvailable(true);
-        }
-      } catch (e) {
-        console.log('Error checking for updates', e);
-      }
-    }
-    checkForUpdates();
-  }, []);
-
-  const handleUpdate = async () => {
-    setIsDownloading(true);
-    try {
-      await Updates.fetchUpdateAsync();
-      await Updates.reloadAsync(); // This restarts the app with the new code
-    } catch (e) {
-      console.log('Error fetching update', e);
-      setIsDownloading(false);
-      setUpdateAvailable(false);
-    }
-  };
-
+  // 2. If no update, render nothing
   if (!updateAvailable) return null;
 
+  // 3. Render the UI
   return (
     <Modal visible={updateAvailable} transparent animationType="fade">
       <View style={styles.overlay}>
         <View style={styles.box}>
-          {/* Logo */}
+          
           <Image 
             source={require('../../../assets/icon.png')} 
             style={styles.logoImage} 
             resizeMode="cover"
           />
+          
           <Text style={styles.title}>Update Available</Text>
           <Text style={styles.body}>
             A new version of SplitEase is available.
@@ -60,7 +39,7 @@ export function UpdateChecker() {
             <Button
               title="Later"
               variant="ghost"
-              onPress={() => setUpdateAvailable(false)}
+              onPress={dismissUpdate}
               disabled={isDownloading}
               style={{ flex: 1 }}
             />
@@ -68,7 +47,7 @@ export function UpdateChecker() {
             <Button
               title={isDownloading ? "Updating..." : "Update Now"}
               variant="primary"
-              onPress={handleUpdate}
+              onPress={downloadAndInstallUpdate}
               loading={isDownloading}
               style={{ flex: 2 }}
             />
@@ -97,15 +76,10 @@ const styles = StyleSheet.create({
     gap: SPACING.md,
     alignItems: "center",
   },
-  iconWrap: {
-    width: 56,
-    height: 56,
-    borderRadius: RADIUS.lg,
-    backgroundColor: 'rgba(37,99,235,0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(37,99,235,0.2)',
-    alignItems: "center",
-    justifyContent: "center",
+  logoImage: {
+    width: 64,
+    height: 64,
+    borderRadius: 16,
     marginBottom: SPACING.xs,
   },
   title: {

@@ -14,17 +14,17 @@
  * 5. authChecked prevents flash of wrong screen while validating
  */
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ActivityIndicator, View, Image } from 'react-native';
-import client from '../api/client';
-import { STORAGE_KEY, ENDPOINTS } from '../constants/api';
-import { COLORS } from '../constants/theme';
+import React, { createContext, useContext, useState, useEffect } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { ActivityIndicator, View, Image } from "react-native";
+import client from "../api/client";
+import { STORAGE_KEY, ENDPOINTS } from "../config/api";
+import { COLORS } from "../constants/theme";
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user,        setUser]        = useState(null);
+  const [user, setUser] = useState(null);
   const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
@@ -74,17 +74,19 @@ export function AuthProvider({ children }) {
   // Splash-like loading while we validate the token
   if (!authChecked) {
     return (
-      <View style={{
-        flex: 1,
-        backgroundColor: COLORS.bg,
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 16,
-      }}>
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: COLORS.bg,
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 16,
+        }}
+      >
         {/* Replaced the hardcoded blue box with your custom icon */}
-        <Image 
-          source={require('../../assets/adaptive-icon.png')} 
-          style={{ width: 80, height: 80 }} 
+        <Image
+          source={require("../../assets/adaptive-icon.png")}
+          style={{ width: 80, height: 80 }}
           resizeMode="contain"
         />
         <ActivityIndicator color={COLORS.primary} size="small" />
@@ -93,7 +95,9 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, updateUser, authChecked }}>
+    <AuthContext.Provider
+      value={{ user, login, logout, updateUser, authChecked }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -101,6 +105,6 @@ export function AuthProvider({ children }) {
 
 export function useAuth() {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used inside AuthProvider');
+  if (!ctx) throw new Error("useAuth must be used inside AuthProvider");
   return ctx;
 }

@@ -24,9 +24,9 @@ import {
   useRoute,
 } from "@react-navigation/native";
 import client from "../../api/client";
-import { ENDPOINTS } from "../../constants/api";
+import { ENDPOINTS } from "../../config/api";
 import { useAuth } from "../../context/AuthContext";
-import { Icons } from "../../constants/icons";
+import { Icons } from "../../components/icons/icons";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -276,14 +276,18 @@ function ListCard({ group, onPress, onLongPress, isFirst, isLast }) {
         </View>
       </View>
       <View style={lcStyles.balCol}>
-        <Text style={[lcStyles.balLabel, { color: isSettled ? C.text3 : balColor }]}>
+        <Text
+          style={[lcStyles.balLabel, { color: isSettled ? C.text3 : balColor }]}
+        >
           {balLabel}
         </Text>
-        <Text style={[
-          lcStyles.balAmt,
-          { color: balColor },
-          isSettled && lcStyles.balAmtSettled
-        ]}>
+        <Text
+          style={[
+            lcStyles.balAmt,
+            { color: balColor },
+            isSettled && lcStyles.balAmtSettled,
+          ]}
+        >
           {balAmount}
         </Text>
       </View>
@@ -324,13 +328,16 @@ const lcStyles = StyleSheet.create({
   metaRow: { flexDirection: "row", alignItems: "center", gap: 5 },
   meta: { fontSize: F.xs, color: C.text3 },
   dot: { fontSize: F.xs, color: C.text3 },
-balCol:  { alignItems: 'flex-end', gap: 2 },
-  balLabel:{ fontSize: F.xs, fontWeight: W.bold, letterSpacing: 0.8, textTransform: 'uppercase' },
-  balAmt:  { fontSize: F.xl, fontWeight: W.bold, letterSpacing: -0.5 },
+  balCol: { alignItems: "flex-end", gap: 2 },
+  balLabel: {
+    fontSize: F.xs,
+    fontWeight: W.bold,
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+  },
+  balAmt: { fontSize: F.xl, fontWeight: W.bold, letterSpacing: -0.5 },
   balAmtSettled: { fontSize: F.sm, fontWeight: W.bold, letterSpacing: 0.5 },
 });
-
-
 
 // ─── Sort pill ────────────────────────────────────────────────────────────────
 
@@ -1488,24 +1495,45 @@ function DeleteConfirmModal({ group, onConfirm, onCancel }) {
         <View style={dcStyles.box}>
           <Text style={dcStyles.title}>Delete Group</Text>
           <Text style={dcStyles.body}>
-            {group._forbidden || group._error
-              ? group._message
-              : group._force
-              ? `${group._message}\n\nDelete anyway? This cannot be undone.`
-              : <>Delete <Text style={{ color: C.text, fontWeight: W.bold }}>"{group.group_name}"</Text>? All expenses and payments will be permanently removed.</>
-            }
+            {group._forbidden || group._error ? (
+              group._message
+            ) : group._force ? (
+              `${group._message}\n\nDelete anyway? This cannot be undone.`
+            ) : (
+              <>
+                Delete{" "}
+                <Text style={{ color: C.text, fontWeight: W.bold }}>
+                  "{group.group_name}"
+                </Text>
+                ? All expenses and payments will be permanently removed.
+              </>
+            )}
           </Text>
           <View style={dcStyles.row}>
-            <TouchableOpacity style={dcStyles.cancelBtn} onPress={onCancel} activeOpacity={0.75}>
+            <TouchableOpacity
+              style={dcStyles.cancelBtn}
+              onPress={onCancel}
+              activeOpacity={0.75}
+            >
               <Text style={dcStyles.cancelText}>Cancel</Text>
             </TouchableOpacity>
             {group._forbidden || group._error ? (
-              <TouchableOpacity style={dcStyles.okBtn} onPress={onConfirm} activeOpacity={0.8}>
+              <TouchableOpacity
+                style={dcStyles.okBtn}
+                onPress={onConfirm}
+                activeOpacity={0.8}
+              >
                 <Text style={dcStyles.deleteText}>OK</Text>
               </TouchableOpacity>
             ) : (
-              <TouchableOpacity style={dcStyles.deleteBtn} onPress={onConfirm} activeOpacity={0.8}>
-                <Text style={dcStyles.deleteText}>{group._force ? "Delete Anyway" : "Delete"}</Text>
+              <TouchableOpacity
+                style={dcStyles.deleteBtn}
+                onPress={onConfirm}
+                activeOpacity={0.8}
+              >
+                <Text style={dcStyles.deleteText}>
+                  {group._force ? "Delete Anyway" : "Delete"}
+                </Text>
               </TouchableOpacity>
             )}
           </View>
@@ -1600,90 +1628,9 @@ const dcStyles = StyleSheet.create({
   deleteText: { fontSize: F.base, fontWeight: W.semibold, color: C.danger },
 });
 
-// const dcStyles = StyleSheet.create({
-//   overlay: {
-//     flex: 1,
-//     backgroundColor: "rgba(0,0,0,0.65)",
-//     alignItems: "center",
-//     justifyContent: "center",
-//     paddingHorizontal: SP.xl,
-//   },
-//   box: {
-//     backgroundColor: C.surface,
-//     borderRadius: R.xl,
-//     borderWidth: 1,
-//     borderColor: C.border2,
-//     padding: SP.xl,
-//     width: "100%",
-//     gap: SP.md,
-//     alignItems: "center",
-//   },
-//   iconWrap: {
-//     width: 52,
-//     height: 52,
-//     borderRadius: R.lg,
-//     backgroundColor: C.dangerLo,
-//     borderWidth: 1,
-//     borderColor: C.danger + "30",
-//     alignItems: "center",
-//     justifyContent: "center",
-//     marginBottom: SP.xs,
-//   },
-//   title: {
-//     fontSize: F.xl,
-//     fontWeight: W.bold,
-//     color: C.text,
-//     letterSpacing: -0.3,
-//   },
-//   body: {
-//     fontSize: F.base,
-//     color: C.text2,
-//     textAlign: "center",
-//     lineHeight: 21,
-//   },
-//   row: {
-//     flexDirection: "row",
-//     gap: SP.sm,
-//     marginTop: SP.xs,
-//     width: "100%",
-//   },
-//   cancelBtn: {
-//     flex: 1,
-//     paddingVertical: 13,
-//     borderRadius: R.lg,
-//     backgroundColor: C.surface2,
-//     borderWidth: 1,
-//     borderColor: C.border,
-//     alignItems: "center",
-//   },
-//   cancelText: { fontSize: F.md, fontWeight: W.semibold, color: C.text2 },
-//   // deleteBtn: {
-//   //   flex: 1,
-//   okBtn: {
-//     flex: 2,
-//     flexDirection: "row",
-//     alignItems: "center",
-//     justifyContent: "center",
-//     paddingVertical: 13,
-//     borderRadius: R.lg,
-//     backgroundColor: C.primary,
-//   },
-//   deleteBtn: {
-//     flex: 1,
-//     flexDirection: "row",
-//     alignItems: "center",
-//     justifyContent: "center",
-//     gap: 7,
-//     paddingVertical: 13,
-//     borderRadius: R.lg,
-//     backgroundColor: C.danger,
-//   },
-//   deleteText: { fontSize: F.md, fontWeight: W.bold, color: "#fff" },
-// });
-
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function GroupsScreen() {
-  const { user }     = useAuth();
+  const { user } = useAuth();
   const navigation = useNavigation();
   const route = useRoute();
   const [groups, setGroups] = useState([]);
@@ -1691,7 +1638,6 @@ export default function GroupsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
-  // const [longPress, setLongPress] = useState(null);
   const [longPress, setLongPress] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
 
@@ -1721,27 +1667,6 @@ export default function GroupsScreen() {
       const { data: membersBulk } = await client.post("/groups/members-bulk", {
         group_ids: groupIds,
       });
-
-      // const merged = fetchedGroups.map((g) => ({
-      //   ...g,
-      //   members: membersBulk[g.group_id] || [],
-      //   member_count: (membersBulk[g.group_id] || []).length,
-      // }));
-
-      // // check
-      // //   setGroups(merged);
-      // // } catch (err) {
-      // //   console.error('Failed to load groups:', err);
-      // setGroups(merged);
-      // if (merged.length > 0) {
-      //   console.log("[Groups] first group keys:", Object.keys(merged[0]));
-      //   console.log("[Groups] first group balance fields:", {
-      //     my_balance: merged[0].my_balance,
-      //     balance: merged[0].balance,
-      //     net_balance: merged[0].net_balance,
-      //     user_balance: merged[0].user_balance,
-      //   });
-      // }
       const merged = fetchedGroups.map((g) => ({
         ...g,
         members: membersBulk[g.group_id] || [],
@@ -1754,8 +1679,8 @@ export default function GroupsScreen() {
           client.get(`/settlements/${g.group_id}`).then((r) => ({
             group_id: g.group_id,
             data: r.data,
-          }))
-        )
+          })),
+        ),
       );
 
       const balanceMap = {};
@@ -1767,7 +1692,9 @@ export default function GroupsScreen() {
           const mine = Array.isArray(data)
             ? data.find((row) => row.user_id === user?.user_id)
             : null;
-          balanceMap[group_id] = mine ? parseFloat(mine.net_balance ?? mine.balance ?? 0) : 0;
+          balanceMap[group_id] = mine
+            ? parseFloat(mine.net_balance ?? mine.balance ?? 0)
+            : 0;
         }
       });
 
@@ -1809,7 +1736,11 @@ export default function GroupsScreen() {
       } else if (s === 403) {
         setDeleteTarget({ ...group, _forbidden: true, _message: d });
       } else {
-        setDeleteTarget({ ...group, _error: true, _message: d || "Failed to delete group." });
+        setDeleteTarget({
+          ...group,
+          _error: true,
+          _message: d || "Failed to delete group.",
+        });
       }
     }
   }
@@ -2027,7 +1958,7 @@ export default function GroupsScreen() {
           </View>
         </TouchableOpacity>
       </Modal>
-    <DeleteConfirmModal
+      <DeleteConfirmModal
         group={deleteTarget}
         onCancel={() => setDeleteTarget(null)}
         onConfirm={() => {
