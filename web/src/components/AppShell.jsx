@@ -252,8 +252,12 @@ export default function AppShell({ children, title, actions }) {
       )}
 
       <aside className={`sidebar ${sidebarOpen ? "open" : ""}`}>
-        <div className="sb-logo">
-          <div className="sb-logo-mark">S</div>
+        <div className="sb-logo" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <img 
+            src="/logo.svg" 
+            alt="SplitEase Logo" 
+            style={{ width: 32, height: 32, display: "block" }} 
+          />
           <span className="sb-logo-text">Split<em>Ease</em></span>
         </div>
 

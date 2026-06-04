@@ -2,7 +2,22 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    
+    <link id="dynamic-favicon" rel="icon" type="image/svg+xml" href="/favicon-solid.svg??v=1" />
+    
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png??v=1" />
+    
+    <script>
+      // Chrome's user agent actually includes the word "Safari", so we have to explicitly filter Chrome out to isolate true Apple Safari.
+      const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+      
+      if (isSafari) {
+        // If it's Safari, hot-swap the icon to the transparent adaptive version 
+        // to prevent Apple's forced white contrast border.
+        document.getElementById('dynamic-favicon').href = '/favicon-adaptive.svg??v=1';
+      }
+    </script>
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SplitEase</title>
   </head>

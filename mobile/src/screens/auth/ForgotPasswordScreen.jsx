@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  KeyboardAvoidingView, Platform, ScrollView, Alert,
+  KeyboardAvoidingView, Platform, ScrollView, Alert, Image
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import client from '../../api/client';
@@ -41,11 +41,13 @@ export default function ForgotPasswordScreen({ navigation }) {
             <Text style={styles.backText}>Back to login</Text>
           </TouchableOpacity>
 
-          {/* Logo */}
+          {/* Updated Logo Wrapper */}
           <View style={styles.logoWrap}>
-            <View style={styles.logoBox}>
-              <Text style={styles.logoText}>S</Text>
-            </View>
+            <Image 
+              source={require('../../../assets/icon.png')} 
+              style={styles.logoImage} 
+              resizeMode="cover"
+            />
             <Text style={styles.appName}>SplitEase</Text>
           </View>
 
@@ -111,11 +113,7 @@ const styles = StyleSheet.create({
   },
   backText:{ color: COLORS.primary, fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.medium },
   logoWrap:  { alignItems: 'center', gap: SPACING.sm, marginBottom: SPACING.lg },
-  logoBox:   {
-    width: 56, height: 56, backgroundColor: COLORS.primary,
-    borderRadius: 16, alignItems: 'center', justifyContent: 'center',
-  },
-  logoText:  { fontSize: 28, fontWeight: FONT_WEIGHT.extrabold, color: COLORS.white },
+  logoImage: { width: 64, height: 64, borderRadius: 16 },
   appName:   { fontSize: FONT_SIZE.xl, fontWeight: FONT_WEIGHT.extrabold, color: COLORS.text },
   card: {
     backgroundColor: COLORS.surface, borderRadius: RADIUS.xl,

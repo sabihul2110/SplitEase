@@ -16,7 +16,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, View, Image } from 'react-native';
 import client from '../api/client';
 import { STORAGE_KEY, ENDPOINTS } from '../constants/api';
 import { COLORS } from '../constants/theme';
@@ -81,22 +81,12 @@ export function AuthProvider({ children }) {
         justifyContent: 'center',
         gap: 16,
       }}>
-        {/* Logo mark */}
-        <View style={{
-          width: 56, height: 56,
-          backgroundColor: COLORS.primary,
-          borderRadius: 16,
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}>
-          <View style={{
-            width: 20, height: 20,
-            borderRadius: 10,
-            borderWidth: 3,
-            borderColor: COLORS.white,
-            borderTopColor: COLORS.transparent,
-          }} />
-        </View>
+        {/* Replaced the hardcoded blue box with your custom icon */}
+        <Image 
+          source={require('../../assets/adaptive-icon.png')} 
+          style={{ width: 80, height: 80 }} 
+          resizeMode="contain"
+        />
         <ActivityIndicator color={COLORS.primary} size="small" />
       </View>
     );

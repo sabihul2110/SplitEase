@@ -11,7 +11,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView,
-  Platform, ScrollView, Alert,
+  Platform, ScrollView, Alert, Image
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import client from '../../api/client';
@@ -76,9 +76,11 @@ export default function LoginScreen({ navigation }) {
         >
           {/* Logo */}
           <View style={styles.logoWrap}>
-            <View style={styles.logoBox}>
-              <Text style={styles.logoText}>S</Text>
-            </View>
+            <Image 
+              source={require('../../../assets/adaptive-icon.png')} 
+              style={styles.logoImage} 
+              resizeMode="contain"
+            />
             <Text style={styles.appName}>SplitEase</Text>
             <Text style={styles.tagline}>Split expenses, not friendships.</Text>
           </View>
@@ -162,14 +164,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap:         SPACING.sm,
   },
-  logoBox: {
-    width:           64,
-    height:          64,
-    backgroundColor: COLORS.primary,
-    borderRadius:    18,
-    alignItems:      'center',
-    justifyContent:  'center',
+  logoImage: {
+    width:  80,
+    height: 80,
   },
+  // logoBox: {
+  //   width:           64,
+  //   height:          64,
+  //   backgroundColor: COLORS.primary,
+  //   borderRadius:    18,
+  //   alignItems:      'center',
+  //   justifyContent:  'center',
+  // },
   logoText: {
     fontSize:   32,
     fontWeight: FONT_WEIGHT.extrabold,
@@ -181,10 +187,6 @@ const styles = StyleSheet.create({
     color:      COLORS.text,
     letterSpacing: 0.5,
   },
-  // tagline: {
-  //   fontSize: FONT_SIZE.base,
-  //   color:    COLORS.text3,
-  // },
   tagline: {
     fontSize: FONT_SIZE.base,
     color:    COLORS.text2, // Boosted from text3 for better readability against dark bg

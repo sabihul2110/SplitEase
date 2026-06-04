@@ -7,9 +7,16 @@
 
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView,
-  Platform, ScrollView, Alert,
-} from 'react-native';
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Alert,
+  Image,
+} from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import client from '../../api/client';
 import { ENDPOINTS } from '../../constants/api';
@@ -75,31 +82,43 @@ export default function SignupScreen({ navigation }) {
     <SafeAreaView style={styles.safe}>
       <KeyboardAvoidingView
         style={styles.kav}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Logo */}
+          {/* Logo
           <View style={styles.logoWrap}>
             <View style={styles.logoBox}>
               <Text style={styles.logoText}>S</Text>
             </View>
             <Text style={styles.appName}>SplitEase</Text>
+          </View> */}
+          {/* Logo */}
+          <View style={styles.logoWrap}>
+            <Image
+              source={require("../../../assets/adaptive-icon.png")}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
+            <Text style={styles.appName}>SplitEase</Text>
+            <Text style={styles.tagline}>Split expenses, not friendships.</Text>
           </View>
 
           {/* Form card */}
           <View style={styles.card}>
             <Text style={styles.heading}>Create account</Text>
-            <Text style={styles.subheading}>Join and start splitting expenses</Text>
+            <Text style={styles.subheading}>
+              Join and start splitting expenses
+            </Text>
 
             <View style={styles.fields}>
               <Input
                 label="Full Name"
                 value={form.name}
-                onChangeText={v => set('name', v)}
+                onChangeText={(v) => set("name", v)}
                 placeholder="Alex Johnson"
                 autoCapitalize="words"
                 error={errors.name}
@@ -107,7 +126,7 @@ export default function SignupScreen({ navigation }) {
               <Input
                 label="Email"
                 value={form.email}
-                onChangeText={v => set('email', v)}
+                onChangeText={(v) => set("email", v)}
                 placeholder="you@example.com"
                 keyboardType="email-address"
                 error={errors.email}
@@ -115,7 +134,7 @@ export default function SignupScreen({ navigation }) {
               <Input
                 label="Password"
                 value={form.password}
-                onChangeText={v => set('password', v)}
+                onChangeText={(v) => set("password", v)}
                 placeholder="At least 6 characters"
                 secureTextEntry
                 error={errors.password}
@@ -123,7 +142,7 @@ export default function SignupScreen({ navigation }) {
               <Input
                 label="Confirm Password"
                 value={form.confirmPassword}
-                onChangeText={v => set('confirmPassword', v)}
+                onChangeText={(v) => set("confirmPassword", v)}
                 placeholder="Repeat your password"
                 secureTextEntry
                 error={errors.confirmPassword}
@@ -131,7 +150,7 @@ export default function SignupScreen({ navigation }) {
               <Input
                 label="UPI ID (optional)"
                 value={form.upi_id}
-                onChangeText={v => set('upi_id', v)}
+                onChangeText={(v) => set("upi_id", v)}
                 placeholder="yourname@upi"
                 hint="Used for settlement payments"
                 autoCapitalize="none"
@@ -139,7 +158,7 @@ export default function SignupScreen({ navigation }) {
             </View>
 
             <Button
-              title={loading ? 'Creating account…' : 'Create Account'}
+              title={loading ? "Creating account…" : "Create Account"}
               onPress={handleSignup}
               loading={loading}
               fullWidth
@@ -151,7 +170,7 @@ export default function SignupScreen({ navigation }) {
           {/* Footer */}
           <View style={styles.footer}>
             <Text style={styles.footerText}>Already have an account? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+            <TouchableOpacity onPress={() => navigation.navigate("Login")}>
               <Text style={styles.footerLink}>Sign in</Text>
             </TouchableOpacity>
           </View>
@@ -170,9 +189,9 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING['2xl'],
   },
   logoWrap:  { alignItems: 'center', gap: SPACING.sm },
-  logoBox:   {
-    width: 56, height: 56, backgroundColor: COLORS.primary,
-    borderRadius: 16, alignItems: 'center', justifyContent: 'center',
+  logoImage: {
+    width:  80,
+    height: 80,
   },
   logoText:  { fontSize: 28, fontWeight: FONT_WEIGHT.extrabold, color: COLORS.white },
   appName:   { fontSize: FONT_SIZE.xl, fontWeight: FONT_WEIGHT.extrabold, color: COLORS.text },

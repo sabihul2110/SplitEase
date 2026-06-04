@@ -69,19 +69,23 @@ export function AuthProvider({ children }) {
   }
 
   // Show nothing until auth is validated — prevents flash of empty state
+  // Show nothing until auth is validated — prevents flash of empty state
   if (!authChecked) {
     return (
       <div style={{
         minHeight: "100vh", display: "flex", alignItems: "center",
-        justifyContent: "center", background: "#0d0e14", flexDirection: "column", gap: 14,
+        justifyContent: "center", background: "#0d0e14", flexDirection: "column", gap: 16,
       }}>
+        {/* Updated Web Loading Logo */}
+        <img 
+          src="/logo.svg" 
+          alt="Loading SplitEase..." 
+          style={{ width: 48, height: 48, display: "block" }} 
+        />
+        
+        {/* Loading Spinner */}
         <div style={{
-          width: 44, height: 44, background: "#2563eb", borderRadius: 12,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 20, fontWeight: 800, color: "#fff",
-        }}>S</div>
-        <div style={{
-          width: 18, height: 18, border: "2px solid #252730",
+          width: 20, height: 20, border: "2px solid #252730",
           borderTopColor: "#2563eb", borderRadius: "50%",
           animation: "spin 0.65s linear infinite",
         }} />
