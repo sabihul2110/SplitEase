@@ -14,9 +14,9 @@
  * 5. authChecked prevents flash of wrong screen while validating
  */
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { ActivityIndicator, View, Image } from "react-native";
+import { View, Image, Animated } from 'react-native';
 import client from "../api/client";
 import { STORAGE_KEY, ENDPOINTS } from "../config/api";
 import { COLORS } from "../constants/theme";
@@ -24,8 +24,17 @@ import { COLORS } from "../constants/theme";
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
+  const [user,        setUser]        = useState(null);
   const [authChecked, setAuthChecked] = useState(false);
+  const splashOpacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(splashOpacity, {
+      toValue:         1,
+      duration:        400,
+      useNativeDriver: true,
+    }).start();
+  }, []);
 
   useEffect(() => {
     validateSession();
@@ -72,24 +81,26 @@ export function AuthProvider({ children }) {
   }
 
   // Splash-like loading while we validate the token
+
   if (!authChecked) {
     return (
-      <View
-        style={{
-          flex: 1,
-          backgroundColor: COLORS.bg,
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 16,
-        }}
-      >
-        {/* Replaced the hardcoded blue box with your custom icon */}
-        <Image
-          source={require("../../assets/adaptive-icon.png")}
-          style={{ width: 80, height: 80 }}
-          resizeMode="contain"
-        />
-        <ActivityIndicator color={COLORS.primary} size="small" />
+      <View style={{
+        flex:            1,
+        backgroundColor: COLORS.bg,
+        alignItems:      'center',
+        justifyContent:  'center',
+      }}>
+        <Animated.View style={{ opacity: splashOpacity }}>
+          <Image
+            source={require('../../assets/adaptive-icon.png')}
+            style={{
+              width:        96,
+              height:       96,
+              borderRadius: 22,
+            }}
+            resizeMode="contain"
+          />
+        </Animated.View>
       </View>
     );
   }

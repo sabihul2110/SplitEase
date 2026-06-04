@@ -704,7 +704,6 @@ export default function AccountScreen() {
           <Icons.edit size={17} color={C.text2} />
         </TouchableOpacity>
       </View>
-
       <ScrollView
         style={styles.scroll}
         showsVerticalScrollIndicator={false}
@@ -827,12 +826,13 @@ export default function AccountScreen() {
             iconBg={C.iconBlue}
             iconColor={C.primary}
             label="Check for Updates"
-            sub={isChecking ? "Checking for bundle..." : "Download latest version if available"}
-            onPress={isChecking ? undefined : checkForUpdate}
+            sub={isChecking ? "Checking server..." : "Download latest version if available"}
+            // Pass 'true' so the hook knows to trigger the Alert popups!
+            onPress={isChecking ? undefined : () => checkForUpdate(true)} 
             last
           />
         </View>
-
+        
         {/* ── SESSION ── */}
         <SectionLabel title="SESSION" />
         <View style={styles.card}>

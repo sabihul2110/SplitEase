@@ -124,6 +124,8 @@ export default function LoginScreen({ navigation }) {
                 onChangeText={v => { setPassword(v); setAuthError(''); setErrors(e => ({ ...e, password: null })); }}
                 placeholder="Your password"
                 secureTextEntry
+                textContentType="password"
+                autoComplete="password"
                 error={errors.password}
               />
             </View>

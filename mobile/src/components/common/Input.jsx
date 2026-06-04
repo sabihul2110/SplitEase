@@ -52,6 +52,8 @@ export default function Input({
             multiline && { height: numberOfLines ? numberOfLines * 22 : 80, textAlignVertical: 'top' },
             inputStyle,
           ]}
+          importantForAutofill="yes"
+          autoComplete={secureTextEntry ? "password" : keyboardType === "email-address" ? "email" : "off"}
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}

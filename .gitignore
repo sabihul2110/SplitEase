@@ -65,5 +65,7 @@ coverage/
 # =========================
 tree.txt
 structure.txt
+**/tree.txt
+**/structure.txt
 
 docs/

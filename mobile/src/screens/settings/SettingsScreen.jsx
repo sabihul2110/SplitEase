@@ -419,20 +419,8 @@ export default function SettingsScreen() {
           <SettingRow
             icon={Icons.refresh}
             label="Check for Updates"
-            sub="Download the latest version if available"
-            onPress={() => checkForUpdate()}
-            last
-          />
-        </View>
-
-        <View style={[styles.card, { marginTop: SPACING.sm }]}>
-          <SettingRow
-            icon={Icons.refresh}
-            label="Check for updates"
-            sub={
-              isChecking ? "Checking…" : "Download latest version if available"
-            }
-            onPress={isChecking ? undefined : checkForUpdate}
+            sub={isChecking ? 'Checking…' : 'Download latest version if available'}
+            onPress={isChecking ? undefined : () => checkForUpdate(true)}
             last
           />
         </View>
