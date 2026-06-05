@@ -23,6 +23,13 @@ const ITEMS = [
     screen: 'Settlements',
     color:  '#8b5cf6',
   },
+  {
+    icon:   Icons.settings,
+    label:  'Settings',
+    sub:    'App preferences, theme, sign out',
+    screen: 'Settings',
+    color:  COLORS.text2,
+  },
 ];
 
 export default function MoreScreen() {
@@ -30,7 +37,10 @@ export default function MoreScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       <ScreenHeader title="More" />
-      <ScrollView contentContainerStyle={styles.list}>
+      <ScrollView
+        contentContainerStyle={[styles.list, { paddingBottom: TAB_BAR_HEIGHT + SPACING.base }]}
+        showsVerticalScrollIndicator={false}
+      >
         {ITEMS.map(item => (
           <TouchableOpacity
             key={item.screen}
@@ -67,7 +77,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: 'center', justifyContent: 'center',
   },
-  info:    { flex: 1 },
-  label:   { fontSize: FONT_SIZE.md, fontWeight: FONT_WEIGHT.semibold, color: COLORS.text },
-  sub:     { fontSize: FONT_SIZE.xs, color: COLORS.text3, marginTop: 3 },
+  info:  { flex: 1 },
+  label: { fontSize: FONT_SIZE.md, fontWeight: FONT_WEIGHT.semibold, color: COLORS.text },
+  sub:   { fontSize: FONT_SIZE.xs, color: COLORS.text3, marginTop: 3 },
 });

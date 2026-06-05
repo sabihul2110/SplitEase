@@ -1,8 +1,21 @@
 // SplitEase/mobile/src/context/AuthContext.jsx
 //
-// Auth state + Instagram-style splash screen.
-// Splash: icon centered on full dark screen, no border radius, large.
-// Fades in on mount, fades out before revealing app.
+// Auth state + splash screen.
+//
+// SPLASH EXPLANATION — why you see white then dark:
+// There are TWO splash layers on Android:
+//   1. Native splash (white screen) — controlled by app.json "splash.backgroundColor"
+//      THIS is the white screen. Fix it in app.json by setting:
+//        "splash": { "backgroundColor": "#0d0e14", "resizeMode": "contain", "image": "./assets/icon.png" }
+//      This change requires a new build (eas build), NOT an OTA update.
+//   2. JS splash (this file) — the dark screen with the icon.
+//      This is what we control here.
+//
+// WHY THE ICON WAS TINY/INVISIBLE:
+//   adaptive-icon.png has a TRANSPARENT background — on a dark screen, the logo
+//   blends into the background and looks like a small dark shape.
+//   icon.png has the dark rounded-square background BAKED IN — it's visible and
+//   looks correct at any size. Always use icon.png for the JS splash.
 
 import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -17,15 +30,12 @@ export function AuthProvider({ children }) {
   const [user,        setUser]        = useState(null);
   const [authChecked, setAuthChecked] = useState(false);
 
-  // Two-phase animation: fade in → hold → fade out
-  const fadeIn  = useRef(new Animated.Value(0)).current;
-  const fadeOut = useRef(new Animated.Value(1)).current; // overlay that covers children
+  const fadeIn = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Fade the icon in immediately
     Animated.timing(fadeIn, {
-      toValue: 1,
-      duration: 300,
+      toValue:         1,
+      duration:        250,
       useNativeDriver: true,
     }).start();
   }, []);
@@ -71,12 +81,11 @@ export function AuthProvider({ children }) {
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   }
 
-  // While checking auth, show full-screen splash
   if (!authChecked) {
     return (
       <View style={styles.splash}>
         <Animated.Image
-          source={require("../../assets/adaptive-icon.png")}
+          source={require("../../assets/icon.png")}
           style={[styles.splashIcon, { opacity: fadeIn }]}
           resizeMode="contain"
         />
@@ -99,15 +108,13 @@ export function useAuth() {
 
 const styles = StyleSheet.create({
   splash: {
-    flex: 1,
+    flex:            1,
     backgroundColor: COLORS.bg,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems:      "center",
+    justifyContent:  "center",
   },
-  // Instagram uses ~140–160pt icon on a full screen.
-  // No border radius on the icon itself — the icon asset already has shape baked in.
   splashIcon: {
-    width: 120,
-    height: 120,
+    width:  160,
+    height: 160,
   },
 });
