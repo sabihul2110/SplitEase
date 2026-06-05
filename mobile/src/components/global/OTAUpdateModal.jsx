@@ -71,12 +71,10 @@ export function OTAUpdateModal() {
              : 'Update Available'}
           </Text>
 
-          {/* Version pill */}
-          <View style={styles.versionRow}>
-            <Text style={styles.versionOld}>v2.1.0</Text>
-            <Text style={styles.versionArrow}>→</Text>
-            <Text style={styles.versionNew}>v2.2.0</Text>
-          </View>
+          {/* Subtitle */}
+          <Text style={styles.subtitle}>
+            {isReady ? 'Ready to apply' : 'A new version is available'}
+          </Text>
 
           {/* State-specific content */}
 
@@ -188,34 +186,11 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
     textAlign: 'center',
   },
-
-  // Version pill
-  versionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.sm,
-    backgroundColor: COLORS.surface2,
-    borderRadius: RADIUS.full,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: 6,
-  },
-  versionOld: {
+  subtitle: {
     fontSize: FONT_SIZE.sm,
     color: COLORS.text3,
-    fontWeight: FONT_WEIGHT.medium,
+    textAlign: 'center',
   },
-  versionArrow: {
-    fontSize: FONT_SIZE.sm,
-    color: COLORS.text3,
-  },
-  versionNew: {
-    fontSize: FONT_SIZE.sm,
-    color: COLORS.primaryH,
-    fontWeight: FONT_WEIGHT.bold,
-  },
-
   body: {
     fontSize: FONT_SIZE.base,
     color: COLORS.text2,

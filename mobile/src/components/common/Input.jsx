@@ -184,9 +184,9 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.md,
     paddingVertical: SPACING.md,
     fontWeight: "400",
-    // Android: explicitly set background to transparent so autofill
-    // overlay can't paint its own color behind the text
-    backgroundColor: "transparent",
+    // Paint a solid color directly on the text input to completely 
+    // cover up Android's native olive-green autofill layer.
+    backgroundColor: COLORS.surface2, 
   },
   eyeBtn: {
     paddingLeft: SPACING.sm,

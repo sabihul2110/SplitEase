@@ -98,7 +98,7 @@ export default function LoginScreen({ navigation }) {
           </View>
 
           {/* Form card */}
-          <View style={styles.card} importantForAutofill="no">
+          <View style={styles.card}>
             <Text style={styles.heading}>Welcome back</Text>
             <Text style={styles.subheading}>Sign in to your account</Text>
 
@@ -108,7 +108,7 @@ export default function LoginScreen({ navigation }) {
               </View>
             )}
 
-            <View style={styles.fields} importantForAutofill="no">
+            <View style={styles.fields}>
               <Input
                 label="Email"
                 value={email}
