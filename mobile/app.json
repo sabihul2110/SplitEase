@@ -25,6 +25,7 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
+      "./withAutofillFix.js",
       "expo-build-properties",
       [
         "expo-splash-screen",

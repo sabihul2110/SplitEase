@@ -81,7 +81,7 @@ export function OTAUpdateModal() {
           {/* Available */}
           {updateAvailable && (
             <Text style={styles.body}>
-              A new version of SplitEase is ready. Tap Download — keep the app open until it finishes.
+              A new version of SplitEase is ready. Tap Download Now — keep the app open until it finishes.
             </Text>
           )}
 
@@ -121,7 +121,7 @@ export function OTAUpdateModal() {
                   <Text style={styles.ghostBtnText}>Later</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.primaryBtn} onPress={downloadUpdate}>
-                  <Text style={styles.primaryBtnText}>Download</Text>
+                  <Text style={styles.primaryBtnText}>Download Now</Text>
                 </TouchableOpacity>
               </>
             )}
@@ -175,7 +175,6 @@ const styles = StyleSheet.create({
   icon: {
     width: 80,
     height: 80,
-    // No borderRadius — icon.png already has it baked in
     marginBottom: 4,
   },
 
