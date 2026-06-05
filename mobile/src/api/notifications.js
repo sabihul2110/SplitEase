@@ -1,4 +1,4 @@
-// SplitEase/mobile/src/api/loans.js
+// SplitEase/mobile/src/api/notifications.js
 
 import client from './client';
 import { ENDPOINTS } from '../config/api';

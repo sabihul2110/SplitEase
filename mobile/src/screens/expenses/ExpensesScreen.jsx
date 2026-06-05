@@ -8,6 +8,7 @@
 import React, {
   useState, useEffect, useCallback, useMemo, useRef,
 } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   TextInput, Alert, ActivityIndicator, FlatList,
@@ -468,7 +469,11 @@ export default function ExpensesScreen() {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load]),
+  );
 
   // Available months for navigator bounds
   const availableMonths = useMemo(() => {

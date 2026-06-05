@@ -18,8 +18,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
-import client from "../../api/client";
-import { ENDPOINTS } from "../../config/api";
+import * as groupsApi from "../../api/groups";
+import * as settlementsApi from "../../api/settlements";
 import { useAuth } from "../../context/AuthContext";
 import {
   COLORS,
@@ -125,13 +125,11 @@ export default function SettlementsScreen() {
       if (isRefresh) setRefreshing(true);
       else setLoading(true);
       try {
-        const { data: groups } = await client.get(ENDPOINTS.groups);
+        const { data: groups } = await groupsApi.getGroups();
         const results = await Promise.all(
           groups.map(async (g) => {
             try {
-              const { data: settlements } = await client.get(
-                ENDPOINTS.settlements(g.group_id),
-              );
+              const { data: settlements } = await settlementsApi.getSimplified(g.group_id);
               return { group: g, settlements: settlements || [] };
             } catch {
               return { group: g, settlements: [] };

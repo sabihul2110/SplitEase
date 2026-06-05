@@ -24,6 +24,7 @@ import {
   useRoute,
 } from "@react-navigation/native";
 import * as groupsApi from "../../api/groups";
+import * as settlementsApi from "../../api/settlements";
 import { useAuth } from "../../context/AuthContext";
 import { Icons } from "../../components/icons/icons";
 import { TAB_BAR_HEIGHT } from '../../constants/theme';
@@ -1674,7 +1675,7 @@ export default function GroupsScreen() {
       // Fetch balances for all groups in parallel
       const balanceResults = await Promise.allSettled(
         merged.map((g) =>
-          groupsApi.getSettlements(g.group_id).then((r) => ({
+          settlementsApi.getSettlements(g.group_id).then((r) => ({
             group_id: g.group_id,
             data: r.data,
           })),

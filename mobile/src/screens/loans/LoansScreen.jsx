@@ -18,8 +18,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
-import client from "../../api/client";
-import { ENDPOINTS } from "../../config/api";
+import * as loansApi from "../../api/loans";
 import {
   COLORS,
   FONT_SIZE,
@@ -128,7 +127,9 @@ function LoanCard({ item, isLent, onRefresh, idx }) {
     }
     setSaving(true);
     try {
-      await client.post(repayEndpt, { repayment_amount: amt });
+      await (isLent
+        ? loansApi.repayLoan(idField, amt)
+        : loansApi.repayBorrow(idField, amt));
       setRepayAmt("");
       onRefresh();
     } catch (ex) {
@@ -147,7 +148,9 @@ function LoanCard({ item, isLent, onRefresh, idx }) {
         onPress: async () => {
           setDeleting(true);
           try {
-            await client.delete(deleteEndpt);
+            await (isLent
+              ? loansApi.deleteLoan(idField)
+              : loansApi.deleteBorrow(idField));
             onRefresh();
           } catch {
             setDeleting(false);
@@ -289,14 +292,14 @@ function AddLoanModal({ visible, onClose, isLent, onSuccess }) {
     setError("");
     try {
       if (isLent) {
-        await client.post("/loans/", {
+        await loansApi.addLoan({
           borrower_name: personName.trim(),
           amount: parseFloat(amount),
           loan_date: date,
           note: note.trim() || null,
         });
       } else {
-        await client.post("/borrows/", {
+        await loansApi.addBorrow({
           lender_name: personName.trim(),
           amount: parseFloat(amount),
           borrow_date: date,
@@ -653,8 +656,8 @@ export default function LoansScreen() {
     else setLoading(true);
     try {
       const [lR, bR] = await Promise.all([
-        client.get(ENDPOINTS.loans),
-        client.get(ENDPOINTS.borrows),
+        loansApi.getLoans(),
+        loansApi.getBorrows(),
       ]);
       setLoans(lR.data || []);
       setBorrows(bR.data || []);

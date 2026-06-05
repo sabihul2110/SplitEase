@@ -6,7 +6,7 @@ import { ENDPOINTS } from '../config/api';
 export const getExpenses    = (groupId)  => client.get(ENDPOINTS.expenses(groupId));
 export const addExpense     = (groupId, payload) =>
   client.post(ENDPOINTS.addExpense(groupId), payload);
-export const editExpense    = (id, payload)  => client.put(`/expenses/${id}`, payload);
+export const editExpense    = (id, payload)  => client.put(ENDPOINTS.delExpense(id), payload);
 export const deleteExpense  = (id)           => client.delete(ENDPOINTS.delExpense(id));
 export const getSettlementStatus = (groupId) =>
   client.get(`/expenses/${groupId}/settlement-status`);
@@ -19,4 +19,4 @@ export const deletePersonalExpense = (id)    =>
 export const addIncome      = (payload)      => client.post(ENDPOINTS.income, payload);
 export const deleteIncome   = (id)           => client.delete(ENDPOINTS.delIncome(id));
 
-export const addPersonalExpense = (payload)  => client.post('/personal-expenses/', payload);
+export const addPersonalExpense = (payload)  => client.post(ENDPOINTS.personalExpenses, payload);

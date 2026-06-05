@@ -95,4 +95,11 @@ export const ENDPOINTS = {
 
   // Reminders
   remind: (groupId) => `/groups/${groupId}/remind`,
+
+  // Leave group
+  leaveGroup: (groupId, userId) => `/groups/${groupId}/members/${userId}`,
+
+  // Pending splits
+  pendingSplits: (groupId, debtorId, creditorId) =>
+    `/payments/pending-splits/${groupId}?debtor_id=${debtorId}&creditor_id=${creditorId}`,
 };

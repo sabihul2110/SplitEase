@@ -389,11 +389,24 @@ function EditProfileModal({ user, visible, onClose, onSave }) {
   );
 }
 
+
 // ─── Change Password modal ─────────────────────────────────────────────────────
-function ChangePasswordModal({ visible, onClose }) {
+function ChangePasswordModal({ visible, onClose, userEmail }) {
   const [form, setForm] = useState({ current: "", newPwd: "", confirm: "" });
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [sendingReset, setSendingReset] = useState(false);
+  const [step, setStep] = useState("idle");
+
+  React.useEffect(() => {
+    if (visible) {
+      setForm({ current: "", newPwd: "", confirm: "" });
+      setError("");
+      setSaving(false);
+      setSendingReset(false);
+      setStep("idle");
+    }
+  }, [visible]);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -411,22 +424,30 @@ function ChangePasswordModal({ visible, onClose }) {
     if (err) { setError(err); return; }
     setSaving(true);
     try {
-      // await client.post(ENDPOINTS.changePass, {
-      //   current_password: form.current,
-      //   new_password: form.newPwd,
-      //   confirm_password: form.confirm,
-      // });
       await authApi.changePassword({
         current_password: form.current,
         new_password: form.newPwd,
         confirm_password: form.confirm,
       });
-      Alert.alert("Success", "Password changed successfully.");
-      onClose();
+      setStep("success"); 
     } catch (err) {
       setError(err.response?.data?.detail || "Failed to change password.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleSendMagicLink() {
+    setSendingReset(true);
+    setError("");
+    try {
+      await authApi.forgotPassword(userEmail);
+      setStep("success");
+    } catch (err) {
+      setError(err.response?.data?.detail || "Failed to send reset link.");
+      setStep("idle");
+    } finally {
+      setSendingReset(false);
     }
   }
 
@@ -446,8 +467,11 @@ function ChangePasswordModal({ visible, onClose }) {
         <TouchableOpacity style={styles.modalScrim} onPress={onClose} activeOpacity={1} />
         <View style={styles.sheet}>
           <View style={styles.sheetHandle} />
+          
           <View style={styles.sheetHeader}>
-            <Text style={styles.sheetTitle}>Change Password</Text>
+            <Text style={styles.sheetTitle}>
+              {step === "success" ? "Done" : "Change Password"}
+            </Text>
             <TouchableOpacity
               onPress={onClose}
               style={styles.sheetCloseBtn}
@@ -456,54 +480,110 @@ function ChangePasswordModal({ visible, onClose }) {
               <Icons.close size={14} color={COLORS.text2} />
             </TouchableOpacity>
           </View>
+          
           <ErrorBanner msg={error} />
-          <View style={{ gap: SPACING.md }}>
-            <Input
-              label="Current Password"
-              value={form.current}
-              onChangeText={(v) => set("current", v)}
-              secureTextEntry
-            />
-            <View style={{ gap: 6 }}>
-              <Input
-                label="New Password"
-                value={form.newPwd}
-                onChangeText={(v) => set("newPwd", v)}
-                secureTextEntry
-                placeholder="Minimum 6 characters"
-              />
-              {form.newPwd.length > 0 && (
-                <View style={styles.strengthTrack}>
-                  <View
-                    style={[
-                      styles.strengthFill,
-                      { width: `${pct * 100}%`, backgroundColor: barClr },
-                    ]}
+
+          {/* STATE 1: DEFAULT FORM */}
+          {step === "idle" && (
+            <>
+              <View style={{ gap: SPACING.md }}>
+                <View>
+                  <Input
+                    label="Current Password"
+                    value={form.current}
+                    onChangeText={(v) => set("current", v)}
+                    secureTextEntry
                   />
+                  <TouchableOpacity
+                    onPress={() => setStep("confirm")}
+                    style={{ alignSelf: "flex-end", marginTop: 8 }}
+                  >
+                    <Text style={{ fontSize: FONT_SIZE.sm, color: COLORS.primary, fontWeight: FONT_WEIGHT.medium }}>
+                      Forgot current password?
+                    </Text>
+                  </TouchableOpacity>
                 </View>
-              )}
+                <View style={{ gap: 6 }}>
+                  <Input
+                    label="New Password"
+                    value={form.newPwd}
+                    onChangeText={(v) => set("newPwd", v)}
+                    secureTextEntry
+                    placeholder="Minimum 6 characters"
+                  />
+                  {form.newPwd.length > 0 && (
+                    <View style={styles.strengthTrack}>
+                      <View
+                        style={[
+                          styles.strengthFill,
+                          { width: `${pct * 100}%`, backgroundColor: barClr },
+                        ]}
+                      />
+                    </View>
+                  )}
+                </View>
+                <Input
+                  label="Confirm New Password"
+                  value={form.confirm}
+                  onChangeText={(v) => set("confirm", v)}
+                  secureTextEntry
+                  error={
+                    form.confirm.length > 0 && form.newPwd !== form.confirm
+                      ? "Passwords don't match"
+                      : undefined
+                  }
+                />
+              </View>
+              <View style={styles.sheetActions}>
+                <Button title="Cancel" onPress={onClose} variant="ghost" fullWidth />
+                <Button
+                  title={saving ? "Updating…" : "Update"}
+                  onPress={submit}
+                  loading={saving}
+                  fullWidth
+                />
+              </View>
+            </>
+          )}
+
+          {/* STATE 2: CONFIRM RESET MAGIC LINK */}
+          {step === "confirm" && (
+            <View style={{ gap: SPACING.md, paddingVertical: SPACING.xs }}>
+              <View>
+                <Text style={{ fontSize: FONT_SIZE.lg, fontWeight: FONT_WEIGHT.bold, color: COLORS.text }}>
+                  Send reset link?
+                </Text>
+                <Text style={{ fontSize: FONT_SIZE.sm, color: COLORS.text2, marginTop: 4, lineHeight: 20 }}>
+                  We'll send a password reset link to {userEmail}. You can safely close this app while you check your inbox.
+                </Text>
+              </View>
+              <View style={styles.sheetActions}>
+                <Button title="Cancel" onPress={() => setStep("idle")} variant="ghost" fullWidth />
+                <Button
+                  title={sendingReset ? "Sending…" : "Send Link"}
+                  onPress={handleSendMagicLink}
+                  loading={sendingReset}
+                  fullWidth
+                />
+              </View>
             </View>
-            <Input
-              label="Confirm New Password"
-              value={form.confirm}
-              onChangeText={(v) => set("confirm", v)}
-              secureTextEntry
-              error={
-                form.confirm.length > 0 && form.newPwd !== form.confirm
-                  ? "Passwords don't match"
-                  : undefined
-              }
-            />
-          </View>
-          <View style={styles.sheetActions}>
-            <Button title="Cancel" onPress={onClose} variant="ghost" fullWidth />
-            <Button
-              title={saving ? "Updating…" : "Update"}
-              onPress={submit}
-              loading={saving}
-              fullWidth
-            />
-          </View>
+          )}
+
+          {/* STATE 3: SUCCESS CONFIRMATION */}
+          {step === "success" && (
+            <View style={{ alignItems: "center", gap: SPACING.md, paddingVertical: SPACING.md }}>
+              <View style={{ width: 48, height: 48, borderRadius: RADIUS.full, backgroundColor: "rgba(16,185,129,0.10)", alignItems: "center", justifyContent: "center" }}>
+                <Icons.checkCircle size={24} color={COLORS.success} />
+              </View>
+              <Text style={{ fontSize: FONT_SIZE.sm, color: COLORS.text2, textAlign: "center", paddingHorizontal: SPACING.md, lineHeight: 20 }}>
+                {form.newPwd.length > 0 
+                  ? "Your password has been changed successfully."
+                  : "A secure link has been sent. Check your inbox to reset your password."}
+              </Text>
+              <Button title="Done" onPress={onClose} fullWidth style={{ marginTop: SPACING.sm }} />
+            </View>
+          )}
+
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -935,7 +1015,7 @@ export default function AccountScreen() {
         onClose={() => setShowEdit(false)}
         onSave={async (freshUser) => { await updateUser(freshUser); }}
       />
-      <ChangePasswordModal visible={showPwd} onClose={() => setShowPwd(false)} />
+      <ChangePasswordModal visible={showPwd} onClose={() => setShowPwd(false)} userEmail={user?.email} />
     </SafeAreaView>
   );
 }

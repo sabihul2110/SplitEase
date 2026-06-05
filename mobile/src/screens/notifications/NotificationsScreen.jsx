@@ -17,8 +17,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Swipeable } from "react-native-gesture-handler";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
-import client from "../../api/client";
-import { ENDPOINTS } from "../../config/api";
+import * as notifsApi from "../../api/notifications";
 import {
   COLORS,
   FONT_SIZE,
@@ -200,7 +199,7 @@ export default function NotificationsScreen() {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
     try {
-      const { data } = await client.get(ENDPOINTS.notifs);
+      const { data } = await notifsApi.getNotifs();
       setNotifs(data || []);
     } catch {
       setNotifs([]);
@@ -236,7 +235,7 @@ export default function NotificationsScreen() {
   // ── Actions ──
   async function markRead(id) {
     try {
-      await client.post(ENDPOINTS.readNotif(id));
+      await notifsApi.markRead(id);
       setNotifs((p) =>
         p.map((n) => (n.notification_id === id ? { ...n, is_read: true } : n)),
       );
@@ -245,7 +244,7 @@ export default function NotificationsScreen() {
 
   async function markAllRead() {
     try {
-      await client.post(ENDPOINTS.readAll);
+      await notifsApi.markAllRead();
       setNotifs((p) => p.map((n) => ({ ...n, is_read: true })));
     } catch {}
   }
@@ -258,7 +257,7 @@ export default function NotificationsScreen() {
       return n;
     });
     try {
-      await client.delete(ENDPOINTS.delNotif(id));
+      await notifsApi.deleteNotif(id);
     } catch {}
   }
 
@@ -266,14 +265,12 @@ export default function NotificationsScreen() {
     const ids = [...selectedIds];
     setNotifs((p) => p.filter((n) => !selectedIds.has(n.notification_id)));
     setSelectedIds(new Set());
-    await Promise.allSettled(
-      ids.map((id) => client.delete(ENDPOINTS.delNotif(id))),
-    );
+    await Promise.allSettled(ids.map((id) => notifsApi.deleteNotif(id)));
   }
 
   async function deleteReadNotifs() {
     try {
-      await client.delete(ENDPOINTS.delReadNotifs);
+      await notifsApi.deleteReadNotifs();
       setNotifs((p) => p.filter((n) => !n.is_read));
     } catch {}
   }
