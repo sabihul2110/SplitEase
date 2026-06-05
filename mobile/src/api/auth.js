@@ -20,3 +20,6 @@ export const forgotPassword = (email) =>
 
 export const resetPassword = (payload) =>
   client.post('/auth/reset-password', payload);
+
+export const updateMe = (payload) =>
+  client.put(ENDPOINTS.updateMe, payload);

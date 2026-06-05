@@ -18,8 +18,9 @@ import {
   Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import client from "../../api/client";
-import { ENDPOINTS } from '../../config/api';
+// import client from "../../api/client";
+// import { ENDPOINTS } from '../../config/api';
+import * as authApi from "../../api/auth";
 import { useAuth } from "../../context/AuthContext";
 import {
   COLORS,
@@ -72,7 +73,8 @@ export default function SignupScreen({ navigation }) {
       };
       if (form.upi_id.trim()) payload.upi_id = form.upi_id.trim();
 
-      const { data } = await client.post(ENDPOINTS.signup, payload);
+      // const { data } = await client.post(ENDPOINTS.signup, payload);
+      const { data } = await authApi.signup(payload);
 
       await login({
         access_token: data.access_token,

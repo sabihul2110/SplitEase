@@ -28,7 +28,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
-import client from "../../api/client";
+import client from "../../api/client"; // still needed for non-auth calls (groups, settlements, resetData)
+import * as authApi from "../../api/auth";
 import { ENDPOINTS } from "../../config/api";
 import { useAuth } from "../../context/AuthContext";
 import {
@@ -311,7 +312,12 @@ function EditProfileModal({ user, visible, onClose, onSave }) {
     if (!form.name.trim()) { setError("Name is required."); return; }
     setSaving(true);
     try {
-      const { data } = await client.put(ENDPOINTS.updateMe, {
+      // const { data } = await client.put(ENDPOINTS.updateMe, {
+      //   name: form.name.trim(),
+      //   email: form.email.trim(),
+      //   upi_id: form.upi_id.trim() || null,
+      // });
+      const { data } = await authApi.updateMe({
         name: form.name.trim(),
         email: form.email.trim(),
         upi_id: form.upi_id.trim() || null,
@@ -405,7 +411,12 @@ function ChangePasswordModal({ visible, onClose }) {
     if (err) { setError(err); return; }
     setSaving(true);
     try {
-      await client.post(ENDPOINTS.changePass, {
+      // await client.post(ENDPOINTS.changePass, {
+      //   current_password: form.current,
+      //   new_password: form.newPwd,
+      //   confirm_password: form.confirm,
+      // });
+      await authApi.changePassword({
         current_password: form.current,
         new_password: form.newPwd,
         confirm_password: form.confirm,

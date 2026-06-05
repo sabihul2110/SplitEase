@@ -6,7 +6,8 @@ import {
   KeyboardAvoidingView, Platform, ScrollView, Alert, Image
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import client from '../../api/client';
+// import client from '../../api/client';
+import * as authApi from "../../api/auth";
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS } from '../../constants/theme';
 import { Icons } from '../../components/icons/icons';
 import Input  from '../../components/common/Input';
@@ -22,9 +23,13 @@ export default function ForgotPasswordScreen({ navigation }) {
     if (!email.trim()) { setError('Email is required'); return; }
     setLoading(true); setError('');
     try {
-      await client.post('/auth/forgot-password', { email: email.trim().toLowerCase() });
+      // await client.post('/auth/forgot-password', { email: email.trim().toLowerCase() });
+      await authApi.forgotPassword(email.trim().toLowerCase());
       setSent(true);
-    } catch {
+    } catch (err) {
+      console.log("BACKEND ERROR:", err.response?.data || err.message);
+      // Temporarily alert the error so we can see it on screen
+      alert(JSON.stringify(err.response?.data || err.message));
       // Always show success to prevent enumeration
       setSent(true);
     } finally {

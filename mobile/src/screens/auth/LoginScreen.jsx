@@ -20,8 +20,9 @@ import {
   Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import client from "../../api/client";
-import { ENDPOINTS } from '../../config/api';
+// import client from "../../api/client";
+// import { ENDPOINTS } from '../../config/api';
+import * as authApi from "../../api/auth";
 import { useAuth } from "../../context/AuthContext";
 import {
   COLORS,
@@ -54,10 +55,14 @@ export default function LoginScreen({ navigation }) {
     if (!validate()) return;
     setLoading(true);
     try {
-      const { data } = await client.post(ENDPOINTS.login, {
-        email: email.trim().toLowerCase(),
+      // const { data } = await client.post(ENDPOINTS.login, {
+      //   email: email.trim().toLowerCase(),
+      //   password,
+      // });
+      const { data } = await authApi.login(
+        email.trim().toLowerCase(),
         password,
-      });
+      );
 
       // Backend returns: { access_token, token_type, user_id, name, email, role }
       await login({
