@@ -25,7 +25,15 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-build-properties"
+      "expo-build-properties",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0d0e14",
+          "image": "./assets/adaptive-icon.png",
+          "resizeMode": "contain"
+        }
+      ]
     ],
     "runtimeVersion": {
       "policy": "appVersion"
