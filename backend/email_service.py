@@ -1,25 +1,18 @@
 # SplitEase/backend/email_service.py
 
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 import os
+import requests
 
-SMTP_PASSWORD = os.getenv("BREVO_SMTP_KEY", "")
-SMTP_LOGIN    = os.getenv("BREVO_SMTP_LOGIN", "")
+# Fallback to SMTP_KEY if API_KEY isn't explicitly set
+BREVO_API_KEY = os.getenv("BREVO_API_KEY", os.getenv("BREVO_SMTP_KEY", ""))
 SENDER_EMAIL  = os.getenv("BREVO_SENDER_EMAIL", "")
 APP_BASE_URL  = os.getenv("APP_BASE_URL", "http://localhost:5173")
 
 def send_reset_email(to_email: str, name: str, token: str) -> None:
-    if not SMTP_PASSWORD or not SENDER_EMAIL or not SMTP_LOGIN:
+    if not BREVO_API_KEY or not SENDER_EMAIL:
         raise RuntimeError("Email not configured — check your Brevo env vars.")
     
     reset_link = f"{APP_BASE_URL}/reset-password?token={token}"
-
-    msg            = MIMEMultipart("alternative")
-    msg["Subject"] = "Reset your SplitEase password"
-    msg["From"]    = f"SplitEase <{SENDER_EMAIL}>"
-    msg["To"]      = to_email
 
     html = f"""
     <div style="font-family:sans-serif;max-width:460px;margin:0 auto;padding:32px 24px;
@@ -45,10 +38,29 @@ def send_reset_email(to_email: str, name: str, token: str) -> None:
     </div>
     """
 
-    msg.attach(MIMEText(html, "html"))
+    url = "https://api.brevo.com/v3/smtp/email"
+    
+    payload = {
+        "sender": {"name": "SplitEase", "email": SENDER_EMAIL},
+        "to": [{"email": to_email, "name": name}],
+        "subject": "Reset your SplitEase password",
+        "htmlContent": html
+    }
+    
+    headers = {
+        "accept": "application/json",
+        "api-key": BREVO_API_KEY,
+        "content-type": "application/json"
+    }
 
-    with smtplib.SMTP("smtp-relay.brevo.com", 587) as server:
-        server.starttls()
-        # Logging in with your specific Brevo account ID, sending FROM your verified Gmail
-        server.login(SMTP_LOGIN, SMTP_PASSWORD)
-        server.sendmail(SENDER_EMAIL, to_email, msg.as_string())
+    try:
+        # 10 second timeout prevents the frontend from hanging indefinitely
+        response = requests.post(url, json=payload, headers=headers, timeout=10)
+        response.raise_for_status() 
+        print(f"[email] Successfully sent reset link to {to_email} via HTTP API")
+        
+    except requests.exceptions.RequestException as e:
+        print(f"[email] Failed: Brevo API Error: {str(e)}")
+        if hasattr(e, 'response') and e.response is not None:
+            print(f"[email] Details: {e.response.text}")
+        raise
