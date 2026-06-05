@@ -10,20 +10,39 @@ export default function AdminGroups() {
   useEffect(() => {
     api.get("/groups/all").then(r => setGroups(r.data)).finally(() => setLoading(false));
   }, []);
-
   async function deleteGroup(id, name) {
     if (!confirm(`Delete "${name}"? All expenses and payments will be removed.`)) return;
-    await api.delete(`/groups/${id}`);
+    await api.delete(`/groups/${id}?force=true`);
     setGroups(p => p.filter(g => g.group_id !== id));
+  }
+
+  async function deleteAllGroups() {
+    if (!confirm("Delete ALL groups? This removes every expense, payment, and settlement across the entire app. This cannot be undone.")) return;
+    if (!confirm("Are you absolutely sure? Type OK to confirm.")) return;
+    try {
+      await api.delete("/groups/admin/wipe-groups");
+      setGroups([]);
+    } catch (e) {
+      alert(e.response?.data?.detail || "Failed to wipe groups.");
+    }
   }
 
   if (loading) return <div className="loading"><div className="spinner" />Loading…</div>;
 
   return (
     <div className="fade-up">
-      <div style={{ marginBottom: 24 }}>
-        <div className="page-title">Groups</div>
-        <div className="page-sub">{groups.length} total groups</div>
+      <div style={{ marginBottom: 24, display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+        <div>
+          <div className="page-title">Groups</div>
+          <div className="page-sub">{groups.length} total groups</div>
+        </div>
+        <button
+          className="btn btn-danger btn-sm"
+          onClick={deleteAllGroups}
+          style={{ marginTop: 4 }}
+        >
+          Wipe All Groups
+        </button>
       </div>
 
       <div className="card">

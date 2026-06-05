@@ -2055,3 +2055,36 @@ def fetch_expense_splits(expense_id):
                 (expense_id,)
             )
             return cur.fetchall()
+
+
+def admin_wipe_groups() -> dict:
+    """
+    Admin only: Wipes ALL groups, group expenses, and group payments.
+    Leaves users, personal expenses, income, and peer-to-peer loans intact.
+    """
+    conn = get_connection()
+    cur  = conn.cursor()
+    try:
+        conn.start_transaction()
+        # Delete all group-dependent records
+        cur.execute("DELETE FROM Notifications WHERE group_id IS NOT NULL")
+        cur.execute("DELETE FROM Invites")
+        cur.execute("DELETE FROM Payment_Allocations")
+        cur.execute("DELETE FROM Payments")
+        cur.execute("DELETE FROM Expense_Splits")
+        cur.execute("DELETE FROM Expenses")
+        cur.execute("DELETE FROM Group_Members")
+        cur.execute("DELETE FROM `Groups`")
+        
+        # Reset IDs back to 1
+        cur.execute("ALTER TABLE `Groups` AUTO_INCREMENT = 1")
+        cur.execute("ALTER TABLE Expenses AUTO_INCREMENT = 1")
+        cur.execute("ALTER TABLE Payments AUTO_INCREMENT = 1")
+        
+        conn.commit()
+        return {"wiped": True, "message": "All groups and related data deleted."}
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close(); conn.close()

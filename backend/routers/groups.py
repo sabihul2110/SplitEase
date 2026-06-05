@@ -202,3 +202,10 @@ def leave_group(group_id: int, user_id: int, current_user: dict = Depends(get_cu
 
     db.remove_group_member(group_id, user_id)
     return {"message": "Left the group."}
+
+
+
+@router.delete("/admin/wipe-groups")
+def wipe_all_groups(current_user: dict = Depends(require_admin)):
+    """Admin only: delete every group, expense, payment, and settlement."""
+    return db.admin_wipe_groups()

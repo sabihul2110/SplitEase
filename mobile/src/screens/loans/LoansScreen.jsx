@@ -7,7 +7,6 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  Alert,
   RefreshControl,
   TextInput,
   Modal,
@@ -31,6 +30,7 @@ import { EmptyState, LoadingState } from "../../components/common/Ui";
 import ScreenHeader from "../../components/layout/ScreenHeader";
 import { Icons } from "../../components/icons/icons";
 import DatePickerInput from "../../components/common/DatePickerInput";
+import AppAlert from "../../components/common/AppAlert";
 
 function fmt(n) {
   return Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 });
@@ -85,6 +85,7 @@ function LoanCard({ item, isLent, onRefresh, idx }) {
   const [repayErr, setRepayErr] = useState("");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [alert, setAlert] = useState(null);
 
   const accentColor = isLent ? "#f59e0b" : "#818cf8";
   const btnColor = isLent ? COLORS.success : "#6366f1";
@@ -139,25 +140,30 @@ function LoanCard({ item, isLent, onRefresh, idx }) {
     }
   }
 
-  async function handleDelete() {
-    Alert.alert("Delete record?", "This cannot be undone.", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          setDeleting(true);
-          try {
-            await (isLent
-              ? loansApi.deleteLoan(idField)
-              : loansApi.deleteBorrow(idField));
-            onRefresh();
-          } catch {
-            setDeleting(false);
-          }
+  function handleDelete() {
+    setAlert({
+      title: "Delete record?",
+      message: "This cannot be undone.",
+      buttons: [
+        { text: "Cancel", style: "cancel", onPress: () => setAlert(null) },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            setAlert(null);
+            setDeleting(true);
+            try {
+              await (isLent
+                ? loansApi.deleteLoan(idField)
+                : loansApi.deleteBorrow(idField));
+              onRefresh();
+            } catch {
+              setDeleting(false);
+            }
+          },
         },
-      },
-    ]);
+      ],
+    });
   }
 
   return (
@@ -253,6 +259,7 @@ function LoanCard({ item, isLent, onRefresh, idx }) {
           </Text>
         </TouchableOpacity>
       </View>
+      <AppAlert config={alert} />
     </View>
   );
 }
