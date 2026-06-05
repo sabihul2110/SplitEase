@@ -85,7 +85,7 @@ export function AuthProvider({ children }) {
     return (
       <View style={styles.splash}>
         <Animated.Image
-          source={require("../../assets/icon.png")}
+          source={require("../../assets/adaptive-icon.png")}
           style={[styles.splashIcon, { opacity: fadeIn }]}
           resizeMode="contain"
         />
@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
     justifyContent:  "center",
   },
   splashIcon: {
-    width:  160,
-    height: 160,
+    width:  220,
+    height: 220,
   },
 });
