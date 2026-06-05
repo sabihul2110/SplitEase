@@ -7,7 +7,7 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "splash": {
-      "image": "./assets/adaptive-icon.png",
+      "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#0d0e14"
     },
@@ -30,7 +30,7 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#0d0e14",
-          "image": "./assets/adaptive-icon.png",
+          "image": "./assets/splash-icon.png",
           "resizeMode": "contain"
         }
       ]
