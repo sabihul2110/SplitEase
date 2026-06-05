@@ -85,6 +85,7 @@ export default function Input({
           error && styles.inputError,
           !editable && styles.inputDisabled,
         ]}
+        importantForAutofill={resolvedAutoComplete === "off" ? "no" : "yes"}
       >
         <TextInput
           style={[

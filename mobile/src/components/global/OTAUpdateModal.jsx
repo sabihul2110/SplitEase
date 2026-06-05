@@ -24,7 +24,7 @@ import {
 import { useOTAUpdate } from '../../hooks/useOTAUpdate';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS } from '../../constants/theme';
 
-const FAKE_UPDATE = __DEV__;
+const FAKE_UPDATE = false;
 
 export function OTAUpdateModal() {
   const {
@@ -36,7 +36,7 @@ export function OTAUpdateModal() {
     downloadUpdate,
     restartApp,
     dismissUpdate,
-  } = useOTAUpdate({ autoCheck: FAKE_UPDATE });
+  } = useOTAUpdate({ autoCheck: true });
 
   const visible = updateAvailable || isDownloading || isReady;
   if (!visible) return null;

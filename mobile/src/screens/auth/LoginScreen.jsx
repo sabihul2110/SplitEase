@@ -98,7 +98,7 @@ export default function LoginScreen({ navigation }) {
           </View>
 
           {/* Form card */}
-          <View style={styles.card}>
+          <View style={styles.card} importantForAutofill="no">
             <Text style={styles.heading}>Welcome back</Text>
             <Text style={styles.subheading}>Sign in to your account</Text>
 
@@ -108,7 +108,7 @@ export default function LoginScreen({ navigation }) {
               </View>
             )}
 
-            <View style={styles.fields}>
+            <View style={styles.fields} importantForAutofill="no">
               <Input
                 label="Email"
                 value={email}
@@ -117,6 +117,8 @@ export default function LoginScreen({ navigation }) {
                 keyboardType="email-address"
                 error={errors.email}
                 autoCapitalize="none"
+                autoComplete="email"
+                textContentType="emailAddress"
               />
               <Input
                 label="Password"
@@ -125,7 +127,7 @@ export default function LoginScreen({ navigation }) {
                 placeholder="Your password"
                 secureTextEntry
                 textContentType="password"
-                autoComplete="password"
+                autoComplete="current-password"
                 error={errors.password}
               />
             </View>

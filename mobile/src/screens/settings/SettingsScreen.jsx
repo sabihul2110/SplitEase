@@ -73,6 +73,7 @@ function Row({
   last,
   right,
   noChevron,
+  plainSeparator,
 }) {
   const Wrap = onPress ? TouchableOpacity : View;
   return (
@@ -114,7 +115,9 @@ function Row({
           <Icons.chevronRight size={14} color={COLORS.text3} />
         ) : null}
       </Wrap>
-      {!last && <View style={styles.separator} />}
+      {!last && (
+        <View style={plainSeparator ? styles.separatorFull : styles.separator} />
+      )}
     </>
   );
 }
@@ -281,7 +284,7 @@ export default function SettingsScreen() {
         {/* ── About ── */}
         <SectionLabel title="ABOUT" />
         <Group>
-          <Row label="App" value="SplitEase" noChevron />
+          <Row label="App" value="SplitEase" noChevron plainSeparator />
           <Row label="Version" value="2.1.0" noChevron last />
         </Group>
 
@@ -394,6 +397,11 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: COLORS.border,
     marginLeft: SPACING.base + 36 + SPACING.md,
+  },
+  separatorFull: {
+    height: 1,
+    backgroundColor: COLORS.border,
+    marginLeft: 0,
   },
   iconWrap: {
     width: 34,

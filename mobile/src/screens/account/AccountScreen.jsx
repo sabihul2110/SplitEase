@@ -1076,7 +1076,7 @@ const styles = StyleSheet.create({
   rowDividerFull: {
     height: 1,
     backgroundColor: COLORS.border,
-    marginLeft: SPACING.base,
+    marginLeft: 0,
   },
   rowIcon: {
     width: 36,
