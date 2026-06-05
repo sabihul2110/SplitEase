@@ -8,16 +8,19 @@ module.exports = function withAutofillFix(config) {
     );
 
     if (appTheme) {
-      // Check if our fix is already there to avoid duplicates
-      const exists = appTheme.item.some(
+      // Look for the autofill highlight item
+      const existingItem = appTheme.item.find(
         (item) => item.$.name === 'android:autofilledHighlight'
       );
 
-      // If not, inject the command to kill the autofill highlight
-      if (!exists) {
+      if (existingItem) {
+        // If it exists (e.g., set to @null from before), overwrite it safely
+        existingItem._ = '@android:color/transparent';
+      } else {
+        // Otherwise, create it cleanly
         appTheme.item.push({
           $: { name: 'android:autofilledHighlight' },
-          _: '@null' 
+          _: '@android:color/transparent' 
         });
       }
     }
