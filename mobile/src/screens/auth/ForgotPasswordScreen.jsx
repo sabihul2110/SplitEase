@@ -6,7 +6,6 @@ import {
   KeyboardAvoidingView, Platform, ScrollView, Alert, Image
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-// import client from '../../api/client';
 import * as authApi from "../../api/auth";
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS } from '../../constants/theme';
 import { Icons } from '../../components/icons/icons';
@@ -23,15 +22,14 @@ export default function ForgotPasswordScreen({ navigation }) {
     if (!email.trim()) { setError('Email is required'); return; }
     setLoading(true); setError('');
     try {
-      // await client.post('/auth/forgot-password', { email: email.trim().toLowerCase() });
       await authApi.forgotPassword(email.trim().toLowerCase());
+      // If FastAPI returns 200 OK, the request was successful.
       setSent(true);
     } catch (err) {
-      console.log("BACKEND ERROR:", err.response?.data || err.message);
-      // Temporarily alert the error so we can see it on screen
-      alert(JSON.stringify(err.response?.data || err.message));
-      // Always show success to prevent enumeration
-      setSent(true);
+      // Only catches actual crashes or 429 Rate Limits.
+      // Extracts the specific FastAPI error, or defaults to a generic message.
+      const errorMessage = err.response?.data?.detail || 'Failed to connect to the server. Please try again.';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

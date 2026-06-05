@@ -17,9 +17,9 @@ def send_reset_email(to_email: str, name: str, token: str) -> None:
     html = f"""
     <div style="font-family:sans-serif;max-width:460px;margin:0 auto;padding:32px 24px;
                 background:#0a0d14;color:#f0f4ff;border-radius:12px;border:1px solid #242a3d;">
-      <div style="width:44px;height:44px;background:#2563eb;border-radius:12px;
-                  display:flex;align-items:center;justify-content:center;
-                  font-size:20px;font-weight:800;color:#fff;margin-bottom:20px;">S</div>
+      <img src="https://raw.githubusercontent.com/sabihul2110/SplitEase/main/mobile/assets/icon.png" 
+           alt="SplitEase Logo" 
+           style="width:56px;height:56px;border-radius:14px;margin-bottom:20px;display:block;">
       <h2 style="color:#f0f4ff;margin:0 0 8px;font-size:20px;">Reset your password</h2>
       <p style="color:#8892b0;margin:0 0 24px;line-height:1.6;">
         Hi {name}, click below to reset your SplitEase password.

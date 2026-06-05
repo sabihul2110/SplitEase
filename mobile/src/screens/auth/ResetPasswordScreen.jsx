@@ -6,7 +6,6 @@ import {
   Platform, ScrollView, TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-// import client from '../../api/client';
 import * as authApi from "../../api/auth";
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS } from '../../constants/theme';
 import Input  from '../../components/common/Input';
@@ -34,11 +33,6 @@ export default function ResetPasswordScreen({ navigation }) {
     if (!validate()) return;
     setLoading(true);
     try {
-      // await client.post('/auth/reset-password', {
-      //   token:            token.trim(),
-      //   new_password:     pass,
-      //   confirm_password: confirm,
-      // });
       await authApi.resetPassword({
         token:            token.trim(),
         new_password:     pass,
