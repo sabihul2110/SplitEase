@@ -16,3 +16,8 @@ export const getInviteInfo  = (token)  => client.get(ENDPOINTS.inviteInfo(token)
 export const joinInvite     = (token)  => client.post(ENDPOINTS.joinInvite(token));
 export const remindMember   = (groupId, payload) =>
   client.post(ENDPOINTS.remind(groupId), payload);
+
+export const getUsers       = ()             => client.get('/users/');
+export const leaveGroup     = (groupId, userId) =>
+  client.delete(`/groups/${groupId}/members/${userId}`);
+export const getSettlements = (groupId)      => client.get(`/settlements/${groupId}`);

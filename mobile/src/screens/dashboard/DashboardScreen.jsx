@@ -12,8 +12,9 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
-import client from "../../api/client";
-import { ENDPOINTS } from "../../config/api";
+import * as groupsApi from "../../api/groups";
+import * as settlementsApi from "../../api/settlements";
+import * as notificationsApi from "../../api/notifications";
 import { useAuth } from "../../context/AuthContext";
 import {
   COLORS,
@@ -199,15 +200,12 @@ export default function DashboardScreen() {
       if (isRefresh) setRefreshing(true);
       else setLoading(true);
       try {
-        const { data: groupList } = await client.get(ENDPOINTS.groups);
+        const { data: groupList } = await groupsApi.getGroups();
         setGroups(groupList || []);
 
         if (groupList?.length) {
-          const { data: bulkResult } = await client.post(
-            ENDPOINTS.settlementsBulk,
-            {
-              group_ids: groupList.map((g) => g.group_id),
-            },
+          const { data: bulkResult } = await settlementsApi.getSettlementsBulk(
+            groupList.map((g) => g.group_id),
           );
           let owe = 0,
             owed = 0;
@@ -226,7 +224,7 @@ export default function DashboardScreen() {
         }
 
         try {
-          const { data: nc } = await client.get(ENDPOINTS.notifCount);
+          const { data: nc } = await notificationsApi.getCount();
           setUnreadCount(nc?.count || 0);
         } catch {}
       } catch (err) {

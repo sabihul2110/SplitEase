@@ -15,7 +15,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
-import client from "../../api/client";
+import * as expensesApi from "../../api/expenses";
 import { useAuth } from "../../context/AuthContext";
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS, TAB_BAR_HEIGHT } from "../../constants/theme";
 import { Icons, TYPE_ICONS, TYPE_CFG } from "../../components/icons/icons";
@@ -276,7 +276,7 @@ function InlineRepay({ entry, onSuccess }) {
     if (parsed > remaining)           { setErr(`Max ₹${fmt(remaining)}`); return; }
     setSaving(true);
     try {
-      await client.post(`/loans/${entry.ref_id}/repay`, { repayment_amount: parsed });
+      await expensesApi.repayLoan(entry.ref_id, parsed);
       setAmt("");
       onSuccess();
     } catch (ex) {
@@ -459,7 +459,7 @@ export default function ExpensesScreen() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await client.get("/timeline/");
+      const { data } = await expensesApi.getTimeline();
       setEntries(data);
     } catch {
       setEntries([]);
@@ -499,10 +499,10 @@ export default function ExpensesScreen() {
     if (mode === "refresh") { load(); return; }
     setDeleting(entry.ref_id);
     try {
-      if (entry.type === "personal_expense") await client.delete(`/personal-expenses/${entry.ref_id}/`);
-      else if (entry.type === "income")      await client.delete(`/income/${entry.ref_id}/`);
-      else if (entry.type === "loan_given")  await client.delete(`/loans/${entry.ref_id}/`);
-      else if (entry.type === "loan_taken")  await client.delete(`/borrows/${entry.ref_id}/`);
+      if (entry.type === "personal_expense") await expensesApi.deletePersonalExpense(entry.ref_id);
+      else if (entry.type === "income")      await expensesApi.deleteIncome(entry.ref_id);
+      else if (entry.type === "loan_given")  await expensesApi.deleteLoan(entry.ref_id);
+      else if (entry.type === "loan_taken")  await expensesApi.deleteBorrow(entry.ref_id);
       await load();
     } catch { /* silent */ }
     finally { setDeleting(null); }

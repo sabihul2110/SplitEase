@@ -13,7 +13,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
-import client from '../../api/client';
+import * as groupsApi from "../../api/groups";
+import * as expensesApi from "../../api/expenses";
+import * as settlementsApi from "../../api/settlements";
 import { useAuth } from '../../context/AuthContext';
 import { Icons, CATEGORY_ICONS } from '../../components/icons/icons';
 import { TAB_BAR_HEIGHT } from '../../constants/theme';
@@ -743,10 +745,10 @@ export default function GroupDetailScreen() {
     try {
       setSettLoaded(false);
       const [expRes, payRes, memRes, statusRes] = await Promise.all([
-        client.get(`/expenses/${groupId}`),
-        client.get(`/payments/${groupId}`),
-        client.get(`/groups/${groupId}/members`),
-        client.get(`/expenses/${groupId}/settlement-status`),
+        expensesApi.getExpenses(groupId),
+        settlementsApi.getPayments(groupId),
+        groupsApi.getMembers(groupId),
+        expensesApi.getSettlementStatus(groupId),
       ]);
       setExpenses(expRes.data      || []);
       setPayments(payRes.data      || []);
@@ -765,8 +767,8 @@ export default function GroupDetailScreen() {
     setSettLoading(true);
     try {
       const [raw, simp] = await Promise.all([
-        client.get(`/settlements/${groupId}`),
-        client.get(`/settlements/${groupId}/simplified`),
+        settlementsApi.getSettlements(groupId),
+        settlementsApi.getSimplified(groupId),
       ]);
       setNetBalances(raw.data  || []);
       setSimplified(simp.data  || []);
@@ -814,10 +816,10 @@ export default function GroupDetailScreen() {
   async function handleDelete(type, id) {
     try {
       if (type === 'expense') {
-        await client.delete(`/expenses/${id}`);
+        await expensesApi.deleteExpense(id);
         setExpenses(p => p.filter(e => e.expense_id !== id));
       } else {
-        await client.delete(`/payments/${id}`);
+        await settlementsApi.deletePayment(id);
         setPayments(p => p.filter(x => x.payment_id !== id));
       }
       showToast('Deleted');
@@ -827,7 +829,7 @@ export default function GroupDetailScreen() {
   async function handleRemind(s) {
     setReminding(s.from);
     try {
-      await client.post(`/groups/${groupId}/remind`, { debtor_user_id: s.from_user_id, amount: s.amount });
+      await groupsApi.remindMember(groupId, { debtor_user_id: s.from_user_id, amount: s.amount });
       showToast(`Reminder sent to ${s.from}`);
     } catch (err) {
       const detail = err?.response?.data?.detail;
@@ -841,7 +843,7 @@ export default function GroupDetailScreen() {
 
   async function handleDeleteGroup(force = false) {
     try {
-      await client.delete(`/groups/${groupId}${force ? '?force=true' : ''}`);
+      await groupsApi.deleteGroup(groupId, force);
       navigation.goBack();
     } catch (err) {
       const s      = err?.response?.status;
@@ -865,7 +867,7 @@ export default function GroupDetailScreen() {
 
   async function handleLeaveGroup() {
     try {
-      await client.delete(`/groups/${groupId}/members/${user.user_id}`);
+      await groupsApi.leaveGroup(groupId, user.user_id);
       navigation.goBack();
     } catch (err) {
       const detail = err?.response?.data?.detail;
@@ -876,7 +878,7 @@ export default function GroupDetailScreen() {
   async function handleInvite() {
     setInviting(true);
     try {
-      const { data } = await client.post(`/groups/${groupId}/invite`);
+      const { data } = await groupsApi.generateInvite(groupId);
       const link = data.invite_url || `https://splitease.app/join/${data.token}`;
       await Share.share({
         message: `Join "${groupName}" on SplitEase:\n${link}`,
@@ -979,7 +981,7 @@ export default function GroupDetailScreen() {
             members={members}
             onEdit={async (exp) => {
               try {
-                const { data } = await client.get(`/expenses/${exp.expense_id}/splits`);
+                const { data } = await expensesApi.getExpenseSplits(exp.expense_id);
                 navigation.navigate('AddExpense', {
                   groupId, groupName, members,
                   editExpense: { ...exp, splits: data || [] },

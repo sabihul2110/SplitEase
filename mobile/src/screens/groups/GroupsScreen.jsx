@@ -23,8 +23,7 @@ import {
   useNavigation,
   useRoute,
 } from "@react-navigation/native";
-import client from "../../api/client";
-import { ENDPOINTS } from "../../config/api";
+import * as groupsApi from "../../api/groups";
 import { useAuth } from "../../context/AuthContext";
 import { Icons } from "../../components/icons/icons";
 import { TAB_BAR_HEIGHT } from '../../constants/theme';
@@ -770,7 +769,7 @@ function CreateGroupModal({ visible, onClose, onCreated }) {
   async function loadUsers() {
     setFetchingUsers(true);
     try {
-      const { data } = await client.get("/users/");
+      const { data } = await groupsApi.getUsers();
       setAllUsers(data.filter((u) => u.user_id !== user?.user_id));
     } catch {
       setAllUsers([]);
@@ -791,7 +790,7 @@ function CreateGroupModal({ visible, onClose, onCreated }) {
     setLoading(true);
     try {
       const ids = [...new Set([user.user_id, ...picked])];
-      const { data } = await client.post(ENDPOINTS.createGroup, {
+      const { data } = await groupsApi.createGroup({
         group_name: name.trim(),
         user_ids: ids,
       });
@@ -1051,7 +1050,7 @@ function JoinGroupModal({ visible, onClose, onJoined }) {
     setLoading(true);
     setError("");
     try {
-      const { data } = await client.get(`/invite/${token}`);
+      const { data } = await groupsApi.getInviteInfo(token);
       setGroupInfo({ ...data, token });
       setStep("preview");
     } catch (err) {
@@ -1064,7 +1063,7 @@ function JoinGroupModal({ visible, onClose, onJoined }) {
   async function handleJoin() {
     setStep("joining");
     try {
-      const { data } = await client.post(`/invite/${groupInfo.token}/join`);
+      const { data } = await groupsApi.joinInvite(groupInfo.token);
       setStep("success");
       setTimeout(() => {
         onJoined(data);
@@ -1658,16 +1657,14 @@ export default function GroupsScreen() {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
     try {
-      const { data: fetchedGroups } = await client.get(ENDPOINTS.groups);
+      const { data: fetchedGroups } = await groupsApi.getGroups();
       if (!fetchedGroups?.length) {
         setGroups([]);
         return;
       }
 
       const groupIds = fetchedGroups.map((g) => g.group_id);
-      const { data: membersBulk } = await client.post("/groups/members-bulk", {
-        group_ids: groupIds,
-      });
+      const { data: membersBulk } = await groupsApi.getMembersBulk(groupIds);
       const merged = fetchedGroups.map((g) => ({
         ...g,
         members: membersBulk[g.group_id] || [],
@@ -1677,7 +1674,7 @@ export default function GroupsScreen() {
       // Fetch balances for all groups in parallel
       const balanceResults = await Promise.allSettled(
         merged.map((g) =>
-          client.get(`/settlements/${g.group_id}`).then((r) => ({
+          groupsApi.getSettlements(g.group_id).then((r) => ({
             group_id: g.group_id,
             data: r.data,
           })),
@@ -1722,9 +1719,7 @@ export default function GroupsScreen() {
 
   async function handleDeleteGroup(group, force = false) {
     try {
-      await client.delete(
-        `/groups/${group.group_id}${force ? "?force=true" : ""}`,
-      );
+      await groupsApi.deleteGroup(group.group_id, force);
       setGroups((p) => p.filter((g) => g.group_id !== group.group_id));
       setLongPress(null);
     } catch (err) {

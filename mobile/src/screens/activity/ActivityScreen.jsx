@@ -23,8 +23,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
-import client from "../../api/client";
-import { ENDPOINTS } from "../../config/api";
+import * as expensesApi from "../../api/expenses";
 import { useAuth } from "../../context/AuthContext";
 import {
   COLORS,
@@ -196,7 +195,7 @@ export default function ActivityScreen() {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
     try {
-      const { data } = await client.get(ENDPOINTS.timeline + "?limit=200");
+      const { data } = await expensesApi.getTimeline(200);
       setFeed(data || []);
     } catch {
       setFeed([]);

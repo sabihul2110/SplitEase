@@ -18,3 +18,5 @@ export const deletePersonalExpense = (id)    =>
   client.delete(ENDPOINTS.delPersonalExpense(id));
 export const addIncome      = (payload)      => client.post(ENDPOINTS.income, payload);
 export const deleteIncome   = (id)           => client.delete(ENDPOINTS.delIncome(id));
+
+export const addPersonalExpense = (payload)  => client.post('/personal-expenses/', payload);

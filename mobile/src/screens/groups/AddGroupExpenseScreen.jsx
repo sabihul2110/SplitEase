@@ -16,7 +16,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import client from '../../api/client';
+import * as expensesApi from "../../api/expenses";
+import * as groupsApi from "../../api/groups";
 import { useAuth } from '../../context/AuthContext';
 import { Icons, CATEGORY_ICONS } from '../../components/icons/icons';
 import { Modal } from 'react-native';
@@ -87,7 +88,7 @@ export default function AddGroupExpenseScreen() {
     async function loadCategories() {
       setCatsLoading(true);
       try {
-        const { data } = await client.get('/groups/categories');
+        const { data } = await groupsApi.getCategories();
         if (data?.length) {
           setCategories(data);
           if (editExpense) {
@@ -96,7 +97,7 @@ export default function AddGroupExpenseScreen() {
               setCategoryId(match.category_id);
               // load subcategories for this category
               try {
-                const sub = await client.get(`/groups/subcategories/${match.category_id}`);
+                const sub = await groupsApi.getSubcategories(match.category_id);
                 setSubcats(sub.data || []);
                 if (editExpense.subcategory_name) {
                   const smatch = sub.data?.find(s => s.subcategory_name === editExpense.subcategory_name);
@@ -120,7 +121,7 @@ export default function AddGroupExpenseScreen() {
     setSubcategoryId(null);
     setSubcats([]);
     try {
-      const { data } = await client.get(`/groups/subcategories/${id}`);
+      const { data } = await groupsApi.getSubcategories(id);
       setSubcats(data || []);
     } catch {}
   }
@@ -199,9 +200,9 @@ export default function AddGroupExpenseScreen() {
         splits,
       };
       if (isEdit) {
-        await client.put(`/expenses/${editExpense.expense_id}`, payload);
+        await expensesApi.editExpense(editExpense.expense_id, payload);
       } else {
-        await client.post(`/expenses/${groupId}`, payload);
+        await expensesApi.addExpense(groupId, payload);
       }
 
       // navigation.goBack();

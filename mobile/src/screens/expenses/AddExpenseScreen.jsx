@@ -12,7 +12,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import client from '../../api/client';
+import * as expensesApi from "../../api/expenses";
+import * as loansApi from "../../api/loans";
 import { useAuth } from '../../context/AuthContext';
 import { Icons } from '../../components/icons/icons';
 import DatePickerInput from '../../components/common/DatePickerInput';
@@ -152,7 +153,7 @@ function PersonalForm({ onSuccess }) {
 
     setSaving(true);
     try {
-      await client.post('/personal-expenses/', {
+      await expensesApi.addPersonalExpense({
         description: desc.trim(),
         amount: parseFloat(amount),
         expense_date: date,
@@ -202,7 +203,7 @@ function IncomeForm({ onSuccess }) {
 
     setSaving(true);
     try {
-      await client.post('/income/', {
+      await expensesApi.addIncome({
         source: source.trim(),
         amount: parseFloat(amount),
         income_date: date,
@@ -252,7 +253,7 @@ function LendForm({ onSuccess }) {
 
     setSaving(true);
     try {
-      await client.post('/loans/', {
+      await loansApi.addLoan({
         borrower_name: borrower.trim(),
         amount: parseFloat(amount),
         loan_date: date,
@@ -306,7 +307,7 @@ function BorrowForm({ onSuccess }) {
 
     setSaving(true);
     try {
-      await client.post('/borrows/', {
+      await loansApi.addBorrow({
         lender_name: lender.trim(),
         amount: parseFloat(amount),
         borrow_date: date,

@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import client from '../../api/client';
+import * as settlementsApi from "../../api/settlements";
 import { useAuth } from '../../context/AuthContext';
 import { Icons } from '../../components/icons/icons';
 import { TAB_BAR_HEIGHT } from "../../constants/theme";
@@ -102,8 +102,8 @@ export default function AddGroupPaymentScreen() {
     try {
       // Fetch both pending splits AND net balances in parallel
       const [splitsRes, settlementsRes] = await Promise.all([
-        client.get(`/payments/pending-splits/${groupId}?debtor_id=${user.user_id}&creditor_id=${payeeId}`),
-        client.get(`/settlements/${groupId}`),
+        settlementsApi.getPendingSplits(groupId, user.user_id, payeeId),
+        settlementsApi.getSettlements(groupId),
       ]);
 
       const splits = splitsRes.data || [];
@@ -123,7 +123,7 @@ export default function AddGroupPaymentScreen() {
 
       // Actual amount I owe this specific person (not group-wide net)
       // Fetch from simplified endpoint for accuracy
-      const simpRes  = await client.get(`/settlements/${groupId}/simplified`);
+      const simpRes = await settlementsApi.getSimplified(groupId);
       const simpList = simpRes.data || [];
       const myDebt   = simpList.find(
         t => t.from_user_id === user.user_id && t.to_user_id === payeeId
@@ -198,7 +198,7 @@ export default function AddGroupPaymentScreen() {
 
     setLoading(true);
     try {
-      await client.post(`/payments/${groupId}`, {
+      await settlementsApi.addPayment(groupId, {
         payer_id:     user.user_id,
         payee_id:     payeeId,
         amount:       amt,
