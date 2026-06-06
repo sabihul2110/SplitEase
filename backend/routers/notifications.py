@@ -45,11 +45,11 @@ def get_group_name(group_id: int) -> str:
     return row[0] if row else "your group"
 
 def create_notification(
-    user_id:      int,
-    message:      str,
-    type:         str = "reminder",
-    from_user_id: int | None = None,
-    group_id:     int | None = None,
+    user_id:           int,
+    message:           str,
+    notification_type: str = "reminder",
+    from_user_id:      int | None = None,
+    group_id:          int | None = None,
 ) -> None:
     conn = db.get_connection()
     cur  = conn.cursor()
@@ -59,7 +59,7 @@ def create_notification(
             INSERT INTO Notifications (user_id, from_user_id, type, message, group_id)
             VALUES (%s, %s, %s, %s, %s)
             """,
-            (user_id, from_user_id, type, message, group_id),
+            (user_id, from_user_id, notification_type, message, group_id),
         )
         conn.commit()
     finally:
@@ -237,11 +237,11 @@ def send_reminder(
     )
 
     create_notification(
-        user_id      = debtor["user_id"],
-        from_user_id = sender_id,
-        type         = "reminder",
-        message      = message,
-        group_id     = group_id,
+        user_id           = debtor["user_id"],
+        from_user_id      = sender_id,
+        notification_type = "reminder",
+        message           = message,
+        group_id          = group_id,
     )
 
     return {"message": f"Reminder sent to {debtor['name']}."}

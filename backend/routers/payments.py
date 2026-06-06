@@ -38,6 +38,9 @@ class AddPaymentRequest(BaseModel):
 
 @router.get("/{group_id}")
 def list_payments(group_id: int, current_user: dict = Depends(get_current_user)):
+    is_admin = current_user.get("role") == "admin"
+    if not is_admin and not db.is_group_member(group_id, current_user["user_id"]):
+        raise HTTPException(status_code=403, detail="Not a member of this group.")
     return db.fetch_group_payments(group_id, current_user["user_id"])
 
 
@@ -82,7 +85,7 @@ def pending_splits(
     return db.fetch_pending_splits_between(group_id, debtor_id, creditor_id)
 
 
-@router.get("/allocations/{payment_id}")
+@router.get("/payment-allocations/{payment_id}")
 def payment_allocations(payment_id: int, current_user: dict = Depends(get_current_user)):
     """Which expenses a payment covers."""
     group_id = db.fetch_payment_group_id(payment_id)

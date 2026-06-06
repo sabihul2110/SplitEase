@@ -44,7 +44,7 @@ function SettlementCard({
   onGoToGroup,
 }) {
   const relevant = settlements.filter(
-    (s) => s.from_id === currentUserId || s.to_id === currentUserId,
+    (s) => s.from_user_id === currentUserId || s.to_user_id === currentUserId,
   );
   if (!relevant.length) return null;
 
@@ -63,21 +63,21 @@ function SettlementCard({
       </TouchableOpacity>
 
       {relevant.map((s, i) => {
-        const isDebtor = s.from_id === currentUserId;
-        const isCreditor = s.to_id === currentUserId;
+        const isDebtor = s.from_user_id === currentUserId;
+        const isCreditor = s.to_user_id === currentUserId;
         const color = isDebtor ? COLORS.danger : COLORS.success;
         const label = isDebtor
-          ? `You owe ${s.to_name}`
-          : `${s.from_name} owes you`;
+          ? `You owe ${s.to}`
+          : `${s.from} owes you`;
 
         return (
           <View key={i} style={styles.settleRow}>
             <View style={styles.settleLeft}>
-              <Avatar name={isDebtor ? s.to_name : s.from_name} size={36} />
+              <Avatar name={isDebtor ? s.to : s.from} size={36} />
               <View>
                 <Text style={styles.settleName}>{label}</Text>
-                {isDebtor && s.to_upi && (
-                  <Text style={styles.settleUpi}>{s.to_upi}</Text>
+                {isDebtor && s.to_upi_id && (
+                  <Text style={styles.settleUpi}>{s.to_upi_id}</Text>
                 )}
               </View>
             </View>
@@ -85,7 +85,7 @@ function SettlementCard({
               <Text style={[styles.settleAmount, { color }]}>
                 {isDebtor ? "-" : "+"}₹{parseFloat(s.amount).toFixed(2)}
               </Text>
-              {isDebtor && s.to_upi && <Badge label="UPI" variant="primary" />}
+              {isDebtor && s.to_upi_id && <Badge label="UPI" variant="primary" />}
             </View>
           </View>
         );
@@ -108,7 +108,7 @@ export default function SettlementsScreen() {
     (sum, g) =>
       sum +
       g.settlements
-        .filter((s) => s.to_id === user.user_id)
+        .filter((s) => s.to_user_id === user.user_id)
         .reduce((a, s) => a + parseFloat(s.amount), 0),
     0,
   );
@@ -117,7 +117,7 @@ export default function SettlementsScreen() {
     (sum, g) =>
       sum +
       g.settlements
-        .filter((s) => s.from_id === user.user_id)
+        .filter((s) => s.from_user_id === user.user_id)
         .reduce((a, s) => a + parseFloat(s.amount), 0),
     0,
   );

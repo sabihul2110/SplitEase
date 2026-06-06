@@ -50,5 +50,3 @@ app.include_router(ai_agent.router)     # prefix="/ai" defined in router
 @app.head("/health", tags=["Health"])  # add this line
 def health():
     return {"status": "ok"}
-
-print("ALLOWED_ORIGINS =", ALLOWED_ORIGINS)

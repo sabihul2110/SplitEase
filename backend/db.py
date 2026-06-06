@@ -9,10 +9,7 @@ Ported from Streamlit version to FastAPI (no logic changes, same queries).
 import mysql.connector
 from config import DB_CONFIG, VALID_SOURCE_TYPES
  
-# ── Connection pool (created once at module import time) ───────────────────
 
- 
- 
 def get_connection():
     return mysql.connector.connect(**DB_CONFIG)
 
@@ -864,15 +861,6 @@ def fetch_personal_expenses(user_id: int) -> list[dict]:
     """All personal expenses for a user, newest first."""
     conn = get_connection()
     cur  = conn.cursor(dictionary=True)
-    # cur.execute(
-    #     """
-    #     SELECT expense_id, amount, category, note, expense_date, created_at
-    #     FROM   Personal_Expenses
-    #     WHERE  user_id = %s
-    #     ORDER  BY expense_date DESC, expense_id DESC
-    #     """,
-    #     (user_id,),
-    # )
     cur.execute(
         """
         SELECT pe.expense_id, pe.amount, pe.category, pe.note,
@@ -2029,12 +2017,12 @@ def get_reset_token(token: str) -> dict | None:
     return row
 
 
-def use_reset_token(token: str, user_id: int, new_hash: str) -> None:
+def use_reset_token(token_hash: str, user_id: int, new_hash: str) -> None:
     conn = get_connection()
     cur  = conn.cursor()
     try:
         conn.start_transaction()
-        cur.execute("UPDATE PasswordResetTokens SET used=1 WHERE token=%s", (token,))
+        cur.execute("UPDATE PasswordResetTokens SET used=1 WHERE token=%s", (token_hash,))
         cur.execute(
             "UPDATE Users SET password_hash=%s, token_version=token_version+1 WHERE user_id=%s",
             (new_hash, user_id),
@@ -2044,17 +2032,6 @@ def use_reset_token(token: str, user_id: int, new_hash: str) -> None:
         conn.rollback(); raise
     finally:
         cur.close(); conn.close()
-
-
-def fetch_expense_splits(expense_id):
-    with get_connection() as conn:
-        with conn.cursor(dictionary=True) as cur:
-            cur.execute(
-                "SELECT split_id, expense_id, user_id, amount_owed, share_pct "
-                "FROM Expense_Splits WHERE expense_id = %s",
-                (expense_id,)
-            )
-            return cur.fetchall()
 
 
 def admin_wipe_groups() -> dict:

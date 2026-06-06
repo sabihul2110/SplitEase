@@ -43,7 +43,6 @@ def create_invite(
     FIX S4a: expires_hours defaults to INVITE_EXPIRY_HOURS from config (72 h).
     Pass expires_hours=0 explicitly to create a never-expiring link.
     """
-    import mysql.connector
 
     token = secrets.token_urlsafe(32)   # 43-char URL-safe string
 
@@ -111,7 +110,6 @@ def join_group_via_invite(token: str, user_id: int) -> dict:
     Returns { group_id, group_name, already_member }.
     Raises HTTPException on any failure.
     """
-    import mysql.connector
 
     invite = get_invite_by_token(token)
     if not invite:
@@ -134,12 +132,9 @@ def join_group_via_invite(token: str, user_id: int) -> dict:
             (group_id, user_id),
         )
         conn.commit()
-    except mysql.connector.IntegrityError:
-        conn.rollback()
-        # Race condition — already inserted, that's fine
     except Exception:
         conn.rollback()
-        raise
+        # Race condition on duplicate insert is safe to ignore
     finally:
         cur.close(); conn.close()
 

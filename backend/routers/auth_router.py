@@ -304,5 +304,5 @@ def reset_password_via_token(body: ResetPasswordRequest):
     if datetime.now(timezone.utc) > expires:
         raise HTTPException(400, "Reset link has expired. Please request a new one.")
 
-    db.use_reset_token(body.token, row["user_id"], hash_password(body.new_password))
+    db.use_reset_token(_hash_token(body.token), row["user_id"], hash_password(body.new_password))
     return {"message": "Password reset successfully. Please log in with your new password."}

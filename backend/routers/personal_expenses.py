@@ -9,7 +9,7 @@ DELETE /personal-expenses/{id}    → delete (owner only)
 
 from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, condecimal
+from pydantic import BaseModel
 
 import db
 from auth import get_current_user
@@ -33,23 +33,6 @@ class PersonalExpenseIn(BaseModel):
 @router.get("/personal-expenses/")
 def list_personal_expenses(current_user: dict = Depends(get_current_user)):
     return db.fetch_personal_expenses(current_user["user_id"])
-
-
-# @router.post("/personal-expenses/", status_code=status.HTTP_201_CREATED)
-# def add_personal_expense(
-#     body: PersonalExpenseIn,
-#     current_user: dict = Depends(get_current_user),
-# ):
-#     if body.amount <= 0:
-#         raise HTTPException(status_code=422, detail="Amount must be positive.")
-#     new_id = db.insert_personal_expense(
-#         user_id      = current_user["user_id"],
-#         amount       = body.amount,
-#         category     = body.category,
-#         note         = body.note,
-#         expense_date = body.expense_date,
-#     )
-#     return {"expense_id": new_id, "message": "Personal expense added."}
 
 @router.post("/personal-expenses/", status_code=status.HTTP_201_CREATED)
 def add_personal_expense(

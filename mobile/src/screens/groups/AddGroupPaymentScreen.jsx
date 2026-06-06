@@ -125,6 +125,7 @@ export default function AddGroupPaymentScreen() {
       const myDebt   = simpList.find(
         t => t.from_user_id === user.user_id && t.to_user_id === payeeId
       );
+      // Note: simplified debt fields are: from, to, from_user_id, to_user_id, to_upi_id, amount
       const suggested = myDebt ? myDebt.amount : 0;
 
       setNetOwed(suggested);

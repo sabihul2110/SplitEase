@@ -24,9 +24,10 @@ router = APIRouter()
 @router.get("/{group_id}")
 def raw_settlements(group_id: int, current_user: dict = Depends(get_current_user)):
     """Returns one row per member with their net_balance."""
-    rows = db.calculate_settlements(group_id, current_user["user_id"])
-    if rows == [] and not db.is_group_member(group_id, current_user["user_id"]):
+    is_admin = current_user.get("role") == "admin"
+    if not is_admin and not db.is_group_member(group_id, current_user["user_id"]):
         raise HTTPException(status_code=403, detail="Not a member of this group.")
+    rows = db.calculate_settlements(group_id, current_user["user_id"])
     return rows
 
 

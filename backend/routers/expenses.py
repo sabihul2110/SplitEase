@@ -89,9 +89,14 @@ def add_expense(group_id: int, body: AddExpenseRequest, current_user: dict = Dep
 
 @router.get("/{expense_id}/splits")
 def get_expense_splits(expense_id: int, current_user: dict = Depends(get_current_user)):
+    group_id = db.fetch_expense_group_id(expense_id)
+    if group_id is None:
+        raise HTTPException(status_code=404, detail="Expense not found.")
+    is_admin = current_user.get("role") == "admin"
+    if not is_admin and not db.is_group_member(group_id, current_user["user_id"]):
+        raise HTTPException(status_code=403, detail="Not a member of this group.")
     splits = db.fetch_expense_splits(expense_id)
-    return splits    
-
+    return splits
 
 @router.get("/{group_id}/settlement-status")
 def settlement_status(group_id: int, current_user: dict = Depends(get_current_user)):
