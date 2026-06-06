@@ -11,7 +11,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Alert, KeyboardAvoidingView, Platform, TextInput,
+  KeyboardAvoidingView, Platform, TextInput,
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -26,6 +26,7 @@ import { Avatar } from '../../components/common/Ui';
 import Input  from '../../components/common/Input';
 import Button from '../../components/common/Button';
 import ScreenHeader from '../../components/layout/ScreenHeader';
+import AppAlert from "../../components/common/AppAlert";
 
 // Fallback categories if API unavailable
 const FALLBACK_CATEGORIES = [
@@ -72,6 +73,7 @@ export default function AddGroupExpenseScreen() {
   const [participants,  setParticipants]  = useState(initialParticipants);
   const [customAmounts, setCustomAmounts] = useState(initialCustomAmounts);
   const [loading,       setLoading]       = useState(false);
+  const [alert, setAlert] = useState(null);
   const [errors,        setErrors]        = useState({});
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [pickerMonth,    setPickerMonth]    = useState(() => {
@@ -212,7 +214,7 @@ export default function AddGroupExpenseScreen() {
         refreshStamp: Date.now() 
       });
     } catch (err) {
-      Alert.alert('Error', err?.response?.data?.detail || 'Failed to add expense');
+      setAlert({ title: 'Error', message: err?.response?.data?.detail || 'Failed to add expense', buttons: [{ text: 'OK', onPress: () => setAlert(null) }] });
     } finally {
       setLoading(false);
     }
@@ -630,6 +632,7 @@ export default function AddGroupExpenseScreen() {
 
         </ScrollView>
       </KeyboardAvoidingView>
+      <AppAlert config={alert} />
     </SafeAreaView>
   );
 }

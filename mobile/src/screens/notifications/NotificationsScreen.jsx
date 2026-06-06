@@ -11,7 +11,6 @@ import {
   FlatList,
   RefreshControl,
   TouchableOpacity,
-  Alert,
   Animated,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -27,6 +26,7 @@ import {
   TAB_BAR_HEIGHT,
 } from "../../constants/theme";
 import { Icons } from "../../components/icons/icons";
+import AppAlert from "../../components/common/AppAlert";
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 function timeAgo(dateStr) {
@@ -193,6 +193,8 @@ export default function NotificationsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedIds, setSelectedIds] = useState(new Set());
 
+  const [alert, setAlert] = useState(null);
+
   const selectionMode = selectedIds.size > 0;
 
   const load = useCallback(async (isRefresh = false) => {
@@ -335,18 +337,14 @@ export default function NotificationsScreen() {
               {hasRead && (
                 <TouchableOpacity
                   onPress={() =>
-                    Alert.alert(
-                      "Clear Read",
-                      "Delete all read notifications? This cannot be undone.",
-                      [
-                        { text: "Cancel", style: "cancel" },
-                        {
-                          text: "Delete",
-                          style: "destructive",
-                          onPress: deleteReadNotifs,
-                        },
+                    setAlert({
+                      title: "Clear Read",
+                      message: "Delete all read notifications? This cannot be undone.",
+                      buttons: [
+                        { text: "Cancel", style: "cancel", onPress: () => setAlert(null) },
+                        { text: "Delete", style: "destructive", onPress: () => { setAlert(null); deleteReadNotifs(); } },
                       ],
-                    )
+                    })
                   }
                 >
                   <Text style={[S.hAction, { color: COLORS.danger }]}>
@@ -402,6 +400,8 @@ export default function NotificationsScreen() {
         contentContainerStyle={[S.list, notifs.length === 0 && S.listEmpty]}
       />
 
+      <AppAlert config={alert} />
+
       {/* ── Bulk action bar ── */}
       {selectionMode && (
         <View style={S.bulkBar}>
@@ -412,18 +412,14 @@ export default function NotificationsScreen() {
           <TouchableOpacity
             style={S.bulkDeleteBtn}
             onPress={() =>
-              Alert.alert(
-                "Delete Notifications",
-                `Permanently delete ${selectedIds.size} notification${selectedIds.size > 1 ? "s" : ""}?`,
-                [
-                  { text: "Cancel", style: "cancel" },
-                  {
-                    text: "Delete",
-                    style: "destructive",
-                    onPress: deleteSelected,
-                  },
+              setAlert({
+                title: "Delete Notifications",
+                message: `Permanently delete ${selectedIds.size} notification${selectedIds.size > 1 ? "s" : ""}?`,
+                buttons: [
+                  { text: "Cancel", style: "cancel", onPress: () => setAlert(null) },
+                  { text: "Delete", style: "destructive", onPress: () => { setAlert(null); deleteSelected(); } },
                 ],
-              )
+              })
             }
             activeOpacity={0.85}
           >

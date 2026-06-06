@@ -1,9 +1,5 @@
 // SplitEase/mobile/src/screens/expenses/ExpensesScreen.jsx
-//
-// Full mobile port of web/src/pages/Expenses.jsx
-// Matches all features: month navigator, tabs, search,
-// summary cards, timeline grouped by month → day, inline repay,
-// delete, settled badges, group links, loan status.
+
 
 import React, {
   useState, useEffect, useCallback, useMemo, useRef,
@@ -11,7 +7,7 @@ import React, {
 import { useFocusEffect } from "@react-navigation/native";
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, Alert, ActivityIndicator, FlatList,
+  TextInput, ActivityIndicator, FlatList,
   Animated, Pressable, Linking, Modal
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -21,6 +17,7 @@ import { useAuth } from "../../context/AuthContext";
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS, TAB_BAR_HEIGHT } from "../../constants/theme";
 import { Icons, TYPE_ICONS, TYPE_CFG } from "../../components/icons/icons";
 import ScreenHeader from "../../components/layout/ScreenHeader";
+import AppAlert from "../../components/common/AppAlert";
 
 // ─────────────────────────────────────────────
 //  Helpers (identical logic to web)
@@ -322,6 +319,7 @@ function InlineRepay({ entry, onSuccess }) {
 //  Single Entry Row
 // ─────────────────────────────────────────────
 function EntryRow({ entry, deleting, onDelete, onNavigateGroup }) {
+  const [alert, setAlert] = useState(null);
   const cfg     = TYPE_CFG[entry.type];
   const iconCfg = TYPE_ICONS[entry.type];
   if (!cfg || !iconCfg) return null;
@@ -412,14 +410,14 @@ function EntryRow({ entry, deleting, onDelete, onNavigateGroup }) {
           <TouchableOpacity
             style={styles.delBtn}
             onPress={() => {
-              Alert.alert(
-                "Delete entry",
-                `Delete "${entry.label}"?`,
-                [
-                  { text: "Cancel", style: "cancel" },
-                  { text: "Delete", style: "destructive", onPress: () => onDelete?.(entry) },
-                ]
-              );
+              setAlert({
+                title: "Delete entry",
+                message: `Delete "${entry.label}"?`,
+                buttons: [
+                  { text: "Cancel", style: "cancel", onPress: () => setAlert(null) },
+                  { text: "Delete", style: "destructive", onPress: () => { setAlert(null); onDelete?.(entry); } },
+                ],
+              });
             }}
             disabled={isDeleting}
           >
@@ -429,6 +427,7 @@ function EntryRow({ entry, deleting, onDelete, onNavigateGroup }) {
           </TouchableOpacity>
         )}
       </View>
+      <AppAlert config={alert} />
     </View>
   );
 }
@@ -456,6 +455,7 @@ export default function ExpensesScreen() {
   const [search,   setSearch]   = useState("");
   const [deleting, setDeleting] = useState(null);
   const [selMonth, setSelMonth] = useState(currentMonth);
+  const [alertConfig, setAlertConfig] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -509,8 +509,15 @@ export default function ExpensesScreen() {
       else if (entry.type === "loan_given")  await expensesApi.deleteLoan(entry.ref_id);
       else if (entry.type === "loan_taken")  await expensesApi.deleteBorrow(entry.ref_id);
       await load();
-    } catch { /* silent */ }
-    finally { setDeleting(null); }
+    } catch (err) {
+      setAlertConfig({
+        title: "Delete Failed",
+        message: err?.response?.data?.detail || err.message || "An unexpected error occurred while deleting.",
+        buttons: [{ text: "OK", onPress: () => setAlertConfig(null) }]
+      });
+    } finally {
+      setDeleting(null);
+    }
   }
 
   const sumCards = [
@@ -703,6 +710,7 @@ export default function ExpensesScreen() {
           </>
         }
       />
+      <AppAlert config={alertConfig} />
     </SafeAreaView>
   );
 }

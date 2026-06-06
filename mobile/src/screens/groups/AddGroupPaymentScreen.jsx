@@ -1,15 +1,10 @@
 // SplitEase/mobile/src/screens/groups/AddGroupPaymentScreen.jsx
-//
-// Rebuilt for Option E settlement architecture:
-//   - Shows unpaid splits from payer → payee
-//   - User selects which expenses this payment covers
-//   - Amount auto-fills from selections, or can be overridden (partial)
-//   - Submits allocations alongside payment
+
 
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Alert, TextInput, ActivityIndicator, Modal,
+  TextInput, ActivityIndicator, Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -17,6 +12,7 @@ import * as settlementsApi from "../../api/settlements";
 import { useAuth } from '../../context/AuthContext';
 import { Icons } from '../../components/icons/icons';
 import { TAB_BAR_HEIGHT } from "../../constants/theme";
+import AppAlert from "../../components/common/AppAlert";
 
 const C = {
   bg:        '#0a0d14',
@@ -84,6 +80,7 @@ export default function AddGroupPaymentScreen() {
   const [note,           setNote]           = useState('');
   const [paymentDate,    setPaymentDate]    = useState(new Date().toISOString().split('T')[0]);
   const [loading,        setLoading]        = useState(false);
+  const [alert, setAlert] = useState(null);
   const [splitsLoading,  setSplitsLoading]  = useState(false);
   const [showCal,        setShowCal]        = useState(false);
   const [calMonth,       setCalMonth]       = useState(() => {
@@ -134,7 +131,7 @@ export default function AddGroupPaymentScreen() {
       setAmount(suggested > 0 ? suggested.toFixed(2) : '');
       setAmountOverride(false);
     } catch {
-      Alert.alert('Error', 'Could not load pending expenses.');
+      setAlert({ title: 'Error', message: 'Could not load pending expenses.', buttons: [{ text: 'OK', onPress: () => setAlert(null) }] });
     } finally {
       setSplitsLoading(false);
     }
@@ -171,10 +168,10 @@ export default function AddGroupPaymentScreen() {
   }
 
   async function handleSubmit() {
-    if (!payeeId) return Alert.alert('Select payee', 'Choose who you are paying.');
+    if (!payeeId) { setAlert({ title: 'Select payee', message: 'Choose who you are paying.', buttons: [{ text: 'OK', onPress: () => setAlert(null) }] }); return; }
     const amt = parseFloat(amount);
-    if (!amt || amt <= 0) return Alert.alert('Invalid amount', 'Enter a valid payment amount.');
-    if (selectedIds.size === 0) return Alert.alert('Select expenses', 'Select at least one expense to settle.');
+    if (!amt || amt <= 0) { setAlert({ title: 'Invalid amount', message: 'Enter a valid payment amount.', buttons: [{ text: 'OK', onPress: () => setAlert(null) }] }); return; }
+    if (selectedIds.size === 0) { setAlert({ title: 'Select expenses', message: 'Select at least one expense to settle.', buttons: [{ text: 'OK', onPress: () => setAlert(null) }] }); return; }
 
     // Build allocations — distribute amount across selected splits proportionally
     // if amount < sum of selected, otherwise 1:1
@@ -210,7 +207,7 @@ export default function AddGroupPaymentScreen() {
         groupId, groupName, refreshStamp: Date.now(),
       });
     } catch (err) {
-      Alert.alert('Error', err?.response?.data?.detail || 'Failed to record payment.');
+      setAlert({ title: 'Error', message: err?.response?.data?.detail || 'Failed to record payment.', buttons: [{ text: 'OK', onPress: () => setAlert(null) }] });
     } finally {
       setLoading(false);
     }
@@ -430,6 +427,8 @@ export default function AddGroupPaymentScreen() {
           </TouchableOpacity>
         )}
       </ScrollView>
+
+      <AppAlert config={alert} />
 
       {/* Calendar modal */}
       <Modal visible={showCal} transparent animationType="fade" onRequestClose={() => setShowCal(false)}>

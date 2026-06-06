@@ -21,6 +21,7 @@ import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import * as groupsApi from "../../api/groups";
 import * as settlementsApi from "../../api/settlements";
 import { useAuth } from "../../context/AuthContext";
+import AppAlert from "../../components/common/AppAlert";
 import {
   COLORS,
   FONT_SIZE,
@@ -100,6 +101,7 @@ export default function SettlementsScreen() {
   const [data, setData] = useState([]); // [{ group, settlements }]
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [alertConfig, setAlertConfig] = useState(null);
 
   // Summary numbers
   const totalOwed = data.reduce(
@@ -145,7 +147,11 @@ export default function SettlementsScreen() {
           ),
         );
       } catch {
-        Alert.alert("Error", "Failed to load settlements");
+        setAlertConfig({
+          title: "Error",
+          message: "Failed to load Settlements",
+          buttons: [{ text: "OK", onPress: () => setAlertConfig(null) }]
+        });
       } finally {
         setLoading(false);
         setRefreshing(false);
@@ -279,6 +285,7 @@ export default function SettlementsScreen() {
         )}
         contentContainerStyle={styles.list}
       />
+      <AppAlert config={alertConfig} />
     </SafeAreaView>
   );
 }

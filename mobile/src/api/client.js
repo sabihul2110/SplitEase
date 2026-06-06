@@ -59,16 +59,6 @@ client.interceptors.response.use(
           index: 0,
           routes: [{ name: 'Auth', params: { screen: 'Login' } }],
         });
-      } else {
-        // Retry once the navigator is ready
-        setTimeout(() => {
-          if (_navigationRef?.isReady()) {
-            _navigationRef.resetRoot({
-              index: 0,
-              routes: [{ name: 'Auth', params: { screen: 'Login' } }],
-            });
-          }
-        }, 500);
       }
     }
     return Promise.reject(error);

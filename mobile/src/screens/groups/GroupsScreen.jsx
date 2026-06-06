@@ -8,7 +8,6 @@ import {
   FlatList,
   TouchableOpacity,
   Modal,
-  Alert,
   RefreshControl,
   TextInput,
   KeyboardAvoidingView,
@@ -28,6 +27,7 @@ import * as settlementsApi from "../../api/settlements";
 import { useAuth } from "../../context/AuthContext";
 import { Icons } from "../../components/icons/icons";
 import { TAB_BAR_HEIGHT } from '../../constants/theme';
+import AppAlert from "../../components/common/AppAlert";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -1654,6 +1654,8 @@ export default function GroupsScreen() {
     }
   }, [route.params?.openCreate]);
 
+  const [alert, setAlert] = useState(null);
+
   const load = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
@@ -1705,7 +1707,7 @@ export default function GroupsScreen() {
       setGroups(withBalances);
     } catch (err) {
       console.error("Failed to load groups:", err);
-      Alert.alert("Error", "Failed to load groups");
+      setAlert({ title: "Error", message: "Failed to load groups", buttons: [{ text: "OK", onPress: () => setAlert(null) }] });
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -1955,6 +1957,7 @@ export default function GroupsScreen() {
           </View>
         </TouchableOpacity>
       </Modal>
+      <AppAlert config={alert} />
       <DeleteConfirmModal
         group={deleteTarget}
         onCancel={() => setDeleteTarget(null)}

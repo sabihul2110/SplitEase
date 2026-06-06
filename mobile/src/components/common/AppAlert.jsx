@@ -1,13 +1,5 @@
 // SplitEase/mobile/src/components/common/AppAlert.jsx
-//
-// Drop-in replacement for Alert.alert that matches the app's dark theme.
-// Usage:
-//   const [alert, setAlert] = useState(null);
-//   setAlert({ title: "Delete?", message: "Cannot be undone.", buttons: [
-//     { text: "Cancel", onPress: () => setAlert(null) },
-//     { text: "Delete", style: "destructive", onPress: () => { ... setAlert(null); } }
-//   ]});
-//   <AppAlert config={alert} />
+
 
 import React from "react";
 import { Modal, View, Text, TouchableOpacity, StyleSheet } from "react-native";
@@ -21,26 +13,27 @@ export default function AppAlert({ config }) {
         <View style={s.box}>
           {!!config.title && <Text style={s.title}>{config.title}</Text>}
           {!!config.message && <Text style={s.message}>{config.message}</Text>}
-          <View style={[s.btnRow, config.buttons?.length === 1 && { justifyContent: "center" }]}>
+          <View style={s.btnRow}>
             {(config.buttons || [{ text: "OK" }]).map((btn, i) => (
               <TouchableOpacity
                 key={i}
                 style={[
                   s.btn,
                   btn.style === "destructive" && s.btnDanger,
-                  btn.style === "cancel"      && s.btnGhost,
-                  !btn.style                  && s.btnPrimary,
-                  config.buttons?.length === 1 && { flex: 0, paddingHorizontal: SPACING.xl },
+                  btn.style === "cancel" && s.btnGhost,
+                  !btn.style && s.btnPrimary,
                 ]}
                 onPress={btn.onPress}
                 activeOpacity={0.8}
               >
-                <Text style={[
-                  s.btnText,
-                  btn.style === "destructive" && { color: COLORS.white },
-                  btn.style === "cancel"      && { color: COLORS.text2 },
-                  !btn.style                  && { color: COLORS.white },
-                ]}>
+                <Text
+                  style={[
+                    s.btnText,
+                    btn.style === "destructive" && { color: COLORS.white },
+                    btn.style === "cancel" && { color: COLORS.text2 },
+                    !btn.style && { color: COLORS.white },
+                  ]}
+                >
                   {btn.text}
                 </Text>
               </TouchableOpacity>
@@ -83,11 +76,12 @@ const s = StyleSheet.create({
     textAlign: "center",
     lineHeight: 20,
     paddingHorizontal: SPACING.sm,
+    marginTop: 4,
   },
   btnRow: {
     flexDirection: "row",
     gap: SPACING.sm,
-    marginTop: SPACING.sm,
+    marginTop: SPACING.md,
     width: "100%",
   },
   btn: {
@@ -98,8 +92,16 @@ const s = StyleSheet.create({
     justifyContent: "center",
   },
   btnPrimary: { backgroundColor: COLORS.primary },
-  btnDanger:  { backgroundColor: "rgba(239,68,68,0.85)", borderWidth: 1, borderColor: "rgba(239,68,68,0.4)" },
-  btnGhost:   { backgroundColor: "#1e2438", borderWidth: 1, borderColor: "#2e3650" },
+  btnDanger: {
+    backgroundColor: "rgba(239,68,68,0.85)",
+    borderWidth: 1,
+    borderColor: "rgba(239,68,68,0.4)",
+  },
+  btnGhost: {
+    backgroundColor: "#1e2438",
+    borderWidth: 1,
+    borderColor: "#2e3650",
+  },
   btnText: {
     fontSize: FONT_SIZE.base,
     fontWeight: FONT_WEIGHT.semibold,

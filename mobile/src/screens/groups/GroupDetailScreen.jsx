@@ -1,14 +1,9 @@
 // SplitEase/mobile/src/screens/groups/GroupDetailScreen.jsx
-//
-// Full redesign:
-//   • Double tab indicator fixed (removed redundant tabIndicator View)
-//   • All emojis replaced with SVG icons from icons.jsx
-//   • Modern card layout, refined typography, professional aesthetic
-//   • Expense icon uses CATEGORY_ICONS SVGs not emoji text
+
 
 import React, { useState, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Alert,
+  View, Text, StyleSheet, TouchableOpacity,
   RefreshControl, ScrollView, Linking, ActivityIndicator, Platform, Share
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -19,6 +14,7 @@ import * as settlementsApi from "../../api/settlements";
 import { useAuth } from '../../context/AuthContext';
 import { Icons, CATEGORY_ICONS } from '../../components/icons/icons';
 import { TAB_BAR_HEIGHT } from '../../constants/theme';
+import AppAlert from "../../components/common/AppAlert";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -160,7 +156,7 @@ const badgeCfg = {
 
 // Expense Row
 
-function ExpenseRow({ item, currentUserName, onDelete, onEdit, settlementBadge, myStatus, participantCount, totalMembers, splitStatuses, members }) {
+function ExpenseRow({ item, currentUserName, onDelete, onEdit, settlementBadge, myStatus, participantCount, totalMembers, splitStatuses, members, onAlert, isDeleting }) {
   const isPayer = item.payer_name === currentUserName;
   const [expanded, setExpanded] = React.useState(false);
 
@@ -302,18 +298,19 @@ function ExpenseRow({ item, currentUserName, onDelete, onEdit, settlementBadge, 
               </TouchableOpacity>
               <TouchableOpacity
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                disabled={isDeleting}
                 onPress={() =>
-                  Alert.alert("Delete Expense", "Remove this expense?", [
-                    { text: "Cancel", style: "cancel" },
-                    {
-                      text: "Delete",
-                      style: "destructive",
-                      onPress: () => onDelete("expense", item.expense_id),
-                    },
-                  ])
+                  onAlert({
+                    title: "Delete Expense",
+                    message: "Remove this expense?",
+                    buttons: [
+                      { text: "Cancel", style: "cancel", onPress: () => onAlert(null) },
+                      { text: "Delete", style: "destructive", onPress: () => { onAlert(null); onDelete("expense", item.expense_id); } },
+                    ],
+                  })
                 }
               >
-                <Icons.trash size={14} color={C.danger} />
+                {isDeleting ? <ActivityIndicator size="small" color={C.danger} /> : <Icons.trash size={14} color={C.danger} />}
               </TouchableOpacity>
             </>
           )}
@@ -450,7 +447,7 @@ function ExpenseRow({ item, currentUserName, onDelete, onEdit, settlementBadge, 
 }
 
 // ─── Payment row ──────────────────────────────────────────────────────────────
-function PaymentRow({ item, currentUserName, onDelete }) {
+function PaymentRow({ item, currentUserName, onDelete, onAlert, isDeleting }) {
   const isPayer = item.payer_name === currentUserName;
   return (
     <View style={[styles.ledgerRow, { opacity: 0.65, backgroundColor: 'transparent' }]}>
@@ -470,12 +467,17 @@ function PaymentRow({ item, currentUserName, onDelete }) {
         {isPayer && (
           <TouchableOpacity
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            onPress={() => Alert.alert('Delete Payment', 'Remove this payment?', [
-              { text: 'Cancel', style: 'cancel' },
-              { text: 'Delete', style: 'destructive', onPress: () => onDelete('payment', item.payment_id) },
-            ])}
+            disabled={isDeleting}
+            onPress={() => onAlert({
+              title: 'Delete Payment',
+              message: 'Remove this payment?',
+              buttons: [
+                { text: 'Cancel', style: 'cancel', onPress: () => onAlert(null) },
+                { text: 'Delete', style: 'destructive', onPress: () => { onAlert(null); onDelete('payment', item.payment_id); } },
+              ],
+            })}
           >
-            <Icons.trash size={14} color={C.danger} />
+            {isDeleting ? <ActivityIndicator size="small" color={C.danger} /> : <Icons.trash size={14} color={C.danger} />}
           </TouchableOpacity>
         )}
       </View>
@@ -485,7 +487,7 @@ function PaymentRow({ item, currentUserName, onDelete }) {
 
 // ─── Settlement row ───────────────────────────────────────────────────────────
 
-function SettlementRow({ item, currentUserName, members, onRemind, reminding }) {
+function SettlementRow({ item, currentUserName, members, onRemind, reminding, onAlert }) {
   const isDebtor   = item.from === currentUserName;
   const isCreditor = item.to   === currentUserName;
 
@@ -535,7 +537,7 @@ function SettlementRow({ item, currentUserName, members, onRemind, reminding }) 
           {isDebtor && upiLink && (
             <TouchableOpacity
               style={[styles.actionBtn, { backgroundColor: C.primaryLo, borderColor: C.primary + '40' }]}
-              onPress={() => Linking.openURL(upiLink).catch(() => Alert.alert('UPI app not found'))}
+              onPress={() => Linking.openURL(upiLink).catch(() => onAlert?.({ title: 'UPI app not found', message: 'No UPI app is installed.', buttons: [{ text: 'OK', onPress: () => onAlert(null) }] }))}
             >
               <Icons.upi size={13} color={C.primary} />
               <Text style={[styles.actionBtnText, { color: C.primary }]}>Pay via UPI</Text>
@@ -711,6 +713,8 @@ export default function GroupDetailScreen() {
   const [toast,       setToast]       = useState('');
   const [ledgerAsc,   setLedgerAsc]   = useState(false);
   const [inviting, setInviting] = useState(false);
+  const [alert, setAlert] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
   function getMyStatus(expenseId) {
     const mySplit = splitStatuses.find(
@@ -755,8 +759,11 @@ export default function GroupDetailScreen() {
       setMembers(memRes.data       || []);
       setSplitStatuses(statusRes.data || []);
     } catch (err) {
-      Alert.alert('Failed to load',
-        err?.response?.data?.detail || err?.message || 'Check your connection.');
+      setAlert({
+        title: 'Failed to load',
+        message: err?.response?.data?.detail || err?.message || 'Check your connection.',
+        buttons: [{ text: 'OK', onPress: () => setAlert(null) }],
+      });
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -773,8 +780,8 @@ export default function GroupDetailScreen() {
       setNetBalances(raw.data  || []);
       setSimplified(simp.data  || []);
       setSettLoaded(true);
-    } catch {
-      Alert.alert('Error', 'Could not load settlements.');
+   } catch {
+      setAlert({ title: 'Error', message: 'Could not load settlements.', buttons: [{ text: 'OK', onPress: () => setAlert(null) }] });
     } finally {
       setSettLoading(false);
     }
@@ -814,6 +821,7 @@ export default function GroupDetailScreen() {
   }
 
   async function handleDelete(type, id) {
+    setDeletingId(id);
     try {
       if (type === 'expense') {
         await expensesApi.deleteExpense(id);
@@ -823,7 +831,29 @@ export default function GroupDetailScreen() {
         setPayments(p => p.filter(x => x.payment_id !== id));
       }
       showToast('Deleted');
-    } catch { Alert.alert('Error', 'Failed to delete.'); }
+
+      // 1. Silently refresh settlement statuses so expense badges update automatically
+      expensesApi.getSettlementStatus(groupId)
+        .then(res => setSplitStatuses(res.data || []))
+        .catch(() => {});
+
+      // 2. Refresh the settlements tab if active, otherwise mark it dirty
+      if (tab === 'Settlements') loadSettlements();
+      else setSettLoaded(false);
+
+    } catch (err) {
+      // 3. Catch offline/network errors specifically
+      const isOffline = !err.response;
+      setAlert({ 
+        title: isOffline ? 'Network Error' : 'Delete Failed', 
+        message: isOffline 
+          ? 'Please check your internet connection and try again.' 
+          : err?.response?.data?.detail || 'Failed to delete the item.', 
+        buttons: [{ text: 'OK', onPress: () => setAlert(null) }] 
+      }); 
+    } finally { 
+      setDeletingId(null); 
+    }
   }
 
   async function handleRemind(s) {
@@ -849,18 +879,18 @@ export default function GroupDetailScreen() {
       const s      = err?.response?.status;
       const detail = err?.response?.data?.detail;
       if (s === 409) {
-        Alert.alert(
-          'Unsettled Balances',
-          `${detail}\n\nDelete anyway?`,
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Delete Anyway', style: 'destructive', onPress: () => handleDeleteGroup(true) },
-          ]
-        );
+        setAlert({
+          title: 'Unsettled Balances',
+          message: `${detail}\n\nDelete anyway?`,
+          buttons: [
+            { text: 'Cancel', style: 'cancel', onPress: () => setAlert(null) },
+            { text: 'Delete Anyway', style: 'destructive', onPress: () => { setAlert(null); handleDeleteGroup(true); } },
+          ],
+        });
       } else if (s === 403) {
-        Alert.alert('Not Allowed', detail || 'Only the group creator or admin can do this.');
+        setAlert({ title: 'Not Allowed', message: detail || 'Only the group creator or admin can do this.', buttons: [{ text: 'OK', onPress: () => setAlert(null) }] });
       } else {
-        Alert.alert('Error', detail || 'Failed to delete group.');
+        setAlert({ title: 'Error', message: detail || 'Failed to delete group.', buttons: [{ text: 'OK', onPress: () => setAlert(null) }] });
       }
     }
   }
@@ -871,7 +901,7 @@ export default function GroupDetailScreen() {
       navigation.goBack();
     } catch (err) {
       const detail = err?.response?.data?.detail;
-      Alert.alert('Cannot Leave', typeof detail === 'string' ? detail : 'Failed to leave group.');
+      setAlert({ title: 'Cannot Leave', message: typeof detail === 'string' ? detail : 'Failed to leave group.', buttons: [{ text: 'OK', onPress: () => setAlert(null) }] });
     }
   }
 
@@ -885,7 +915,7 @@ export default function GroupDetailScreen() {
         title: 'Invite to Group',
       });
     } catch {
-      Alert.alert('Error', 'Could not generate invite link.');
+      setAlert({ title: 'Error', message: 'Could not generate invite link.', buttons: [{ text: 'OK', onPress: () => setAlert(null) }] });
     } finally {
       setInviting(false);
     }
@@ -973,6 +1003,8 @@ export default function GroupDetailScreen() {
             item={item}
             currentUserName={userName}
             onDelete={handleDelete}
+            onAlert={setAlert}
+            isDeleting={deletingId === item.expense_id}
             settlementBadge={getExpenseBadge(item.expense_id, item.payer_name)}
             myStatus={getMyStatus(item.expense_id)}
             participantCount={splitStatuses.filter(s => s.expense_id === item.expense_id).length}
@@ -997,6 +1029,8 @@ export default function GroupDetailScreen() {
             item={item}
             currentUserName={userName}
             onDelete={handleDelete}
+            onAlert={setAlert}
+            isDeleting={deletingId === item.payment_id}
           />
         );
       })}
@@ -1061,6 +1095,7 @@ export default function GroupDetailScreen() {
             <SettlementRow
               key={i} item={s} currentUserName={userName}
               members={members} onRemind={handleRemind} reminding={reminding}
+              onAlert={setAlert}
             />
           ))
         )}
@@ -1089,10 +1124,14 @@ export default function GroupDetailScreen() {
         <TouchableOpacity
           style={[styles.leaveBtn]}
           onPress={() =>
-            Alert.alert('Leave Group', 'Are you sure you want to leave this group? You must have a zero balance.', [
-              { text: 'Cancel', style: 'cancel' },
-              { text: 'Leave', style: 'destructive', onPress: handleLeaveGroup },
-            ])
+            setAlert({
+              title: 'Leave Group',
+              message: 'Are you sure you want to leave this group? You must have a zero balance.',
+              buttons: [
+                { text: 'Cancel', style: 'cancel', onPress: () => setAlert(null) },
+                { text: 'Leave', style: 'destructive', onPress: () => { setAlert(null); handleLeaveGroup(); } },
+              ],
+            })
           }
         >
           <Icons.logout size={15} color={C.danger} />
@@ -1102,14 +1141,14 @@ export default function GroupDetailScreen() {
         <TouchableOpacity
           style={styles.deleteGroupBtn}
           onPress={() =>
-            Alert.alert(
-              'Delete Group',
-              `Permanently delete "${groupName}" and all its data?`,
-              [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'Delete', style: 'destructive', onPress: () => handleDeleteGroup() },
-              ]
-            )
+            setAlert({
+              title: 'Delete Group',
+              message: `Permanently delete "${groupName}" and all its data?`,
+              buttons: [
+                { text: 'Cancel', style: 'cancel', onPress: () => setAlert(null) },
+                { text: 'Delete', style: 'destructive', onPress: () => { setAlert(null); handleDeleteGroup(); } },
+              ],
+            })
           }
         >
           <Icons.trash size={14} color={C.danger} />
@@ -1200,14 +1239,6 @@ export default function GroupDetailScreen() {
       >
 
         {/* Stats */}
-        {/* <View style={styles.statsRow}>
-          <StatCard label="Total Spent"  value={`₹${totalSpent.toLocaleString('en-IN')}`} color={C.primary} />
-          <StatCard label="Expenses"     value={String(expenses.length)} />
-          <StatCard label="Payments"     value={String(payments.length)} />
-          <StatCard label="Members"      value={String(members.length)} />
-        </View> */}
-
-        {/* Stats */}
         <View style={styles.statsRow}>
           <StatCard label="Total"    value={`₹${totalSpent.toLocaleString('en-IN')}`} color={C.primary} />
           <StatCard label="Expenses" value={`${expenses.length}`} />
@@ -1229,6 +1260,8 @@ export default function GroupDetailScreen() {
           {tab === 'Members'     && renderMembers()}
         </View>
       </ScrollView>
+
+      <AppAlert config={alert} />
 
       {/* FAB */}
       <View style={styles.fabArea}>
@@ -1266,12 +1299,6 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: C.success + '30',
   },
   payBtnText: { fontSize: F.sm, fontWeight: W.bold, color: C.success },
-
-  // Stats
-  // statsRow: {
-  //   flexDirection: 'row', paddingHorizontal: SP.base,
-  //   gap: SP.sm, marginBottom: SP.sm,
-  // },
   statsRow: {
     flexDirection: 'row', paddingHorizontal: SP.base,
     gap: SP.sm, marginBottom: SP.sm, marginTop: SP.sm,
@@ -1512,17 +1539,6 @@ const styles = StyleSheet.create({
   monthHeaderLine: {
     flex: 1, height: 1, backgroundColor: C.border,
   },
-  // dayHeader: {
-  //   paddingHorizontal: 2,
-  //   paddingVertical: 3,
-  //   marginTop: 4,
-  // },
-  // dayHeaderText: {
-  //   fontSize: F.xs,
-  //   fontWeight: W.bold,
-  //   color: C.text3,
-  //   letterSpacing: 0.3,
-  // },
   dayHeader: {
     paddingHorizontal: 2,
     paddingVertical: 3,
