@@ -29,8 +29,9 @@ import {
 import { EmptyState, LoadingState } from "../../components/common/Ui";
 import ScreenHeader from "../../components/layout/ScreenHeader";
 import { Icons } from "../../components/icons/icons";
-import DatePickerInput from "../../components/common/DatePickerInput";
+import Toast from "../../components/common/Toast";
 import AppAlert from "../../components/common/AppAlert";
+import DatePickerInput from "../../components/common/DatePickerInput";
 
 function fmt(n) {
   return Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 });
@@ -80,24 +81,17 @@ function ProgressBar({ pct, color }) {
   );
 }
 
-function LoanCard({ item, isLent, onRefresh, idx }) {
+function LoanCard({ item, isLent, onRefresh, idx, showToast, setAlert }) {
   const [repayAmt, setRepayAmt] = useState("");
   const [repayErr, setRepayErr] = useState("");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [alert, setAlert] = useState(null);
 
   const accentColor = isLent ? "#f59e0b" : "#818cf8";
   const btnColor = isLent ? COLORS.success : "#6366f1";
   const personLabel = isLent ? item.borrower_name : item.lender_name;
   const dateField = isLent ? item.loan_date : item.borrow_date;
   const idField = isLent ? item.loan_id : item.borrow_id;
-  const repayEndpt = isLent
-    ? ENDPOINTS.loanRepay(idField)
-    : ENDPOINTS.borrowRepay(idField);
-  const deleteEndpt = isLent
-    ? ENDPOINTS.delLoan(idField)
-    : ENDPOINTS.delBorrow(idField);
   const dirLabel = isLent ? "Lent to" : "Borrowed from";
   const dateLbl = isLent ? "Lent on" : "Borrowed on";
   const amtLabel = isLent ? "Amount Lent" : "Amount Borrowed";
@@ -132,6 +126,7 @@ function LoanCard({ item, isLent, onRefresh, idx }) {
         ? loansApi.repayLoan(idField, amt)
         : loansApi.repayBorrow(idField, amt));
       setRepayAmt("");
+      showToast?.("Repayment recorded");
       onRefresh();
     } catch (ex) {
       setRepayErr(ex?.response?.data?.detail || "Failed");
@@ -156,6 +151,7 @@ function LoanCard({ item, isLent, onRefresh, idx }) {
               await (isLent
                 ? loansApi.deleteLoan(idField)
                 : loansApi.deleteBorrow(idField));
+              showToast?.("Deleted");
               onRefresh();
             } catch {
               setDeleting(false);
@@ -259,7 +255,6 @@ function LoanCard({ item, isLent, onRefresh, idx }) {
           </Text>
         </TouchableOpacity>
       </View>
-      <AppAlert config={alert} />
     </View>
   );
 }
@@ -657,6 +652,13 @@ export default function LoansScreen() {
   const [pageTab, setPageTab] = useState("lent"); // lent | borrowed
   const [filterTab, setFilterTab] = useState("all"); // all | active | repaid
   const [showAdd, setShowAdd] = useState(false);
+  const [toast, setToast]   = useState({ msg: '', type: 'success' });
+  const [alert, setAlert]   = useState(null);
+
+  function showToast(msg, type = 'success') {
+    setToast({ msg, type });
+    setTimeout(() => setToast(p => ({ ...p, msg: '' })), 3000);
+  }
 
   const load = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
@@ -900,7 +902,14 @@ export default function LoansScreen() {
           )
         }
         renderItem={({ item, index }) => (
-          <LoanCard item={item} isLent={isLent} onRefresh={load} idx={index} />
+          <LoanCard
+            item={item}
+            isLent={isLent}
+            onRefresh={load}
+            idx={index}
+            showToast={showToast}
+            setAlert={setAlert}
+          />
         )}
         contentContainerStyle={[styles.list, { paddingBottom: TAB_BAR_HEIGHT }]}
       />
@@ -908,8 +917,10 @@ export default function LoansScreen() {
         visible={showAdd}
         onClose={() => setShowAdd(false)}
         isLent={isLent}
-        onSuccess={() => load()}
+        onSuccess={() => { showToast(isLent ? "Loan recorded" : "Borrow recorded"); load(); }}
       />
+      <Toast config={toast} />
+      <AppAlert config={alert} />
     </SafeAreaView>
   );
 }
@@ -1086,9 +1097,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     borderRadius: RADIUS.sm,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: 'rgba(255,69,58,0.3)', // Faint red border
+    backgroundColor: 'rgba(255,69,58,0.05)',
   },
-  delText: { fontSize: FONT_SIZE.xs, color: COLORS.text3 },
+  delText: { 
+  fontSize: FONT_SIZE.xs, 
+  color: COLORS.danger, 
+  fontWeight: FONT_WEIGHT.semibold
+},
 
   addHeaderBtn: {
     flexDirection: "row",

@@ -12,6 +12,9 @@ import {
   RefreshControl,
   TouchableOpacity,
   Animated,
+  LayoutAnimation,
+  Platform,
+  UIManager,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Swipeable } from "react-native-gesture-handler";
@@ -27,6 +30,16 @@ import {
 } from "../../constants/theme";
 import { Icons } from "../../components/icons/icons";
 import AppAlert from "../../components/common/AppAlert";
+import Toast from "../../components/common/Toast";
+
+
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  const isNewArch = global._IS_FABRIC === true;
+  if (!isNewArch) {
+    UIManager.setLayoutAnimationEnabledExperimental(true);
+  }
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 function timeAgo(dateStr) {
@@ -195,6 +208,13 @@ export default function NotificationsScreen() {
 
   const [alert, setAlert] = useState(null);
 
+  const [toast, setToast] = useState({ msg: '', type: 'success' });
+
+  function showToast(msg, type = 'success') {
+    setToast({ msg, type });
+    setTimeout(() => setToast(p => ({ ...p, msg: '' })), 3000);
+  }
+
   const selectionMode = selectedIds.size > 0;
 
   const load = useCallback(async (isRefresh = false) => {
@@ -248,10 +268,12 @@ export default function NotificationsScreen() {
     try {
       await notifsApi.markAllRead();
       setNotifs((p) => p.map((n) => ({ ...n, is_read: true })));
+      showToast("All marked as read");
     } catch {}
   }
 
   async function deleteOne(id) {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setNotifs((p) => p.filter((n) => n.notification_id !== id));
     setSelectedIds((p) => {
       const n = new Set(p);
@@ -265,8 +287,10 @@ export default function NotificationsScreen() {
 
   async function deleteSelected() {
     const ids = [...selectedIds];
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setNotifs((p) => p.filter((n) => !selectedIds.has(n.notification_id)));
     setSelectedIds(new Set());
+    showToast(`${ids.length} deleted`);
     await Promise.allSettled(ids.map((id) => notifsApi.deleteNotif(id)));
   }
 
@@ -274,6 +298,7 @@ export default function NotificationsScreen() {
     try {
       await notifsApi.deleteReadNotifs();
       setNotifs((p) => p.filter((n) => !n.is_read));
+      showToast("Read notifications cleared");
     } catch {}
   }
 
@@ -400,6 +425,7 @@ export default function NotificationsScreen() {
         contentContainerStyle={[S.list, notifs.length === 0 && S.listEmpty]}
       />
 
+      <Toast config={toast} />
       <AppAlert config={alert} />
 
       {/* ── Bulk action bar ── */}

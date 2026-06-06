@@ -1,12 +1,21 @@
 // SplitEase/mobile/src/screens/groups/GroupDetailScreen.jsx
 
-
+import Toast from "../../components/common/Toast";
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  RefreshControl, ScrollView, Linking, ActivityIndicator, Platform, Share
+  RefreshControl, ScrollView, Linking, ActivityIndicator, Platform, Share, Animated, LayoutAnimation, UIManager
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+
+// Enable LayoutAnimation for Android (only if NOT on New Architecture)
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  const isNewArch = global._IS_FABRIC === true;
+  if (!isNewArch) {
+    UIManager.setLayoutAnimationEnabledExperimental(true);
+  }
+}
+
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import * as groupsApi from "../../api/groups";
 import * as expensesApi from "../../api/expenses";
@@ -105,17 +114,6 @@ function Badge({ label, variant = 'neutral' }) {
   );
 }
 
-// ─── Toast ────────────────────────────────────────────────────────────────────
-function Toast({ message }) {
-  if (!message) return null;
-  return (
-    <View style={styles.toast} pointerEvents="none">
-      <Icons.check size={14} color={C.success} />
-      <Text style={styles.toastText}>{message}</Text>
-    </View>
-  );
-}
-
 // ─── Stat card ────────────────────────────────────────────────────────────────
 function StatCard({ label, value, color }) {
   return (
@@ -179,7 +177,10 @@ function ExpenseRow({ item, currentUserName, onDelete, onEdit, settlementBadge, 
           flex: 1,
           gap: SP.md,
         }}
-        onPress={() => setExpanded((p) => !p)}
+        onPress={() => {
+          LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+          setExpanded((p) => !p);
+        }}
         activeOpacity={0.7}
       >
         <CategoryIcon categoryName={item.category_name} />
@@ -315,7 +316,10 @@ function ExpenseRow({ item, currentUserName, onDelete, onEdit, settlementBadge, 
             </>
           )}
           <TouchableOpacity
-            onPress={() => setExpanded((p) => !p)}
+            onPress={() => {
+              LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+              setExpanded((p) => !p);
+            }}
             hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
           >
             <View
@@ -710,7 +714,7 @@ export default function GroupDetailScreen() {
   const [refreshing,  setRefreshing]  = useState(false);
   const [settLoaded,  setSettLoaded]  = useState(false);
   const [reminding,   setReminding]   = useState('');
-  const [toast,       setToast]       = useState('');
+  const [toast,       setToast]       = useState({ msg: '', type: 'success' });
   const [ledgerAsc,   setLedgerAsc]   = useState(false);
   const [inviting, setInviting] = useState(false);
   const [alert, setAlert] = useState(null);
@@ -738,9 +742,9 @@ export default function GroupDetailScreen() {
     return 'pending';
   }
 
-  function showToast(msg) {
-    setToast(msg);
-    setTimeout(() => setToast(''), 3000);
+  function showToast(msg, type = 'success') {
+    setToast({ msg, type });
+    setTimeout(() => setToast(prev => ({ ...prev, msg: '' })), 3000);
   }
 
   const loadCore = useCallback(async (isRefresh = false) => {
@@ -866,7 +870,8 @@ export default function GroupDetailScreen() {
       showToast(
         Array.isArray(detail)   ? detail[0]?.msg :
         typeof detail === 'string' ? detail        :
-        'Failed to send reminder.'
+        'Failed to send reminder.',
+        'error' // <--- This triggers the red error styling!
       );
     } finally { setReminding(''); }
   }
@@ -874,7 +879,10 @@ export default function GroupDetailScreen() {
   async function handleDeleteGroup(force = false) {
     try {
       await groupsApi.deleteGroup(groupId, force);
-      navigation.goBack();
+      showToast("Group deleted");
+      setTimeout(() => {
+        navigation.goBack();
+      }, 1200); 
     } catch (err) {
       const s      = err?.response?.status;
       const detail = err?.response?.data?.detail;
@@ -898,7 +906,10 @@ export default function GroupDetailScreen() {
   async function handleLeaveGroup() {
     try {
       await groupsApi.leaveGroup(groupId, user.user_id);
-      navigation.goBack();
+      showToast("Left group");
+      setTimeout(() => {
+        navigation.goBack();
+      }, 1200);
     } catch (err) {
       const detail = err?.response?.data?.detail;
       setAlert({ title: 'Cannot Leave', message: typeof detail === 'string' ? detail : 'Failed to leave group.', buttons: [{ text: 'OK', onPress: () => setAlert(null) }] });
@@ -1229,7 +1240,7 @@ export default function GroupDetailScreen() {
         </TouchableOpacity>
       </View>
 
-      <Toast message={toast} />
+      <Toast config={toast} />
 
       <ScrollView
         style={styles.scroll}
@@ -1445,18 +1456,6 @@ const styles = StyleSheet.create({
   },
   emptyTitle: { fontSize: F.lg, fontWeight: W.bold, color: C.text },
   emptySub:   { fontSize: F.base, color: C.text2, textAlign: 'center', lineHeight: 20 },
-
-  // Toast
-  toast: {
-    position: 'absolute', top: 90, left: SP.xl, right: SP.xl, zIndex: 999, // was bottom:120
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: C.surface2, borderRadius: R.xl,
-    borderWidth: 1, borderColor: C.border,
-    paddingVertical: 11, paddingHorizontal: SP.base,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3, shadowRadius: 10, elevation: 10,
-  },
-  toastText: { fontSize: F.base, color: C.text, fontWeight: W.medium },
 
   // Centred loader
   centred:     { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80, gap: 12 },

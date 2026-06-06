@@ -43,6 +43,7 @@ import Input from "../../components/common/Input";
 import Button from "../../components/common/Button";
 import { Icons } from "../../components/icons/icons";
 import { useOTAUpdate } from "../../hooks/useOTAUpdate";
+import Toast from "../../components/common/Toast";
 import AppAlert from "../../components/common/AppAlert";
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
@@ -391,7 +392,7 @@ function EditProfileModal({ user, visible, onClose, onSave }) {
 
 
 // ─── Change Password modal ─────────────────────────────────────────────────────
-function ChangePasswordModal({ visible, onClose, userEmail }) {
+function ChangePasswordModal({ visible, onClose, userEmail, onSuccess }) {
   const [form, setForm] = useState({ current: "", newPwd: "", confirm: "" });
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -429,7 +430,8 @@ function ChangePasswordModal({ visible, onClose, userEmail }) {
         new_password: form.newPwd,
         confirm_password: form.confirm,
       });
-      setStep("success"); 
+      setStep("success");
+      onSuccess?.();
     } catch (err) {
       setError(err.response?.data?.detail || "Failed to change password.");
     } finally {
@@ -443,6 +445,7 @@ function ChangePasswordModal({ visible, onClose, userEmail }) {
     try {
       await authApi.forgotPassword(userEmail);
       setStep("success");
+      onSuccess?.();
     } catch (err) {
       setError(err.response?.data?.detail || "Failed to send reset link.");
       setStep("idle");
@@ -788,6 +791,13 @@ export default function AccountScreen() {
   const [showEdit, setShowEdit] = useState(false);
   const [showPwd, setShowPwd] = useState(false);
   const [logoutConfirm, setLogoutConfirm] = useState(false);
+
+  const [toast, setToast] = useState({ msg: '', type: 'success' });
+
+  function showToast(msg, type = 'success') {
+    setToast({ msg, type });
+    setTimeout(() => setToast(p => ({ ...p, msg: '' })), 3000);
+  }
   const [alert, setAlert] = useState(null);
 
   useFocusEffect(
@@ -1023,14 +1033,24 @@ export default function AccountScreen() {
         </Group>
 
       </ScrollView>
+      
+      <Toast config={toast} />
 
       <EditProfileModal
         user={user}
         visible={showEdit}
         onClose={() => setShowEdit(false)}
-        onSave={async (freshUser) => { await updateUser(freshUser); }}
+        onSave={async (freshUser) => {
+          await updateUser(freshUser);
+          showToast("Profile updated");
+        }}
       />
-      <ChangePasswordModal visible={showPwd} onClose={() => setShowPwd(false)} userEmail={user?.email} />
+      <ChangePasswordModal
+        visible={showPwd}
+        onClose={() => setShowPwd(false)}
+        userEmail={user?.email}
+        onSuccess={() => showToast("Password changed")}
+      />
       <AppAlert config={alert} />
     </SafeAreaView>
   );

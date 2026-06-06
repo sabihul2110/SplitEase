@@ -93,9 +93,9 @@ const s = StyleSheet.create({
   },
   btnPrimary: { backgroundColor: COLORS.primary },
   btnDanger: {
-    backgroundColor: "rgba(239,68,68,0.85)",
+    backgroundColor: "rgba(255, 69, 58, 1)",
     borderWidth: 1,
-    borderColor: "rgba(239,68,68,0.4)",
+    borderColor: "rgba(255, 69, 58, 1)",
   },
   btnGhost: {
     backgroundColor: "#1e2438",

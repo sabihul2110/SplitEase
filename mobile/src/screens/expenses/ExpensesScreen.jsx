@@ -18,6 +18,7 @@ import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS, TAB_BAR_HEIGHT } from 
 import { Icons, TYPE_ICONS, TYPE_CFG } from "../../components/icons/icons";
 import ScreenHeader from "../../components/layout/ScreenHeader";
 import AppAlert from "../../components/common/AppAlert";
+import Toast from "../../components/common/Toast";
 
 // ─────────────────────────────────────────────
 //  Helpers (identical logic to web)
@@ -251,7 +252,7 @@ function MonthNavigator({ value, onChange, availableMonths }) {
 // ─────────────────────────────────────────────
 //  Inline Repay widget (loan_given)
 // ─────────────────────────────────────────────
-function InlineRepay({ entry, onSuccess }) {
+function InlineRepay({ entry, onSuccess, onToast }) {
   const [amt,    setAmt]    = useState("");
   const [saving, setSaving] = useState(false);
   const [err,    setErr]    = useState("");
@@ -276,7 +277,8 @@ function InlineRepay({ entry, onSuccess }) {
     try {
       await expensesApi.repayLoan(entry.ref_id, parsed);
       setAmt("");
-      onSuccess();
+      onToast?.("Repayment recorded");
+      onSuccess(); // onSuccess calls load() which triggers screen refresh
     } catch (ex) {
       setErr(ex?.response?.data?.detail || "Failed.");
     } finally {
@@ -318,8 +320,8 @@ function InlineRepay({ entry, onSuccess }) {
 // ─────────────────────────────────────────────
 //  Single Entry Row
 // ─────────────────────────────────────────────
-function EntryRow({ entry, deleting, onDelete, onNavigateGroup }) {
-  const [alert, setAlert] = useState(null);
+function EntryRow({ entry, deleting, onDelete, onNavigateGroup, onToast }) {
+  // Removed local alert state!
   const cfg     = TYPE_CFG[entry.type];
   const iconCfg = TYPE_ICONS[entry.type];
   if (!cfg || !iconCfg) return null;
@@ -372,7 +374,11 @@ function EntryRow({ entry, deleting, onDelete, onNavigateGroup }) {
 
         {/* Loan given — inline repay */}
         {isLoanGiven && (
-          <InlineRepay entry={entry} onSuccess={onDelete ? () => onDelete(entry, "refresh") : () => {}} />
+          <InlineRepay
+            entry={entry}
+            onSuccess={onDelete ? () => onDelete(entry, "refresh") : () => {}}
+            onToast={onToast}
+          />
         )}
 
         {/* Loan taken — repayment status */}
@@ -409,16 +415,7 @@ function EntryRow({ entry, deleting, onDelete, onNavigateGroup }) {
         {isDeletable && (
           <TouchableOpacity
             style={styles.delBtn}
-            onPress={() => {
-              setAlert({
-                title: "Delete entry",
-                message: `Delete "${entry.label}"?`,
-                buttons: [
-                  { text: "Cancel", style: "cancel", onPress: () => setAlert(null) },
-                  { text: "Delete", style: "destructive", onPress: () => { setAlert(null); onDelete?.(entry); } },
-                ],
-              });
-            }}
+            onPress={() => onDelete?.(entry, "confirm")}
             disabled={isDeleting}
           >
             {isDeleting
@@ -427,7 +424,6 @@ function EntryRow({ entry, deleting, onDelete, onNavigateGroup }) {
           </TouchableOpacity>
         )}
       </View>
-      <AppAlert config={alert} />
     </View>
   );
 }
@@ -454,6 +450,12 @@ export default function ExpensesScreen() {
   const [filter,   setFilter]   = useState("all");
   const [search,   setSearch]   = useState("");
   const [deleting, setDeleting] = useState(null);
+  const [toast, setToast] = useState({ msg: '', type: 'success' });
+
+  function showToast(msg, type = 'success') {
+    setToast({ msg, type });
+    setTimeout(() => setToast(p => ({ ...p, msg: '' })), 3000);
+  }
   const [selMonth, setSelMonth] = useState(currentMonth);
   const [alertConfig, setAlertConfig] = useState(null);
 
@@ -502,12 +504,26 @@ export default function ExpensesScreen() {
 
   async function handleDelete(entry, mode) {
     if (mode === "refresh") { load(); return; }
+    if (mode === "confirm") {
+      setAlertConfig({
+        title: "Delete entry",
+        message: `Delete "${entry.label}"?`,
+        buttons: [
+          { text: "Cancel", style: "cancel", onPress: () => setAlertConfig(null) },
+          { text: "Delete", style: "destructive", onPress: () => { setAlertConfig(null); handleDelete(entry, "execute"); } },
+        ],
+      });
+      return;
+    }
     setDeleting(entry.ref_id);
     try {
       if (entry.type === "personal_expense") await expensesApi.deletePersonalExpense(entry.ref_id);
       else if (entry.type === "income")      await expensesApi.deleteIncome(entry.ref_id);
       else if (entry.type === "loan_given")  await expensesApi.deleteLoan(entry.ref_id);
       else if (entry.type === "loan_taken")  await expensesApi.deleteBorrow(entry.ref_id);
+
+      showToast("Deleted"); 
+
       await load();
     } catch (err) {
       setAlertConfig({
@@ -577,6 +593,7 @@ export default function ExpensesScreen() {
         entry={item.entry}
         deleting={deleting}
         onDelete={handleDelete}
+        onToast={showToast}
         onNavigateGroup={(gid) =>
           navigation.navigate("Groups", {
             screen: "GroupDetail",
@@ -711,6 +728,7 @@ export default function ExpensesScreen() {
         }
       />
       <AppAlert config={alertConfig} />
+    <Toast config={toast} />
     </SafeAreaView>
   );
 }

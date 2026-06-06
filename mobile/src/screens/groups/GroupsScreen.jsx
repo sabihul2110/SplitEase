@@ -28,6 +28,7 @@ import { useAuth } from "../../context/AuthContext";
 import { Icons } from "../../components/icons/icons";
 import { TAB_BAR_HEIGHT } from '../../constants/theme';
 import AppAlert from "../../components/common/AppAlert";
+import Toast from "../../components/common/Toast";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -1656,6 +1657,13 @@ export default function GroupsScreen() {
 
   const [alert, setAlert] = useState(null);
 
+  const [toast, setToast] = useState({ msg: '', type: 'success' });
+
+  function showToast(msg, type = 'success') {
+    setToast({ msg, type });
+    setTimeout(() => setToast(p => ({ ...p, msg: '' })), 3000);
+  }
+
   const load = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
@@ -1725,6 +1733,7 @@ export default function GroupsScreen() {
       await groupsApi.deleteGroup(group.group_id, force);
       setGroups((p) => p.filter((g) => g.group_id !== group.group_id));
       setLongPress(null);
+      showToast("Group deleted");
     } catch (err) {
       const s = err?.response?.status;
       const d = err?.response?.data?.detail;
@@ -1957,6 +1966,7 @@ export default function GroupsScreen() {
           </View>
         </TouchableOpacity>
       </Modal>
+      <Toast config={toast} />
       <AppAlert config={alert} />
       <DeleteConfirmModal
         group={deleteTarget}
