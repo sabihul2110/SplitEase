@@ -829,7 +829,7 @@ function CreateGroupModal({ visible, onClose, onCreated }) {
     >
       <KeyboardAvoidingView
         style={modalS.overlay}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <TouchableOpacity
           style={StyleSheet.absoluteFill}
@@ -1086,7 +1086,7 @@ function JoinGroupModal({ visible, onClose, onJoined }) {
     >
       <KeyboardAvoidingView
         style={modalS.overlay}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <TouchableOpacity
           style={StyleSheet.absoluteFill}
