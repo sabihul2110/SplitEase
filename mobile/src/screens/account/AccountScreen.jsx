@@ -20,7 +20,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
   Modal,
   KeyboardAvoidingView,
   Platform,
@@ -44,6 +43,7 @@ import Input from "../../components/common/Input";
 import Button from "../../components/common/Button";
 import { Icons } from "../../components/icons/icons";
 import { useOTAUpdate } from "../../hooks/useOTAUpdate";
+import AppAlert from "../../components/common/AppAlert";
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 function fmtAmt(n) {
@@ -591,7 +591,7 @@ function ChangePasswordModal({ visible, onClose, userEmail }) {
 }
 
 // ─── Danger Zone ───────────────────────────────────────────────────────────────
-function DangerZone() {
+function DangerZone({ onAlert }) {
   const { logout } = useAuth();
   const [step, setStep] = useState("idle");
   const [pending, setPending] = useState([]);
@@ -608,7 +608,14 @@ function DangerZone() {
         setStep("done");
       }
     } catch (e) {
-      Alert.alert("Error", e.response?.data?.detail || "Something went wrong.");
+      const isOffline = !e.response;
+      onAlert({
+        title: isOffline ? "Network Error" : "Error",
+        message: isOffline 
+          ? "Please check your internet connection and try again." 
+          : e.response?.data?.detail || "Something went wrong.",
+        buttons: [{ text: "OK", onPress: () => onAlert(null) }]
+      });
       setStep("idle");
     } finally {
       setLoading(false);
@@ -621,7 +628,14 @@ function DangerZone() {
       await client.post(ENDPOINTS.resetData + "/force");
       setStep("done");
     } catch (e) {
-      Alert.alert("Error", e.response?.data?.detail || "Something went wrong.");
+      const isOffline = !e.response;
+      onAlert({
+        title: isOffline ? "Network Error" : "Error",
+        message: isOffline 
+          ? "Please check your internet connection and try again." 
+          : e.response?.data?.detail || "Something went wrong.",
+        buttons: [{ text: "OK", onPress: () => onAlert(null) }]
+      });
     } finally {
       setLoading(false);
     }
@@ -774,6 +788,7 @@ export default function AccountScreen() {
   const [showEdit, setShowEdit] = useState(false);
   const [showPwd, setShowPwd] = useState(false);
   const [logoutConfirm, setLogoutConfirm] = useState(false);
+  const [alert, setAlert] = useState(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -997,7 +1012,7 @@ export default function AccountScreen() {
         {/* ── Danger Zone ── */}
         <SectionLabel title="DANGER ZONE" danger />
         <Group danger>
-          <DangerZone />
+          <DangerZone onAlert={setAlert} />
         </Group>
 
         {/* ── About ── */}
@@ -1016,6 +1031,7 @@ export default function AccountScreen() {
         onSave={async (freshUser) => { await updateUser(freshUser); }}
       />
       <ChangePasswordModal visible={showPwd} onClose={() => setShowPwd(false)} userEmail={user?.email} />
+      <AppAlert config={alert} />
     </SafeAreaView>
   );
 }
