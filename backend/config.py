@@ -1,69 +1,91 @@
-# --- backend/config.py ---
+# backend/config.py
 """
-config.py — loads .env and exposes all settings as constants.
-Import from here everywhere else — never hardcode credentials.
-
-FIX S7: Fail fast at startup if JWT_SECRET is still the insecure default.
-         A weak secret means any attacker can forge valid tokens for any user.
-         Better to crash loudly at startup than silently run insecurely.
+config.py — all settings via pydantic-settings.
+Validates required fields at startup. Crashes immediately with a clear
+error message if anything is missing or wrong, rather than failing at
+first use deep in a request handler.
 """
 
-import os
 import sys
-from dotenv import load_dotenv
+from pydantic_settings import BaseSettings
+from pydantic import field_validator
 
-load_dotenv()   # reads backend/.env into os.environ
 
-# ── MySQL ──────────────────────────────────────────────────────────────────
-DB_CONFIG = {
-    "host":     os.getenv("DB_HOST",     "localhost"),
-    "port":     int(os.getenv("DB_PORT", 3306)),
-    "user":     os.getenv("DB_USER",     "root"),
-    "password": os.getenv("DB_PASSWORD", ""),
-    "database": os.getenv("DB_NAME",     "expense_splitter_react"),
-    "ssl_disabled": os.getenv("DB_SSL_DISABLED", "false").lower() == "true",
+class Settings(BaseSettings):
+    # ── MySQL ──────────────────────────────────────────────────────────────
+    DB_HOST:     str = "localhost"
+    DB_PORT:     int = 3306
+    DB_USER:     str = "root"
+    DB_PASSWORD: str = ""
+    DB_NAME:     str = "expense_splitter_react"
+    DB_SSL_DISABLED: bool = False
+
+    # ── JWT ────────────────────────────────────────────────────────────────
+    JWT_SECRET:         str = "dev_secret_change_me"
+    JWT_ALGORITHM:      str = "HS256"
+    JWT_EXPIRE_MINUTES: int = 60
+
+    # ── CORS ───────────────────────────────────────────────────────────────
+    ALLOWED_ORIGINS: str = "http://localhost:5173"
+
+    # ── Invite ─────────────────────────────────────────────────────────────
+    INVITE_EXPIRY_HOURS: int = 72
+
+    # ── AI ─────────────────────────────────────────────────────────────────
+    GEMINI_API_KEY: str = ""
+
+    # ── Sentry ─────────────────────────────────────────────────────────────
+    SENTRY_DSN: str = ""
+
+    # ── Env ────────────────────────────────────────────────────────────────
+    TESTING: bool = False
+
+    model_config = {"env_file": ".env", "extra": "ignore"}
+
+    @field_validator("JWT_SECRET")
+    @classmethod
+    def jwt_secret_must_be_changed(cls, v: str, info) -> str:
+        testing = (info.data or {}).get("TESTING", False)
+        if v == "dev_secret_change_me" and not testing:
+            print(
+                "\n[FATAL] JWT_SECRET is still the insecure default.\n"
+                "        Set a strong secret in backend/.env\n"
+                "        Generate: python -c \"import secrets; print(secrets.token_hex(32))\"\n",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        return v
+
+
+settings = Settings()
+
+# ── Derived values kept as module-level constants for backward compat ──────
+# All routers that did `from config import X` continue to work unchanged.
+
+DB_CONFIG: dict = {
+    "host":               settings.DB_HOST,
+    "port":               settings.DB_PORT,
+    "user":               settings.DB_USER,
+    "password":           settings.DB_PASSWORD,
+    "database":           settings.DB_NAME,
+    "ssl_disabled":       settings.DB_SSL_DISABLED,
     "connection_timeout": 30,
 }
 
-# ── JWT ────────────────────────────────────────────────────────────────────
-_INSECURE_DEFAULT = "dev_secret_change_me"
+JWT_SECRET:         str = settings.JWT_SECRET
+JWT_ALGORITHM:      str = settings.JWT_ALGORITHM
+JWT_EXPIRE_MINUTES: int = settings.JWT_EXPIRE_MINUTES
 
-JWT_SECRET         = os.getenv("JWT_SECRET", _INSECURE_DEFAULT)
-JWT_ALGORITHM      = os.getenv("JWT_ALGORITHM",      "HS256")
-JWT_EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", 60))
-
-# FIX S7: Hard-fail on startup if the secret is still the placeholder.
-# Skip this check only during automated testing (set TESTING=1 in test env).
-if JWT_SECRET == _INSECURE_DEFAULT and os.getenv("TESTING") != "1":
-    print(
-        "\n[FATAL] JWT_SECRET is still set to the insecure default value.\n"
-        "        Set a strong secret in backend/.env before starting the server.\n"
-        "        Generate one with:  python -c \"import secrets; print(secrets.token_hex(32))\"\n",
-        file=sys.stderr,
-    )
-    sys.exit(1)
-
-# ── CORS ───────────────────────────────────────────────────────────────────
-# Comma-separated list of allowed web app origins.
-# Example .env entry:
-#   ALLOWED_ORIGINS=https://splitease.yourdomain.com,https://www.splitease.yourdomain.com
-# Defaults to localhost for local development only.
 ALLOWED_ORIGINS: list[str] = [
     o.strip()
-    for o in os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(",")
+    for o in settings.ALLOWED_ORIGINS.split(",")
     if o.strip()
 ]
- 
-# ── INVITE ─────────────────────────────────────────────────────────────────
-# Default lifetime for new invite links (hours). 0 = never expire (old behaviour).
-INVITE_EXPIRY_HOURS: int = int(os.getenv("INVITE_EXPIRY_HOURS", 72))
 
-# ── AI — Google Gemini ─────────────────────────────────────────────────────
-# NOTE: The env var is named GEMINI_API_KEY throughout. The SDK is google-genai.
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+INVITE_EXPIRY_HOURS: int       = settings.INVITE_EXPIRY_HOURS
+GEMINI_API_KEY:      str       = settings.GEMINI_API_KEY
+SENTRY_DSN:          str       = settings.SENTRY_DSN
 
-
-# ── Shared constants ───────────────────────────────────────────────────────
 VALID_SOURCE_TYPES: frozenset[str] = frozenset({
     "salary", "pocket_money", "stipend", "other"
 })

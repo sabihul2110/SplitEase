@@ -35,10 +35,6 @@ router = APIRouter(tags=["Auth"])
 
 
 # ── FIX S3a: In-process rate limiter ──────────────────────────────────────
-#
-# Stores (ip → list[timestamp]) for login attempts.
-# On each request we evict timestamps older than the window, then check count.
-# Thread-safe via a lock (uvicorn runs multiple threads for sync routes).
 
 _LOGIN_WINDOW_SECONDS = 60
 _LOGIN_MAX_ATTEMPTS   = 10

@@ -11,11 +11,21 @@ FIX S6: CORS allowed_origins no longer hardcoded to localhost.
 
 import logging
 import uuid
-from fastapi import FastAPI, Request
+import sentry_sdk
+from fastapi import FastAPI, Request, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from config import ALLOWED_ORIGINS
+from config import ALLOWED_ORIGINS, SENTRY_DSN
+
+if SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        traces_sample_rate=0.2,   # 20% of requests traced — free tier safe
+        profiles_sample_rate=0.1,
+        environment="production",
+    )
+
 from routers import (
     auth_router, users, groups, expenses, payments,
     settlements, invites, notifications, personal_expenses,
@@ -64,24 +74,29 @@ async def global_exception_handler(request: Request, exc: Exception):
         content={"detail": "An unexpected error occurred.", "request_id": request_id},
     )
 
-app.include_router(auth_router.router,   prefix="/auth",        tags=["Auth"])
-app.include_router(users.router,         prefix="/users",       tags=["Users"])
-app.include_router(groups.router,        prefix="/groups",      tags=["Groups"])
-app.include_router(expenses.router,      prefix="/expenses",    tags=["Expenses"])
-app.include_router(payments.router,      prefix="/payments",    tags=["Payments"])
-app.include_router(settlements.router,   prefix="/settlements", tags=["Settlements"])
-app.include_router(invites.router,                              tags=["Invites"])
-app.include_router(notifications.router,                        tags=["Notifications"])
-app.include_router(personal_expenses.router)
-app.include_router(income.router)
-app.include_router(loans.router)
-app.include_router(timeline.router)
-app.include_router(borrows.router)
-app.include_router(ai_agent.router)     # prefix="/ai" defined in router
+
+api_v1 = APIRouter(prefix="/api/v1")
+
+api_v1.include_router(auth_router.router,         prefix="/auth",             tags=["Auth"])
+api_v1.include_router(users.router,               prefix="/users",            tags=["Users"])
+api_v1.include_router(groups.router,              prefix="/groups",           tags=["Groups"])
+api_v1.include_router(expenses.router,            prefix="/expenses",         tags=["Expenses"])
+api_v1.include_router(payments.router,            prefix="/payments",         tags=["Payments"])
+api_v1.include_router(settlements.router,         prefix="/settlements",      tags=["Settlements"])
+api_v1.include_router(invites.router,                                         tags=["Invites"])
+api_v1.include_router(notifications.router,                                   tags=["Notifications"])
+api_v1.include_router(personal_expenses.router,                               tags=["Personal Expenses"])
+api_v1.include_router(income.router,                                          tags=["Income"])
+api_v1.include_router(loans.router,                                           tags=["Loans"])
+api_v1.include_router(timeline.router,                                        tags=["Timeline"])
+api_v1.include_router(borrows.router,                                         tags=["Borrows"])
+api_v1.include_router(ai_agent.router,                                        tags=["AI Agent"])
+
+app.include_router(api_v1)
 
 
 @app.get("/health", tags=["Health"])
-@app.head("/health", tags=["Health"])  # add this line
+@app.head("/health", tags=["Health"])
 def health():
     return {"status": "ok"}
 
