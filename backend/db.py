@@ -374,419 +374,430 @@ from repositories.group_repository import fetch_categories, fetch_subcategories
 
 
 # ─────────────────────────────────────────────
-#  EXPENSES
+#  EXPENSES -> MOVED TO expense_repository.py
 # ─────────────────────────────────────────────
+from repositories.expense_repository import (
+    fetch_group_expenses, fetch_group_expenses_admin, fetch_expense_splits,
+    insert_expense, update_expense, delete_expense, fetch_expense_group_id,
+    fetch_expense_settlement_status, fetch_expenses_bulk
+)
 
-def fetch_group_expenses(group_id: int, user_id: int) -> list[dict]:
-    """All expenses for a group — only if user is a member."""
-    conn = get_connection()
-    cur  = conn.cursor(dictionary=True)
-    cur.execute(
-        """
-        SELECT
-            e.expense_id,
-            e.description,
-            e.total_amount,
-            e.split_type,
-            e.expense_date,
-            u.name             AS payer_name,
-            c.category_name,
-            sc.subcategory_name
-        FROM   Expenses e
-        JOIN   Users u              ON u.user_id         = e.payer_id
-        JOIN   Categories c         ON c.category_id     = e.category_id
-        LEFT JOIN Subcategories sc  ON sc.subcategory_id = e.subcategory_id
-        WHERE  e.group_id = %s
-          AND  e.group_id IN (
-                   SELECT group_id FROM Group_Members WHERE user_id = %s
-               )
-        ORDER  BY e.expense_date DESC, e.expense_id DESC
-        """,
-        (group_id, user_id),
-    )
-    rows = cur.fetchall()
-    cur.close(); conn.close()
-    return rows
-
-
-def fetch_group_expenses_admin(group_id: int) -> list[dict]:
-    """
-    FIX #10: Admin-only variant of fetch_group_expenses.
-    No membership check — returns all expenses for a group regardless
-    of whether the calling admin is a member.
-    Only called from expenses.py when current_user["role"] == "admin".
-    """
-    conn = get_connection()
-    cur  = conn.cursor(dictionary=True)
-    cur.execute(
-        """
-        SELECT
-            e.expense_id,
-            e.description,
-            e.total_amount,
-            e.split_type,
-            e.expense_date,
-            u.name             AS payer_name,
-            c.category_name,
-            sc.subcategory_name
-        FROM   Expenses e
-        JOIN   Users u              ON u.user_id         = e.payer_id
-        JOIN   Categories c         ON c.category_id     = e.category_id
-        LEFT JOIN Subcategories sc  ON sc.subcategory_id = e.subcategory_id
-        WHERE  e.group_id = %s
-        ORDER  BY e.expense_date DESC, e.expense_id DESC
-        """,
-        (group_id,),
-    )
-    rows = cur.fetchall()
-    cur.close(); conn.close()
-    return rows
+# def fetch_group_expenses(group_id: int, user_id: int) -> list[dict]:
+#     """All expenses for a group — only if user is a member."""
+#     conn = get_connection()
+#     cur  = conn.cursor(dictionary=True)
+#     cur.execute(
+#         """
+#         SELECT
+#             e.expense_id,
+#             e.description,
+#             e.total_amount,
+#             e.split_type,
+#             e.expense_date,
+#             u.name             AS payer_name,
+#             c.category_name,
+#             sc.subcategory_name
+#         FROM   Expenses e
+#         JOIN   Users u              ON u.user_id         = e.payer_id
+#         JOIN   Categories c         ON c.category_id     = e.category_id
+#         LEFT JOIN Subcategories sc  ON sc.subcategory_id = e.subcategory_id
+#         WHERE  e.group_id = %s
+#           AND  e.group_id IN (
+#                    SELECT group_id FROM Group_Members WHERE user_id = %s
+#                )
+#         ORDER  BY e.expense_date DESC, e.expense_id DESC
+#         """,
+#         (group_id, user_id),
+#     )
+#     rows = cur.fetchall()
+#     cur.close(); conn.close()
+#     return rows
 
 
-def fetch_expense_splits(expense_id: int) -> list[dict]:
-    conn = get_connection()
-    cur  = conn.cursor(dictionary=True)
-    cur.execute(
-        """
-        SELECT u.name, u.user_id, es.amount_owed, es.share_pct
-        FROM   Expense_Splits es
-        JOIN   Users u ON u.user_id = es.user_id
-        WHERE  es.expense_id = %s
-        ORDER  BY u.user_id ASC
-        """,
-        (expense_id,),
-    )
-    rows = cur.fetchall()
-    cur.close(); conn.close()
-    return rows
+# def fetch_group_expenses_admin(group_id: int) -> list[dict]:
+#     """
+#     FIX #10: Admin-only variant of fetch_group_expenses.
+#     No membership check — returns all expenses for a group regardless
+#     of whether the calling admin is a member.
+#     Only called from expenses.py when current_user["role"] == "admin".
+#     """
+#     conn = get_connection()
+#     cur  = conn.cursor(dictionary=True)
+#     cur.execute(
+#         """
+#         SELECT
+#             e.expense_id,
+#             e.description,
+#             e.total_amount,
+#             e.split_type,
+#             e.expense_date,
+#             u.name             AS payer_name,
+#             c.category_name,
+#             sc.subcategory_name
+#         FROM   Expenses e
+#         JOIN   Users u              ON u.user_id         = e.payer_id
+#         JOIN   Categories c         ON c.category_id     = e.category_id
+#         LEFT JOIN Subcategories sc  ON sc.subcategory_id = e.subcategory_id
+#         WHERE  e.group_id = %s
+#         ORDER  BY e.expense_date DESC, e.expense_id DESC
+#         """,
+#         (group_id,),
+#     )
+#     rows = cur.fetchall()
+#     cur.close(); conn.close()
+#     return rows
 
 
-def insert_expense(
-    group_id: int,
-    payer_id: int,
-    category_id: int,
-    subcategory_id: int | None,
-    total_amount: float,
-    description: str,
-    split_type: str,
-    expense_date: str,
-    splits: list[dict],
-) -> int:
-    conn = get_connection()
-    cur  = conn.cursor()
-    try:
-        conn.start_transaction()
-        cur.execute(
-            """
-            INSERT INTO Expenses
-                (group_id, payer_id, category_id, subcategory_id,
-                 total_amount, description, split_type, expense_date)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-            """,
-            (group_id, payer_id, category_id, subcategory_id,
-             total_amount, description, split_type, expense_date),
-        )
-        expense_id = cur.lastrowid
-        cur.executemany(
-            """
-            INSERT INTO Expense_Splits (expense_id, user_id, amount_owed, share_pct)
-            VALUES (%s, %s, %s, %s)
-            """,
-            [
-                (expense_id, s["user_id"], round(s["amount_owed"], 2), s.get("share_pct"))
-                for s in splits
-            ],
-        )
-        conn.commit()
-        return expense_id
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        cur.close(); conn.close()
+# def fetch_expense_splits(expense_id: int) -> list[dict]:
+#     conn = get_connection()
+#     cur  = conn.cursor(dictionary=True)
+#     cur.execute(
+#         """
+#         SELECT u.name, u.user_id, es.amount_owed, es.share_pct
+#         FROM   Expense_Splits es
+#         JOIN   Users u ON u.user_id = es.user_id
+#         WHERE  es.expense_id = %s
+#         ORDER  BY u.user_id ASC
+#         """,
+#         (expense_id,),
+#     )
+#     rows = cur.fetchall()
+#     cur.close(); conn.close()
+#     return rows
 
 
-def delete_expense(expense_id: int) -> None:
-    conn = get_connection()
-    cur  = conn.cursor()
-    try:
-        conn.start_transaction()
-        cur.execute("DELETE FROM Expenses WHERE expense_id = %s", (expense_id,))
-        conn.commit()
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        cur.close(); conn.close()
+# def insert_expense(
+#     group_id: int,
+#     payer_id: int,
+#     category_id: int,
+#     subcategory_id: int | None,
+#     total_amount: float,
+#     description: str,
+#     split_type: str,
+#     expense_date: str,
+#     splits: list[dict],
+# ) -> int:
+#     conn = get_connection()
+#     cur  = conn.cursor()
+#     try:
+#         conn.start_transaction()
+#         cur.execute(
+#             """
+#             INSERT INTO Expenses
+#                 (group_id, payer_id, category_id, subcategory_id,
+#                  total_amount, description, split_type, expense_date)
+#             VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+#             """,
+#             (group_id, payer_id, category_id, subcategory_id,
+#              total_amount, description, split_type, expense_date),
+#         )
+#         expense_id = cur.lastrowid
+#         cur.executemany(
+#             """
+#             INSERT INTO Expense_Splits (expense_id, user_id, amount_owed, share_pct)
+#             VALUES (%s, %s, %s, %s)
+#             """,
+#             [
+#                 (expense_id, s["user_id"], round(s["amount_owed"], 2), s.get("share_pct"))
+#                 for s in splits
+#             ],
+#         )
+#         conn.commit()
+#         return expense_id
+#     except Exception:
+#         conn.rollback()
+#         raise
+#     finally:
+#         cur.close(); conn.close()
 
 
-def fetch_expense_group_id(expense_id: int) -> int | None:
-    """
-    Return the group_id for a given expense, or None if the expense
-    doesn't exist.  Used by the DELETE endpoint to authorise the caller
-    before touching the record.
-    """
-    conn = get_connection()
-    cur  = conn.cursor()
-    cur.execute(
-        "SELECT group_id FROM Expenses WHERE expense_id = %s",
-        (expense_id,),
-    )
-    row = cur.fetchone()
-    cur.close(); conn.close()
-    return row[0] if row else None
+# def delete_expense(expense_id: int) -> None:
+#     conn = get_connection()
+#     cur  = conn.cursor()
+#     try:
+#         conn.start_transaction()
+#         cur.execute("DELETE FROM Expenses WHERE expense_id = %s", (expense_id,))
+#         conn.commit()
+#     except Exception:
+#         conn.rollback()
+#         raise
+#     finally:
+#         cur.close(); conn.close()
+
+
+# def fetch_expense_group_id(expense_id: int) -> int | None:
+#     """
+#     Return the group_id for a given expense, or None if the expense
+#     doesn't exist.  Used by the DELETE endpoint to authorise the caller
+#     before touching the record.
+#     """
+#     conn = get_connection()
+#     cur  = conn.cursor()
+#     cur.execute(
+#         "SELECT group_id FROM Expenses WHERE expense_id = %s",
+#         (expense_id,),
+#     )
+#     row = cur.fetchone()
+#     cur.close(); conn.close()
+#     return row[0] if row else None
 
 
 # ─────────────────────────────────────────────
-#  PAYMENTS
+#  PAYMENTS -> MOVED TO payment_repository.py
 # ─────────────────────────────────────────────
+from repositories.payment_repository import (
+    fetch_pending_splits_between, insert_payment_with_allocations,
+    fetch_payment_allocations, fetch_group_payments, insert_payment,
+    delete_payment, fetch_payment_group_id
+)
 
-def fetch_pending_splits_between(group_id: int, debtor_id: int, creditor_id: int) -> list[dict]:
-    """
-    Returns all expense splits where debtor_id owes creditor_id money
-    in this group, along with how much has already been allocated via
-    Payment_Allocations. Used to pre-populate the AddPayment screen.
-    """
-    conn = get_connection()
-    cur  = conn.cursor(dictionary=True)
-    cur.execute(
-        """
-        SELECT
-            e.expense_id,
-            e.description,
-            e.expense_date,
-            es.amount_owed,
-            IFNULL(SUM(pa.allocated_amt), 0) AS already_paid,
-            (es.amount_owed - IFNULL(SUM(pa.allocated_amt), 0)) AS remaining
-        FROM   Expense_Splits es
-        JOIN   Expenses e ON e.expense_id = es.expense_id
-        LEFT JOIN Payment_Allocations pa ON pa.expense_id = es.expense_id
-            AND pa.payment_id IN (
-                SELECT payment_id FROM Payments
-                WHERE group_id = %s AND payer_id = %s AND payee_id = %s
-            )
-        WHERE  es.user_id  = %s
-          AND  e.payer_id  = %s
-          AND  e.group_id  = %s
-        GROUP  BY e.expense_id, e.description, e.expense_date, es.amount_owed
-        HAVING remaining > 0.005
-        ORDER  BY e.expense_date ASC, e.expense_id ASC
-        """,
-        (group_id, debtor_id, creditor_id, debtor_id, creditor_id, group_id),
-    )
-    rows = cur.fetchall()
-    cur.close(); conn.close()
-    for r in rows:
-        r["expense_date"]  = str(r["expense_date"])
-        r["amount_owed"]   = float(r["amount_owed"])
-        r["already_paid"]  = float(r["already_paid"])
-        r["remaining"]     = float(r["remaining"])
-    return rows
-
-
-def insert_payment_with_allocations(
-    group_id: int,
-    payer_id: int,
-    payee_id: int,
-    amount: float,
-    note: str | None,
-    payment_date: str,
-    allocations: list[dict],  # [{"expense_id": int, "allocated_amt": float}]
-) -> int:
-    conn = get_connection()
-    cur  = conn.cursor()
-    try:
-        conn.start_transaction()
-        cur.execute(
-            """
-            INSERT INTO Payments
-                (group_id, payer_id, payee_id, amount, note, payment_date)
-            VALUES (%s, %s, %s, %s, %s, %s)
-            """,
-            (group_id, payer_id, payee_id, round(amount, 2), note or None, payment_date),
-        )
-        payment_id = cur.lastrowid
-        if allocations:
-            cur.executemany(
-                """
-                INSERT INTO Payment_Allocations (payment_id, expense_id, allocated_amt)
-                VALUES (%s, %s, %s)
-                """,
-                [(payment_id, a["expense_id"], round(float(a["allocated_amt"]), 2))
-                 for a in allocations],
-            )
-        conn.commit()
-        return payment_id
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        cur.close(); conn.close()
+# def fetch_pending_splits_between(group_id: int, debtor_id: int, creditor_id: int) -> list[dict]:
+#     """
+#     Returns all expense splits where debtor_id owes creditor_id money
+#     in this group, along with how much has already been allocated via
+#     Payment_Allocations. Used to pre-populate the AddPayment screen.
+#     """
+#     conn = get_connection()
+#     cur  = conn.cursor(dictionary=True)
+#     cur.execute(
+#         """
+#         SELECT
+#             e.expense_id,
+#             e.description,
+#             e.expense_date,
+#             es.amount_owed,
+#             IFNULL(SUM(pa.allocated_amt), 0) AS already_paid,
+#             (es.amount_owed - IFNULL(SUM(pa.allocated_amt), 0)) AS remaining
+#         FROM   Expense_Splits es
+#         JOIN   Expenses e ON e.expense_id = es.expense_id
+#         LEFT JOIN Payment_Allocations pa ON pa.expense_id = es.expense_id
+#             AND pa.payment_id IN (
+#                 SELECT payment_id FROM Payments
+#                 WHERE group_id = %s AND payer_id = %s AND payee_id = %s
+#             )
+#         WHERE  es.user_id  = %s
+#           AND  e.payer_id  = %s
+#           AND  e.group_id  = %s
+#         GROUP  BY e.expense_id, e.description, e.expense_date, es.amount_owed
+#         HAVING remaining > 0.005
+#         ORDER  BY e.expense_date ASC, e.expense_id ASC
+#         """,
+#         (group_id, debtor_id, creditor_id, debtor_id, creditor_id, group_id),
+#     )
+#     rows = cur.fetchall()
+#     cur.close(); conn.close()
+#     for r in rows:
+#         r["expense_date"]  = str(r["expense_date"])
+#         r["amount_owed"]   = float(r["amount_owed"])
+#         r["already_paid"]  = float(r["already_paid"])
+#         r["remaining"]     = float(r["remaining"])
+#     return rows
 
 
-def fetch_expense_settlement_status(group_id: int) -> list[dict]:
-    """
-    For every expense in the group, returns per-split settlement status.
-    Used to show settled/partial/pending badges on expense rows.
-
-    Returns list of:
-    {
-        expense_id: int,
-        user_id: int,
-        amount_owed: float,
-        allocated: float,
-        status: "settled" | "partial" | "pending"
-    }
-    """
-    conn = get_connection()
-    cur  = conn.cursor(dictionary=True)
-    cur.execute(
-        """
-        SELECT
-            es.expense_id,
-            es.user_id,
-            es.amount_owed,
-            IFNULL(SUM(pa.allocated_amt), 0) AS allocated
-        FROM   Expense_Splits es
-        JOIN   Expenses e ON e.expense_id = es.expense_id
-        LEFT JOIN Payment_Allocations pa ON pa.expense_id = es.expense_id
-            AND pa.payment_id IN (
-                SELECT payment_id FROM Payments WHERE group_id = %s
-            )
-        WHERE  e.group_id = %s
-        GROUP  BY es.expense_id, es.user_id, es.amount_owed
-        """,
-        (group_id, group_id),
-    )
-    rows = cur.fetchall()
-    cur.close(); conn.close()
-    for r in rows:
-        r["amount_owed"] = float(r["amount_owed"])
-        r["allocated"]   = float(r["allocated"])
-        if r["allocated"] >= r["amount_owed"] - 0.005:
-            r["status"] = "settled"
-        elif r["allocated"] > 0.005:
-            r["status"] = "partial"
-        else:
-            r["status"] = "pending"
-    return rows
+# def insert_payment_with_allocations(
+#     group_id: int,
+#     payer_id: int,
+#     payee_id: int,
+#     amount: float,
+#     note: str | None,
+#     payment_date: str,
+#     allocations: list[dict],  # [{"expense_id": int, "allocated_amt": float}]
+# ) -> int:
+#     conn = get_connection()
+#     cur  = conn.cursor()
+#     try:
+#         conn.start_transaction()
+#         cur.execute(
+#             """
+#             INSERT INTO Payments
+#                 (group_id, payer_id, payee_id, amount, note, payment_date)
+#             VALUES (%s, %s, %s, %s, %s, %s)
+#             """,
+#             (group_id, payer_id, payee_id, round(amount, 2), note or None, payment_date),
+#         )
+#         payment_id = cur.lastrowid
+#         if allocations:
+#             cur.executemany(
+#                 """
+#                 INSERT INTO Payment_Allocations (payment_id, expense_id, allocated_amt)
+#                 VALUES (%s, %s, %s)
+#                 """,
+#                 [(payment_id, a["expense_id"], round(float(a["allocated_amt"]), 2))
+#                  for a in allocations],
+#             )
+#         conn.commit()
+#         return payment_id
+#     except Exception:
+#         conn.rollback()
+#         raise
+#     finally:
+#         cur.close(); conn.close()
 
 
-def fetch_payment_allocations(payment_id: int) -> list[dict]:
-    """Which expenses a specific payment covers. For detail view."""
-    conn = get_connection()
-    cur  = conn.cursor(dictionary=True)
-    cur.execute(
-        """
-        SELECT
-            pa.expense_id,
-            pa.allocated_amt,
-            e.description,
-            e.expense_date
-        FROM   Payment_Allocations pa
-        JOIN   Expenses e ON e.expense_id = pa.expense_id
-        WHERE  pa.payment_id = %s
-        ORDER  BY e.expense_date ASC
-        """,
-        (payment_id,),
-    )
-    rows = cur.fetchall()
-    cur.close(); conn.close()
-    for r in rows:
-        r["expense_date"]  = str(r["expense_date"])
-        r["allocated_amt"] = float(r["allocated_amt"])
-    return rows
+# def fetch_expense_settlement_status(group_id: int) -> list[dict]:
+#     """
+#     For every expense in the group, returns per-split settlement status.
+#     Used to show settled/partial/pending badges on expense rows.
 
-def fetch_group_payments(group_id: int, user_id: int) -> list[dict]:
-    """All payments for a group — only if user is a member."""
-    conn = get_connection()
-    cur  = conn.cursor(dictionary=True)
-    cur.execute(
-        """
-        SELECT
-            p.payment_id,
-            p.amount,
-            p.note,
-            p.payment_date,
-            payer.name  AS payer_name,
-            payee.name  AS payee_name
-        FROM   Payments p
-        JOIN   Users payer ON payer.user_id = p.payer_id
-        JOIN   Users payee ON payee.user_id = p.payee_id
-        WHERE  p.group_id = %s
-          AND  p.group_id IN (
-                   SELECT group_id FROM Group_Members WHERE user_id = %s
-               )
-        ORDER  BY p.payment_date DESC, p.payment_id DESC
-        """,
-        (group_id, user_id),
-    )
-    rows = cur.fetchall()
-    cur.close(); conn.close()
-    return rows
+#     Returns list of:
+#     {
+#         expense_id: int,
+#         user_id: int,
+#         amount_owed: float,
+#         allocated: float,
+#         status: "settled" | "partial" | "pending"
+#     }
+#     """
+#     conn = get_connection()
+#     cur  = conn.cursor(dictionary=True)
+#     cur.execute(
+#         """
+#         SELECT
+#             es.expense_id,
+#             es.user_id,
+#             es.amount_owed,
+#             IFNULL(SUM(pa.allocated_amt), 0) AS allocated
+#         FROM   Expense_Splits es
+#         JOIN   Expenses e ON e.expense_id = es.expense_id
+#         LEFT JOIN Payment_Allocations pa ON pa.expense_id = es.expense_id
+#             AND pa.payment_id IN (
+#                 SELECT payment_id FROM Payments WHERE group_id = %s
+#             )
+#         WHERE  e.group_id = %s
+#         GROUP  BY es.expense_id, es.user_id, es.amount_owed
+#         """,
+#         (group_id, group_id),
+#     )
+#     rows = cur.fetchall()
+#     cur.close(); conn.close()
+#     for r in rows:
+#         r["amount_owed"] = float(r["amount_owed"])
+#         r["allocated"]   = float(r["allocated"])
+#         if r["allocated"] >= r["amount_owed"] - 0.005:
+#             r["status"] = "settled"
+#         elif r["allocated"] > 0.005:
+#             r["status"] = "partial"
+#         else:
+#             r["status"] = "pending"
+#     return rows
 
 
-def insert_payment(
-    group_id: int,
-    payer_id: int,
-    payee_id: int,
-    amount: float,
-    note: str | None,
-    payment_date: str,
-) -> int:
-    if payer_id == payee_id:
-        raise ValueError("Payer and payee must be different members.")
-    conn = get_connection()
-    cur  = conn.cursor()
-    try:
-        conn.start_transaction()
-        cur.execute(
-            """
-            INSERT INTO Payments
-                (group_id, payer_id, payee_id, amount, note, payment_date)
-            VALUES (%s, %s, %s, %s, %s, %s)
-            """,
-            (group_id, payer_id, payee_id, round(amount, 2), note or None, payment_date),
-        )
-        payment_id = cur.lastrowid
-        conn.commit()
-        return payment_id
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        cur.close(); conn.close()
+# def fetch_payment_allocations(payment_id: int) -> list[dict]:
+#     """Which expenses a specific payment covers. For detail view."""
+#     conn = get_connection()
+#     cur  = conn.cursor(dictionary=True)
+#     cur.execute(
+#         """
+#         SELECT
+#             pa.expense_id,
+#             pa.allocated_amt,
+#             e.description,
+#             e.expense_date
+#         FROM   Payment_Allocations pa
+#         JOIN   Expenses e ON e.expense_id = pa.expense_id
+#         WHERE  pa.payment_id = %s
+#         ORDER  BY e.expense_date ASC
+#         """,
+#         (payment_id,),
+#     )
+#     rows = cur.fetchall()
+#     cur.close(); conn.close()
+#     for r in rows:
+#         r["expense_date"]  = str(r["expense_date"])
+#         r["allocated_amt"] = float(r["allocated_amt"])
+#     return rows
 
 
-def delete_payment(payment_id: int) -> None:
-    conn = get_connection()
-    cur  = conn.cursor()
-    try:
-        conn.start_transaction()
-        cur.execute("DELETE FROM Payments WHERE payment_id = %s", (payment_id,))
-        conn.commit()
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        cur.close(); conn.close()
+# def fetch_group_payments(group_id: int, user_id: int) -> list[dict]:
+#     """All payments for a group — only if user is a member."""
+#     conn = get_connection()
+#     cur  = conn.cursor(dictionary=True)
+#     cur.execute(
+#         """
+#         SELECT
+#             p.payment_id,
+#             p.amount,
+#             p.note,
+#             p.payment_date,
+#             payer.name  AS payer_name,
+#             payee.name  AS payee_name
+#         FROM   Payments p
+#         JOIN   Users payer ON payer.user_id = p.payer_id
+#         JOIN   Users payee ON payee.user_id = p.payee_id
+#         WHERE  p.group_id = %s
+#           AND  p.group_id IN (
+#                    SELECT group_id FROM Group_Members WHERE user_id = %s
+#                )
+#         ORDER  BY p.payment_date DESC, p.payment_id DESC
+#         """,
+#         (group_id, user_id),
+#     )
+#     rows = cur.fetchall()
+#     cur.close(); conn.close()
+#     return rows
 
 
-def fetch_payment_group_id(payment_id: int) -> int | None:
-    """
-    Return the group_id for a given payment, or None if the payment
-    doesn't exist.  Used by the DELETE endpoint to authorise the caller
-    before touching the record.
-    """
-    conn = get_connection()
-    cur  = conn.cursor()
-    cur.execute(
-        "SELECT group_id FROM Payments WHERE payment_id = %s",
-        (payment_id,),
-    )
-    row = cur.fetchone()
-    cur.close(); conn.close()
-    return row[0] if row else None
+# def insert_payment(
+#     group_id: int,
+#     payer_id: int,
+#     payee_id: int,
+#     amount: float,
+#     note: str | None,
+#     payment_date: str,
+# ) -> int:
+#     if payer_id == payee_id:
+#         raise ValueError("Payer and payee must be different members.")
+#     conn = get_connection()
+#     cur  = conn.cursor()
+#     try:
+#         conn.start_transaction()
+#         cur.execute(
+#             """
+#             INSERT INTO Payments
+#                 (group_id, payer_id, payee_id, amount, note, payment_date)
+#             VALUES (%s, %s, %s, %s, %s, %s)
+#             """,
+#             (group_id, payer_id, payee_id, round(amount, 2), note or None, payment_date),
+#         )
+#         payment_id = cur.lastrowid
+#         conn.commit()
+#         return payment_id
+#     except Exception:
+#         conn.rollback()
+#         raise
+#     finally:
+#         cur.close(); conn.close()
+
+
+# def delete_payment(payment_id: int) -> None:
+#     conn = get_connection()
+#     cur  = conn.cursor()
+#     try:
+#         conn.start_transaction()
+#         cur.execute("DELETE FROM Payments WHERE payment_id = %s", (payment_id,))
+#         conn.commit()
+#     except Exception:
+#         conn.rollback()
+#         raise
+#     finally:
+#         cur.close(); conn.close()
+
+
+# def fetch_payment_group_id(payment_id: int) -> int | None:
+#     """
+#     Return the group_id for a given payment, or None if the payment
+#     doesn't exist.  Used by the DELETE endpoint to authorise the caller
+#     before touching the record.
+#     """
+#     conn = get_connection()
+#     cur  = conn.cursor()
+#     cur.execute(
+#         "SELECT group_id FROM Payments WHERE payment_id = %s",
+#         (payment_id,),
+#     )
+#     row = cur.fetchone()
+#     cur.close(); conn.close()
+#     return row[0] if row else None
 
 
 # ─────────────────────────────────────────────
@@ -1667,47 +1678,47 @@ def fetch_settlements_for_groups(group_ids: list[int]) -> dict[int, list[dict]]:
 #     return result
  
  
-def fetch_expenses_bulk(group_ids: list[int]) -> dict[int, list[dict]]:
-    """
-    FIX #15: Fetch expenses for ALL supplied groups in one query.
-    Returns {group_id: [expense_rows]}.
-    Used by AdminTransactions to avoid N individual /expenses/{id} calls.
-    """
-    if not group_ids:
-        return {}
+# def fetch_expenses_bulk(group_ids: list[int]) -> dict[int, list[dict]]:
+#     """
+#     FIX #15: Fetch expenses for ALL supplied groups in one query.
+#     Returns {group_id: [expense_rows]}.
+#     Used by AdminTransactions to avoid N individual /expenses/{id} calls.
+#     """
+#     if not group_ids:
+#         return {}
  
-    placeholders = ", ".join(["%s"] * len(group_ids))
-    conn = get_connection()
-    cur  = conn.cursor(dictionary=True)
-    cur.execute(
-        f"""
-        SELECT
-            e.group_id,
-            e.expense_id,
-            e.description,
-            e.total_amount,
-            e.split_type,
-            e.expense_date,
-            u.name              AS payer_name,
-            c.category_name,
-            sc.subcategory_name
-        FROM   Expenses e
-        JOIN   Users u             ON u.user_id         = e.payer_id
-        JOIN   Categories c        ON c.category_id     = e.category_id
-        LEFT JOIN Subcategories sc ON sc.subcategory_id = e.subcategory_id
-        WHERE  e.group_id IN ({placeholders})
-        ORDER  BY e.expense_date DESC, e.expense_id DESC
-        """,
-        group_ids,
-    )
-    rows = cur.fetchall()
-    cur.close(); conn.close()
+#     placeholders = ", ".join(["%s"] * len(group_ids))
+#     conn = get_connection()
+#     cur  = conn.cursor(dictionary=True)
+#     cur.execute(
+#         f"""
+#         SELECT
+#             e.group_id,
+#             e.expense_id,
+#             e.description,
+#             e.total_amount,
+#             e.split_type,
+#             e.expense_date,
+#             u.name              AS payer_name,
+#             c.category_name,
+#             sc.subcategory_name
+#         FROM   Expenses e
+#         JOIN   Users u             ON u.user_id         = e.payer_id
+#         JOIN   Categories c        ON c.category_id     = e.category_id
+#         LEFT JOIN Subcategories sc ON sc.subcategory_id = e.subcategory_id
+#         WHERE  e.group_id IN ({placeholders})
+#         ORDER  BY e.expense_date DESC, e.expense_id DESC
+#         """,
+#         group_ids,
+#     )
+#     rows = cur.fetchall()
+#     cur.close(); conn.close()
  
-    result: dict[int, list[dict]] = {gid: [] for gid in group_ids}
-    for r in rows:
-        gid = r.pop("group_id")
-        result[gid].append(r)
-    return result
+#     result: dict[int, list[dict]] = {gid: [] for gid in group_ids}
+#     for r in rows:
+#         gid = r.pop("group_id")
+#         result[gid].append(r)
+#     return result
 
 
 # def fetch_groups_has_expenses(group_ids: list[int]) -> dict[int, bool]:
@@ -1835,45 +1846,45 @@ def get_user_pending_settlements(user_id: int) -> list[dict]:
         r["net_balance"] = float(r["net_balance"])
     return rows
 
-def update_expense(
-    expense_id: int,
-    payer_id: int,
-    category_id: int,
-    subcategory_id: int | None,
-    total_amount: float,
-    description: str,
-    split_type: str,
-    expense_date: str,
-    splits: list[dict],
-) -> None:
-    conn = get_connection()
-    cur  = conn.cursor()
-    try:
-        conn.start_transaction()
-        cur.execute(
-            """
-            UPDATE Expenses
-            SET payer_id=%s, category_id=%s, subcategory_id=%s,
-                total_amount=%s, description=%s, split_type=%s, expense_date=%s
-            WHERE expense_id=%s
-            """,
-            (payer_id, category_id, subcategory_id,
-             total_amount, description, split_type, expense_date, expense_id),
-        )
-        cur.execute("DELETE FROM Expense_Splits WHERE expense_id = %s", (expense_id,))
-        cur.executemany(
-            """
-            INSERT INTO Expense_Splits (expense_id, user_id, amount_owed, share_pct)
-            VALUES (%s, %s, %s, %s)
-            """,
-            [(expense_id, s["user_id"], round(s["amount_owed"], 2), s.get("share_pct")) for s in splits],
-        )
-        conn.commit()
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        cur.close(); conn.close()
+# def update_expense(
+#     expense_id: int,
+#     payer_id: int,
+#     category_id: int,
+#     subcategory_id: int | None,
+#     total_amount: float,
+#     description: str,
+#     split_type: str,
+#     expense_date: str,
+#     splits: list[dict],
+# ) -> None:
+#     conn = get_connection()
+#     cur  = conn.cursor()
+#     try:
+#         conn.start_transaction()
+#         cur.execute(
+#             """
+#             UPDATE Expenses
+#             SET payer_id=%s, category_id=%s, subcategory_id=%s,
+#                 total_amount=%s, description=%s, split_type=%s, expense_date=%s
+#             WHERE expense_id=%s
+#             """,
+#             (payer_id, category_id, subcategory_id,
+#              total_amount, description, split_type, expense_date, expense_id),
+#         )
+#         cur.execute("DELETE FROM Expense_Splits WHERE expense_id = %s", (expense_id,))
+#         cur.executemany(
+#             """
+#             INSERT INTO Expense_Splits (expense_id, user_id, amount_owed, share_pct)
+#             VALUES (%s, %s, %s, %s)
+#             """,
+#             [(expense_id, s["user_id"], round(s["amount_owed"], 2), s.get("share_pct")) for s in splits],
+#         )
+#         conn.commit()
+#     except Exception:
+#         conn.rollback()
+#         raise
+#     finally:
+#         cur.close(); conn.close()
 
 
 def admin_wipe_app(admin_user_id: int) -> dict:
