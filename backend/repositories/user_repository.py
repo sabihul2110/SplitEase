@@ -143,20 +143,54 @@ def get_user_pending_settlements(user_id: int) -> list[dict]:
 
 
 def reset_user_data(user_id: int) -> dict:
+    """
+    Deletes all personal data for a user:
+    - Personal expenses, income, loans, borrows, notifications
+    - Removes from all groups (deletes groups where they're sole member)
+    - Deletes their group expenses/splits
+    Returns summary of what was deleted.
+    """
     conn = get_connection()
     cur  = conn.cursor()
     try:
         conn.start_transaction()
+
+        # Personal data
         cur.execute("DELETE FROM Personal_Expenses WHERE user_id = %s", (user_id,))
         pe = cur.rowcount
         cur.execute("DELETE FROM Income WHERE user_id = %s", (user_id,))
         inc = cur.rowcount
         cur.execute("DELETE FROM Loans WHERE lender_user_id = %s", (user_id,))
-        lo = cur.rowcount
+        loans = cur.rowcount
         cur.execute("DELETE FROM Borrows WHERE borrower_user_id = %s", (user_id,))
-        bo = cur.rowcount
+        borrows = cur.rowcount
+        cur.execute("DELETE FROM Notifications WHERE user_id = %s", (user_id,))
+
+        # Group expenses they paid
+        cur.execute("DELETE FROM Expenses WHERE payer_id = %s", (user_id,))
+        exp = cur.rowcount
+
+        # Their splits in other expenses
+        cur.execute("DELETE FROM Expense_Splits WHERE user_id = %s", (user_id,))
+
+        # Payments they sent or received
+        cur.execute("DELETE FROM Payments WHERE payer_id = %s OR payee_id = %s", (user_id, user_id))
+
+        # Groups where they are the sole member — delete the group
+        cur.execute("""
+            DELETE FROM `Groups` WHERE group_id IN (
+                SELECT group_id FROM Group_Members
+                GROUP BY group_id
+                HAVING COUNT(user_id) = 1
+                AND MAX(user_id) = %s
+            )
+        """, (user_id,))
+
+        # Remove from all remaining groups
+        cur.execute("DELETE FROM Group_Members WHERE user_id = %s", (user_id,))
+
         conn.commit()
-        return {"personal_expenses": pe, "income": inc, "loans": lo, "borrows": bo}
+        return {"personal_expenses": pe, "income": inc, "loans": loans, "borrows": borrows, "group_expenses": exp}
     except Exception:
         conn.rollback()
         raise
