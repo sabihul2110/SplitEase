@@ -292,16 +292,6 @@ CREATE TABLE Borrows (
     INDEX idx_borrows_user (borrower_user_id, status)
 );
 
-CREATE TABLE PasswordResetTokens (
-    token_id   INT PRIMARY KEY AUTO_INCREMENT,
-    user_id    INT NOT NULL,
-    token      VARCHAR(64) NOT NULL UNIQUE,
-    expires_at DATETIME NOT NULL,
-    used       TINYINT(1) NOT NULL DEFAULT 0,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE
-);
-
 -- ─────────────────────────────────────────────
 --  15. PAYMENT_ALLOCATIONS
 -- ─────────────────────────────────────────────
@@ -315,6 +305,19 @@ CREATE TABLE Payment_Allocations (
     CONSTRAINT fk_alloc_expense FOREIGN KEY (expense_id)  REFERENCES Expenses(expense_id)  ON DELETE CASCADE,
     CONSTRAINT uq_alloc         UNIQUE (payment_id, expense_id),
     CONSTRAINT chk_alloc_amt    CHECK (allocated_amt > 0)
+);
+
+-- ─────────────────────────────────────────────
+-- 16. Password Reset Tokens 
+-- ─────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS PasswordResetTokens (
+    token_id   INT PRIMARY KEY AUTO_INCREMENT,
+    user_id    INT NOT NULL,
+    token      VARCHAR(64) NOT NULL UNIQUE,
+    expires_at DATETIME NOT NULL,
+    used       TINYINT(1) NOT NULL DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE
 );
 
 
