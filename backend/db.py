@@ -185,184 +185,192 @@ from database import get_connection
 
 
 # ─────────────────────────────────────────────
-#  GROUPS
+#  GROUPS -> MOVED TO group_repository.py
 # ─────────────────────────────────────────────
-
-def fetch_groups(user_id: int) -> list[dict]:
-    """Groups the logged-in user belongs to."""
-    conn = get_connection()
-    cur  = conn.cursor(dictionary=True)
-    cur.execute(
-        """
-        SELECT g.group_id, g.group_name, g.created_at
-        FROM   `Groups` g
-        JOIN   Group_Members gm ON gm.group_id = g.group_id
-        WHERE  gm.user_id = %s
-        ORDER  BY g.group_id ASC
-        """,
-        (user_id,),
-    )
-    rows = cur.fetchall()
-    cur.close(); conn.close()
-    return rows
+from repositories.group_repository import (
+    fetch_groups, fetch_all_groups, fetch_group_members, insert_group,
+    update_group, update_group_members, delete_group, is_group_member,
+    fetch_group_members_bulk, fetch_groups_has_expenses, fetch_group_creator,
+    fetch_member_net_balance, remove_group_member, admin_wipe_groups
+)
 
 
-def fetch_all_groups() -> list[dict]:
-    """All groups with member count — admin only."""
-    conn = get_connection()
-    cur  = conn.cursor(dictionary=True)
-    cur.execute(
-        """
-        SELECT
-            g.group_id,
-            g.group_name,
-            g.created_at,
-            COUNT(gm.user_id) AS member_count
-        FROM `Groups` g
-        LEFT JOIN Group_Members gm ON gm.group_id = g.group_id
-        GROUP BY g.group_id, g.group_name, g.created_at
-        ORDER BY g.group_id ASC
-        """
-    )
-    rows = cur.fetchall()
-    cur.close(); conn.close()
-    return rows
+# def fetch_groups(user_id: int) -> list[dict]:
+#     """Groups the logged-in user belongs to."""
+#     conn = get_connection()
+#     cur  = conn.cursor(dictionary=True)
+#     cur.execute(
+#         """
+#         SELECT g.group_id, g.group_name, g.created_at
+#         FROM   `Groups` g
+#         JOIN   Group_Members gm ON gm.group_id = g.group_id
+#         WHERE  gm.user_id = %s
+#         ORDER  BY g.group_id ASC
+#         """,
+#         (user_id,),
+#     )
+#     rows = cur.fetchall()
+#     cur.close(); conn.close()
+#     return rows
 
 
-def fetch_group_members(group_id: int) -> list[dict]:
-    conn = get_connection()
-    cur  = conn.cursor(dictionary=True)
-    cur.execute(
-        """
-        SELECT u.user_id, u.name, u.upi_id
-        FROM   Group_Members gm
-        JOIN   Users u ON u.user_id = gm.user_id
-        WHERE  gm.group_id = %s
-        ORDER  BY u.user_id ASC
-        """,
-        (group_id,),
-    )
-    rows = cur.fetchall()
-    cur.close(); conn.close()
-    return rows
+# def fetch_all_groups() -> list[dict]:
+#     """All groups with member count — admin only."""
+#     conn = get_connection()
+#     cur  = conn.cursor(dictionary=True)
+#     cur.execute(
+#         """
+#         SELECT
+#             g.group_id,
+#             g.group_name,
+#             g.created_at,
+#             COUNT(gm.user_id) AS member_count
+#         FROM `Groups` g
+#         LEFT JOIN Group_Members gm ON gm.group_id = g.group_id
+#         GROUP BY g.group_id, g.group_name, g.created_at
+#         ORDER BY g.group_id ASC
+#         """
+#     )
+#     rows = cur.fetchall()
+#     cur.close(); conn.close()
+#     return rows
 
 
-def insert_group(group_name: str, user_ids: list[int]) -> int:
-    conn = get_connection()
-    cur  = conn.cursor()
-    try:
-        conn.start_transaction()
-        cur.execute(
-            "INSERT INTO `Groups` (group_name) VALUES (%s)",
-            (group_name.strip(),),
-        )
-        group_id = cur.lastrowid
-        for uid in user_ids:
-            cur.execute(
-                "INSERT INTO Group_Members (group_id, user_id) VALUES (%s, %s)",
-                (group_id, uid),
-            )
-        conn.commit()
-        return group_id
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        cur.close(); conn.close()
+# def fetch_group_members(group_id: int) -> list[dict]:
+#     conn = get_connection()
+#     cur  = conn.cursor(dictionary=True)
+#     cur.execute(
+#         """
+#         SELECT u.user_id, u.name, u.upi_id
+#         FROM   Group_Members gm
+#         JOIN   Users u ON u.user_id = gm.user_id
+#         WHERE  gm.group_id = %s
+#         ORDER  BY u.user_id ASC
+#         """,
+#         (group_id,),
+#     )
+#     rows = cur.fetchall()
+#     cur.close(); conn.close()
+#     return rows
 
 
-def update_group(group_id: int, group_name: str) -> None:
-    conn = get_connection()
-    cur  = conn.cursor()
-    try:
-        conn.start_transaction()
-        cur.execute(
-            "UPDATE `Groups` SET group_name = %s WHERE group_id = %s",
-            (group_name.strip(), group_id),
-        )
-        conn.commit()
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        cur.close(); conn.close()
+# def insert_group(group_name: str, user_ids: list[int]) -> int:
+#     conn = get_connection()
+#     cur  = conn.cursor()
+#     try:
+#         conn.start_transaction()
+#         cur.execute(
+#             "INSERT INTO `Groups` (group_name) VALUES (%s)",
+#             (group_name.strip(),),
+#         )
+#         group_id = cur.lastrowid
+#         for uid in user_ids:
+#             cur.execute(
+#                 "INSERT INTO Group_Members (group_id, user_id) VALUES (%s, %s)",
+#                 (group_id, uid),
+#             )
+#         conn.commit()
+#         return group_id
+#     except Exception:
+#         conn.rollback()
+#         raise
+#     finally:
+#         cur.close(); conn.close()
 
 
-def update_group_members(group_id: int, user_ids: list[int]) -> None:
-    """Atomically replace the member list of a group."""
-    conn = get_connection()
-    cur  = conn.cursor()
-    try:
-        conn.start_transaction()
-        cur.execute("DELETE FROM Group_Members WHERE group_id = %s", (group_id,))
-        for uid in user_ids:
-            cur.execute(
-                "INSERT INTO Group_Members (group_id, user_id) VALUES (%s, %s)",
-                (group_id, uid),
-            )
-        conn.commit()
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        cur.close(); conn.close()
+# def update_group(group_id: int, group_name: str) -> None:
+#     conn = get_connection()
+#     cur  = conn.cursor()
+#     try:
+#         conn.start_transaction()
+#         cur.execute(
+#             "UPDATE `Groups` SET group_name = %s WHERE group_id = %s",
+#             (group_name.strip(), group_id),
+#         )
+#         conn.commit()
+#     except Exception:
+#         conn.rollback()
+#         raise
+#     finally:
+#         cur.close(); conn.close()
 
 
-def delete_group(group_id: int) -> None:
-    conn = get_connection()
-    cur  = conn.cursor()
-    try:
-        conn.start_transaction()
-        cur.execute("DELETE FROM `Groups` WHERE group_id = %s", (group_id,))
-        conn.commit()
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        cur.close(); conn.close()
+# def update_group_members(group_id: int, user_ids: list[int]) -> None:
+#     """Atomically replace the member list of a group."""
+#     conn = get_connection()
+#     cur  = conn.cursor()
+#     try:
+#         conn.start_transaction()
+#         cur.execute("DELETE FROM Group_Members WHERE group_id = %s", (group_id,))
+#         for uid in user_ids:
+#             cur.execute(
+#                 "INSERT INTO Group_Members (group_id, user_id) VALUES (%s, %s)",
+#                 (group_id, uid),
+#             )
+#         conn.commit()
+#     except Exception:
+#         conn.rollback()
+#         raise
+#     finally:
+#         cur.close(); conn.close()
 
 
-def is_group_member(group_id: int, user_id: int) -> bool:
-    """Quick membership check used by all group-level routes."""
-    conn = get_connection()
-    cur  = conn.cursor()
-    cur.execute(
-        "SELECT 1 FROM Group_Members WHERE group_id = %s AND user_id = %s",
-        (group_id, user_id),
-    )
-    found = cur.fetchone() is not None
-    cur.close(); conn.close()
-    return found
+# def delete_group(group_id: int) -> None:
+#     conn = get_connection()
+#     cur  = conn.cursor()
+#     try:
+#         conn.start_transaction()
+#         cur.execute("DELETE FROM `Groups` WHERE group_id = %s", (group_id,))
+#         conn.commit()
+#     except Exception:
+#         conn.rollback()
+#         raise
+#     finally:
+#         cur.close(); conn.close()
+
+
+# def is_group_member(group_id: int, user_id: int) -> bool:
+#     """Quick membership check used by all group-level routes."""
+#     conn = get_connection()
+#     cur  = conn.cursor()
+#     cur.execute(
+#         "SELECT 1 FROM Group_Members WHERE group_id = %s AND user_id = %s",
+#         (group_id, user_id),
+#     )
+#     found = cur.fetchone() is not None
+#     cur.close(); conn.close()
+#     return found
 
 
 # ─────────────────────────────────────────────
-#  CATEGORIES
+#  CATEGORIES -> MOVED TO group_repository.py
 # ─────────────────────────────────────────────
+from repositories.group_repository import fetch_categories, fetch_subcategories
 
-def fetch_categories() -> list[dict]:
-    conn = get_connection()
-    cur  = conn.cursor(dictionary=True)
-    cur.execute("SELECT category_id, category_name FROM Categories ORDER BY category_id ASC")
-    rows = cur.fetchall()
-    cur.close(); conn.close()
-    return rows
+# def fetch_categories() -> list[dict]:
+#     conn = get_connection()
+#     cur  = conn.cursor(dictionary=True)
+#     cur.execute("SELECT category_id, category_name FROM Categories ORDER BY category_id ASC")
+#     rows = cur.fetchall()
+#     cur.close(); conn.close()
+#     return rows
 
 
-def fetch_subcategories(category_id: int) -> list[dict]:
-    conn = get_connection()
-    cur  = conn.cursor(dictionary=True)
-    cur.execute(
-        """
-        SELECT subcategory_id, subcategory_name
-        FROM   Subcategories
-        WHERE  category_id = %s
-        ORDER  BY subcategory_id ASC
-        """,
-        (category_id,),
-    )
-    rows = cur.fetchall()
-    cur.close(); conn.close()
-    return rows
+# def fetch_subcategories(category_id: int) -> list[dict]:
+#     conn = get_connection()
+#     cur  = conn.cursor(dictionary=True)
+#     cur.execute(
+#         """
+#         SELECT subcategory_id, subcategory_name
+#         FROM   Subcategories
+#         WHERE  category_id = %s
+#         ORDER  BY subcategory_id ASC
+#         """,
+#         (category_id,),
+#     )
+#     rows = cur.fetchall()
+#     cur.close(); conn.close()
+#     return rows
 
 
 # ─────────────────────────────────────────────
@@ -908,34 +916,6 @@ def fetch_personal_expenses(user_id: int) -> list[dict]:
     return rows
 
 
-# def insert_personal_expense(
-#     user_id: int,
-#     amount: float,
-#     category: str,
-#     note: str | None,
-#     expense_date: str,
-# ) -> int:
-#     conn = get_connection()
-#     cur  = conn.cursor()
-#     try:
-#         conn.start_transaction()
-#         cur.execute(
-#             """
-#             INSERT INTO Personal_Expenses (user_id, amount, category, note, expense_date)
-#             VALUES (%s, %s, %s, %s, %s)
-#             """,
-#             (user_id, round(float(amount), 2), category.strip(), note or None, expense_date),
-#         )
-#         new_id = cur.lastrowid
-#         conn.commit()
-#         return new_id
-#     except Exception:
-#         conn.rollback()
-#         raise
-#     finally:
-#         cur.close(); conn.close()
-
-
 def insert_personal_expense(
     user_id: int,
     amount: float,
@@ -1206,29 +1186,6 @@ def delete_loan(loan_id: int, user_id: int) -> None:
         raise
     finally:
         cur.close(); conn.close()
-
-
-# ─────────────────────────────────────────────
-#  UNIFIED TIMELINE
-#  Used by the My Expenses page to build a single
-#  chronological feed across all entry types.
-# ─────────────────────────────────────────────
-
-# ─────────────────────────────────────────────────────────────────────────────
-#  db_timeline_fix.py
-#
-#  INSTRUCTIONS:
-#  1. In your db.py, FIND the function fetch_unified_timeline() and
-#     REPLACE IT ENTIRELY with the version below.
-#
-#  2. Also ADD the two new functions at the bottom:
-#     - insert_borrow()
-#     - fetch_borrows()
-#     - record_borrow_repayment()
-#     - delete_borrow()
-#
-#  These are the ONLY changes needed in db.py.
-# ─────────────────────────────────────────────────────────────────────────────
 
 
 # ─────────────────────────────────────────────
@@ -1679,35 +1636,35 @@ def fetch_settlements_for_groups(group_ids: list[int]) -> dict[int, list[dict]]:
     return result
  
  
-def fetch_group_members_bulk(group_ids: list[int]) -> dict[int, list[dict]]:
-    """
-    FIX #15: Fetch members for ALL supplied groups in one query.
-    Returns {group_id: [member_rows]}.
-    """
-    if not group_ids:
-        return {}
+# def fetch_group_members_bulk(group_ids: list[int]) -> dict[int, list[dict]]:
+#     """
+#     FIX #15: Fetch members for ALL supplied groups in one query.
+#     Returns {group_id: [member_rows]}.
+#     """
+#     if not group_ids:
+#         return {}
  
-    placeholders = ", ".join(["%s"] * len(group_ids))
-    conn = get_connection()
-    cur  = conn.cursor(dictionary=True)
-    cur.execute(
-        f"""
-        SELECT gm.group_id, u.user_id, u.name, u.upi_id
-        FROM   Group_Members gm
-        JOIN   Users u ON u.user_id = gm.user_id
-        WHERE  gm.group_id IN ({placeholders})
-        ORDER  BY gm.group_id, u.user_id ASC
-        """,
-        group_ids,
-    )
-    rows = cur.fetchall()
-    cur.close(); conn.close()
+#     placeholders = ", ".join(["%s"] * len(group_ids))
+#     conn = get_connection()
+#     cur  = conn.cursor(dictionary=True)
+#     cur.execute(
+#         f"""
+#         SELECT gm.group_id, u.user_id, u.name, u.upi_id
+#         FROM   Group_Members gm
+#         JOIN   Users u ON u.user_id = gm.user_id
+#         WHERE  gm.group_id IN ({placeholders})
+#         ORDER  BY gm.group_id, u.user_id ASC
+#         """,
+#         group_ids,
+#     )
+#     rows = cur.fetchall()
+#     cur.close(); conn.close()
  
-    result: dict[int, list[dict]] = {gid: [] for gid in group_ids}
-    for r in rows:
-        gid = r.pop("group_id")
-        result[gid].append(r)
-    return result
+#     result: dict[int, list[dict]] = {gid: [] for gid in group_ids}
+#     for r in rows:
+#         gid = r.pop("group_id")
+#         result[gid].append(r)
+#     return result
  
  
 def fetch_expenses_bulk(group_ids: list[int]) -> dict[int, list[dict]]:
@@ -1753,50 +1710,45 @@ def fetch_expenses_bulk(group_ids: list[int]) -> dict[int, list[dict]]:
     return result
 
 
-# --- backend/db.py  (ADD this function at the end) ---
-#
-# Paste this at the bottom of db.py.
-# This is the only new DB function needed.
+# def fetch_groups_has_expenses(group_ids: list[int]) -> dict[int, bool]:
+#     """
+#     For each group_id, returns True if the group has at least one expense,
+#     False otherwise.
 
-def fetch_groups_has_expenses(group_ids: list[int]) -> dict[int, bool]:
-    """
-    For each group_id, returns True if the group has at least one expense,
-    False otherwise.
+#     This is the correct way to detect 'empty' groups — checking
+#     fetch_settlements_for_groups rows is WRONG because that query always
+#     returns rows (one per member from Group_Members JOIN), even when
+#     there are zero expenses. All balances are 0 in that case, but the
+#     row count is non-zero, so sRows.length === 0 is never true.
 
-    This is the correct way to detect 'empty' groups — checking
-    fetch_settlements_for_groups rows is WRONG because that query always
-    returns rows (one per member from Group_Members JOIN), even when
-    there are zero expenses. All balances are 0 in that case, but the
-    row count is non-zero, so sRows.length === 0 is never true.
+#     Returns: { group_id: bool }
+#     """
+#     if not group_ids:
+#         return {}
 
-    Returns: { group_id: bool }
-    """
-    if not group_ids:
-        return {}
+#     placeholders = ", ".join(["%s"] * len(group_ids))
+#     conn = get_connection()
+#     cur  = conn.cursor(dictionary=True)
+#     cur.execute(
+#         f"""
+#         SELECT group_id, COUNT(*) AS expense_count
+#         FROM   Expenses
+#         WHERE  group_id IN ({placeholders})
+#         GROUP  BY group_id
+#         """,
+#         group_ids,
+#     )
+#     rows = cur.fetchall()
+#     cur.close(); conn.close()
 
-    placeholders = ", ".join(["%s"] * len(group_ids))
-    conn = get_connection()
-    cur  = conn.cursor(dictionary=True)
-    cur.execute(
-        f"""
-        SELECT group_id, COUNT(*) AS expense_count
-        FROM   Expenses
-        WHERE  group_id IN ({placeholders})
-        GROUP  BY group_id
-        """,
-        group_ids,
-    )
-    rows = cur.fetchall()
-    cur.close(); conn.close()
+#     # Build result — default False for groups with no expenses at all
+#     # (those won't appear in the query result since COUNT filters them out)
+#     result = {gid: False for gid in group_ids}
+#     for r in rows:
+#         if r["expense_count"] > 0:
+#             result[r["group_id"]] = True
 
-    # Build result — default False for groups with no expenses at all
-    # (those won't appear in the query result since COUNT filters them out)
-    result = {gid: False for gid in group_ids}
-    for r in rows:
-        if r["expense_count"] > 0:
-            result[r["group_id"]] = True
-
-    return result
+#     return result
 
 
 
@@ -1957,58 +1909,58 @@ def admin_wipe_app(admin_user_id: int) -> dict:
         cur.close(); conn.close()
 
 
-def fetch_group_creator(group_id: int):
-    """Returns the user_id of the first member added (proxy for creator)."""
-    conn = get_connection()
-    cur  = conn.cursor()
-    cur.execute(
-        "SELECT user_id FROM Group_Members WHERE group_id = %s ORDER BY joined_at ASC LIMIT 1",
-        (group_id,),
-    )
-    row = cur.fetchone()
-    cur.close(); conn.close()
-    return row[0] if row else None
+# def fetch_group_creator(group_id: int):
+#     """Returns the user_id of the first member added (proxy for creator)."""
+#     conn = get_connection()
+#     cur  = conn.cursor()
+#     cur.execute(
+#         "SELECT user_id FROM Group_Members WHERE group_id = %s ORDER BY joined_at ASC LIMIT 1",
+#         (group_id,),
+#     )
+#     row = cur.fetchone()
+#     cur.close(); conn.close()
+#     return row[0] if row else None
 
 
-def fetch_member_net_balance(group_id: int, user_id: int) -> float:
-    """Net balance for one member in one group. Positive = owed to them."""
-    conn = get_connection()
-    cur  = conn.cursor()
-    cur.execute(
-        """
-        SELECT
-            IFNULL(paid.total_paid,        0)
-          - IFNULL(owed.total_owed,        0)
-          + IFNULL(psent.payments_sent,    0)
-          - IFNULL(prec.payments_received, 0)
-        FROM (SELECT 1) dummy
-        LEFT JOIN (SELECT SUM(total_amount) AS total_paid   FROM Expenses        WHERE group_id=%s AND payer_id=%s) paid  ON 1=1
-        LEFT JOIN (SELECT SUM(es.amount_owed) AS total_owed FROM Expense_Splits es JOIN Expenses e ON e.expense_id=es.expense_id WHERE e.group_id=%s AND es.user_id=%s) owed ON 1=1
-        LEFT JOIN (SELECT SUM(amount) AS payments_sent      FROM Payments        WHERE group_id=%s AND payer_id=%s) psent ON 1=1
-        LEFT JOIN (SELECT SUM(amount) AS payments_received  FROM Payments        WHERE group_id=%s AND payee_id=%s) prec  ON 1=1
-        """,
-        (group_id, user_id, group_id, user_id, group_id, user_id, group_id, user_id),
-    )
-    row = cur.fetchone()
-    cur.close(); conn.close()
-    return float(row[0]) if row and row[0] is not None else 0.0
+# def fetch_member_net_balance(group_id: int, user_id: int) -> float:
+#     """Net balance for one member in one group. Positive = owed to them."""
+#     conn = get_connection()
+#     cur  = conn.cursor()
+#     cur.execute(
+#         """
+#         SELECT
+#             IFNULL(paid.total_paid,        0)
+#           - IFNULL(owed.total_owed,        0)
+#           + IFNULL(psent.payments_sent,    0)
+#           - IFNULL(prec.payments_received, 0)
+#         FROM (SELECT 1) dummy
+#         LEFT JOIN (SELECT SUM(total_amount) AS total_paid   FROM Expenses        WHERE group_id=%s AND payer_id=%s) paid  ON 1=1
+#         LEFT JOIN (SELECT SUM(es.amount_owed) AS total_owed FROM Expense_Splits es JOIN Expenses e ON e.expense_id=es.expense_id WHERE e.group_id=%s AND es.user_id=%s) owed ON 1=1
+#         LEFT JOIN (SELECT SUM(amount) AS payments_sent      FROM Payments        WHERE group_id=%s AND payer_id=%s) psent ON 1=1
+#         LEFT JOIN (SELECT SUM(amount) AS payments_received  FROM Payments        WHERE group_id=%s AND payee_id=%s) prec  ON 1=1
+#         """,
+#         (group_id, user_id, group_id, user_id, group_id, user_id, group_id, user_id),
+#     )
+#     row = cur.fetchone()
+#     cur.close(); conn.close()
+#     return float(row[0]) if row and row[0] is not None else 0.0
 
 
-def remove_group_member(group_id: int, user_id: int) -> None:
-    conn = get_connection()
-    cur  = conn.cursor()
-    try:
-        conn.start_transaction()
-        cur.execute(
-            "DELETE FROM Group_Members WHERE group_id=%s AND user_id=%s",
-            (group_id, user_id),
-        )
-        conn.commit()
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        cur.close(); conn.close()
+# def remove_group_member(group_id: int, user_id: int) -> None:
+#     conn = get_connection()
+#     cur  = conn.cursor()
+#     try:
+#         conn.start_transaction()
+#         cur.execute(
+#             "DELETE FROM Group_Members WHERE group_id=%s AND user_id=%s",
+#             (group_id, user_id),
+#         )
+#         conn.commit()
+#     except Exception:
+#         conn.rollback()
+#         raise
+#     finally:
+#         cur.close(); conn.close()
 
 
 def create_reset_token(user_id: int, token: str, expires_at: str) -> None:
@@ -2057,34 +2009,34 @@ def use_reset_token(token_hash: str, user_id: int, new_hash: str) -> None:
         cur.close(); conn.close()
 
 
-def admin_wipe_groups() -> dict:
-    """
-    Admin only: Wipes ALL groups, group expenses, and group payments.
-    Leaves users, personal expenses, income, and peer-to-peer loans intact.
-    """
-    conn = get_connection()
-    cur  = conn.cursor()
-    try:
-        conn.start_transaction()
-        # Delete all group-dependent records
-        cur.execute("DELETE FROM Notifications WHERE group_id IS NOT NULL")
-        cur.execute("DELETE FROM Invites")
-        cur.execute("DELETE FROM Payment_Allocations")
-        cur.execute("DELETE FROM Payments")
-        cur.execute("DELETE FROM Expense_Splits")
-        cur.execute("DELETE FROM Expenses")
-        cur.execute("DELETE FROM Group_Members")
-        cur.execute("DELETE FROM `Groups`")
+# def admin_wipe_groups() -> dict:
+#     """
+#     Admin only: Wipes ALL groups, group expenses, and group payments.
+#     Leaves users, personal expenses, income, and peer-to-peer loans intact.
+#     """
+#     conn = get_connection()
+#     cur  = conn.cursor()
+#     try:
+#         conn.start_transaction()
+#         # Delete all group-dependent records
+#         cur.execute("DELETE FROM Notifications WHERE group_id IS NOT NULL")
+#         cur.execute("DELETE FROM Invites")
+#         cur.execute("DELETE FROM Payment_Allocations")
+#         cur.execute("DELETE FROM Payments")
+#         cur.execute("DELETE FROM Expense_Splits")
+#         cur.execute("DELETE FROM Expenses")
+#         cur.execute("DELETE FROM Group_Members")
+#         cur.execute("DELETE FROM `Groups`")
         
-        # Reset IDs back to 1
-        cur.execute("ALTER TABLE `Groups` AUTO_INCREMENT = 1")
-        cur.execute("ALTER TABLE Expenses AUTO_INCREMENT = 1")
-        cur.execute("ALTER TABLE Payments AUTO_INCREMENT = 1")
+#         # Reset IDs back to 1
+#         cur.execute("ALTER TABLE `Groups` AUTO_INCREMENT = 1")
+#         cur.execute("ALTER TABLE Expenses AUTO_INCREMENT = 1")
+#         cur.execute("ALTER TABLE Payments AUTO_INCREMENT = 1")
         
-        conn.commit()
-        return {"wiped": True, "message": "All groups and related data deleted."}
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        cur.close(); conn.close()
+#         conn.commit()
+#         return {"wiped": True, "message": "All groups and related data deleted."}
+#     except Exception:
+#         conn.rollback()
+#         raise
+#     finally:
+#         cur.close(); conn.close()
