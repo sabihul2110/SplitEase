@@ -18,9 +18,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import * as expensesApi from "../../api/expenses";
 import * as groupsApi from "../../api/groups";
+import DatePickerInput from '../../components/common/DatePickerInput';
 import { useAuth } from '../../context/AuthContext';
 import { Icons, CATEGORY_ICONS } from '../../components/icons/icons';
-import { Modal } from 'react-native';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS, TAB_BAR_HEIGHT } from '../../constants/theme';
 import { Avatar } from '../../components/common/Ui';
 import Input  from '../../components/common/Input';
@@ -75,11 +75,6 @@ export default function AddGroupExpenseScreen() {
   const [loading,       setLoading]       = useState(false);
   const [alert, setAlert] = useState(null);
   const [errors,        setErrors]        = useState({});
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [pickerMonth,    setPickerMonth]    = useState(() => {
-    const d = new Date(expenseDate);
-    return { year: d.getFullYear(), month: d.getMonth() };
-  });
 
   // Category data
   const [categories, setCategories] = useState(FALLBACK_CATEGORIES);
@@ -361,134 +356,13 @@ export default function AddGroupExpenseScreen() {
                   </Text>
                 </TouchableOpacity>
               )}
-              <TouchableOpacity
-                style={styles.datePickerBtn}
-                onPress={() => {
-                  const d = new Date(expenseDate);
-                  setPickerMonth({ year: d.getFullYear(), month: d.getMonth() });
-                  setShowDatePicker(true);
-                }}
-                activeOpacity={0.7}
-              >
-                <Icons.calendarDays size={16} color={COLORS.text2} />
-                <Text style={styles.datePickerText}>
-                  {new Date(expenseDate).toLocaleDateString('en-IN', {
-                    day: 'numeric', month: 'long', year: 'numeric'
-                  })}
-                </Text>
-                <Icons.chevronRight size={14} color={COLORS.text3} style={{ marginLeft: 'auto' }} />
-              </TouchableOpacity>
+              <DatePickerInput
+                value={expenseDate}
+                onChange={(v) => { setExpenseDate(v); setErrors(p => ({ ...p, date: null })); }}
+                accentColor={COLORS.primary}
+              />
               {!!errors.date && <Text style={styles.err}>{errors.date}</Text>}
             </View>
-
-            {/* Custom date picker modal */}
-            <Modal
-              visible={showDatePicker}
-              transparent
-              animationType="fade"
-              onRequestClose={() => setShowDatePicker(false)}
-            >
-              <TouchableOpacity
-                style={styles.modalOverlay}
-                activeOpacity={1}
-                onPress={() => setShowDatePicker(false)}
-              >
-                <TouchableOpacity activeOpacity={1} style={styles.calendarModal}>
-                  {/* Month navigation */}
-                  <View style={styles.calMonthRow}>
-                    <TouchableOpacity
-                      onPress={() => setPickerMonth(p => {
-                        const d = new Date(p.year, p.month - 1);
-                        return { year: d.getFullYear(), month: d.getMonth() };
-                      })}
-                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                    >
-                      <Icons.chevronLeft size={20} color={COLORS.text2} />
-                    </TouchableOpacity>
-                    <Text style={styles.calMonthLabel}>
-                      {new Date(pickerMonth.year, pickerMonth.month).toLocaleDateString('en-IN', {
-                        month: 'long', year: 'numeric'
-                      })}
-                    </Text>
-                    <TouchableOpacity
-                      onPress={() => {
-                        const next = new Date(pickerMonth.year, pickerMonth.month + 1);
-                        const now  = new Date();
-                        if (next <= now) {
-                          setPickerMonth({ year: next.getFullYear(), month: next.getMonth() });
-                        }
-                      }}
-                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                    >
-                      <Icons.chevronRight size={20} color={COLORS.text2} />
-                    </TouchableOpacity>
-                  </View>
-
-                  {/* Day-of-week headers */}
-                  <View style={styles.calDowRow}>
-                    {['Su','Mo','Tu','We','Th','Fr','Sa'].map(d => (
-                      <Text key={d} style={styles.calDow}>{d}</Text>
-                    ))}
-                  </View>
-
-                  {/* Day grid */}
-                  {(() => {
-                    const { year, month } = pickerMonth;
-                    const firstDay = new Date(year, month, 1).getDay();
-                    const daysInMonth = new Date(year, month + 1, 0).getDate();
-                    const today = new Date();
-                    const selected = new Date(expenseDate);
-                    const cells = [];
-                    for (let i = 0; i < firstDay; i++) cells.push(null);
-                    for (let d = 1; d <= daysInMonth; d++) cells.push(d);
-                    while (cells.length % 7 !== 0) cells.push(null);
-                    const weeks = [];
-                    for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
-                    return weeks.map((week, wi) => (
-                      <View key={wi} style={styles.calWeekRow}>
-                        {week.map((day, di) => {
-                          if (!day) return <View key={di} style={styles.calDayCell} />;
-                          const thisDate = new Date(year, month, day);
-                          const isFuture = thisDate > today;
-                          const isSelected =
-                            selected.getFullYear() === year &&
-                            selected.getMonth() === month &&
-                            selected.getDate() === day;
-                          return (
-                            <TouchableOpacity
-                              key={di}
-                              style={[
-                                styles.calDayCell,
-                                isSelected && styles.calDaySelected,
-                                isFuture  && styles.calDayDisabled,
-                              ]}
-                              onPress={() => {
-                                if (isFuture) return;
-                                const iso = `${year}-${String(month + 1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-                                setExpenseDate(iso);
-                                setErrors(p => ({ ...p, date: null }));
-                                setShowDatePicker(false);
-                              }}
-                              disabled={isFuture}
-                              activeOpacity={0.7}
-                            >
-                              <Text style={[
-                                styles.calDayText,
-                                isSelected && styles.calDayTextSelected,
-                                isFuture   && { color: COLORS.text3 },
-                              ]}>
-                                {day}
-                              </Text>
-                            </TouchableOpacity>
-                          );
-                        })}
-                      </View>
-                    ));
-                  })()}
-                </TouchableOpacity>
-              </TouchableOpacity>
-            </Modal>
-          </View>
 
           {/* ── Split strategy ── */}
           <View style={styles.card}>
@@ -767,60 +641,4 @@ const styles = StyleSheet.create({
   previewTotalAmt:   { fontSize: 18, fontWeight: FONT_WEIGHT.heavy, color: COLORS.text },
 
   err: { fontSize: FONT_SIZE.sm, color: COLORS.danger },
-  datePickerBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: COLORS.surface2, borderRadius: RADIUS.lg,
-    borderWidth: 1, borderColor: COLORS.border,
-    paddingHorizontal: SPACING.md, paddingVertical: 13,
-  },
-  datePickerText: {
-    flex: 1,
-    fontSize: FONT_SIZE.md, color: COLORS.text, fontWeight: FONT_WEIGHT.medium,
-  },
-  modalOverlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'center', alignItems: 'center',
-    paddingHorizontal: 24,
-  },
-  calendarModal: {
-    backgroundColor: '#111520',
-    borderRadius: 18,
-    borderWidth: 1, borderColor: '#242a3d',
-    padding: 20, width: '100%',
-  },
-  calMonthRow: {
-    flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'space-between', marginBottom: 16,
-  },
-  calMonthLabel: {
-    fontSize: FONT_SIZE.md, fontWeight: FONT_WEIGHT.bold, color: COLORS.text,
-  },
-  calDowRow: {
-    flexDirection: 'row', marginBottom: 6,
-  },
-  calDow: {
-    flex: 1, textAlign: 'center',
-    fontSize: FONT_SIZE.xs, fontWeight: FONT_WEIGHT.semibold,
-    color: COLORS.text3, paddingVertical: 4,
-  },
-  calWeekRow: {
-    flexDirection: 'row',
-  },
-  calDayCell: {
-    flex: 1, aspectRatio: 1,
-    alignItems: 'center', justifyContent: 'center',
-    borderRadius: 8, margin: 1,
-  },
-  calDaySelected: {
-    backgroundColor: '#3b82f6',
-  },
-  calDayDisabled: {
-    opacity: 0.3,
-  },
-  calDayText: {
-    fontSize: FONT_SIZE.base, color: COLORS.text2, fontWeight: FONT_WEIGHT.medium,
-  },
-  calDayTextSelected: {
-    color: '#ffffff', fontWeight: FONT_WEIGHT.bold,
-  },
 });

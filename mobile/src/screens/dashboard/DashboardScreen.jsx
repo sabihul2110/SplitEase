@@ -224,7 +224,7 @@ export default function DashboardScreen() {
         }
 
         try {
-          const { data: nc } = await notificationsApi.getCount();
+          const { data: nc } = await notificationsApi.getUnreadCount();
           setUnreadCount(nc?.count || 0);
         } catch {}
       } catch (err) {

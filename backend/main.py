@@ -9,8 +9,11 @@ FIX S6: CORS allowed_origins no longer hardcoded to localhost.
          workflows are unaffected — but production MUST set the env var.
 """
 
-from fastapi import FastAPI
+import logging
+import uuid
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from config import ALLOWED_ORIGINS
 from routers import (
@@ -19,7 +22,14 @@ from routers import (
     income, loans, timeline, borrows, ai_agent,
 )
 
-app = FastAPI(title="College Expense Splitter API", version="2.1.0")
+# ── Structured logging ────────────────────────────────────────────────────
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s %(message)s",
+)
+logger = logging.getLogger("splitease")
+
+app = FastAPI(title="SplitEase API", version="2.1.0")
 
 # FIX S6: origins come from config, which reads from the environment
 app.add_middleware(
@@ -29,6 +39,30 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.middleware("http")
+async def request_id_middleware(request: Request, call_next):
+    request_id = str(uuid.uuid4())[:8]
+    request.state.request_id = request_id
+    response = await call_next(request)
+    response.headers["X-Request-ID"] = request_id
+    return response
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    request_id = getattr(request.state, "request_id", "unknown")
+    logger.error(
+        "Unhandled exception request_id=%s path=%s method=%s error=%s",
+        request_id,
+        request.url.path,
+        request.method,
+        repr(exc),
+        exc_info=True,
+    )
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "An unexpected error occurred.", "request_id": request_id},
+    )
 
 app.include_router(auth_router.router,   prefix="/auth",        tags=["Auth"])
 app.include_router(users.router,         prefix="/users",       tags=["Users"])
@@ -50,3 +84,5 @@ app.include_router(ai_agent.router)     # prefix="/ai" defined in router
 @app.head("/health", tags=["Health"])  # add this line
 def health():
     return {"status": "ok"}
+
+logger.info("ALLOWED_ORIGINS = %s", ALLOWED_ORIGINS)

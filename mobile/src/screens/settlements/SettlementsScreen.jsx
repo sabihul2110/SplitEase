@@ -142,7 +142,7 @@ export default function SettlementsScreen() {
         setData(
           results.filter((r) =>
             r.settlements.some(
-              (s) => s.from_id === user.user_id || s.to_id === user.user_id,
+              (s) => s.from_user_id === user.user_id || s.to_user_id === user.user_id,
             ),
           ),
         );

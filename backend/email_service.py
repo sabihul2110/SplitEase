@@ -1,7 +1,10 @@
 # SplitEase/backend/email_service.py
 
+import logging
 import os
 import requests
+
+logger = logging.getLogger("splitease.email")
 
 # Fallback to SMTP_KEY if API_KEY isn't explicitly set
 BREVO_API_KEY = os.getenv("BREVO_API_KEY", os.getenv("BREVO_SMTP_KEY", ""))
@@ -96,10 +99,10 @@ def send_reset_email(to_email: str, name: str, token: str) -> None:
         # 10 second timeout prevents the frontend from hanging indefinitely
         response = requests.post(url, json=payload, headers=headers, timeout=10)
         response.raise_for_status() 
-        print(f"[email] Successfully sent reset link to {to_email} via HTTP API")
+        logger.info("Reset email sent to=%s", to_email)
         
     except requests.exceptions.RequestException as e:
-        print(f"[email] Failed: Brevo API Error: {str(e)}")
+        logger.error("Brevo API error: %s", str(e))
         if hasattr(e, 'response') and e.response is not None:
-            print(f"[email] Details: {e.response.text}")
+            logger.error("Brevo response: %s", e.response.text)
         raise

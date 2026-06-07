@@ -19,7 +19,9 @@ def _hash_token(raw: str) -> str:
     return hashlib.sha256(raw.encode()).hexdigest()
 from collections import defaultdict
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+import logging
+
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from pydantic import BaseModel, EmailStr
 import mysql.connector
 
@@ -28,6 +30,8 @@ from auth import (
     hash_password, verify_password, create_access_token,
     get_current_user,
 )
+
+logger = logging.getLogger("splitease.auth")
 
 router = APIRouter(tags=["Auth"])
 
@@ -260,7 +264,7 @@ class ResetPasswordRequest(BaseModel):
 
 
 @router.post("/forgot-password")
-def forgot_password(body: ForgotPasswordRequest, request: Request):
+def forgot_password(body: ForgotPasswordRequest, request: Request, background_tasks: BackgroundTasks):
     """
     Always returns 200 to prevent email enumeration.
     Sends a 15-minute reset link to the registered email.
@@ -274,12 +278,8 @@ def forgot_password(body: ForgotPasswordRequest, request: Request):
         token_hash = _hash_token(token)          # store hash, never raw
         expires_at = (datetime.now(timezone.utc) + timedelta(minutes=15)).strftime("%Y-%m-%d %H:%M:%S")
         db.create_reset_token(user["user_id"], token_hash, expires_at)
-        try:
-            from email_service import send_reset_email
-            send_reset_email(user["email"], user["name"], token)  # raw token goes to email only
-        except Exception as e:
-            # Log type only — full traceback can expose SMTP credentials
-            print(f"[email] Failed: {type(e).__name__}")
+        from email_service import send_reset_email
+        background_tasks.add_task(send_reset_email, user["email"], user["name"], token)
     return {"message": "If that email is registered, a reset link has been sent."}
 
 

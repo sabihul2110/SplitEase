@@ -554,12 +554,11 @@ function SettlementRow({ item, currentUserName, members, onRemind, reminding, on
             <TouchableOpacity
               style={[styles.actionBtn, { backgroundColor: C.warningLo, borderColor: C.warning + '40' }]}
               onPress={() => {
-                const fromMember = members.find(m => m.name === item.from);
-                onRemind({ ...item, from_user_id: fromMember?.user_id });
+                onRemind(item);
               }}
-              disabled={reminding === item.from}
+              disabled={reminding === item.from_user_id}
             >
-              {reminding === item.from
+              {reminding === item.from_user_id
                 ? <ActivityIndicator size="small" color={C.warning} />
                 : <><Icons.bell size={13} color={C.warning} /><Text style={[styles.actionBtnText, { color: C.warning }]}>Remind</Text></>
               }
@@ -861,7 +860,7 @@ export default function GroupDetailScreen() {
   }
 
   async function handleRemind(s) {
-    setReminding(s.from);
+    setReminding(s.from_user_id);
     try {
       await groupsApi.remindMember(groupId, { debtor_user_id: s.from_user_id, amount: s.amount });
       showToast(`Reminder sent to ${s.from}`);
@@ -871,9 +870,9 @@ export default function GroupDetailScreen() {
         Array.isArray(detail)   ? detail[0]?.msg :
         typeof detail === 'string' ? detail        :
         'Failed to send reminder.',
-        'error' // <--- This triggers the red error styling!
+        'error'
       );
-    } finally { setReminding(''); }
+    } finally { setReminding(null); }
   }
 
   async function handleDeleteGroup(force = false) {
