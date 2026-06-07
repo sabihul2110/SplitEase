@@ -13,93 +13,91 @@ export const BASE_URL = (__DEV__ && USE_LOCAL_BACKEND)
   ? 'http://192.168.29.115:8000'
   : 'https://splitease-4hcc.onrender.com';
 
+
 export const STORAGE_KEY = 'splitease_user';
 
-// export const BASE_URL = __DEV__
-//   ? 'http://192.168.29.115:8000'
-//   : 'https://splitease-4hcc.onrender.com';
 
+const V1 = '/api/v1';
 
 export const ENDPOINTS = {
   // Auth
-  login:  '/auth/login',
-  signup: '/auth/signup',
-  me:     '/auth/me',
+  login:  `${V1}/auth/login`,
+  signup: `${V1}/auth/signup`,
+  me:     `${V1}/auth/me`,
 
   // Groups
-  groups:            '/groups/',
-  groupMembers:      (id) => `/groups/${id}/members`,
-  createGroup:       '/groups/',
-  categories:        '/groups/categories',
-  subcategories:     (catId) => `/groups/subcategories/${catId}`,
-  membersBulk:       '/groups/members-bulk',
-  hasExpensesBulk:   '/groups/has-expenses-bulk',
-  deleteGroup:       (id) => `/groups/${id}`,
+  groups:            `${V1}/groups/`,
+  groupMembers:      (id) => `${V1}/groups/${id}/members`,
+  createGroup:       `${V1}/groups/`,
+  categories:        `${V1}/groups/categories`,
+  subcategories:     (catId) => `${V1}/groups/subcategories/${catId}`,
+  membersBulk:       `${V1}/groups/members-bulk`,
+  hasExpensesBulk:   `${V1}/groups/has-expenses-bulk`,
+  deleteGroup:       (id) => `${V1}/groups/${id}`,
 
   // Expenses
-  expenses:    (groupId) => `/expenses/${groupId}`,
-  addExpense:  (groupId) => `/expenses/${groupId}`,
-  delExpense:  (id)      => `/expenses/${id}`,
+  expenses:    (groupId) => `${V1}/expenses/${groupId}`,
+  addExpense:  (groupId) => `${V1}/expenses/${groupId}`,
+  delExpense:  (id)      => `${V1}/expenses/${id}`,
 
   // Payments
-  payments:    (groupId) => `/payments/${groupId}`,
-  addPayment:  (groupId) => `/payments/${groupId}`,
-  delPayment:  (id)      => `/payments/${id}`,
+  payments:    (groupId) => `${V1}/payments/${groupId}`,
+  addPayment:  (groupId) => `${V1}/payments/${groupId}`,
+  delPayment:  (id)      => `${V1}/payments/${id}`,
 
   // Settlements
-  settlementsBulk:       '/settlements/bulk',
-  settlementsSimplified: (groupId) => `/settlements/${groupId}/simplified`,
-  settlementsRaw:        (groupId) => `/settlements/${groupId}`,
+  settlementsBulk:       `${V1}/settlements/bulk`,
+  settlementsSimplified: (groupId) => `${V1}/settlements/${groupId}/simplified`,
+  settlementsRaw:        (groupId) => `${V1}/settlements/${groupId}`,
 
   // Timeline (single endpoint for all activity types)
-  timeline: '/timeline/',
+  timeline: `${V1}/timeline/`,
 
   // Notifications
-  notifCount: '/notifications/unread-count',
-  notifs:     '/notifications/',
-  readNotif:  (id) => `/notifications/read/${id}`,
-  readAll:    '/notifications/read-all',
-
-  delNotif:       (id) => `/notifications/${id}`,
-  delReadNotifs:  '/notifications/read',
+  notifCount: `${V1}/notifications/unread-count`,
+  notifs:     `${V1}/notifications/`,
+  readNotif:  (id) => `${V1}/notifications/read/${id}`,
+  readAll:    `${V1}/notifications/read-all`,
+  delNotif:       (id) => `${V1}/notifications/${id}`,
+  delReadNotifs:  `${V1}/notifications/read`,
 
   // Users / Profile
-  users:      '/users/',
-  updateMe:   '/users/me',
-  changePass: '/auth/change-password',
-  resetData:  '/users/reset-my-data',
-  adminWipe:  '/users/admin-wipe',
+  users:      `${V1}/users/`,
+  updateMe:   `${V1}/users/me`,
+  changePass: `${V1}/auth/change-password`,
+  resetData:  `${V1}/users/reset-my-data`,
+  adminWipe:  `${V1}/users/admin-wipe`,
 
   // Loans (money lent by current user)
-  loans:      '/loans/',
-  loanRepay:  (id) => `/loans/${id}/repay/`,
-  delLoan:    (id) => `/loans/${id}/`,
+  loans:      `${V1}/loans/`,
+  loanRepay:  (id) => `${V1}/loans/${id}/repay/`,
+  delLoan:    (id) => `${V1}/loans/${id}/`,
 
   // Borrows (money borrowed by current user)
-  borrows:     '/borrows/',
-  borrowRepay: (id) => `/borrows/${id}/repay/`,
-  delBorrow:   (id) => `/borrows/${id}/`,
+  borrows:     `${V1}/borrows/`,
+  borrowRepay: (id) => `${V1}/borrows/${id}/repay/`,
+  delBorrow:   (id) => `${V1}/borrows/${id}/`,
 
   // Personal expenses
-  personalExpenses:   '/personal-expenses/',
-  delPersonalExpense: (id) => `/personal-expenses/${id}/`,
+  personalExpenses:   `${V1}/personal-expenses/`,
+  delPersonalExpense: (id) => `${V1}/personal-expenses/${id}/`,
 
   // Income
-  income:    '/income/',
-  delIncome: (id) => `/income/${id}/`,
+  income:    `${V1}/income/`,
+  delIncome: (id) => `${V1}/income/${id}/`,
 
   // Invites
-  generateInvite: (groupId) => `/groups/${groupId}/invite`,
-  inviteInfo:     (token)   => `/invite/${token}`,
-  joinInvite:     (token)   => `/invite/${token}/join`,
+  generateInvite: (groupId) => `${V1}/groups/${groupId}/invite`,
+  inviteInfo:     (token)   => `${V1}/invite/${token}`,
+  joinInvite:     (token)   => `${V1}/invite/${token}/join`,
 
   // Reminders
-  remind: (groupId) => `/groups/${groupId}/remind`,
+  remind: (groupId) => `${V1}/groups/${groupId}/remind`,
 
   // Leave group
-  leaveGroup: (groupId, userId) => `/groups/${groupId}/members/${userId}`,
+  leaveGroup: (groupId, userId) => `${V1}/groups/${groupId}/members/${userId}`,
 
   // Pending splits
   pendingSplits: (groupId, debtorId, creditorId) =>
-    `/payments/pending-splits/${groupId}?debtor_id=${debtorId}&creditor_id=${creditorId}`,
+    `${V1}/payments/pending-splits/${groupId}?debtor_id=${debtorId}&creditor_id=${creditorId}`,
 };
