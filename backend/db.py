@@ -37,151 +37,151 @@ from database import get_connection
 # ----------------------------
 
 
-# ─────────────────────────────────────────────
-#  USERS
-# ─────────────────────────────────────────────
+# # ─────────────────────────────────────────────
+# #  USERS -> MOVED TO user_repository.py
+# # ─────────────────────────────────────────────
 
-def fetch_users() -> list[dict]:
-    """All users — user_id, name, upi_id (used by group pages)."""
-    conn = get_connection()
-    cur  = conn.cursor(dictionary=True)
-    cur.execute("SELECT user_id, name, upi_id FROM Users ORDER BY user_id ASC")
-    rows = cur.fetchall()
-    cur.close(); conn.close()
-    return rows
-
-
-def fetch_all_users() -> list[dict]:
-    """All users with full details — admin only."""
-    conn = get_connection()
-    cur  = conn.cursor(dictionary=True)
-    cur.execute(
-        "SELECT user_id, name, email, upi_id, role, created_at FROM Users ORDER BY user_id ASC"
-    )
-    rows = cur.fetchall()
-    cur.close(); conn.close()
-    return rows
+# def fetch_users() -> list[dict]:
+#     """All users — user_id, name, upi_id (used by group pages)."""
+#     conn = get_connection()
+#     cur  = conn.cursor(dictionary=True)
+#     cur.execute("SELECT user_id, name, upi_id FROM Users ORDER BY user_id ASC")
+#     rows = cur.fetchall()
+#     cur.close(); conn.close()
+#     return rows
 
 
-def fetch_user_by_email(email: str) -> dict | None:
-    """
-    Returns full user row for the given email, or None.
-    Used by auth login. Includes password_hash — never send to frontend.
-    """
-    conn = get_connection()
-    cur  = conn.cursor(dictionary=True)
-    cur.execute(
-        "SELECT user_id, name, email, password_hash, role, token_version FROM Users WHERE email = %s",
-        (email.strip().lower(),),
-    )
-    row = cur.fetchone()
-    cur.close(); conn.close()
-    return row
+# def fetch_all_users() -> list[dict]:
+#     """All users with full details — admin only."""
+#     conn = get_connection()
+#     cur  = conn.cursor(dictionary=True)
+#     cur.execute(
+#         "SELECT user_id, name, email, upi_id, role, created_at FROM Users ORDER BY user_id ASC"
+#     )
+#     rows = cur.fetchall()
+#     cur.close(); conn.close()
+#     return rows
 
 
-def fetch_user_by_id(user_id: int) -> dict | None:
-    """
-    Return a user row (user_id, name, email, role) by primary key,
-    or None if not found.  Used by the admin DELETE endpoint to check
-    the target's role before deletion.
-    NOTE: does NOT return password_hash — safe to inspect in route logic.
-    """
-    conn = get_connection()
-    cur  = conn.cursor(dictionary=True)
-    cur.execute(
-        "SELECT user_id, name, email, role FROM Users WHERE user_id = %s",
-        (user_id,),
-    )
-    row = cur.fetchone()
-    cur.close(); conn.close()
-    return row
+# def fetch_user_by_email(email: str) -> dict | None:
+#     """
+#     Returns full user row for the given email, or None.
+#     Used by auth login. Includes password_hash — never send to frontend.
+#     """
+#     conn = get_connection()
+#     cur  = conn.cursor(dictionary=True)
+#     cur.execute(
+#         "SELECT user_id, name, email, password_hash, role, token_version FROM Users WHERE email = %s",
+#         (email.strip().lower(),),
+#     )
+#     row = cur.fetchone()
+#     cur.close(); conn.close()
+#     return row
 
 
-def count_users() -> int:
-    """Total registered users. First user to sign up becomes admin."""
-    conn = get_connection()
-    cur  = conn.cursor()
-    cur.execute("SELECT COUNT(*) FROM Users")
-    count = cur.fetchone()[0]
-    cur.close(); conn.close()
-    return count
-
-def count_admins() -> int:
-    """
-    Return the total number of users with role = 'admin'.
-    Used to prevent deleting the last admin account.
-    """
-    conn = get_connection()
-    cur  = conn.cursor()
-    cur.execute("SELECT COUNT(*) FROM Users WHERE role = 'admin'")
-    count = cur.fetchone()[0]
-    cur.close(); conn.close()
-    return count
+# def fetch_user_by_id(user_id: int) -> dict | None:
+#     """
+#     Return a user row (user_id, name, email, role) by primary key,
+#     or None if not found.  Used by the admin DELETE endpoint to check
+#     the target's role before deletion.
+#     NOTE: does NOT return password_hash — safe to inspect in route logic.
+#     """
+#     conn = get_connection()
+#     cur  = conn.cursor(dictionary=True)
+#     cur.execute(
+#         "SELECT user_id, name, email, role FROM Users WHERE user_id = %s",
+#         (user_id,),
+#     )
+#     row = cur.fetchone()
+#     cur.close(); conn.close()
+#     return row
 
 
-def insert_user_with_auth(
-    name: str,
-    email: str,
-    password_hash: str,
-    upi_id: str | None = None,
-    role: str = "user",
-) -> int:
-    """
-    Insert a new user with hashed password and role.
-    Returns the new user_id.
-    Raises mysql.connector.IntegrityError if email already exists.
-    """
-    conn = get_connection()
-    cur  = conn.cursor()
-    try:
-        conn.start_transaction()
-        cur.execute(
-            """
-            INSERT INTO Users (name, email, upi_id, password_hash, role)
-            VALUES (%s, %s, %s, %s, %s)
-            """,
-            (name.strip(), email.strip().lower(), upi_id or None, password_hash, role),
-        )
-        new_id = cur.lastrowid
-        conn.commit()
-        return new_id
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        cur.close(); conn.close()
+# def count_users() -> int:
+#     """Total registered users. First user to sign up becomes admin."""
+#     conn = get_connection()
+#     cur  = conn.cursor()
+#     cur.execute("SELECT COUNT(*) FROM Users")
+#     count = cur.fetchone()[0]
+#     cur.close(); conn.close()
+#     return count
+
+# def count_admins() -> int:
+#     """
+#     Return the total number of users with role = 'admin'.
+#     Used to prevent deleting the last admin account.
+#     """
+#     conn = get_connection()
+#     cur  = conn.cursor()
+#     cur.execute("SELECT COUNT(*) FROM Users WHERE role = 'admin'")
+#     count = cur.fetchone()[0]
+#     cur.close(); conn.close()
+#     return count
 
 
-def update_user(user_id: int, name: str, email: str, upi_id: str | None = None) -> None:
-    conn = get_connection()
-    cur  = conn.cursor()
-    try:
-        conn.start_transaction()
-        cur.execute(
-            "UPDATE Users SET name = %s, email = %s, upi_id = %s WHERE user_id = %s",
-            (name.strip(), email.strip().lower(), upi_id or None, user_id),
-        )
-        conn.commit()
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        cur.close(); conn.close()
+# def insert_user_with_auth(
+#     name: str,
+#     email: str,
+#     password_hash: str,
+#     upi_id: str | None = None,
+#     role: str = "user",
+# ) -> int:
+#     """
+#     Insert a new user with hashed password and role.
+#     Returns the new user_id.
+#     Raises mysql.connector.IntegrityError if email already exists.
+#     """
+#     conn = get_connection()
+#     cur  = conn.cursor()
+#     try:
+#         conn.start_transaction()
+#         cur.execute(
+#             """
+#             INSERT INTO Users (name, email, upi_id, password_hash, role)
+#             VALUES (%s, %s, %s, %s, %s)
+#             """,
+#             (name.strip(), email.strip().lower(), upi_id or None, password_hash, role),
+#         )
+#         new_id = cur.lastrowid
+#         conn.commit()
+#         return new_id
+#     except Exception:
+#         conn.rollback()
+#         raise
+#     finally:
+#         cur.close(); conn.close()
 
 
-def delete_user(user_id: int) -> None:
-    """Cascade removes memberships, splits, payments."""
-    conn = get_connection()
-    cur  = conn.cursor()
-    try:
-        conn.start_transaction()
-        cur.execute("DELETE FROM Users WHERE user_id = %s", (user_id,))
-        conn.commit()
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        cur.close(); conn.close()
+# def update_user(user_id: int, name: str, email: str, upi_id: str | None = None) -> None:
+#     conn = get_connection()
+#     cur  = conn.cursor()
+#     try:
+#         conn.start_transaction()
+#         cur.execute(
+#             "UPDATE Users SET name = %s, email = %s, upi_id = %s WHERE user_id = %s",
+#             (name.strip(), email.strip().lower(), upi_id or None, user_id),
+#         )
+#         conn.commit()
+#     except Exception:
+#         conn.rollback()
+#         raise
+#     finally:
+#         cur.close(); conn.close()
+
+
+# def delete_user(user_id: int) -> None:
+    # """Cascade removes memberships, splits, payments."""
+    # conn = get_connection()
+    # cur  = conn.cursor()
+    # try:
+    #     conn.start_transaction()
+    #     cur.execute("DELETE FROM Users WHERE user_id = %s", (user_id,))
+    #     conn.commit()
+    # except Exception:
+    #     conn.rollback()
+    #     raise
+    # finally:
+    #     cur.close(); conn.close()
 
 
 # ─────────────────────────────────────────────

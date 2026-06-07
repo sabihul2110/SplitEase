@@ -25,7 +25,8 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request,
 from pydantic import BaseModel, EmailStr
 import mysql.connector
 
-import db
+import db  # Leaving this temporarily for any DB connection needs
+from repositories import user_repository
 from auth import (
     hash_password, verify_password, create_access_token,
     get_current_user,
@@ -120,12 +121,12 @@ class ChangePasswordRequest(BaseModel):
 
 @router.post("/signup", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
 def signup(body: SignupRequest):
-    if db.count_users() == 0 or body.email == "sabihul2005@gmail.com":
+    if user_repository.count_users() == 0 or body.email == "sabihul2005@gmail.com":
         role = "admin"
     else:
         role = "user"
     try:
-        user_id = db.insert_user_with_auth(
+        user_id = user_repository.insert_user_with_auth(
             name=body.name, email=body.email,
             password_hash=hash_password(body.password),
             upi_id=body.upi_id, role=role,
@@ -149,7 +150,7 @@ def login(body: LoginRequest, request: Request):
     client_ip = request.client.host if request.client else "unknown"
     _check_login_rate_limit(client_ip)
 
-    user = db.fetch_user_by_email(body.email)
+    user = user_repository.fetch_user_by_email(body.email)
     if not user or not verify_password(body.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Invalid email or password.")
 
@@ -220,7 +221,7 @@ def change_password(
         raise HTTPException(status_code=400, detail="New password must differ from the current one.")
 
     # 2. Fetch current hash from DB
-    user = db.fetch_user_by_email(current_user["email"])
+    user = user_repository.fetch_user_by_email(current_user["email"])
     if not user:
         raise HTTPException(status_code=404, detail="User not found.")
 
@@ -272,7 +273,7 @@ def forgot_password(body: ForgotPasswordRequest, request: Request, background_ta
     client_ip = request.client.host if request.client else "unknown"
     _check_forgot_rate_limit(client_ip)
     from datetime import datetime, timedelta, timezone
-    user = db.fetch_user_by_email(body.email)
+    user = user_repository.fetch_user_by_email(body.email)
     if user:
         token      = secrets.token_urlsafe(32)
         token_hash = _hash_token(token)          # store hash, never raw

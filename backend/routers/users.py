@@ -16,7 +16,8 @@ FIX S5: DELETE now prevents an admin from deleting themselves if they are
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, EmailStr
 import mysql.connector
-import db
+import db  # Leaving this temporarily for any DB connection needs
+from repositories import user_repository
 from auth import get_current_user, require_admin
 
 router = APIRouter()
@@ -44,7 +45,7 @@ def update_me(
         raise HTTPException(status_code=400, detail="Name cannot be empty.")
 
     try:
-        db.update_user(user_id, body.name.strip(), body.email.strip().lower(), body.upi_id or None)
+        user_repository.update_user(user_id, body.name.strip(), body.email.strip().lower(), body.upi_id or None)
     except mysql.connector.IntegrityError:
         raise HTTPException(status_code=409, detail="That email is already in use by another account.")
 
@@ -67,13 +68,13 @@ def update_me(
 @router.get("/")
 def list_users(current_user: dict = Depends(get_current_user)):
     """Public (any logged-in user) — returns user_id, name, upi_id for dropdowns."""
-    return db.fetch_users()
+    return user_repository.fetch_users()
 
 
 @router.get("/all")
 def list_all_users(current_user: dict = Depends(require_admin)):
     """Admin only — returns full user details."""
-    return db.fetch_all_users()
+    return user_repository.fetch_all_users()
 
 
 # ── Update ─────────────────────────────────────────────────────────────────
@@ -87,7 +88,7 @@ def update_user(
     if current_user["user_id"] != user_id and current_user["role"] != "admin":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed.")
     try:
-        db.update_user(user_id, body.name, body.email, body.upi_id)
+        user_repository.update_user(user_id, body.name, body.email, body.upi_id)
     except mysql.connector.IntegrityError:
         raise HTTPException(status_code=409, detail="Email already in use.")
     return {"message": "User updated."}
@@ -114,19 +115,19 @@ def delete_user(user_id: int, current_user: dict = Depends(require_admin)):
         )
 
     # If the target is an admin, ensure at least one admin will remain
-    target = db.fetch_user_by_id(user_id)
+    target = user_repository.fetch_user_by_id(user_id)
     if target is None:
         raise HTTPException(status_code=404, detail="User not found.")
 
     if target.get("role") == "admin":
-        admin_count = db.count_admins()
+        admin_count = user_repository.count_admins()
         if admin_count <= 1:
             raise HTTPException(
                 status_code=400,
                 detail="Cannot delete the last admin account. Promote another user first.",
             )
 
-    db.delete_user(user_id)
+    user_repository.delete_user(user_id)
     return {"message": "User deleted."}
 
 
@@ -134,25 +135,25 @@ def delete_user(user_id: int, current_user: dict = Depends(require_admin)):
 @router.post("/reset-my-data")
 def reset_my_data(current_user: dict = Depends(get_current_user)):
     user_id = current_user["user_id"]
-    pending = db.get_user_pending_settlements(user_id)
+    pending = user_repository.get_user_pending_settlements(user_id)
     if pending:
         return {
             "status": "pending_settlements",
             "message": "You have unsettled balances.",
             "pending": pending
         }
-    result = db.reset_user_data(user_id)
+    result = user_repository.reset_user_data(user_id)
     return {"status": "ok", "deleted": result}
 
 
 @router.post("/reset-my-data/force")
 def reset_my_data_force(current_user: dict = Depends(get_current_user)):
     """Reset even with pending settlements."""
-    result = db.reset_user_data(current_user["user_id"])
+    result = user_repository.reset_user_data(current_user["user_id"])
     return {"status": "ok", "deleted": result}
 
 
 @router.post("/admin-wipe")
 def admin_wipe(current_user: dict = Depends(require_admin)):
-    result = db.admin_wipe_app(current_user["user_id"])
+    result = user_repository.admin_wipe_app(current_user["user_id"])
     return result
