@@ -218,18 +218,21 @@ export default function AddGroupExpenseScreen() {
   const total = parseFloat(amount || 0);
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
-      <ScreenHeader title={isEdit ? 'Edit Expense' : 'Add Expense'} subtitle={groupName} showBack />
+    <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
+      <ScreenHeader
+        title={isEdit ? "Edit Expense" : "Add Expense"}
+        subtitle={groupName}
+        showBack
+      />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView
           contentContainerStyle={styles.scroll}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-
           {/* ── Amount ── */}
           <View style={styles.amountCard}>
             <Text style={styles.amountLabel}>TOTAL AMOUNT</Text>
@@ -238,7 +241,10 @@ export default function AddGroupExpenseScreen() {
               <TextInput
                 style={styles.amountInput}
                 value={amount}
-                onChangeText={v => { setAmount(v); setErrors(p => ({...p, amount: null})); }}
+                onChangeText={(v) => {
+                  setAmount(v);
+                  setErrors((p) => ({ ...p, amount: null }));
+                }}
                 placeholder="0.00"
                 placeholderTextColor={COLORS.text3}
                 keyboardType="decimal-pad"
@@ -252,7 +258,10 @@ export default function AddGroupExpenseScreen() {
             <Input
               label="What was this for?"
               value={description}
-              onChangeText={v => { setDescription(v); setErrors(p => ({...p, description: null})); }}
+              onChangeText={(v) => {
+                setDescription(v);
+                setErrors((p) => ({ ...p, description: null }));
+              }}
               placeholder="e.g. Hotel booking, Dinner…"
               autoCapitalize="sentences"
               error={errors.description}
@@ -267,115 +276,169 @@ export default function AddGroupExpenseScreen() {
             <View style={styles.field}>
               <Text style={styles.fieldLabel}>WHO PAID</Text>
               <View style={styles.chips}>
-                {members.map(m => (
+                {members.map((m) => (
                   <TouchableOpacity
                     key={m.user_id}
-                    style={[styles.chip, payerId === m.user_id && styles.chipActive]}
+                    style={[
+                      styles.chip,
+                      payerId === m.user_id && styles.chipActive,
+                    ]}
                     onPress={() => setPayerId(m.user_id)}
                   >
                     <Avatar name={m.name} size={22} />
-                    <Text style={[styles.chipText, payerId === m.user_id && styles.chipTextActive]}>
-                      {m.user_id === user.user_id ? 'You' : m.name}
+                    <Text
+                      style={[
+                        styles.chipText,
+                        payerId === m.user_id && styles.chipTextActive,
+                      ]}
+                    >
+                      {m.user_id === user.user_id ? "You" : m.name}
                     </Text>
                   </TouchableOpacity>
                 ))}
               </View>
             </View>
+          </View>
 
-            {/* Category */}
+          {/* Category */}
+          <View style={styles.field}>
+            <Text style={styles.fieldLabel}>CATEGORY</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View style={styles.catRow}>
+                {categories.map((cat) => {
+                  const isActive = categoryId === (cat.category_id || cat.id);
+                  const id = cat.category_id || cat.id;
+                  const name = cat.category_name || cat.name;
+                  const catCfg = CATEGORY_ICONS[name];
+                  const iconColor = isActive
+                    ? catCfg?.color || DEFAULT_CAT_COLOR
+                    : COLORS.text3;
+                  return (
+                    <TouchableOpacity
+                      key={id}
+                      style={[styles.catChip, isActive && styles.catChipActive]}
+                      onPress={() => handleCategoryChange(id)}
+                    >
+                      {catCfg ? (
+                        <catCfg.Icon size={20} color={iconColor} />
+                      ) : (
+                        <Icons.expenses size={20} color={iconColor} />
+                      )}
+                      <Text
+                        style={[
+                          styles.catName,
+                          isActive && {
+                            color: catCfg?.color || DEFAULT_CAT_COLOR,
+                          },
+                        ]}
+                      >
+                        {name}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </ScrollView>
+          </View>
+
+          {/* Subcategory */}
+          {subcats.length > 0 && (
             <View style={styles.field}>
-              <Text style={styles.fieldLabel}>CATEGORY</Text>
+              <Text style={styles.fieldLabel}>SUBCATEGORY</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <View style={styles.catRow}>
-                  {categories.map(cat => {
-                    const isActive = categoryId === (cat.category_id || cat.id);
-                    const id = cat.category_id || cat.id;
-                    const name = cat.category_name || cat.name;
-                    const catCfg = CATEGORY_ICONS[name];
-                    const iconColor = isActive
-                      ? (catCfg?.color || DEFAULT_CAT_COLOR)
-                      : COLORS.text3;
-                    return (
-                      <TouchableOpacity
-                        key={id}
-                        style={[styles.catChip, isActive && styles.catChipActive]}
-                        onPress={() => handleCategoryChange(id)}
+                  <TouchableOpacity
+                    style={[
+                      styles.subChip,
+                      subcategoryId === null && styles.subChipActive,
+                    ]}
+                    onPress={() => setSubcategoryId(null)}
+                  >
+                    <Text
+                      style={[
+                        styles.subChipText,
+                        subcategoryId === null && styles.subChipTextActive,
+                      ]}
+                    >
+                      None
+                    </Text>
+                  </TouchableOpacity>
+                  {subcats.map((s) => (
+                    <TouchableOpacity
+                      key={s.subcategory_id}
+                      style={[
+                        styles.subChip,
+                        subcategoryId === s.subcategory_id &&
+                          styles.subChipActive,
+                      ]}
+                      onPress={() => setSubcategoryId(s.subcategory_id)}
+                    >
+                      <Text
+                        style={[
+                          styles.subChipText,
+                          subcategoryId === s.subcategory_id &&
+                            styles.subChipTextActive,
+                        ]}
                       >
-                        {catCfg
-                          ? <catCfg.Icon size={20} color={iconColor} />
-                          : <Icons.expenses size={20} color={iconColor} />
-                        }
-                        <Text style={[styles.catName, isActive && { color: catCfg?.color || DEFAULT_CAT_COLOR }]}>
-                          {name}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
+                        {s.subcategory_name}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
                 </View>
               </ScrollView>
             </View>
+          )}
 
-            {/* Subcategory */}
-            {subcats.length > 0 && (
-              <View style={styles.field}>
-                <Text style={styles.fieldLabel}>SUBCATEGORY</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                  <View style={styles.catRow}>
-                    <TouchableOpacity
-                      style={[styles.subChip, subcategoryId === null && styles.subChipActive]}
-                      onPress={() => setSubcategoryId(null)}
-                    >
-                      <Text style={[styles.subChipText, subcategoryId === null && styles.subChipTextActive]}>None</Text>
-                    </TouchableOpacity>
-                    {subcats.map(s => (
-                      <TouchableOpacity
-                        key={s.subcategory_id}
-                        style={[styles.subChip, subcategoryId === s.subcategory_id && styles.subChipActive]}
-                        onPress={() => setSubcategoryId(s.subcategory_id)}
-                      >
-                        <Text style={[styles.subChipText, subcategoryId === s.subcategory_id && styles.subChipTextActive]}>
-                          {s.subcategory_name}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </ScrollView>
-              </View>
-            )}
-
-            {/* Date */}
-            <View style={styles.field}>
-              <Text style={styles.fieldLabel}>DATE</Text>
-              {expenseDate !== todayStr() && (
-                <TouchableOpacity
-                  onPress={() => setExpenseDate(todayStr())}
-                  style={{ alignSelf: 'flex-start', marginBottom: 6 }}
+          {/* Date */}
+          <View style={styles.field}>
+            <Text style={styles.fieldLabel}>DATE</Text>
+            {expenseDate !== todayStr() && (
+              <TouchableOpacity
+                onPress={() => setExpenseDate(todayStr())}
+                style={{ alignSelf: "flex-start", marginBottom: 6 }}
+              >
+                <Text
+                  style={{
+                    fontSize: FONT_SIZE.xs,
+                    color: COLORS.primary,
+                    fontWeight: FONT_WEIGHT.semibold,
+                  }}
                 >
-                  <Text style={{ fontSize: FONT_SIZE.xs, color: COLORS.primary, fontWeight: FONT_WEIGHT.semibold }}>
-                    Use today
-                  </Text>
-                </TouchableOpacity>
-              )}
-              <DatePickerInput
-                value={expenseDate}
-                onChange={(v) => { setExpenseDate(v); setErrors(p => ({ ...p, date: null })); }}
-                accentColor={COLORS.primary}
-              />
-              {!!errors.date && <Text style={styles.err}>{errors.date}</Text>}
-            </View>
+                  Use today
+                </Text>
+              </TouchableOpacity>
+            )}
+            <DatePickerInput
+              value={expenseDate}
+              onChange={(v) => {
+                setExpenseDate(v);
+                setErrors((p) => ({ ...p, date: null }));
+              }}
+              accentColor={COLORS.primary}
+            />
+            {!!errors.date && <Text style={styles.err}>{errors.date}</Text>}
+          </View>
 
           {/* ── Split strategy ── */}
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Split Strategy</Text>
             <View style={styles.splitToggle}>
-              {['equal', 'custom'].map(type => (
+              {["equal", "custom"].map((type) => (
                 <TouchableOpacity
                   key={type}
-                  style={[styles.splitBtn, splitType === type && styles.splitBtnActive]}
+                  style={[
+                    styles.splitBtn,
+                    splitType === type && styles.splitBtnActive,
+                  ]}
                   onPress={() => setSplitType(type)}
                 >
-                  <Text style={[styles.splitBtnText, splitType === type && styles.splitBtnTextActive]}>
-                    {type === 'equal' ? ' Equal' : '️  Custom'}
+                  <Text
+                    style={[
+                      styles.splitBtnText,
+                      splitType === type && styles.splitBtnTextActive,
+                    ]}
+                  >
+                    {type === "equal" ? " Equal" : "️  Custom"}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -385,21 +448,26 @@ export default function AddGroupExpenseScreen() {
           {/* ── Participants ── */}
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Participants</Text>
-            {!!errors.participants && <Text style={styles.err}>{errors.participants}</Text>}
+            {!!errors.participants && (
+              <Text style={styles.err}>{errors.participants}</Text>
+            )}
 
-            {members.map(member => {
+            {members.map((member) => {
               const isSelected = participants.includes(member.user_id);
-              const isMe       = member.user_id === user.user_id;
-              const share      = isSelected
-                ? splitType === 'equal'
+              const isMe = member.user_id === user.user_id;
+              const share = isSelected
+                ? splitType === "equal"
                   ? `₹${equalShare()}`
                   : `₹${parseFloat(customAmounts[member.user_id] || 0).toFixed(2)}`
-                : '—';
+                : "—";
 
               return (
                 <View key={member.user_id}>
                   <TouchableOpacity
-                    style={[styles.participantRow, isSelected && styles.participantRowActive]}
+                    style={[
+                      styles.participantRow,
+                      isSelected && styles.participantRowActive,
+                    ]}
                     onPress={() => toggleParticipant(member.user_id)}
                     activeOpacity={0.7}
                   >
@@ -408,23 +476,40 @@ export default function AddGroupExpenseScreen() {
                       {isMe ? `${member.name} (you)` : member.name}
                     </Text>
                     <View style={styles.participantRight}>
-                      <Text style={[styles.shareText, { color: isSelected ? COLORS.success : COLORS.text3 }]}>
+                      <Text
+                        style={[
+                          styles.shareText,
+                          { color: isSelected ? COLORS.success : COLORS.text3 },
+                        ]}
+                      >
                         {share}
                       </Text>
-                      <View style={[styles.checkbox, isSelected && styles.checkboxOn]}>
+                      <View
+                        style={[
+                          styles.checkbox,
+                          isSelected && styles.checkboxOn,
+                        ]}
+                      >
                         {isSelected && <Text style={styles.checkmark}>✓</Text>}
                       </View>
                     </View>
                   </TouchableOpacity>
 
                   {/* Custom amount input — shown inline below the row */}
-                  {splitType === 'custom' && isSelected && (
+                  {splitType === "custom" && isSelected && (
                     <View style={styles.customInputRow}>
-                      <Text style={styles.customInputLabel}>Amount for {isMe ? 'you' : member.name}:</Text>
+                      <Text style={styles.customInputLabel}>
+                        Amount for {isMe ? "you" : member.name}:
+                      </Text>
                       <TextInput
                         style={styles.customInput}
-                        value={customAmounts[member.user_id] || ''}
-                        onChangeText={v => setCustomAmounts(p => ({...p, [member.user_id]: v}))}
+                        value={customAmounts[member.user_id] || ""}
+                        onChangeText={(v) =>
+                          setCustomAmounts((p) => ({
+                            ...p,
+                            [member.user_id]: v,
+                          }))
+                        }
                         placeholder="0.00"
                         placeholderTextColor={COLORS.text3}
                         keyboardType="decimal-pad"
@@ -436,23 +521,32 @@ export default function AddGroupExpenseScreen() {
             })}
 
             {/* Custom split summary */}
-            {splitType === 'custom' && total > 0 && (
-              <View style={[
-                styles.splitSummary,
-                Math.abs(customTotal() - total) < 0.02
-                  ? { borderColor: 'rgba(16,185,129,0.3)', backgroundColor: 'rgba(16,185,129,0.06)' }
-                  : { borderColor: 'rgba(239,68,68,0.3)',  backgroundColor: 'rgba(239,68,68,0.06)'  },
-              ]}>
+            {splitType === "custom" && total > 0 && (
+              <View
+                style={[
+                  styles.splitSummary,
+                  Math.abs(customTotal() - total) < 0.02
+                    ? {
+                        borderColor: "rgba(16,185,129,0.3)",
+                        backgroundColor: "rgba(16,185,129,0.06)",
+                      }
+                    : {
+                        borderColor: "rgba(239,68,68,0.3)",
+                        backgroundColor: "rgba(239,68,68,0.06)",
+                      },
+                ]}
+              >
                 <Text style={styles.splitSummaryText}>
                   Assigned: ₹{customTotal().toFixed(2)}
-                  {'  ·  '}
+                  {"  ·  "}
                   Target: ₹{total.toFixed(2)}
-                  {Math.abs(customTotal() - total) < 0.02
-                    ? <Text style={{ color: COLORS.success }}>  ✓ Matches</Text>
-                    : null
-                  }
+                  {Math.abs(customTotal() - total) < 0.02 ? (
+                    <Text style={{ color: COLORS.success }}> ✓ Matches</Text>
+                  ) : null}
                 </Text>
-                {!!errors.custom && <Text style={styles.err}>{errors.custom}</Text>}
+                {!!errors.custom && (
+                  <Text style={styles.err}>{errors.custom}</Text>
+                )}
               </View>
             )}
           </View>
@@ -461,30 +555,48 @@ export default function AddGroupExpenseScreen() {
           {total > 0 && participants.length > 0 && (
             <View style={styles.card}>
               <Text style={styles.cardTitle}>Split Preview</Text>
-              {members.filter(m => participants.includes(m.user_id)).map(m => {
-                const isPayer = m.user_id === payerId;
-                const amt = splitType === 'equal'
-                  ? total / participants.length
-                  : parseFloat(customAmounts[m.user_id] || 0);
-                const pct = total ? ((amt / total) * 100).toFixed(1) : '0.0';
-                return (
-                  <View key={m.user_id} style={styles.previewRow}>
-                    <Avatar name={m.name} size={28} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.previewName}>
-                        {m.user_id === user.user_id ? 'You' : m.name}
-                      </Text>
-                      <Text style={{ fontSize: FONT_SIZE.xs, color: isPayer ? COLORS.success : COLORS.danger, marginTop: 1 }}>
-                        {isPayer ? `Paid ₹${total.toFixed(2)}` : `Owes ₹${amt.toFixed(2)}`}
-                      </Text>
+              {members
+                .filter((m) => participants.includes(m.user_id))
+                .map((m) => {
+                  const isPayer = m.user_id === payerId;
+                  const amt =
+                    splitType === "equal"
+                      ? total / participants.length
+                      : parseFloat(customAmounts[m.user_id] || 0);
+                  const pct = total ? ((amt / total) * 100).toFixed(1) : "0.0";
+                  return (
+                    <View key={m.user_id} style={styles.previewRow}>
+                      <Avatar name={m.name} size={28} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.previewName}>
+                          {m.user_id === user.user_id ? "You" : m.name}
+                        </Text>
+                        <Text
+                          style={{
+                            fontSize: FONT_SIZE.xs,
+                            color: isPayer ? COLORS.success : COLORS.danger,
+                            marginTop: 1,
+                          }}
+                        >
+                          {isPayer
+                            ? `Paid ₹${total.toFixed(2)}`
+                            : `Owes ₹${amt.toFixed(2)}`}
+                        </Text>
+                      </View>
+                      <View style={{ alignItems: "flex-end" }}>
+                        <Text style={styles.previewAmt}>₹{amt.toFixed(2)}</Text>
+                        <Text
+                          style={{
+                            fontSize: FONT_SIZE.xs,
+                            color: COLORS.text3,
+                          }}
+                        >
+                          {pct}%
+                        </Text>
+                      </View>
                     </View>
-                    <View style={{ alignItems: 'flex-end' }}>
-                      <Text style={styles.previewAmt}>₹{amt.toFixed(2)}</Text>
-                      <Text style={{ fontSize: FONT_SIZE.xs, color: COLORS.text3 }}>{pct}%</Text>
-                    </View>
-                  </View>
-                );
-              })}
+                  );
+                })}
               <View style={styles.previewTotal}>
                 <Text style={styles.previewTotalLabel}>Total Allocated</Text>
                 <Text style={styles.previewTotalAmt}>₹{total.toFixed(2)}</Text>
@@ -493,17 +605,25 @@ export default function AddGroupExpenseScreen() {
           )}
 
           <Button
-            title={loading ? (isEdit ? 'Saving…' : 'Recording…') : (isEdit ? 'Save Changes →' : 'Record Expense →')}
+            title={
+              loading
+                ? isEdit
+                  ? "Saving…"
+                  : "Recording…"
+                : isEdit
+                  ? "Save Changes →"
+                  : "Record Expense →"
+            }
             onPress={handleSubmit}
             loading={loading}
             fullWidth
             size="lg"
             disabled={
-              !amount || !participants.length ||
-              (splitType === 'custom' && Math.abs(customTotal() - total) > 0.01)
+              !amount ||
+              !participants.length ||
+              (splitType === "custom" && Math.abs(customTotal() - total) > 0.01)
             }
           />
-
         </ScrollView>
       </KeyboardAvoidingView>
       <AppAlert config={alert} />
