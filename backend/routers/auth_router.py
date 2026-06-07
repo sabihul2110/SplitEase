@@ -25,12 +25,9 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request,
 from pydantic import BaseModel, EmailStr
 import mysql.connector
 
-import db  # Leaving this temporarily for any DB connection needs
-from repositories import user_repository
-from auth import (
-    hash_password, verify_password, create_access_token,
-    get_current_user,
-)
+from repositories import auth_repository, user_repository
+from auth import hash_password, verify_password, create_access_token
+from dependencies import get_current_user
 
 logger = logging.getLogger("splitease.auth")
 
@@ -179,14 +176,18 @@ def get_me(current_user: dict = Depends(get_current_user)):
     FIX S3b: get_current_user now validates token_version (see auth.py).
     If the password was changed after this token was issued, this returns 401.
     """
-    conn = db.get_connection()
-    cur  = conn.cursor(dictionary=True)
-    cur.execute(
-        "SELECT user_id, name, email, role, upi_id FROM Users WHERE user_id = %s",
-        (current_user["user_id"],),
-    )
-    user = cur.fetchone()
-    cur.close(); conn.close()
+    user = user_repository.fetch_user_by_id(current_user["user_id"])
+    if user:
+        # fetch_user_by_id doesn't return upi_id, fetch full row
+        from database import get_connection
+        conn = get_connection()
+        cur  = conn.cursor(dictionary=True)
+        cur.execute(
+            "SELECT user_id, name, email, role, upi_id FROM Users WHERE user_id = %s",
+            (current_user["user_id"],),
+        )
+        user = cur.fetchone()
+        cur.close(); conn.close()
 
     if not user:
         raise HTTPException(status_code=401, detail="User no longer exists.")
@@ -231,17 +232,13 @@ def change_password(
 
     # 4. Hash + store the new password AND bump token_version atomically
     new_hash = hash_password(body.new_password)
-    conn = db.get_connection()
+    from database import get_connection
+    conn = get_connection()
     cur  = conn.cursor()
     try:
         conn.start_transaction()
         cur.execute(
-            """
-            UPDATE Users
-            SET    password_hash = %s,
-                   token_version = token_version + 1
-            WHERE  user_id = %s
-            """,
+            "UPDATE Users SET password_hash = %s, token_version = token_version + 1 WHERE user_id = %s",
             (new_hash, current_user["user_id"]),
         )
         conn.commit()
@@ -278,7 +275,7 @@ def forgot_password(body: ForgotPasswordRequest, request: Request, background_ta
         token      = secrets.token_urlsafe(32)
         token_hash = _hash_token(token)          # store hash, never raw
         expires_at = (datetime.now(timezone.utc) + timedelta(minutes=15)).strftime("%Y-%m-%d %H:%M:%S")
-        db.create_reset_token(user["user_id"], token_hash, expires_at)
+        auth_repository.create_reset_token(user["user_id"], token_hash, expires_at)
         from email_service import send_reset_email
         background_tasks.add_task(send_reset_email, user["email"], user["name"], token)
     return {"message": "If that email is registered, a reset link has been sent."}
@@ -292,7 +289,7 @@ def reset_password_via_token(body: ResetPasswordRequest):
     if body.new_password != body.confirm_password:
         raise HTTPException(400, "Passwords do not match.")
 
-    row = db.get_reset_token(_hash_token(body.token))
+    row = auth_repository.get_reset_token(_hash_token(body.token))
     if not row:
         raise HTTPException(400, "Invalid or expired reset link.")
     if row["used"]:
@@ -305,5 +302,5 @@ def reset_password_via_token(body: ResetPasswordRequest):
     if datetime.now(timezone.utc) > expires:
         raise HTTPException(400, "Reset link has expired. Please request a new one.")
 
-    db.use_reset_token(_hash_token(body.token), row["user_id"], hash_password(body.new_password))
+    auth_repository.use_reset_token(_hash_token(body.token), row["user_id"], hash_password(body.new_password))
     return {"message": "Password reset successfully. Please log in with your new password."}

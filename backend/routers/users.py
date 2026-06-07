@@ -16,9 +16,10 @@ FIX S5: DELETE now prevents an admin from deleting themselves if they are
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, EmailStr
 import mysql.connector
-import db  # Leaving this temporarily for any DB connection needs
+
 from repositories import user_repository
-from auth import get_current_user, require_admin
+from database import get_connection
+from dependencies import get_current_user, require_admin
 
 router = APIRouter()
 
@@ -50,7 +51,7 @@ def update_me(
         raise HTTPException(status_code=409, detail="That email is already in use by another account.")
 
     # Return fresh row so frontend can sync AuthContext
-    conn = db.get_connection()
+    conn = get_connection()
     cur  = conn.cursor(dictionary=True)
     cur.execute(
         "SELECT user_id, name, email, upi_id, role FROM Users WHERE user_id = %s",

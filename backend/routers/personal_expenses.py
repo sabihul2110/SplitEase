@@ -11,8 +11,8 @@ from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
-import db
-from auth import get_current_user
+from repositories import personal_expense_repository
+from dependencies import get_current_user
 
 router = APIRouter()
 
@@ -32,7 +32,7 @@ class PersonalExpenseIn(BaseModel):
 
 @router.get("/personal-expenses/")
 def list_personal_expenses(current_user: dict = Depends(get_current_user)):
-    return db.fetch_personal_expenses(current_user["user_id"])
+    return personal_expense_repository.fetch_personal_expenses(current_user["user_id"])
 
 @router.post("/personal-expenses/", status_code=status.HTTP_201_CREATED)
 def add_personal_expense(
@@ -41,7 +41,7 @@ def add_personal_expense(
 ):
     if body.amount <= 0:
         raise HTTPException(status_code=422, detail="Amount must be positive.")
-    new_id = db.insert_personal_expense(
+    new_id = personal_expense_repository.insert_personal_expense(
         user_id        = current_user["user_id"],
         amount         = body.amount,
         category       = body.category,
@@ -58,5 +58,5 @@ def delete_personal_expense(
     expense_id: int,
     current_user: dict = Depends(get_current_user),
 ):
-    db.delete_personal_expense(expense_id, current_user["user_id"])
+    personal_expense_repository.delete_personal_expense(expense_id, current_user["user_id"])
     return {"message": "Deleted."}

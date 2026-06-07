@@ -23,8 +23,9 @@ from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
-import db
-from auth import get_current_user
+from database import get_connection as _get_connection
+from repositories import group_repository
+from dependencies import get_current_user
 from config import INVITE_EXPIRY_HOURS
 
 router = APIRouter()
@@ -55,7 +56,7 @@ def create_invite(
         else None
     )
 
-    conn = db.get_connection()
+    conn = _get_connection()
     cur  = conn.cursor()
     try:
         cur.execute(
@@ -73,7 +74,7 @@ def create_invite(
 
 def get_invite_by_token(token: str) -> dict | None:
     """Return invite row or None. Includes group_name via JOIN."""
-    conn = db.get_connection()
+    conn = _get_connection()
     cur  = conn.cursor(dictionary=True)
     cur.execute(
         """
@@ -120,10 +121,10 @@ def join_group_via_invite(token: str, user_id: int) -> dict:
     group_id   = invite["group_id"]
     group_name = invite["group_name"]
 
-    if db.is_group_member(group_id, user_id):
+    if group_repository.is_group_member(group_id, user_id):
         return {"group_id": group_id, "group_name": group_name, "already_member": True}
 
-    conn = db.get_connection()
+    conn = _get_connection()
     cur  = conn.cursor()
     try:
         conn.start_transaction()
@@ -165,7 +166,7 @@ def generate_invite(
     """
     user_id = current_user["user_id"]
 
-    if not db.is_group_member(group_id, user_id) and current_user["role"] != "admin":
+    if not group_repository.is_group_member(group_id, user_id) and current_user["role"] != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only group members can generate invite links.",
@@ -257,7 +258,7 @@ def revoke_invite(
             detail="Only the invite creator or an admin can revoke this link.",
         )
 
-    conn = db.get_connection()
+    conn = _get_connection()
     cur  = conn.cursor()
     try:
         cur.execute("DELETE FROM Invites WHERE token = %s", (token,))

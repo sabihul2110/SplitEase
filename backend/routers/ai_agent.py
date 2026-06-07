@@ -28,8 +28,9 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from pydantic import BaseModel
 
 from config import GEMINI_API_KEY
-import db
-from auth import get_current_user
+
+from repositories import group_repository
+from dependencies import get_current_user
 
 router = APIRouter(prefix="/ai", tags=["AI Agent"])
 
@@ -271,8 +272,8 @@ async def scan_receipt(
     if len(image_bytes) > 10 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="Image too large. Max 10 MB.")
 
-    categories  = db.fetch_categories()
-    subcats_map = {cat["category_id"]: db.fetch_subcategories(cat["category_id"]) for cat in categories}
+    categories  = group_repository.fetch_categories()
+    subcats_map = {cat["category_id"]: group_repository.fetch_subcategories(cat["category_id"]) for cat in categories}
 
     # FIX #20: use singleton agent, not a new instance per request
     agent = get_agent()

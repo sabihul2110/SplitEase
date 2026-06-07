@@ -18,8 +18,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from datetime import date
 
-import db
-from auth import get_current_user
+from repositories import expense_repository, group_repository
+from dependencies import get_current_user
 
 router = APIRouter()
 
@@ -52,28 +52,28 @@ def list_expenses(group_id: int, current_user: dict = Depends(get_current_user))
 
     if is_admin:
         # Admin path: fetch without membership gate
-        return db.fetch_group_expenses_admin(group_id)
+        return expense_repository.fetch_group_expenses_admin(group_id)
     else:
         # Normal path: membership enforced inside the query
-        return db.fetch_group_expenses(group_id, current_user["user_id"])
+        return expense_repository.fetch_group_expenses(group_id, current_user["user_id"])
 
 
 @router.get("/{group_id}/{expense_id}/splits")
 def expense_splits(group_id: int, expense_id: int, current_user: dict = Depends(get_current_user)):
     is_admin = current_user.get("role") == "admin"
-    if not is_admin and not db.is_group_member(group_id, current_user["user_id"]):
+    if not is_admin and not group_repository.is_group_member(group_id, current_user["user_id"]):
         raise HTTPException(status_code=403, detail="Not a member of this group.")
-    return db.fetch_expense_splits(expense_id)
+    return expense_repository.fetch_expense_splits(expense_id)
 
 
 @router.post("/{group_id}", status_code=status.HTTP_201_CREATED)
 def add_expense(group_id: int, body: AddExpenseRequest, current_user: dict = Depends(get_current_user)):
-    if not db.is_group_member(group_id, current_user["user_id"]):
+    if not group_repository.is_group_member(group_id, current_user["user_id"]):
         raise HTTPException(status_code=403, detail="Not a member of this group.")
     if body.split_type not in ("equal", "custom"):
         raise HTTPException(status_code=400, detail="split_type must be 'equal' or 'custom'.")
 
-    expense_id = db.insert_expense(
+    expense_id = expense_repository.insert_expense(
         group_id       = group_id,
         payer_id       = body.payer_id,
         category_id    = body.category_id,
@@ -89,36 +89,36 @@ def add_expense(group_id: int, body: AddExpenseRequest, current_user: dict = Dep
 
 @router.get("/{expense_id}/splits")
 def get_expense_splits(expense_id: int, current_user: dict = Depends(get_current_user)):
-    group_id = db.fetch_expense_group_id(expense_id)
+    group_id = expense_repository.fetch_expense_group_id(expense_id)
     if group_id is None:
         raise HTTPException(status_code=404, detail="Expense not found.")
     is_admin = current_user.get("role") == "admin"
-    if not is_admin and not db.is_group_member(group_id, current_user["user_id"]):
+    if not is_admin and not group_repository.is_group_member(group_id, current_user["user_id"]):
         raise HTTPException(status_code=403, detail="Not a member of this group.")
-    splits = db.fetch_expense_splits(expense_id)
+    splits = expense_repository.fetch_expense_splits(expense_id)
     return splits
 
 @router.get("/{group_id}/settlement-status")
 def settlement_status(group_id: int, current_user: dict = Depends(get_current_user)):
     """Per-split settlement status for all expenses in a group."""
-    if not db.is_group_member(group_id, current_user["user_id"]) and current_user.get("role") != "admin":
+    if not group_repository.is_group_member(group_id, current_user["user_id"]) and current_user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Not a member of this group.")
-    return db.fetch_expense_settlement_status(group_id)
+    return expense_repository.fetch_expense_settlement_status(group_id)
 
 
 @router.delete("/{expense_id}")
 def delete_expense(expense_id: int, current_user: dict = Depends(get_current_user)):
     # Batch 1 fix retained
-    group_id = db.fetch_expense_group_id(expense_id)
+    group_id = expense_repository.fetch_expense_group_id(expense_id)
     if group_id is None:
         raise HTTPException(status_code=404, detail="Expense not found.")
 
-    is_member = db.is_group_member(group_id, current_user["user_id"])
+    is_member = group_repository.is_group_member(group_id, current_user["user_id"])
     is_admin  = current_user.get("role") == "admin"
     if not is_member and not is_admin:
         raise HTTPException(status_code=403, detail="Not a member of this group.")
 
-    db.delete_expense(expense_id)
+    expense_repository.delete_expense(expense_id)
     return {"message": "Expense deleted."}
 
 
@@ -135,16 +135,16 @@ class UpdateExpenseRequest(BaseModel):
 
 @router.put("/{expense_id}")
 def update_expense(expense_id: int, body: UpdateExpenseRequest, current_user: dict = Depends(get_current_user)):
-    group_id = db.fetch_expense_group_id(expense_id)
+    group_id = expense_repository.fetch_expense_group_id(expense_id)
     if group_id is None:
         raise HTTPException(status_code=404, detail="Expense not found.")
-    is_member = db.is_group_member(group_id, current_user["user_id"])
+    is_member = group_repository.is_group_member(group_id, current_user["user_id"])
     is_admin  = current_user.get("role") == "admin"
     if not is_member and not is_admin:
         raise HTTPException(status_code=403, detail="Not a member of this group.")
     if body.split_type not in ("equal", "custom"):
         raise HTTPException(status_code=400, detail="split_type must be 'equal' or 'custom'.")
-    db.update_expense(
+    expense_repository.update_expense(
         expense_id     = expense_id,
         payer_id       = body.payer_id,
         category_id    = body.category_id,

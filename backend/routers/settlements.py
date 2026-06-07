@@ -15,8 +15,8 @@ FIX #15: New POST /settlements/bulk endpoint accepts a list of group_ids
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-import db
-from auth import get_current_user
+from repositories import settlement_repository, group_repository
+from dependencies import get_current_user
 
 router = APIRouter()
 
@@ -25,17 +25,17 @@ router = APIRouter()
 def raw_settlements(group_id: int, current_user: dict = Depends(get_current_user)):
     """Returns one row per member with their net_balance."""
     is_admin = current_user.get("role") == "admin"
-    if not is_admin and not db.is_group_member(group_id, current_user["user_id"]):
+    if not is_admin and not group_repository.is_group_member(group_id, current_user["user_id"]):
         raise HTTPException(status_code=403, detail="Not a member of this group.")
-    rows = db.calculate_settlements(group_id, current_user["user_id"])
+    rows = settlement_repository.calculate_settlements(group_id, current_user["user_id"])
     return rows
 
 
 @router.get("/{group_id}/simplified")
 def simplified_settlements(group_id: int, current_user: dict = Depends(get_current_user)):
     """Returns minimal transactions needed to settle all debts."""
-    rows = db.calculate_settlements(group_id, current_user["user_id"])
-    return db.simplify_debts(rows)
+    rows = settlement_repository.calculate_settlements(group_id, current_user["user_id"])
+    return settlement_repository.simplify_debts(rows)
 
 
 class BulkSettlementRequest(BaseModel):
@@ -66,10 +66,10 @@ def bulk_settlements(
     else:
         allowed_ids = [
             gid for gid in body.group_ids
-            if db.is_group_member(gid, current_user["user_id"])
+            if group_repository.is_group_member(gid, current_user["user_id"])
         ]
 
     if not allowed_ids:
         return {}
 
-    return db.fetch_settlements_for_groups(allowed_ids)
+    return settlement_repository.fetch_settlements_for_groups(allowed_ids)

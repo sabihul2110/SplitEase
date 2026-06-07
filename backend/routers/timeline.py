@@ -11,8 +11,8 @@ Optional query param:  ?limit=100  (default 100, max 200)
 
 from fastapi import APIRouter, Depends, Query
 
-import db
-from auth import get_current_user
+from repositories import timeline_repository
+from dependencies import get_current_user
 
 router = APIRouter()
 
@@ -23,7 +23,7 @@ def get_timeline(
     offset: int = Query(default=0,   ge=0),
     current_user: dict = Depends(get_current_user),
 ):
-    return db.fetch_unified_timeline(
+    return timeline_repository.fetch_unified_timeline(
         current_user["user_id"],
         limit=limit,
         offset=offset,

@@ -17,8 +17,8 @@ GET    /groups/subcategories/{cat_id}→ subcategories for a category
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
-import db
-from auth import get_current_user, require_admin
+from repositories import group_repository, settlement_repository
+from dependencies import get_current_user, require_admin
 
 router = APIRouter()
 
@@ -38,48 +38,48 @@ class UpdateMembersRequest(BaseModel):
 
 @router.get("/")
 def my_groups(current_user: dict = Depends(get_current_user)):
-    return db.fetch_groups(current_user["user_id"])
+    return group_repository.fetch_groups(current_user["user_id"])
 
 
 @router.get("/all")
 def all_groups(current_user: dict = Depends(require_admin)):
-    return db.fetch_all_groups()
+    return group_repository.fetch_all_groups()
 
 
 @router.get("/categories")
 def categories(current_user: dict = Depends(get_current_user)):
-    return db.fetch_categories()
+    return group_repository.fetch_categories()
 
 
 @router.get("/subcategories/{category_id}")
 def subcategories(category_id: int, current_user: dict = Depends(get_current_user)):
-    return db.fetch_subcategories(category_id)
+    return group_repository.fetch_subcategories(category_id)
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
 def create_group(body: CreateGroupRequest, current_user: dict = Depends(get_current_user)):
     if len(body.user_ids) < 2:
         raise HTTPException(status_code=400, detail="A group needs at least 2 members.")
-    group_id = db.insert_group(body.group_name, body.user_ids)
+    group_id = group_repository.insert_group(body.group_name, body.user_ids)
     return {"group_id": group_id, "message": "Group created."}
 
 
 @router.get("/{group_id}/members")
 def group_members(group_id: int, current_user: dict = Depends(get_current_user)):
-    if not db.is_group_member(group_id, current_user["user_id"]) and current_user["role"] != "admin":
+    if not group_repository.is_group_member(group_id, current_user["user_id"]) and current_user["role"] != "admin":
         raise HTTPException(status_code=403, detail="Not a member of this group.")
-    return db.fetch_group_members(group_id)
+    return group_repository.fetch_group_members(group_id)
 
 
 @router.put("/{group_id}")
 def update_group(group_id: int, body: UpdateGroupRequest, current_user: dict = Depends(require_admin)):
-    db.update_group(group_id, body.group_name)
+    group_repository.update_group(group_id, body.group_name)
     return {"message": "Group renamed."}
 
 
 @router.put("/{group_id}/members")
 def update_members(group_id: int, body: UpdateMembersRequest, current_user: dict = Depends(require_admin)):
-    db.update_group_members(group_id, body.user_ids)
+    group_repository.update_group_members(group_id, body.user_ids)
     return {"message": "Members updated."}
 
 
@@ -90,12 +90,12 @@ def delete_group(
     current_user: dict = Depends(get_current_user),
 ):
     is_admin   = current_user.get("role") == "admin"
-    creator_id = db.fetch_group_creator(group_id)
+    creator_id = group_repository.fetch_group_creator(group_id)
     if not is_admin and current_user["user_id"] != creator_id:
         raise HTTPException(status_code=403, detail="Only the group creator or an admin can delete this group.")
 
     if not force:
-        balances   = db.fetch_settlements_for_groups([group_id])
+        balances   = settlement_repository.fetch_settlements_for_groups([group_id])
         group_rows = balances.get(group_id, [])
         has_debt   = any(abs(float(r.get("net_balance", 0))) > 0.01 for r in group_rows)
         if has_debt:
@@ -104,7 +104,7 @@ def delete_group(
                 detail="This group has unsettled balances. Settle up first, or force-delete.",
             )
 
-    db.delete_group(group_id)
+    group_repository.delete_group(group_id)
     return {"message": "Group deleted."}
 
 # --- backend/routers/groups.py  (ADD these two endpoints) ---
@@ -141,13 +141,13 @@ def members_bulk(
     else:
         allowed_ids = [
             gid for gid in body.group_ids
-            if db.is_group_member(gid, current_user["user_id"])
+            if group_repository.is_group_member(gid, current_user["user_id"])
         ]
 
     if not allowed_ids:
         return {}
 
-    return db.fetch_group_members_bulk(allowed_ids)
+    return group_repository.fetch_group_members_bulk(allowed_ids)
 
 
 @router.post("/has-expenses-bulk")
@@ -169,13 +169,13 @@ def has_expenses_bulk(
     else:
         allowed_ids = [
             gid for gid in body.group_ids
-            if db.is_group_member(gid, current_user["user_id"])
+            if group_repository.is_group_member(gid, current_user["user_id"])
         ]
 
     if not allowed_ids:
         return {}
 
-    return db.fetch_groups_has_expenses(allowed_ids)
+    return group_repository.fetch_groups_has_expenses(allowed_ids)
 
 
 @router.delete("/{group_id}/members/{user_id}")
@@ -188,10 +188,10 @@ def leave_group(group_id: int, user_id: int, current_user: dict = Depends(get_cu
     if not is_admin and current_user["user_id"] != user_id:
         raise HTTPException(status_code=403, detail="Cannot remove another member.")
 
-    if not db.is_group_member(group_id, user_id):
+    if not group_repository.is_group_member(group_id, user_id):
         raise HTTPException(status_code=404, detail="Member not found in group.")
 
-    net = db.fetch_member_net_balance(group_id, user_id)
+    net = group_repository.fetch_member_net_balance(group_id, user_id)
     if net is None:
         net = 0.0
     if abs(net) > 0.01:   # allow tiny float rounding
@@ -200,7 +200,7 @@ def leave_group(group_id: int, user_id: int, current_user: dict = Depends(get_cu
             detail=f"Cannot leave: net balance is ₹{net:,.0f}. Settle up first.",
         )
 
-    db.remove_group_member(group_id, user_id)
+    group_repository.remove_group_member(group_id, user_id)
     return {"message": "Left the group."}
 
 
@@ -208,4 +208,4 @@ def leave_group(group_id: int, user_id: int, current_user: dict = Depends(get_cu
 @router.delete("/admin/wipe-groups")
 def wipe_all_groups(current_user: dict = Depends(require_admin)):
     """Admin only: delete every group, expense, payment, and settlement."""
-    return db.admin_wipe_groups()
+    return group_repository.admin_wipe_groups()

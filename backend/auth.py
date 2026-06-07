@@ -18,18 +18,19 @@ from fastapi.security import OAuth2PasswordBearer
 
 from config import JWT_SECRET, JWT_ALGORITHM, JWT_EXPIRE_MINUTES
 
+# get_current_user and require_admin have moved to dependencies.py
+
 # ── Password hashing ───────────────────────────────────────────────────────
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
 
 def hash_password(plain: str) -> str:
     return pwd_context.hash(plain)
 
+
 def verify_password(plain: str, hashed: str) -> bool:
     return pwd_context.verify(plain, hashed)
 
-
-# ── JWT ────────────────────────────────────────────────────────────────────
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 def create_access_token(data: dict) -> str:
     """
@@ -56,8 +57,3 @@ def decode_token(token: str) -> dict:
             detail="Invalid or expired token",
             headers={"WWW-Authenticate": "Bearer"},
         )
-
-
-# ── Dependency injected into protected routes ──────────────────────────────
-# MOVED to dependencies.py
-from dependencies import get_current_user, require_admin

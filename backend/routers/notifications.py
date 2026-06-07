@@ -19,75 +19,10 @@ FIX #13: get_user_by_name_in_group replaced with get_user_by_id_in_group.
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from pydantic import BaseModel
 
-import db
-from repositories import notification_repository
-from auth import get_current_user
+from repositories import notification_repository, group_repository
+from dependencies import get_current_user
 
 router = APIRouter()
-
-
-# ── DB helpers ────────────────────────────────────────────────────────────────
-# All local DB helpers have been moved to repositories/notification_repository.py
-
-# def get_user_name(user_id: int) -> str:
-#     """Fetch a user's display name by ID. Returns 'Someone' as fallback."""
-#     conn = db.get_connection()
-#     cur  = conn.cursor()
-#     cur.execute("SELECT name FROM Users WHERE user_id = %s", (user_id,))
-#     row = cur.fetchone()
-#     cur.close(); conn.close()
-#     return row[0] if row else "Someone"
-
-# def get_group_name(group_id: int) -> str:
-#     conn = db.get_connection()
-#     cur  = conn.cursor()
-#     cur.execute("SELECT group_name FROM `Groups` WHERE group_id = %s", (group_id,))
-#     row = cur.fetchone()
-#     cur.close(); conn.close()
-#     return row[0] if row else "your group"
-
-# def create_notification(
-#     user_id:           int,
-#     message:           str,
-#     notification_type: str = "reminder",
-#     from_user_id:      int | None = None,
-#     group_id:          int | None = None,
-# ) -> None:
-#     conn = db.get_connection()
-#     cur  = conn.cursor()
-#     try:
-#         cur.execute(
-#             """
-#             INSERT INTO Notifications (user_id, from_user_id, type, message, group_id)
-#             VALUES (%s, %s, %s, %s, %s)
-#             """,
-#             (user_id, from_user_id, notification_type, message, group_id),
-#         )
-#         conn.commit()
-#     finally:
-#         cur.close(); conn.close()
-
-
-# def get_user_by_id_in_group(user_id: int, group_id: int) -> dict | None:
-#     """
-#     FIX #13: Look up a group member by user_id (not name).
-#     Returns the member row or None if the user isn't in this group.
-#     This is unambiguous even when two members share the same display name.
-#     """
-#     conn = db.get_connection()
-#     cur  = conn.cursor(dictionary=True)
-#     cur.execute(
-#         """
-#         SELECT u.user_id, u.name, u.email
-#         FROM   Group_Members gm
-#         JOIN   Users u ON u.user_id = gm.user_id
-#         WHERE  gm.group_id = %s AND gm.user_id = %s
-#         """,
-#         (group_id, user_id),
-#     )
-#     row = cur.fetchone()
-#     cur.close(); conn.close()
-#     return row
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────
@@ -156,7 +91,7 @@ def send_reminder(
     """
     sender_id = current_user["user_id"]
 
-    if not db.is_group_member(group_id, sender_id):
+    if not group_repository.is_group_member(group_id, sender_id):
         raise HTTPException(status_code=403, detail="Not a member of this group.")
 
     if body.debtor_user_id == sender_id:

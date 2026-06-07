@@ -11,8 +11,8 @@ DELETE /borrows/{id}            → delete borrow record (owner only)
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
-import db
-from auth import get_current_user
+from repositories import borrow_repository
+from dependencies import get_current_user
 
 router = APIRouter()
 
@@ -30,7 +30,7 @@ class BorrowRepayIn(BaseModel):
 
 @router.get("/borrows/")
 def list_borrows(current_user: dict = Depends(get_current_user)):
-    return db.fetch_borrows(current_user["user_id"])
+    return borrow_repository.fetch_borrows(current_user["user_id"])
 
 
 @router.post("/borrows/", status_code=status.HTTP_201_CREATED)
@@ -42,7 +42,7 @@ def add_borrow(
         raise HTTPException(status_code=422, detail="Amount must be positive.")
     if not body.lender_name.strip():
         raise HTTPException(status_code=422, detail="Lender name is required.")
-    new_id = db.insert_borrow(
+    new_id = borrow_repository.insert_borrow(
         borrower_user_id = current_user["user_id"],
         lender_name      = body.lender_name,
         amount           = body.amount,
@@ -61,7 +61,7 @@ def repay_borrow(
     if body.repayment_amount <= 0:
         raise HTTPException(status_code=422, detail="Repayment must be positive.")
     try:
-        result = db.record_borrow_repayment(
+        result = borrow_repository.record_borrow_repayment(
             borrow_id        = borrow_id,
             user_id          = current_user["user_id"],
             repayment_amount = body.repayment_amount,
@@ -76,5 +76,5 @@ def delete_borrow(
     borrow_id: int,
     current_user: dict = Depends(get_current_user),
 ):
-    db.delete_borrow(borrow_id, current_user["user_id"])
+    borrow_repository.delete_borrow(borrow_id, current_user["user_id"])
     return {"message": "Borrow record deleted."}

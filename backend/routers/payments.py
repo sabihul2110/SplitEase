@@ -16,8 +16,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from datetime import date
 
-import db
-from auth import get_current_user
+from repositories import payment_repository, group_repository
+from dependencies import get_current_user
 
 router = APIRouter()
 
@@ -39,14 +39,14 @@ class AddPaymentRequest(BaseModel):
 @router.get("/{group_id}")
 def list_payments(group_id: int, current_user: dict = Depends(get_current_user)):
     is_admin = current_user.get("role") == "admin"
-    if not is_admin and not db.is_group_member(group_id, current_user["user_id"]):
+    if not is_admin and not group_repository.is_group_member(group_id, current_user["user_id"]):
         raise HTTPException(status_code=403, detail="Not a member of this group.")
-    return db.fetch_group_payments(group_id, current_user["user_id"])
+    return payment_repository.fetch_group_payments(group_id, current_user["user_id"])
 
 
 @router.post("/{group_id}", status_code=status.HTTP_201_CREATED)
 def add_payment(group_id: int, body: AddPaymentRequest, current_user: dict = Depends(get_current_user)):
-    if not db.is_group_member(group_id, current_user["user_id"]):
+    if not group_repository.is_group_member(group_id, current_user["user_id"]):
         raise HTTPException(status_code=403, detail="Not a member of this group.")
     if body.payer_id == body.payee_id:
         raise HTTPException(status_code=400, detail="Payer and payee must be different.")
@@ -60,7 +60,7 @@ def add_payment(group_id: int, body: AddPaymentRequest, current_user: dict = Dep
                 detail=f"Allocations total ₹{alloc_total:.2f} exceeds payment ₹{body.amount:.2f}."
             )
 
-    payment_id = db.insert_payment_with_allocations(
+    payment_id = payment_repository.insert_payment_with_allocations(
         group_id     = group_id,
         payer_id     = body.payer_id,
         payee_id     = body.payee_id,
@@ -80,20 +80,20 @@ def pending_splits(
     current_user: dict = Depends(get_current_user),
 ):
     """Returns unpaid splits from debtor → creditor in a group."""
-    if not db.is_group_member(group_id, current_user["user_id"]):
+    if not group_repository.is_group_member(group_id, current_user["user_id"]):
         raise HTTPException(status_code=403, detail="Not a member of this group.")
-    return db.fetch_pending_splits_between(group_id, debtor_id, creditor_id)
+    return payment_repository.fetch_pending_splits_between(group_id, debtor_id, creditor_id)
 
 
 @router.get("/payment-allocations/{payment_id}")
 def payment_allocations(payment_id: int, current_user: dict = Depends(get_current_user)):
     """Which expenses a payment covers."""
-    group_id = db.fetch_payment_group_id(payment_id)
+    group_id = payment_repository.fetch_payment_group_id(payment_id)
     if group_id is None:
         raise HTTPException(status_code=404, detail="Payment not found.")
-    if not db.is_group_member(group_id, current_user["user_id"]):
+    if not group_repository.is_group_member(group_id, current_user["user_id"]):
         raise HTTPException(status_code=403, detail="Not a member of this group.")
-    return db.fetch_payment_allocations(payment_id)
+    return payment_repository.fetch_payment_allocations(payment_id)
 
 
 @router.delete("/{payment_id}")
@@ -109,18 +109,18 @@ def delete_payment(payment_id: int, current_user: dict = Depends(get_current_use
       4. Delete.
     """
     # Step 1: resolve which group this payment belongs to
-    group_id = db.fetch_payment_group_id(payment_id)
+    group_id = payment_repository.fetch_payment_group_id(payment_id)
 
     # Step 2: 404 if payment doesn't exist
     if group_id is None:
         raise HTTPException(status_code=404, detail="Payment not found.")
 
     # Step 3: membership or admin required
-    is_member = db.is_group_member(group_id, current_user["user_id"])
+    is_member = group_repository.is_group_member(group_id, current_user["user_id"])
     is_admin  = current_user.get("role") == "admin"
     if not is_member and not is_admin:
         raise HTTPException(status_code=403, detail="Not a member of this group.")
 
     # Step 4: delete
-    db.delete_payment(payment_id)
+    payment_repository.delete_payment(payment_id)
     return {"message": "Payment deleted."}

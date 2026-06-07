@@ -11,8 +11,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from config import VALID_SOURCE_TYPES
 
-import db
-from auth import get_current_user
+from repositories import income_repository
+from dependencies import get_current_user
 
 router = APIRouter()
 
@@ -28,7 +28,7 @@ class IncomeIn(BaseModel):
 
 @router.get("/income/")
 def list_income(current_user: dict = Depends(get_current_user)):
-    return db.fetch_income(current_user["user_id"])
+    return income_repository.fetch_income(current_user["user_id"])
 
 
 @router.post("/income/", status_code=status.HTTP_201_CREATED)
@@ -43,7 +43,7 @@ def add_income(
             status_code=422,
             detail=f"source_type must be one of {sorted(VALID_SOURCE_TYPES)}",
         )
-    new_id = db.insert_income(
+    new_id = income_repository.insert_income(
         user_id     = current_user["user_id"],
         amount      = body.amount,
         source_type = body.source_type,
@@ -58,5 +58,5 @@ def delete_income(
     income_id: int,
     current_user: dict = Depends(get_current_user),
 ):
-    db.delete_income(income_id, current_user["user_id"])
+    income_repository.delete_income(income_id, current_user["user_id"])
     return {"message": "Deleted."}
