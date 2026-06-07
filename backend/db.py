@@ -10,27 +10,31 @@ import mysql.connector
 from config import DB_CONFIG, VALID_SOURCE_TYPES
  
 
-from mysql.connector.pooling import MySQLConnectionPool as _Pool
-import threading as _threading
+from database import get_connection
 
-_pool_lock = _threading.Lock()
-_pool: _Pool | None = None
-
-def _get_pool() -> _Pool:
-    global _pool
-    if _pool is None:
-        with _pool_lock:
-            if _pool is None:
-                _pool = _Pool(
-                    pool_name="splitease",
-                    pool_size=10,
-                    pool_reset_session=True,
-                    **DB_CONFIG,
-                )
-    return _pool
-
-def get_connection():
-    return _get_pool().get_connection()
+# --- MOVED TO database.py ---
+# from mysql.connector.pooling import MySQLConnectionPool as _Pool
+# import threading as _threading
+#
+# _pool_lock = _threading.Lock()
+# _pool: _Pool | None = None
+#
+# def _get_pool() -> _Pool:
+#     global _pool
+#     if _pool is None:
+#         with _pool_lock:
+#             if _pool is None:
+#                 _pool = _Pool(
+#                     pool_name="splitease",
+#                     pool_size=10,
+#                     pool_reset_session=True,
+#                     **DB_CONFIG,
+#                 )
+#     return _pool
+#
+# def get_connection():
+#     return _get_pool().get_connection()
+# ----------------------------
 
 
 # ─────────────────────────────────────────────
