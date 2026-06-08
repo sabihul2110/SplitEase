@@ -1,5 +1,5 @@
 # backend/repositories/auth_repository.py
-from database import get_connection
+from core.database import get_connection
 
 
 def create_reset_token(user_id: int, token_hash: str, expires_at: str) -> None:

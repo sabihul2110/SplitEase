@@ -2,7 +2,7 @@
 
 import logging
 import requests
-from config import BREVO_SMTP_KEY, BREVO_SENDER_EMAIL, APP_BASE_URL
+from core.config import BREVO_SMTP_KEY, BREVO_SENDER_EMAIL, APP_BASE_URL
 
 logger = logging.getLogger("splitease.email")
 

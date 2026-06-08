@@ -14,8 +14,8 @@ from services.auth_service import (
     change_user_password,
 )
 
-from dependencies import get_current_user
-from database import get_connection
+from core.dependencies import get_current_user
+from core.database import get_connection
 from infrastructure.email_service import send_reset_email
 
 logger = logging.getLogger("splitease.auth")

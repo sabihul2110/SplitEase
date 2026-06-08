@@ -11,7 +11,7 @@ import hashlib
 from datetime import datetime, timedelta, timezone
 
 from repositories import auth_repository, user_repository
-from auth import hash_password, verify_password, create_access_token
+from core.security import hash_password, verify_password, create_access_token
 
 
 def _hash_token(raw: str) -> str:

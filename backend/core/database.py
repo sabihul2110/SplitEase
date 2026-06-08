@@ -1,4 +1,4 @@
-# backend/database.py
+# SplitEase/backend/core/database.py
 """
 Single source of connection management.
 All repositories import get_connection() from here.

@@ -1,0 +1,1 @@
+# SplitEase/schemas/__init__.py

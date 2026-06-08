@@ -17,7 +17,7 @@ from pydantic import BaseModel
 
 from repositories import settlement_repository, group_repository
 from services.settlement_service import simplify_debts
-from dependencies import get_current_user
+from core.dependencies import get_current_user
 
 router = APIRouter()
 

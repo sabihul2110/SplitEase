@@ -18,8 +18,8 @@ from pydantic import BaseModel, EmailStr
 import mysql.connector
 
 from repositories import user_repository
-from database import get_connection
-from dependencies import get_current_user, require_admin
+from core.database import get_connection
+from core.dependencies import get_current_user, require_admin
 
 router = APIRouter()
 

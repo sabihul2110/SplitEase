@@ -1,5 +1,5 @@
 # backend/repositories/payment_repository.py
-from database import get_connection
+from core.database import get_connection
 
 
 def fetch_group_payments(group_id: int, user_id: int) -> list[dict]:

@@ -1,4 +1,4 @@
-# --- backend/auth.py ---
+# --- SplitEase/backend/core/auth.py ---
 """
 auth.py — password hashing and JWT utilities.
 Nothing here touches the DB directly — it's pure crypto logic,
@@ -16,7 +16,7 @@ from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 
-from config import JWT_SECRET, JWT_ALGORITHM, JWT_EXPIRE_MINUTES
+from core.config import JWT_SECRET, JWT_ALGORITHM, JWT_EXPIRE_MINUTES
 
 # get_current_user and require_admin have moved to dependencies.py
 

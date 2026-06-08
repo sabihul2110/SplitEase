@@ -9,14 +9,14 @@ FIX S6: CORS allowed_origins no longer hardcoded to localhost.
          workflows are unaffected — but production MUST set the env var.
 """
 
-import logging
 import uuid
 import sentry_sdk
 from fastapi import FastAPI, Request, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 
-from config import ALLOWED_ORIGINS, SENTRY_DSN
+from core.config import ALLOWED_ORIGINS, SENTRY_DSN
+from core.logging import configure_logging, logger
+from core.exceptions import global_exception_handler
 
 if SENTRY_DSN:
     sentry_sdk.init(
@@ -32,12 +32,7 @@ from routers import (
     income, loans, timeline, borrows, ai_agent,
 )
 
-# ── Structured logging ────────────────────────────────────────────────────
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s %(name)s %(message)s",
-)
-logger = logging.getLogger("splitease")
+configure_logging()
 
 app = FastAPI(title="SplitEase API", version="2.1.0")
 
@@ -58,21 +53,7 @@ async def request_id_middleware(request: Request, call_next):
     response.headers["X-Request-ID"] = request_id
     return response
 
-@app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
-    request_id = getattr(request.state, "request_id", "unknown")
-    logger.error(
-        "Unhandled exception request_id=%s path=%s method=%s error=%s",
-        request_id,
-        request.url.path,
-        request.method,
-        repr(exc),
-        exc_info=True,
-    )
-    return JSONResponse(
-        status_code=500,
-        content={"detail": "An unexpected error occurred.", "request_id": request_id},
-    )
+app.add_exception_handler(Exception, global_exception_handler)
 
 
 api_v1 = APIRouter(prefix="/api/v1")

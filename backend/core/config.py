@@ -1,4 +1,4 @@
-# backend/config.py
+# SplitEase/backend/core/config.py
 """
 config.py — all settings via pydantic-settings.
 Validates required fields at startup. Crashes immediately with a clear

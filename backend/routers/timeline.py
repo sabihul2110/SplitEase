@@ -12,7 +12,7 @@ Optional query param:  ?limit=100  (default 100, max 200)
 from fastapi import APIRouter, Depends, Query
 
 from repositories import timeline_repository
-from dependencies import get_current_user
+from core.dependencies import get_current_user
 
 router = APIRouter()
 

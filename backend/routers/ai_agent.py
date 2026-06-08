@@ -27,10 +27,9 @@ from google.genai import types as genai_types
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from pydantic import BaseModel
 
-from config import GEMINI_API_KEY
-
+from core.config import GEMINI_API_KEY
 from repositories import group_repository
-from dependencies import get_current_user
+from core.dependencies import get_current_user
 
 router = APIRouter(prefix="/ai", tags=["AI Agent"])
 

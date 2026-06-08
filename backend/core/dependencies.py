@@ -1,4 +1,4 @@
-# backend/dependencies.py
+# SplitEase/backend/core/dependencies.py
 """
 FastAPI dependencies.
 get_current_user and require_admin live here — not in auth.py —
@@ -8,8 +8,8 @@ so auth.py stays pure crypto (no DB imports, no circular deps).
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 
-from auth import decode_token
-from database import get_connection
+from core.security import decode_token
+from core.database import get_connection
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 

@@ -18,7 +18,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
 from repositories import group_repository, settlement_repository
-from dependencies import get_current_user, require_admin
+from core.dependencies import get_current_user, require_admin
 
 router = APIRouter()
 

@@ -23,10 +23,10 @@ from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
-from database import get_connection as _get_connection
+from core.database import get_connection as _get_connection
 from repositories import group_repository
-from dependencies import get_current_user
-from config import INVITE_EXPIRY_HOURS
+from core.dependencies import get_current_user
+from core.config import INVITE_EXPIRY_HOURS
 
 router = APIRouter()
 

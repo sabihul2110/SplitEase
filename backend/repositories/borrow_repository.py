@@ -1,5 +1,5 @@
 # backend/repositories/borrow_repository.py
-from database import get_connection
+from core.database import get_connection
 
 
 def fetch_borrows(user_id: int) -> list[dict]:

@@ -1,6 +1,6 @@
 # backend/repositories/income_repository.py
-from config import VALID_SOURCE_TYPES
-from database import get_connection
+from core.config import VALID_SOURCE_TYPES
+from core.database import get_connection
 
 
 def fetch_income(user_id: int) -> list[dict]:

@@ -1,5 +1,5 @@
 # backend/repositories/timeline_repository.py
-from database import get_connection
+from core.database import get_connection
 
 
 def fetch_unified_timeline(user_id: int, limit: int = 100, offset: int = 0) -> list[dict]:

@@ -20,7 +20,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from pydantic import BaseModel
 
 from repositories import notification_repository, group_repository
-from dependencies import get_current_user
+from core.dependencies import get_current_user
 
 router = APIRouter()
 

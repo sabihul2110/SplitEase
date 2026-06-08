@@ -1,5 +1,5 @@
 # backend/repositories/notification_repository.py
-from database import get_connection
+from core.database import get_connection
 
 
 def get_unread_count(user_id: int) -> int:

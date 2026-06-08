@@ -1,5 +1,5 @@
 # backend/repositories/group_repository.py
-from database import get_connection
+from core.database import get_connection
 
 
 def fetch_groups(user_id: int) -> list[dict]:
