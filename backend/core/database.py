@@ -7,7 +7,7 @@ Pool is created once on first use (lazy init, thread-safe).
 
 import threading
 from mysql.connector.pooling import MySQLConnectionPool
-from config import DB_CONFIG
+from core.config import DB_CONFIG
 
 _pool_lock = threading.Lock()
 _pool: MySQLConnectionPool | None = None
