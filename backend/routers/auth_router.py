@@ -5,7 +5,10 @@ import threading
 from collections import defaultdict
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
-from pydantic import BaseModel, EmailStr
+from schemas.auth import (
+    SignupRequest, LoginRequest, AuthResponse,
+    ChangePasswordRequest, ForgotPasswordRequest, ResetPasswordRequest,
+)
 import mysql.connector
 
 from services.auth_service import (
@@ -42,36 +45,36 @@ def _rate_check(store, lock, ip, window, max_attempts, retry_after):
         store[ip].append(now)
 
 # ── Schemas ────────────────────────────────────────────────────────────────
-class SignupRequest(BaseModel):
-    name:     str
-    email:    EmailStr
-    password: str
-    upi_id:   str | None = None
+# class SignupRequest(BaseModel):
+#     name:     str
+#     email:    EmailStr
+#     password: str
+#     upi_id:   str | None = None
 
-class LoginRequest(BaseModel):
-    email:    EmailStr
-    password: str
+# class LoginRequest(BaseModel):
+#     email:    EmailStr
+#     password: str
 
-class AuthResponse(BaseModel):
-    access_token: str
-    token_type:   str = "bearer"
-    user_id:      int
-    name:         str
-    role:         str
-    email:        str
+# class AuthResponse(BaseModel):
+#     access_token: str
+#     token_type:   str = "bearer"
+#     user_id:      int
+#     name:         str
+#     role:         str
+#     email:        str
 
-class ChangePasswordRequest(BaseModel):
-    current_password: str
-    new_password:     str
-    confirm_password: str
+# class ChangePasswordRequest(BaseModel):
+#     current_password: str
+#     new_password:     str
+#     confirm_password: str
 
-class ForgotPasswordRequest(BaseModel):
-    email: EmailStr
+# class ForgotPasswordRequest(BaseModel):
+#     email: EmailStr
 
-class ResetPasswordRequest(BaseModel):
-    token:            str
-    new_password:     str
-    confirm_password: str
+# class ResetPasswordRequest(BaseModel):
+#     token:            str
+#     new_password:     str
+#     confirm_password: str
 
 # ── Routes ─────────────────────────────────────────────────────────────────
 @router.post("/signup", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)

@@ -1,4 +1,4 @@
-# --- SplitEase/backend/core/auth.py ---
+# --- SplitEase/backend/core/security.py ---
 """
 auth.py — password hashing and JWT utilities.
 Nothing here touches the DB directly — it's pure crypto logic,

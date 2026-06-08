@@ -7,9 +7,8 @@ POST /personal-expenses/          → add a personal expense
 DELETE /personal-expenses/{id}    → delete (owner only)
 """
 
-from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from schemas.personal_expenses import PersonalExpenseIn
 
 from repositories import personal_expense_repository
 from core.dependencies import get_current_user
@@ -17,15 +16,15 @@ from core.dependencies import get_current_user
 router = APIRouter()
 
 
-# ── Schemas ───────────────────────────────────────────────────────────────────
+# # ── Schemas ───────────────────────────────────────────────────────────────────
 
-class PersonalExpenseIn(BaseModel):
-    amount:       float
-    category:     str  = "General"
-    note:         str | None = None
-    expense_date: str        # YYYY-MM-DD
-    subcategory_id: int | None = None
-    merchant_name:  str | None = None
+# class PersonalExpenseIn(BaseModel):
+#     amount:       float
+#     category:     str  = "General"
+#     note:         str | None = None
+#     expense_date: str        # YYYY-MM-DD
+#     subcategory_id: int | None = None
+#     merchant_name:  str | None = None
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────

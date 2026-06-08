@@ -21,7 +21,7 @@ import secrets
 from datetime import datetime, timezone, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from schemas.invites import GenerateInviteRequest
 
 from core.database import get_connection as _get_connection
 from repositories import group_repository
@@ -144,9 +144,9 @@ def join_group_via_invite(token: str, user_id: int) -> dict:
 
 # ── Request body models ───────────────────────────────────────────────────────
 
-class GenerateInviteRequest(BaseModel):
-    # FIX S4a: caller can override expiry; None means "use server default"
-    expires_hours: int | None = None
+# class GenerateInviteRequest(BaseModel):
+#     # FIX S4a: caller can override expiry; None means "use server default"
+#     expires_hours: int | None = None
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────

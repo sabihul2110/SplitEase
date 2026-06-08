@@ -8,7 +8,7 @@ DELETE /income/{id}    → delete (owner only)
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from schemas.income import IncomeIn
 from core.config import VALID_SOURCE_TYPES
 from repositories import income_repository
 from core.dependencies import get_current_user
@@ -18,11 +18,11 @@ router = APIRouter()
 
 
 
-class IncomeIn(BaseModel):
-    amount:      float
-    source_type: str  = "other"   # salary | pocket_money | stipend | other
-    note:        str | None = None
-    income_date: str               # YYYY-MM-DD
+# class IncomeIn(BaseModel):
+#     amount:      float
+#     source_type: str  = "other"   # salary | pocket_money | stipend | other
+#     note:        str | None = None
+#     income_date: str               # YYYY-MM-DD
 
 
 @router.get("/income/")

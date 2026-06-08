@@ -17,7 +17,7 @@ FIX #13: get_user_by_name_in_group replaced with get_user_by_id_in_group.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from pydantic import BaseModel
+from schemas.notifications import ReminderRequest
 
 from repositories import notification_repository, group_repository
 from core.dependencies import get_current_user
@@ -70,9 +70,9 @@ def delete_notification(notification_id: int, current_user: dict = Depends(get_c
 
 # ── Send Reminder ─────────────────────────────────────────────────────────────
 
-class ReminderRequest(BaseModel):
-    debtor_user_id: int    # FIX #13: was debtor_name (string) — now integer ID
-    amount:         float
+# class ReminderRequest(BaseModel):
+#     debtor_user_id: int    # FIX #13: was debtor_name (string) — now integer ID
+#     amount:         float
 
 
 @router.post("/groups/{group_id}/remind", status_code=status.HTTP_201_CREATED)

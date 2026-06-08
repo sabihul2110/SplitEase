@@ -14,7 +14,7 @@ FIX S5: DELETE now prevents an admin from deleting themselves if they are
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, EmailStr
+from schemas.users import UpdateUserRequest
 import mysql.connector
 
 from repositories import user_repository
@@ -24,10 +24,10 @@ from core.dependencies import get_current_user, require_admin
 router = APIRouter()
 
 
-class UpdateUserRequest(BaseModel):
-    name:   str
-    email:  EmailStr
-    upi_id: str | None = None
+# class UpdateUserRequest(BaseModel):
+#     name:   str
+#     email:  EmailStr
+#     upi_id: str | None = None
 
 
 # ── Self-update ────────────────────────────────────────────────────────────

@@ -9,7 +9,7 @@ DELETE /loans/{id}                   → delete loan record (owner only)
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from schemas.loans import LoanIn, RepaymentIn
 
 from repositories import loan_repository
 from core.dependencies import get_current_user
@@ -17,15 +17,15 @@ from core.dependencies import get_current_user
 router = APIRouter()
 
 
-class LoanIn(BaseModel):
-    borrower_name: str
-    amount:        float
-    note:          str | None = None
-    loan_date:     str          # YYYY-MM-DD
+# class LoanIn(BaseModel):
+#     borrower_name: str
+#     amount:        float
+#     note:          str | None = None
+#     loan_date:     str          # YYYY-MM-DD
 
 
-class RepaymentIn(BaseModel):
-    repayment_amount: float
+# class RepaymentIn(BaseModel):
+#     repayment_amount: float
 
 
 @router.get("/loans/")

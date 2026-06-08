@@ -15,7 +15,10 @@ GET    /groups/subcategories/{cat_id}→ subcategories for a category
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from schemas.groups import (
+    CreateGroupRequest, UpdateGroupRequest,
+    UpdateMembersRequest, BulkGroupIdsRequest,
+)
 
 from repositories import group_repository, settlement_repository
 from core.dependencies import get_current_user, require_admin
@@ -23,17 +26,17 @@ from core.dependencies import get_current_user, require_admin
 router = APIRouter()
 
 
-class CreateGroupRequest(BaseModel):
-    group_name: str
-    user_ids:   list[int]   # members to add (must include creator)
+# class CreateGroupRequest(BaseModel):
+#     group_name: str
+#     user_ids:   list[int]   # members to add (must include creator)
 
 
-class UpdateGroupRequest(BaseModel):
-    group_name: str
+# class UpdateGroupRequest(BaseModel):
+#     group_name: str
 
 
-class UpdateMembersRequest(BaseModel):
-    user_ids: list[int]
+# class UpdateMembersRequest(BaseModel):
+#     user_ids: list[int]
 
 
 @router.get("/")
@@ -118,8 +121,8 @@ def delete_group(
 # Paste both routes into your existing routers/groups.py
 
 
-class BulkGroupIdsRequest(BaseModel):
-    group_ids: list[int]
+# class BulkGroupIdsRequest(BaseModel):
+#     group_ids: list[int]
 
 
 @router.post("/members-bulk")

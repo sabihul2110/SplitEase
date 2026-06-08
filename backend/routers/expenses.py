@@ -15,8 +15,7 @@ FIX #10: list_expenses now allows admins to see expenses for ANY group,
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
-from datetime import date
+from schemas.expenses import SplitItem, AddExpenseRequest, UpdateExpenseRequest
 
 from repositories import expense_repository, group_repository
 from core.dependencies import get_current_user
@@ -24,21 +23,15 @@ from core.dependencies import get_current_user
 router = APIRouter()
 
 
-class SplitItem(BaseModel):
-    user_id:     int
-    amount_owed: float
-    share_pct:   float | None = None
-
-
-class AddExpenseRequest(BaseModel):
-    payer_id:       int
-    category_id:    int
-    subcategory_id: int | None = None
-    total_amount:   float
-    description:    str
-    split_type:     str = "equal"
-    expense_date:   date
-    splits:         list[SplitItem]
+# class UpdateExpenseRequest(BaseModel):
+#     payer_id:       int
+#     category_id:    int
+#     subcategory_id: int | None = None
+#     total_amount:   float
+#     description:    str
+#     split_type:     str = "equal"
+#     expense_date:   date
+#     splits:         list[SplitItem]
 
 
 @router.get("/{group_id}")
@@ -120,17 +113,6 @@ def delete_expense(expense_id: int, current_user: dict = Depends(get_current_use
 
     expense_repository.delete_expense(expense_id)
     return {"message": "Expense deleted."}
-
-
-class UpdateExpenseRequest(BaseModel):
-    payer_id:       int
-    category_id:    int
-    subcategory_id: int | None = None
-    total_amount:   float
-    description:    str
-    split_type:     str = "equal"
-    expense_date:   date
-    splits:         list[SplitItem]
 
 
 @router.put("/{expense_id}")

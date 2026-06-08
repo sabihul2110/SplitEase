@@ -13,8 +13,7 @@ FIX S2: DELETE now verifies the requesting user is a member of the group
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
-from datetime import date
+from schemas.payments import AllocationItem, AddPaymentRequest
 
 from repositories import payment_repository, group_repository
 from core.dependencies import get_current_user
@@ -22,18 +21,18 @@ from core.dependencies import get_current_user
 router = APIRouter()
 
 
-class AllocationItem(BaseModel):
-    expense_id:    int
-    allocated_amt: float
+# class AllocationItem(BaseModel):
+#     expense_id:    int
+#     allocated_amt: float
 
 
-class AddPaymentRequest(BaseModel):
-    payer_id:     int
-    payee_id:     int
-    amount:       float
-    note:         str | None = None
-    payment_date: date
-    allocations:  list[AllocationItem] = []
+# class AddPaymentRequest(BaseModel):
+#     payer_id:     int
+#     payee_id:     int
+#     amount:       float
+#     note:         str | None = None
+#     payment_date: date
+#     allocations:  list[AllocationItem] = []
 
 
 @router.get("/{group_id}")

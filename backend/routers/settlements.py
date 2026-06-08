@@ -13,7 +13,7 @@ FIX #15: New POST /settlements/bulk endpoint accepts a list of group_ids
 """
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from schemas.settlements import BulkSettlementRequest
 
 from repositories import settlement_repository, group_repository
 from services.settlement_service import simplify_debts
@@ -42,8 +42,8 @@ def simplified_settlements(group_id: int, current_user: dict = Depends(get_curre
     return simplify_debts(rows)
 
 
-class BulkSettlementRequest(BaseModel):
-    group_ids: list[int]
+# class BulkSettlementRequest(BaseModel):
+#     group_ids: list[int]
 
 
 @router.post("/bulk")
