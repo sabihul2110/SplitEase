@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  KeyboardAvoidingView, Platform, ScrollView, Image
+  KeyboardAvoidingView, Platform, ScrollView, Image, Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as authApi from "../../api/auth";
@@ -22,12 +22,13 @@ export default function ForgotPasswordScreen({ navigation }) {
     setLoading(true); setError('');
     try {
       await authApi.forgotPassword(email.trim().toLowerCase());
-    } catch (err) {
-      // We ignore the error gracefully if it's an API error for security reasons
-      // but catch actual network failures if needed.
-    } finally {
       setLoading(false);
-      // Always navigate to the Reset Password screen
+      navigation.navigate('ResetPassword');
+    } catch (err) {
+      setLoading(false);
+      const errMsg = err.response?.data?.detail || "Could not connect to server.";
+      Alert.alert("Failed to send OTP", errMsg);
+      // We still navigate so you can test the ResetPassword UI manually
       navigation.navigate('ResetPassword');
     }
   }
