@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, KeyboardAvoidingView,
-  Platform, ScrollView, TouchableOpacity,
+  Platform, ScrollView, TouchableOpacity, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as authApi from "../../api/auth";
@@ -53,7 +53,14 @@ export default function ResetPasswordScreen({ navigation }) {
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <View style={styles.logoWrap}>
-            <Text style={styles.appName}>SplitEase</Text>
+            <Image 
+              source={require('../../../assets/icon.png')} 
+              style={styles.logoImage} 
+              resizeMode="cover"
+            />
+            <Text style={styles.appName}>
+              Split<Text style={{ color: COLORS.primary }}>Ease</Text>
+            </Text>
           </View>
           <View style={styles.card}>
             {done ? (
@@ -110,9 +117,9 @@ export default function ResetPasswordScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  safe:    { flex: 1, backgroundColor: COLORS.bg },
   scroll:  { flexGrow: 1, padding: SPACING.base, justifyContent: 'center' },
   logoWrap:  { alignItems: 'center', gap: SPACING.sm, marginBottom: SPACING.xl },
+  logoImage: { width: 64, height: 64, borderRadius: 16 },
   appName:   { fontSize: FONT_SIZE['2xl'], fontWeight: FONT_WEIGHT.extrabold, color: COLORS.text, letterSpacing: 0.5 },
   card: {
     backgroundColor: COLORS.surface, borderRadius: RADIUS.xl,

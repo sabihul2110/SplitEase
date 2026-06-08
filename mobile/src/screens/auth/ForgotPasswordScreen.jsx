@@ -47,7 +47,9 @@ export default function ForgotPasswordScreen({ navigation }) {
               style={styles.logoImage} 
               resizeMode="cover"
             />
-            <Text style={styles.appName}>SplitEase</Text>
+            <Text style={styles.appName}>
+              Split<Text style={{ color: COLORS.primary }}>Ease</Text>
+            </Text>
           </View>
 
           <View style={styles.card}>

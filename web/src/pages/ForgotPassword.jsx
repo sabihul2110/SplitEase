@@ -29,7 +29,9 @@ export default function ForgotPassword() {
             alt="SplitEase Logo" 
             style={{ width: 64, height: 64, margin: "0 auto 12px", display: "block" }} 
           />
-          <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-0.025em" }}>SplitEase</div>
+          <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-0.025em" }}>
+            Split<span style={{ color: "var(--primary)" }}>Ease</span>
+          </div>
         </div>
         <div className="auth-card">
           <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 8 }}>Forgot your password?</div>
