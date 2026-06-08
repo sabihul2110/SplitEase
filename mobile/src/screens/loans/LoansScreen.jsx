@@ -1,38 +1,38 @@
 // mobile/src/screens/loans/LoansScreen.jsx
 
-import React, { useState, useEffect, useCallback } from "react";
+import { useFocusEffect } from "@react-navigation/native";
+import { useCallback, useEffect, useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  RefreshControl,
-  TextInput,
-  Modal,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
   ActivityIndicator,
+  FlatList,
   Keyboard,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useFocusEffect } from "@react-navigation/native";
 import * as loansApi from "../../api/loans";
+import AppAlert from "../../components/common/AppAlert";
+import DatePickerInput from "../../components/common/DatePickerInput";
+import Toast from "../../components/common/Toast";
+import { LoadingState } from "../../components/common/Ui";
+import { Icons } from "../../components/icons/icons";
+import ScreenHeader from "../../components/layout/ScreenHeader";
 import {
   COLORS,
   FONT_SIZE,
   FONT_WEIGHT,
-  SPACING,
   RADIUS,
+  SPACING,
   TAB_BAR_HEIGHT,
 } from "../../constants/theme";
-import { EmptyState, LoadingState } from "../../components/common/Ui";
-import ScreenHeader from "../../components/layout/ScreenHeader";
-import { Icons } from "../../components/icons/icons";
-import Toast from "../../components/common/Toast";
-import AppAlert from "../../components/common/AppAlert";
-import DatePickerInput from "../../components/common/DatePickerInput";
 
 function fmt(n) {
   return Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 });
@@ -125,19 +125,24 @@ function LoanCard({ item, isLent, onRefresh, idx, showToast, setAlert }) {
       return;
     }
     setSaving(true);
-    try {
-      await (isLent
-        ? loansApi.repayLoan(idField, amountInput)
-        : loansApi.repayBorrow(idField, amountInput));
-      setRepayAmt("");
-      showToast?.("Repayment recorded");
-      if (onRefresh) onRefresh();
-    } catch (ex) {
-      const detail = ex?.response?.data?.detail;
-      setRepayErr(Array.isArray(detail) ? detail[0]?.msg : (typeof detail === "string" ? detail : "Failed"));
-    } finally {
-      setSaving(false);
-    }
+    
+    // CRITICAL ANDROID FIX: Buffer to let the keyboard fully dismiss
+    // before the API call finishes and potentially unmounts this TextInput.
+    setTimeout(async () => {
+      try {
+        await (isLent
+          ? loansApi.repayLoan(idField, amountInput)
+          : loansApi.repayBorrow(idField, amountInput));
+        setRepayAmt("");
+        showToast?.("Repayment recorded");
+        if (onRefresh) onRefresh();
+      } catch (ex) {
+        const detail = ex?.response?.data?.detail;
+        setRepayErr(Array.isArray(detail) ? detail[0]?.msg : (typeof detail === "string" ? detail : "Failed"));
+      } finally {
+        setSaving(false);
+      }
+    }, 250);
   }
 
   function handleDelete() {
@@ -299,36 +304,46 @@ function AddLoanModal({ visible, onClose, isLent, onSuccess }) {
     }
     setSaving(true);
     setError("");
-    try {
-      if (isLent) {
-        await loansApi.addLoan({
-          borrower_name: personName.trim(),
-          amount: parseFloat(amount),
-          loan_date: date,
-          note: note.trim() || null,
-        });
-      } else {
-        await loansApi.addBorrow({
-          lender_name: personName.trim(),
-          amount: parseFloat(amount),
-          borrow_date: date,
-          note: note.trim() || null,
-        });
+    
+    // CRITICAL ANDROID FIX: Wait for keyboard to close before unmounting Modal
+    setTimeout(async () => {
+      try {
+        if (isLent) {
+          await loansApi.addLoan({
+            borrower_name: personName.trim(),
+            amount: parseFloat(amount),
+            loan_date: date,
+            note: note.trim() || null,
+          });
+        } else {
+          await loansApi.addBorrow({
+            lender_name: personName.trim(),
+            amount: parseFloat(amount),
+            borrow_date: date,
+            note: note.trim() || null,
+          });
+        }
+        
+        onClose(); // Hide modal first
+        
+        // Wait for modal exit animation before fetching new data
+        setTimeout(() => {
+          if (onSuccess) onSuccess();
+        }, 300);
+        
+      } catch (err) {
+        const detail = err?.response?.data?.detail;
+        setError(
+          Array.isArray(detail)
+            ? detail[0]?.msg
+            : typeof detail === "string"
+              ? detail
+              : "Failed to save",
+        );
+      } finally {
+        setSaving(false);
       }
-      onSuccess();
-      onClose();
-    } catch (err) {
-      const detail = err?.response?.data?.detail;
-      setError(
-        Array.isArray(detail)
-          ? detail[0]?.msg
-          : typeof detail === "string"
-            ? detail
-            : "Failed to save",
-      );
-    } finally {
-      setSaving(false);
-    }
+    }, 250);
   }
 
   const accentColor = isLent ? "#f59e0b" : "#818cf8";
@@ -923,7 +938,7 @@ export default function LoansScreen() {
         visible={showAdd}
         onClose={() => {
           Keyboard.dismiss();
-          setShowAdd(false);
+          setTimeout(() => setShowAdd(false), 150);
         }}
         isLent={isLent}
         onSuccess={() => { showToast(isLent ? "Loan recorded" : "Borrow recorded"); load(true); }}
