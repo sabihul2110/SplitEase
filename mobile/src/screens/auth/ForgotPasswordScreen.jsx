@@ -3,8 +3,9 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  KeyboardAvoidingView, Platform, ScrollView, Image, Alert
+  KeyboardAvoidingView, Platform, ScrollView, Image,
 } from 'react-native';
+import AppAlert from '../../components/common/AppAlert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as authApi from "../../api/auth";
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS } from '../../constants/theme';
@@ -16,25 +17,38 @@ export default function ForgotPasswordScreen({ navigation }) {
   const [email,   setEmail]   = useState('');
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState('');
+  const [alert,   setAlert]   = useState(null);
 
   async function handleSubmit() {
     if (!email.trim()) { setError('Email is required'); return; }
-    setLoading(true); setError('');
+    setLoading(true);
+    setError('');
     try {
       await authApi.forgotPassword(email.trim().toLowerCase());
-      setLoading(false);
       navigation.navigate('ResetPassword');
     } catch (err) {
+      const errMsg = err.response?.data?.detail || 'Could not connect to server.';
+      setAlert({
+        title: 'Failed to send OTP',
+        message: errMsg,
+        buttons: [
+          {
+            text: 'OK',
+            onPress: () => {
+              setAlert(null);
+              navigation.navigate('ResetPassword');
+            },
+          },
+        ],
+      });
+    } finally {
       setLoading(false);
-      const errMsg = err.response?.data?.detail || "Could not connect to server.";
-      Alert.alert("Failed to send OTP", errMsg);
-      // We still navigate so you can test the ResetPassword UI manually
-      navigation.navigate('ResetPassword');
     }
   }
 
   return (
     <SafeAreaView style={styles.safe}>
+      <AppAlert config={alert} />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <TouchableOpacity style={styles.back} onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
