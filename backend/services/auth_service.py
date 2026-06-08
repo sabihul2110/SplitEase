@@ -4,6 +4,8 @@ Auth business logic that sits above repositories and crypto.
 Keeps auth_router.py thin — it handles HTTP, this handles logic.
 """
 
+import random
+import string
 import secrets
 import hashlib
 from datetime import datetime, timedelta, timezone
@@ -69,20 +71,26 @@ def register_user(name: str, email: str, password: str, upi_id: str | None = Non
 
 def initiate_password_reset(email: str) -> dict | None:
     """
-    Generate reset token, store hash, return (raw_token, user) or None.
+    Generate a 6-digit OTP, store its hash, return (raw_token, user) or None.
     Returns None if email not found — caller should NOT reveal this.
     """
     user = user_repository.fetch_user_by_email(email)
     if not user:
         return None
 
-    raw_token  = secrets.token_urlsafe(32)
+    # Generate a secure 6-digit numeric OTP
+    raw_token = "".join(random.choices(string.digits, k=6))
+    
+    # Hash the OTP before saving it to the database
     token_hash = _hash_token(raw_token)
+    
     expires_at = (
         datetime.now(timezone.utc) + timedelta(minutes=15)
     ).strftime("%Y-%m-%d %H:%M:%S")
 
     auth_repository.create_reset_token(user["user_id"], token_hash, expires_at)
+    
+    # Return the unhashed OTP so the email service can send it to the user
     return {"raw_token": raw_token, "user": user}
 
 

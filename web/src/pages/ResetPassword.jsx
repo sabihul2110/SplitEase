@@ -47,8 +47,10 @@ export default function ResetPassword() {
               {error && <div className="alert alert-error" style={{ marginBottom: 16 }}>⚠ {error}</div>}
               <form onSubmit={onSubmit}>
                 <div className="form-group">
-                  <label className="form-label">Reset token</label>
-                  <input required placeholder="From your reset email"
+                  <label className="form-label">6-Digit Code</label>
+                  <input required placeholder="Enter the code from your email"
+                    maxLength="6"
+                    style={{ letterSpacing: "0.5px", fontSize: "16px", fontWeight: "400" }}
                     value={token} onChange={e => setToken(e.target.value)} />
                 </div>
                 <div className="form-group">

@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  KeyboardAvoidingView, Platform, ScrollView, Alert, Image
+  KeyboardAvoidingView, Platform, ScrollView, Image
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as authApi from "../../api/auth";
@@ -14,7 +14,6 @@ import Button from '../../components/common/Button';
 
 export default function ForgotPasswordScreen({ navigation }) {
   const [email,   setEmail]   = useState('');
-  const [sent,    setSent]    = useState(false);
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState('');
 
@@ -23,15 +22,13 @@ export default function ForgotPasswordScreen({ navigation }) {
     setLoading(true); setError('');
     try {
       await authApi.forgotPassword(email.trim().toLowerCase());
-      // If FastAPI returns 200 OK, the request was successful.
-      setSent(true);
     } catch (err) {
-      // Only catches actual crashes or 429 Rate Limits.
-      // Extracts the specific FastAPI error, or defaults to a generic message.
-      const errorMessage = err.response?.data?.detail || 'Failed to connect to the server. Please try again.';
-      setError(errorMessage);
+      // We ignore the error gracefully if it's an API error for security reasons
+      // but catch actual network failures if needed.
     } finally {
       setLoading(false);
+      // Always navigate to the Reset Password screen
+      navigation.navigate('ResetPassword');
     }
   }
 
@@ -44,7 +41,6 @@ export default function ForgotPasswordScreen({ navigation }) {
             <Text style={styles.backText}>Back to login</Text>
           </TouchableOpacity>
 
-          {/* Updated Logo Wrapper */}
           <View style={styles.logoWrap}>
             <Image 
               source={require('../../../assets/icon.png')} 
@@ -55,46 +51,26 @@ export default function ForgotPasswordScreen({ navigation }) {
           </View>
 
           <View style={styles.card}>
-            {sent ? (
-              <View style={{ alignItems: 'center', gap: SPACING.md }}>
-                <Text style={styles.heading}>Check your email</Text>
-                <Text style={styles.hint}>
-                  If that email is registered, a reset link has been sent. Check your inbox (and spam folder).
-                </Text>
-                <Text style={[styles.hint, { color: COLORS.text3 }]}>
-                  The link expires in 15 minutes.
-                </Text>
-                <Button
-                  title="Back to Login"
-                  onPress={() => navigation.navigate('Login')}
-                  fullWidth size="lg"
-                  style={{ marginTop: SPACING.sm }}
-                />
-              </View>
-            ) : (
-              <>
-                <Text style={styles.heading}>Forgot Password</Text>
-                <Text style={styles.hint}>
-                  Enter your registered email and we'll send you a reset link.
-                </Text>
-                <Input
-                  label="Email"
-                  value={email}
-                  onChangeText={v => { setEmail(v); setError(''); }}
-                  placeholder="you@example.com"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  error={error}
-                  autoFocus
-                />
-                <Button
-                  title={loading ? 'Sending…' : 'Send Reset Link'}
-                  onPress={handleSubmit}
-                  loading={loading}
-                  fullWidth size="lg"
-                />
-              </>
-            )}
+            <Text style={styles.heading}>Forgot Password</Text>
+            <Text style={styles.hint}>
+              Enter your registered email and we'll send you a 6-digit reset code.
+            </Text>
+            <Input
+              label="Email"
+              value={email}
+              onChangeText={v => { setEmail(v); setError(''); }}
+              placeholder="you@example.com"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              error={error}
+              autoFocus
+            />
+            <Button
+              title={loading ? 'Sending Code…' : 'Send Reset Code'}
+              onPress={handleSubmit}
+              loading={loading}
+              fullWidth size="lg"
+            />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

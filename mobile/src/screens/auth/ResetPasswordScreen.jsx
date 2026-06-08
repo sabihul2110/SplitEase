@@ -21,10 +21,11 @@ export default function ResetPasswordScreen({ navigation }) {
 
   function validate() {
     const e = {};
-    if (!token.trim())    e.token   = 'Required';
-    if (!pass)            e.pass    = 'Required';
-    if (pass.length < 6)  e.pass    = 'At least 6 characters';
-    if (pass !== confirm) e.confirm  = 'Passwords do not match';
+    if (!token.trim())          e.token   = 'Required';
+    else if (token.length < 6)  e.token   = 'Code must be 6 digits';
+    if (!pass)                  e.pass    = 'Required';
+    if (pass.length < 6)        e.pass    = 'At least 6 characters';
+    if (pass !== confirm)       e.confirm  = 'Passwords do not match';
     setErrors(e);
     return !Object.keys(e).length;
   }
@@ -41,7 +42,7 @@ export default function ResetPasswordScreen({ navigation }) {
       setDone(true);
     } catch (err) {
       const detail = err?.response?.data?.detail;
-      setErrors({ token: typeof detail === 'string' ? detail : 'Invalid or expired token.' });
+      setErrors({ token: typeof detail === 'string' ? detail : 'Invalid or expired code.' });
     } finally {
       setLoading(false);
     }
@@ -51,7 +52,6 @@ export default function ResetPasswordScreen({ navigation }) {
     <SafeAreaView style={styles.safe}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-          {/* Logo */}
           <View style={styles.logoWrap}>
             <Text style={styles.appName}>SplitEase</Text>
           </View>
@@ -65,14 +65,16 @@ export default function ResetPasswordScreen({ navigation }) {
             ) : (
               <>
                 <Text style={styles.heading}>Reset Password</Text>
-                <Text style={styles.hint}>Paste the token from your reset email, then enter your new password.</Text>
+                <Text style={styles.hint}>Enter the 6-digit code from your email, then set a new password.</Text>
                 <Input
-                  label="Reset Token"
+                  label="6-Digit Code"
                   value={token}
                   onChangeText={v => { setToken(v); setErrors(e => ({ ...e, token: null })); }}
-                  placeholder="Paste token from email"
+                  placeholder="123456"
                   autoCapitalize="none"
                   autoCorrect={false}
+                  keyboardType="number-pad"
+                  maxLength={6}
                   error={errors.token}
                   autoFocus
                 />
@@ -111,11 +113,6 @@ const styles = StyleSheet.create({
   safe:    { flex: 1, backgroundColor: COLORS.bg },
   scroll:  { flexGrow: 1, padding: SPACING.base, justifyContent: 'center' },
   logoWrap:  { alignItems: 'center', gap: SPACING.sm, marginBottom: SPACING.xl },
-  logoBox:   {
-    width: 64, height: 64, backgroundColor: COLORS.primary,
-    borderRadius: 18, alignItems: 'center', justifyContent: 'center',
-  },
-  logoText:  { fontSize: 32, fontWeight: FONT_WEIGHT.extrabold, color: COLORS.white },
   appName:   { fontSize: FONT_SIZE['2xl'], fontWeight: FONT_WEIGHT.extrabold, color: COLORS.text, letterSpacing: 0.5 },
   card: {
     backgroundColor: COLORS.surface, borderRadius: RADIUS.xl,
