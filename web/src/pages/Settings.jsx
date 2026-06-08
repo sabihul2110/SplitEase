@@ -22,7 +22,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link }   from "react-router-dom";
 import { useAuth }             from "../context/AuthContext";
 import AppShell                from "../components/AppShell";
-import api from "../api/axios";
+import { resetMyData, forceResetData } from "../api/users";
 
 // ─────────────────────────────────────────────
 //  Theme utilities
@@ -170,7 +170,7 @@ function DangerZone() {
     setLoading(true);
     setError("");
     try {
-      const r = await api.post("/users/reset-my-data");
+      const r = await resetMyData();
       if (r.data.status === "pending_settlements") {
         setPending(r.data.pending);
         setStep("pending");
@@ -190,7 +190,7 @@ function DangerZone() {
     setLoading(true);
     setError("");
     try {
-      const r = await api.post("/users/reset-my-data/force");
+      const r = await forceResetData();
       setResult(r.data.deleted);
       setStep("done");
     } catch (e) {

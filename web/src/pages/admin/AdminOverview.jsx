@@ -1,7 +1,8 @@
 // --- web/src/pages/admin/AdminOverview.jsx ---
 
 import { useState, useEffect } from "react";
-import api from "../../api/axios";
+import { getAllUsers, adminWipe } from "../../api/users";
+import { getAllGroups } from "../../api/groups";
 
 function AdminWipe() {
   const [step, setStep] = useState("idle"); // idle | confirm | done | error
@@ -14,7 +15,7 @@ function AdminWipe() {
     setLoading(true);
     setError("");
     try {
-      await api.post("/users/admin-wipe");
+      await adminWipe();
       setStep("done");
       setTimeout(() => window.location.reload(), 1500); // reload after 1.5s
     } catch (e) {
@@ -89,7 +90,7 @@ export default function AdminOverview() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([api.get("/users/all"), api.get("/groups/all")])
+    Promise.all([getAllUsers(), getAllGroups()])
       .then(([u, g]) => { setUsers(u.data); setGroups(g.data); })
       .finally(() => setLoading(false));
   }, []);

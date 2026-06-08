@@ -2,7 +2,11 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import api from "../api/axios";
+import { getTimeline } from "../api/timeline";
+import { deletePersonalExpense } from "../api/personalExpenses";
+import { deleteIncome } from "../api/income";
+import { deleteLoan, repayLoan } from "../api/loans";
+import { deleteBorrow } from "../api/loans";
 import AppShell from "../components/AppShell";
 import AddEntryModal from "../components/AddEntryModal";
 import { Icons } from "../utils/Icons";
@@ -648,7 +652,7 @@ export default function Expenses() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await api.get("/timeline/");
+      const { data } = await getTimeline();
       setEntries(data);
     } catch {
       setEntries([]);
@@ -691,10 +695,10 @@ export default function Expenses() {
   async function handleDelete(entry) {
     setDeleting(entry.ref_id);
     try {
-      if (entry.type === "personal_expense") await api.delete(`/personal-expenses/${entry.ref_id}/`);
-      else if (entry.type === "income")      await api.delete(`/income/${entry.ref_id}/`);
-      else if (entry.type === "loan_given")  await api.delete(`/loans/${entry.ref_id}/`);
-      else if (entry.type === "loan_taken")  await api.delete(`/borrows/${entry.ref_id}/`);
+      if (entry.type === "personal_expense") await deletePersonalExpense(entry.ref_id);
+      else if (entry.type === "income")      await deleteIncome(entry.ref_id);
+      else if (entry.type === "loan_given")  await deleteLoan(entry.ref_id);
+      else if (entry.type === "loan_taken")  await deleteBorrow(entry.ref_id);
       await load();
     } catch { /* silent */ }
     finally { setDeleting(null); }

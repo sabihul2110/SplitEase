@@ -1,10 +1,34 @@
 .
 ├── backend
+│   ├── alembic.ini
 │   ├── auth.py
 │   ├── config.py
-│   ├── db.py
-│   ├── email_service.py
+│   ├── database.py
+│   ├── dependencies.py
+│   ├── infrastructure
+│   │   ├── __init__.py
+│   │   └── email_service.py
 │   ├── main.py
+│   ├── migrations
+│   │   ├── env.py
+│   │   ├── README
+│   │   ├── script.py.mako
+│   │   └── versions
+│   │       └── 1647b52f9f0d_baseline.py
+│   ├── repositories
+│   │   ├── __init__.py
+│   │   ├── auth_repository.py
+│   │   ├── borrow_repository.py
+│   │   ├── expense_repository.py
+│   │   ├── group_repository.py
+│   │   ├── income_repository.py
+│   │   ├── loan_repository.py
+│   │   ├── notification_repository.py
+│   │   ├── payment_repository.py
+│   │   ├── personal_expense_repository.py
+│   │   ├── settlement_repository.py
+│   │   ├── timeline_repository.py
+│   │   └── user_repository.py
 │   ├── requirements.txt
 │   ├── routers
 │   │   ├── __init__.py
@@ -22,7 +46,10 @@
 │   │   ├── settlements.py
 │   │   ├── timeline.py
 │   │   └── users.py
-│   └── test_models.py
+│   └── services
+│       ├── __init__.py
+│       ├── auth_service.py
+│       └── settlement_service.py
 ├── docs
 │   └── PROJECT_CONTEXT.md
 ├── mobile
@@ -112,8 +139,6 @@
 ├── shared
 │   └── constants.js
 ├── sql
-│   ├── add_password_tokens.sql
-│   ├── add_payment_allocations.sql
 │   ├── archive
 │   │   └── schema_v2.sql
 │   ├── schema.sql
@@ -174,4 +199,4 @@
     ├── vercel.json
     └── vite.config.js
 
-43 directories, 132 files
+48 directories, 152 files

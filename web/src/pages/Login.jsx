@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import api from "../api/axios";
+import { login as loginRequest } from "../api/auth";
 import { useAuth } from "../context/AuthContext";
 
 export default function Login() {
@@ -18,7 +18,7 @@ export default function Login() {
   async function onSubmit(e) {
     e.preventDefault(); setError(""); setLoading(true);
     try {
-      const { data } = await api.post("/auth/login", form);
+      const { data } = await loginRequest(form);
       login(data);
       navigate(next, { replace: true });
     } catch (err) {

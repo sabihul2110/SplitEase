@@ -6,7 +6,7 @@
 
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import api from "../api/axios";
+import { signup } from "../api/auth";
 import { useAuth } from "../context/AuthContext";
 
 export default function Signup() {
@@ -24,7 +24,7 @@ export default function Signup() {
     if (form.password.length < 6) { setError("Password must be at least 6 characters."); return; }
     setLoading(true);
     try {
-      const { data } = await api.post("/auth/signup", { ...form, upi_id: form.upi_id.trim() || null });
+      const { data } = await signup({ ...form, upi_id: form.upi_id.trim() || null });
       login(data);
       navigate(next, { replace: true });
     } catch (err) {

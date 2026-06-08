@@ -3,7 +3,9 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import api from "../api/axios";
+import { getMyGroups, createGroup as apiCreateGroup, deleteGroup, getMembersBulk, getHasExpenses } from "../api/groups";
+import { getSettlementsBulk } from "../api/settlements";
+import { getUsers } from "../api/users";
 import { useAuth } from "../context/AuthContext";
 import AppShell from "../components/AppShell";
 import { getGroupIcon } from "../utils/GroupIcons";
@@ -393,7 +395,7 @@ export default function Groups() {
 
     let groupList = [];
     try {
-      const { data } = await api.get("/groups/");
+      const { data } = await getMyGroups();
       groupList = data;
       setGroups(groupList);
     } catch(e) {
@@ -409,11 +411,10 @@ export default function Groups() {
     groupList.forEach(g => { fallback[g.group_id] = { myNet:0, pendingSettlements:0, memberCount:0, totalExpenses:0, isEmpty:true }; });
 
     try {
-      // FIX: 3 parallel calls — now includes members-bulk (was 404) and has-expenses-bulk (correct isEmpty)
       const [settlementsRes, membersRes, hasExpensesRes] = await Promise.all([
-        api.post("/settlements/bulk",         { group_ids: groupIds }),
-        api.post("/groups/members-bulk",      { group_ids: groupIds }),
-        api.post("/groups/has-expenses-bulk", { group_ids: groupIds }),
+        getSettlementsBulk(groupIds),
+        getMembersBulk(groupIds),
+        getHasExpenses(groupIds),
       ]);
 
       const bulkSettlements = settlementsRes.data  ?? {};
@@ -464,7 +465,7 @@ export default function Groups() {
 
   async function handleDeleteGroup(group, force = false) {
     try {
-      await api.delete(`/groups/${group.group_id}${force ? '?force=true' : ''}`);
+      await deleteGroup(group.group_id, force);
       setGroups(prev => prev.filter(g => g.group_id !== group.group_id));
       setEnrichedMap(prev => { const n = {...prev}; delete n[group.group_id]; return n; });
     } catch (err) {
@@ -484,7 +485,7 @@ export default function Groups() {
 
   async function openModal() {
     setName(""); setPicked([]); setErr("");
-    try { const { data } = await api.get("/users/"); setAllUsers(data); } catch { setAllUsers([]); }
+    try { const { data } = await getUsers(); setAllUsers(data); } catch { setAllUsers([]); }
     setModal(true);
   }
 
@@ -494,7 +495,7 @@ export default function Groups() {
     if (ids.length < 2) { setErr("Select at least one other member."); return; }
     setSaving(true);
     try {
-      const { data } = await api.post("/groups/", { group_name: name.trim(), user_ids: ids });
+      const { data } = await apiCreateGroup({ group_name: name.trim(), user_ids: ids });
       setModal(false); await loadData(); navigate(`/groups/${data.group_id}`);
     } catch(ex) { setErr(ex.response?.data?.detail || "Failed to create group."); }
     finally { setSaving(false); }

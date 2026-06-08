@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import api from "../api/axios";
+import { getInvite, joinInvite } from "../api/invites";
 import { useAuth } from "../context/AuthContext";
 
 export default function JoinGroup() {
@@ -16,7 +16,7 @@ export default function JoinGroup() {
 
   // Step 1: fetch invite info (group name) — no auth needed
   useEffect(() => {
-    api.get(`/invite/${token}`)
+    getInvite(token)
       .then(r => { setInfo(r.data); setStatus("ready"); })
       .catch(err => {
         setMessage(err.response?.data?.detail || "This invite link is invalid or has expired.");
@@ -32,7 +32,7 @@ export default function JoinGroup() {
     }
     setStatus("joining");
     try {
-      const { data } = await api.post(`/invite/${token}/join`);
+      const { data } = await joinInvite(token);
       setStatus("success");
       setMessage(data.message);
       setTimeout(() => navigate(`/groups/${data.group_id}`), 1500);

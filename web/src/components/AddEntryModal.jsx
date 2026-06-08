@@ -10,7 +10,11 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import api from "../api/axios";
+import { getMyGroups } from "../api/groups";
+import { createPersonalExpense } from "../api/personalExpenses";
+import { createIncome } from "../api/income";
+import { createLoan } from "../api/loans";
+import { createBorrow } from "../api/loans";
 import ReceiptScanner from "./ReceiptScanner";
 
 // ─────────────────────────────────────────────
@@ -236,8 +240,7 @@ export default function AddEntryModal({ onSuccess, defaultTab = "personal" }) {
   // Load groups once when modal opens
   useEffect(() => {
     if (open && groups.length === 0) {
-      api
-        .get("/groups/")
+      getMyGroups()
         .then((r) => {
           setGroups(r.data || []);
           if (r.data?.length > 0) setGroupId(String(r.data[0].group_id));
@@ -321,7 +324,7 @@ export default function AddEntryModal({ onSuccess, defaultTab = "personal" }) {
       if (type === "personal") {
         // Route: POST /personal-expenses/
         // FIX: trailing slash required for FastAPI redirect-free matching
-        await api.post("/personal-expenses/", {
+        await createPersonalExpense({
           amount: amt,
           category: category.trim() || "General",
           note: note.trim() || null,
@@ -331,7 +334,7 @@ export default function AddEntryModal({ onSuccess, defaultTab = "personal" }) {
         });
       } else if (type === "income") {
         // Route: POST /income/
-        await api.post("/income/", {
+        await createIncome({
           amount: amt,
           source_type: sourceType,
           note: note.trim() || null,
@@ -344,7 +347,7 @@ export default function AddEntryModal({ onSuccess, defaultTab = "personal" }) {
           setSaving(false);
           return;
         }
-        await api.post("/loans/", {
+        await createLoan({
           borrower_name: personName.trim(),
           amount: amt,
           note: note.trim() || null,
@@ -357,7 +360,7 @@ export default function AddEntryModal({ onSuccess, defaultTab = "personal" }) {
           setSaving(false);
           return;
         }
-        await api.post("/borrows/", {
+        await createBorrow({
           lender_name: personName.trim(),
           amount: amt,
           note: note.trim() || null,

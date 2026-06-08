@@ -1,19 +1,12 @@
 // --- web/src/pages/Profile.jsx ---
-/**
- * Profile page — /profile 
- *
- * FIX #15: loadStats() now uses POST /settlements/bulk instead of
- *          N individual GET /settlements/{id} calls.
- *          For a user in 10 groups this drops from 11 API calls to 2.
- *
- * FIX #9:  Balance row matched by user_id (integer), not user_name (string).
- *
- * All other logic and UI is identical to the original.
- */
+
 
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import api          from "../api/axios";
+import { getMyGroups } from "../api/groups";
+import { getSettlementsBulk } from "../api/settlements";
+import { updateProfile } from "../api/users";
+import { changePassword } from "../api/auth";
 import { useAuth }  from "../context/AuthContext";
 import AppShell     from "../components/AppShell";
 
@@ -83,7 +76,7 @@ function EditProfileModal({ user, onClose, onSave }) {
     if (!form.name.trim()) { setError("Name is required."); return; }
     setSaving(true);
     try {
-      const { data } = await api.put("/users/me", {
+      const { data } = await updateProfile({
         name:   form.name.trim(),
         email:  form.email.trim(),
         upi_id: form.upi_id.trim() || null,
@@ -169,7 +162,7 @@ function ChangePasswordModal({ onClose }) {
     if (err) { setError(err); return; }
     setSaving(true);
     try {
-      await api.post("/auth/change-password", {
+      await changePassword({
         current_password: form.current,
         new_password:     form.newPwd,
         confirm_password: form.confirm,
@@ -276,7 +269,7 @@ export default function Profile() {
   const [showEdit,     setShowEdit]     = useState(false);
   const [showPwd,      setShowPwd]      = useState(false);
 
-  // Deep-link: /profile?action=password or ?action=edit
+  
   useEffect(() => {
     const action = new URLSearchParams(location.search).get("action");
     if (action === "password") setShowPwd(true);
@@ -286,12 +279,11 @@ export default function Profile() {
   const initials = (user?.name || "?")
     .split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
 
-  // ── FIX #15 + #9: bulk settlements, match by user_id ──────────────────────
   useEffect(() => {
     async function loadStats() {
       setStatsLoading(true);
       try {
-        const { data: groupList } = await api.get("/groups/");
+        const { data: groupList } = await getMyGroups();
         setGroups(groupList);
 
         if (!groupList.length) {
@@ -299,14 +291,10 @@ export default function Profile() {
           return;
         }
 
-        // FIX #15: one POST replaces N individual GET /settlements/{id} calls
-        const { data: bulkResult } = await api.post("/settlements/bulk", {
-          group_ids: groupList.map(g => g.group_id),
-        });
+        const { data: bulkResult } = await getSettlementsBulk(groupList.map(g => g.group_id));
 
         let owe = 0, owed = 0;
         Object.values(bulkResult).forEach(rows => {
-          // FIX #9: match by user_id (integer), not user_name (string)
           const myRow = rows.find(s => s.user_id === user?.user_id);
           if (!myRow) return;
           const net = Number(myRow.net_balance);

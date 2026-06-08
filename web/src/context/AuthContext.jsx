@@ -13,7 +13,7 @@
  */
 
 import { createContext, useContext, useState, useEffect } from "react";
-import api from "../api/axios";
+import { getMe } from "../api/auth";
 
 const AuthContext = createContext(null);
 
@@ -38,10 +38,7 @@ export function AuthProvider({ children }) {
           return;
         }
 
-        // Validate token is still good by calling /auth/me
-        // This also handles the case where backend restarted
-        const { data } = await api.get("/auth/me");
-        // Update stored user with fresh data from server
+        const { data } = await getMe();
         const freshUser = { ...parsed, ...data };
         setUser(freshUser);
         localStorage.setItem("expense_user", JSON.stringify(freshUser));

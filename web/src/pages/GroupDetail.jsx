@@ -2,7 +2,10 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import api from "../api/axios";
+import { getMembers, getMyGroups, generateInvite, sendReminder, removeMember, deleteGroup } from "../api/groups";
+import { getExpenses, deleteExpense } from "../api/expenses";
+import { getPayments, deletePayment } from "../api/payments";
+import { getSettlements, getSimplified } from "../api/settlements";
 import { useAuth } from "../context/AuthContext";
 import AppShell from "../components/AppShell";
 
@@ -51,10 +54,10 @@ export default function GroupDetail() {
     setLoading(true);
     try {
       const [e, p, m, g] = await Promise.all([
-        api.get(`/expenses/${id}`),
-        api.get(`/payments/${id}`),
-        api.get(`/groups/${id}/members`),
-        api.get(`/groups/`),
+        getExpenses(id),
+        getPayments(id),
+        getMembers(id),
+        getMyGroups(),
       ]);
       setExpenses(e.data);
       setPayments(p.data);
@@ -71,8 +74,8 @@ export default function GroupDetail() {
     setSettLoading(true);
     try {
       const [r, s] = await Promise.all([
-        api.get(`/settlements/${id}`),
-        api.get(`/settlements/${id}/simplified`),
+        getSettlements(id),
+        getSimplified(id),
       ]);
       setSettlements(r.data); setSimplified(s.data);
     } catch {} finally { setSettLoading(false); }
@@ -83,10 +86,10 @@ export default function GroupDetail() {
     if (t === "settlements" && settlements.length === 0) loadSettlements();
   }
 
-  async function generateInvite() {
+  async function handleGenerateInvite() {
     setInviteLoading(true); setInviteModal(true); setCopied(false);
     try {
-      const { data } = await api.post(`/groups/${id}/invite`);
+      const { data } = await generateInvite(id);
       setInviteLink(`${window.location.origin}/join/${data.token}`);
     } catch { setInviteLink("Error generating link."); }
     finally { setInviteLoading(false); }
@@ -101,12 +104,12 @@ export default function GroupDetail() {
 
   async function delExpense(eid) {
     if (!confirm("Delete expense?")) return;
-    await api.delete(`/expenses/${eid}`);
+    await deleteExpense(eid);
     setExpenses(p => p.filter(e => e.expense_id !== eid));
   }
   async function delPayment(pid) {
     if (!confirm("Delete payment?")) return;
-    await api.delete(`/payments/${pid}`);
+    await deletePayment(pid);
     setPayments(p => p.filter(x => x.payment_id !== pid));
   }
 
@@ -119,7 +122,7 @@ export default function GroupDetail() {
   async function handleLeaveGroup() {
     if (!window.confirm('Leave this group? You must have a zero balance.')) return;
     try {
-      await api.delete(`/groups/${id}/members/${user.user_id}`);
+      await removeMember(id, user.user_id);
       navigate('/groups');
     } catch (err) {
       alert(err?.response?.data?.detail || 'Failed to leave group. Settle your balance first.');
@@ -132,7 +135,7 @@ export default function GroupDetail() {
       : `Permanently delete this group and all its data?`;
     if (!window.confirm(msg)) return;
     try {
-      await api.delete(`/groups/${id}${force ? '?force=true' : ''}`);
+      await deleteGroup(id, force);
       navigate('/groups');
     } catch (err) {
       const status = err?.response?.status;
@@ -143,10 +146,10 @@ export default function GroupDetail() {
     }
   }
 
-  async function sendReminder(s) {
+  async function handleSendReminder(s) {
     setReminding(s.from);
     try {
-      await api.post(`/groups/${id}/remind`, {
+      await sendReminder(id, {
         debtor_user_id: s.from_user_id,
         amount: s.amount,
       });
@@ -189,7 +192,7 @@ export default function GroupDetail() {
           <button
             className="btn btn-xs"
             disabled={isSending}
-            onClick={() => sendReminder(s)}
+            onClick={() => handleSendReminder(s)}
             style={{
               color: "var(--warning)", borderColor: "rgba(245,158,11,0.35)",
               background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.3)",
@@ -216,7 +219,7 @@ export default function GroupDetail() {
     <>
       <button
         className="btn btn-sm"
-        onClick={generateInvite}
+        onClick={handleGenerateInvite}
         style={{
           display: "flex", alignItems: "center", gap: "6px",
           background: "rgba(59, 130, 246, 0.15)",
@@ -403,7 +406,7 @@ export default function GroupDetail() {
                   <Link to={`/groups/${id}/add-payment`} className="btn btn-ghost" style={{ justifyContent: "center" }}>+ Record Payment</Link>
                   <button
                     className="btn"
-                    onClick={generateInvite}
+                    onClick={handleGenerateInvite}
                     style={{
                       justifyContent: "center", display: "flex", alignItems: "center", gap: "8px",
                       background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text2)",

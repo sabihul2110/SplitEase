@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import api from "../api/axios";
+import { getMembers } from "../api/groups";
+import { createPayment } from "../api/payments";
 import { useAuth } from "../context/AuthContext";
 import AppShell from "../components/AppShell";
 
@@ -17,7 +18,7 @@ export default function AddPayment() {
   const [form, setForm] = useState({ payer_id: String(user.user_id), payee_id: "", amount: "", note: "", payment_date: today });
   const set = (k, v) => setForm(f => ({...f, [k]: v}));
 
-  useEffect(() => { api.get(`/groups/${id}/members`).then(r => setMembers(r.data)); }, [id]);
+  useEffect(() => { getMembers(id).then(r => setMembers(r.data)); }, [id]);
 
   const payerName = members.find(m => m.user_id === parseInt(form.payer_id))?.name || "";
   const payeeName = members.find(m => m.user_id === parseInt(form.payee_id))?.name || "";
@@ -27,7 +28,7 @@ export default function AddPayment() {
     if (parseInt(form.payer_id) === parseInt(form.payee_id)) { setError("Payer and receiver must be different."); return; }
     setLoading(true);
     try {
-      await api.post(`/payments/${id}`, {
+      await createPayment(id, {
         payer_id: parseInt(form.payer_id), payee_id: parseInt(form.payee_id),
         amount: parseFloat(form.amount), note: form.note.trim() || null, payment_date: form.payment_date,
       });

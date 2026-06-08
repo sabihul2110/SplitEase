@@ -10,7 +10,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import api from "../api/axios";
+import { getNotificationCount, getNotifications, markRead, markAllRead, deleteNotification, deleteReadNotifications } from "../api/notifications";
 
 const LIMIT = 20;
 
@@ -44,7 +44,7 @@ export default function NotificationBell() {
 
   const fetchCount = useCallback(async () => {
     try {
-      const { data } = await api.get("/notifications/unread-count");
+      const { data } = await getNotificationCount();
       setCount(data.count);
     } catch {}
   }, []);
@@ -70,7 +70,7 @@ export default function NotificationBell() {
     setOffset(0);
     setHasMore(true); // assume more until proven otherwise — avoids button flicker
     try {
-      const { data } = await api.get(`/notifications/?limit=${LIMIT}&offset=0`);
+      const { data } = await getNotifications(LIMIT, 0);
       setNotifs(data);
       setHasMore(data.length === LIMIT); // if we got a full page, there might be more
       setOffset(LIMIT);
@@ -81,7 +81,7 @@ export default function NotificationBell() {
     if (loadingMore) return; // prevent duplicate calls
     setLoadingMore(true);
     try {
-      const { data } = await api.get(`/notifications/?limit=${LIMIT}&offset=${offset}`);
+      const { data } = await getNotifications(LIMIT, offset);
       setNotifs(prev => [...prev, ...data]);         // append to existing list
       setHasMore(data.length === LIMIT);
       setOffset(prev => prev + LIMIT);
@@ -91,7 +91,7 @@ export default function NotificationBell() {
   async function deleteNotif(e, id) {
     e.stopPropagation();
     try {
-      await api.delete(`/notifications/${id}`);
+      await deleteNotification(id);
       setNotifs(prev => prev.filter(n => n.notification_id !== id));
       setCount(prev => {
         const wasUnread = notifs.find(n => n.notification_id === id && !n.is_read);
@@ -102,14 +102,14 @@ export default function NotificationBell() {
 
   async function deleteReadNotifs() {
     try {
-      await api.delete('/notifications/read');
+      await deleteReadNotifications();
       setNotifs(prev => prev.filter(n => !n.is_read));
     } catch {}
   }
 
   async function markAllRead() {
     try {
-      await api.post("/notifications/read-all");
+      await markAllRead();
       setCount(0);
       setNotifs(prev => prev.map(n => ({ ...n, is_read: 1 })));
     } catch {}
@@ -117,7 +117,7 @@ export default function NotificationBell() {
 
   async function handleNotifClick(n) {
     if (!n.is_read) {
-      try { await api.post(`/notifications/read/${n.notification_id}`); } catch {}
+      try { await markRead(n.notification_id); } catch {}
       setNotifs(prev => prev.map(x => x.notification_id === n.notification_id ? { ...x, is_read: 1 } : x));
       setCount(c => Math.max(0, c - 1));
     }

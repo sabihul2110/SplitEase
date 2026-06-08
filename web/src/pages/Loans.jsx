@@ -3,7 +3,7 @@
 // Each with their own summary, filter tabs, and card grid.
 
 import { useState, useEffect, useCallback } from "react";
-import api from "../api/axios";
+import { getLoans, deleteLoan, repayLoan, getBorrows, deleteBorrow, repayBorrow } from "../api/loans";
 import AppShell from "../components/AppShell";
 import AddEntryModal from "../components/AddEntryModal";
 import { Icons } from "../utils/Icons";
@@ -159,9 +159,7 @@ function LoanCard({ item, onRefresh, idx, accentColor = "#f59e0b", btnColor = "#
     }
     setSaving(true);
     try {
-      await api.post(repayEndpt, {
-        [isLent ? "repayment_amount" : "repayment_amount"]: amt,
-      });
+      await (isLent ? repayLoan(idField, { repayment_amount: amt }) : repayBorrow(idField, { repayment_amount: amt }));
       setRepayAmt("");
       onRefresh();
     } catch (ex) {
@@ -174,7 +172,7 @@ function LoanCard({ item, onRefresh, idx, accentColor = "#f59e0b", btnColor = "#
   async function handleDelete() {
     if (!window.confirm(`Delete this record?`)) return;
     setDeleting(true);
-    try { await api.delete(deleteEndpt); onRefresh(); }
+    try { await (isLent ? deleteLoan(idField) : deleteBorrow(idField)); onRefresh(); }
     catch { setDeleting(false); }
   }
 
@@ -286,10 +284,7 @@ export default function Loans() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [lR, bR] = await Promise.all([
-        api.get("/loans/"),
-        api.get("/borrows/"),
-      ]);
+      const [lR, bR] = await Promise.all([getLoans(), getBorrows()]);
       setLoans(lR.data || []);
       setBorrows(bR.data || []);
     } catch {

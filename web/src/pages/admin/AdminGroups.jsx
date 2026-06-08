@@ -1,18 +1,18 @@
 // --- web/src/pages/admin/AdminGroups.jsx ---
 
 import { useState, useEffect } from "react";
-import api from "../../api/axios";
+import { getAllGroups, deleteGroup, wipeAllGroups } from "../../api/groups";
 
 export default function AdminGroups() {
   const [groups,  setGroups]  = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get("/groups/all").then(r => setGroups(r.data)).finally(() => setLoading(false));
+    getAllGroups().then(r => setGroups(r.data)).finally(() => setLoading(false));
   }, []);
   async function deleteGroup(id, name) {
     if (!confirm(`Delete "${name}"? All expenses and payments will be removed.`)) return;
-    await api.delete(`/groups/${id}?force=true`);
+    await deleteGroup(id, true);
     setGroups(p => p.filter(g => g.group_id !== id));
   }
 
@@ -20,7 +20,7 @@ export default function AdminGroups() {
     if (!confirm("Delete ALL groups? This removes every expense, payment, and settlement across the entire app. This cannot be undone.")) return;
     if (!confirm("Are you absolutely sure? Type OK to confirm.")) return;
     try {
-      await api.delete("/groups/admin/wipe-groups");
+      await wipeAllGroups();
       setGroups([]);
     } catch (e) {
       alert(e.response?.data?.detail || "Failed to wipe groups.");

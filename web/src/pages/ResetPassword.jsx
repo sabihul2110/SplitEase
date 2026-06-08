@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useSearchParams, Link, useNavigate } from "react-router-dom";
-import api from "../api/axios";
+import { resetPassword } from "../api/auth";
 
 
 export default function ResetPassword() {
@@ -19,7 +19,7 @@ export default function ResetPassword() {
     e.preventDefault(); setError(""); setLoading(true);
     if (pass !== confirm) { setError("Passwords do not match."); setLoading(false); return; }
     try {
-      await api.post("/auth/reset-password", { token, new_password: pass, confirm_password: confirm });
+      await resetPassword({ token, new_password: pass, confirm_password: confirm });
       setDone(true);
       setTimeout(() => navigate("/login"), 3000);
     } catch (err) {

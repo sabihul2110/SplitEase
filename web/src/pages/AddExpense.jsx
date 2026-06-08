@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import api from "../api/axios";
+import { getMembers } from "../api/groups";
+import { createExpense, getCategories, getSubcategories } from "../api/expenses";
 import { useAuth } from "../context/AuthContext";
 import AppShell from "../components/AppShell";
 import ReceiptScanner from "../components/ReceiptScanner";
@@ -26,7 +27,7 @@ export default function AddExpense() {
   const [custom, setCustom] = useState({});
 
   useEffect(() => {
-    Promise.all([api.get(`/groups/${id}/members`), api.get("/groups/categories")])
+  Promise.all([getMembers(id), getCategories()])
       .then(([m, c]) => {
         setMembers(m.data); setCategories(c.data);
         const init = {}; m.data.forEach(x => { init[x.user_id] = ""; }); setCustom(init);
@@ -36,7 +37,7 @@ export default function AddExpense() {
   async function onCat(e) {
     const cid = e.target.value;
     setForm(f => ({...f, category_id: cid, subcategory_id: ""}));
-    setSubcats(cid ? (await api.get(`/groups/subcategories/${cid}`)).data : []);
+    setSubcats(cid ? (await getSubcategories(cid)).data : []);
   }
 
   const total = parseFloat(form.total_amount || 0);
@@ -59,7 +60,7 @@ export default function AddExpense() {
     if (!balanced) { setError(`Amounts must sum to ₹${total.toFixed(2)} (current: ₹${customSum.toFixed(2)})`); return; }
     setLoading(true);
     try {
-      await api.post(`/expenses/${id}`, {
+      await createExpense(id, {
         ...form, payer_id: parseInt(form.payer_id), category_id: parseInt(form.category_id),
         subcategory_id: form.subcategory_id ? parseInt(form.subcategory_id) : null,
         total_amount: total, splits: buildSplits(),
@@ -79,7 +80,7 @@ export default function AddExpense() {
     if (data.category_id) {
       set("category_id", String(data.category_id));
       try {
-        const res = await api.get(`/groups/subcategories/${data.category_id}`);
+        const res = await getSubcategories(data.category_id);
         setSubcats(res.data);
       } catch {}
     }
@@ -106,11 +107,17 @@ export default function AddExpense() {
             <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
               <span style={{ fontSize: 28, color: "var(--text3)" }}>₹</span>
               <input
-                className="input-amount" type="number" required min="0.01" step="0.01"
-                placeholder="0.00" value={form.total_amount}
+                className="input-amount" 
+                type="number" 
+                required 
+                min="0.01" 
+                step="0.01"
+                placeholder="0.00" 
+                value={form.total_amount}
                 onChange={e => set("total_amount", e.target.value)}
+                onWheel={(e) => e.target.blur()} /* 👈 THE MAGIC FIX */
                 style={{ flex: 1 }}
-              />
+            />
             </div>
             {/* THE NEW SCANNER BUTTON BLOCK */}
             <div style={{ marginTop: 12 }}>

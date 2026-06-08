@@ -6,7 +6,8 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import api from "../api/axios";
+import { getMyGroups } from "../api/groups";
+import { getSettlementsBulk } from "../api/settlements";
 import { useAuth } from "../context/AuthContext";
 import AppShell from "../components/AppShell";
 import { getGroupIcon } from "../utils/GroupIcons";
@@ -78,14 +79,12 @@ export default function Dashboard() {
   useEffect(() => {
     async function load() {
       try {
-        const { data: groupList } = await api.get("/groups/");
+        const { data: groupList } = await getMyGroups();
         setGroups(groupList || []);
 
         if (groupList?.length) {
-          // FIX #15: ONE bulk call instead of N individual settlement calls
-          const { data: bulkResult } = await api.post("/settlements/bulk", {
-            group_ids: groupList.map(g => g.group_id),
-          });
+          const groupIds = groupList.map(g => g.group_id);
+          const { data: bulkResult } = await getSettlementsBulk(groupIds);
 
           let youOwe = 0, owedToYou = 0;
           Object.values(bulkResult).forEach(rows => {

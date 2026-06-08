@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
-import api from "../../api/axios";
+import { getAllUsers, deleteUser as deleteUserApi } from "../../api/users";
 
 export default function AdminUsers() {
   const { user: me } = useAuth();
@@ -10,12 +10,12 @@ export default function AdminUsers() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get("/users/all").then(r => setUsers(r.data)).finally(() => setLoading(false));
+    getAllUsers().then(r => setUsers(r.data)).finally(() => setLoading(false));
   }, []);
 
   async function deleteUser(id, name) {
     if (!confirm(`Delete ${name}? This removes all their data.`)) return;
-    await api.delete(`/users/${id}`);
+    await deleteUserApi(id);
     setUsers(p => p.filter(u => u.user_id !== id));
   }
 

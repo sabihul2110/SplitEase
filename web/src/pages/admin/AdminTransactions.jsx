@@ -1,7 +1,8 @@
 // --- web/src/pages/admin/AdminTransactions.jsx ---
 
 import { useState, useEffect } from "react";
-import api from "../../api/axios";
+import { getAllGroups } from "../../api/groups";
+import { getExpenses } from "../../api/expenses";
 
 export default function AdminTransactions() {
   const [groups,   setGroups]   = useState([]);
@@ -9,13 +10,12 @@ export default function AdminTransactions() {
   const [loading,  setLoading]  = useState(true);
 
   useEffect(() => {
-    api.get("/groups/all").then(async r => {
-      setGroups(r.data);
-      const all = [];
-      await Promise.all(r.data.map(async g => {
-        try {
-          // Admin uses their own user_id; backend checks membership OR admin bypass
-          const e = await api.get(`/expenses/${g.group_id}`);
+    getAllGroups().then(async r => {
+        setGroups(r.data);
+        const all = [];
+        await Promise.all(r.data.map(async g => {
+          try {
+            const e = await getExpenses(g.group_id);
           e.data.forEach(x => all.push({ ...x, group_name: g.group_name }));
         } catch {}
       }));

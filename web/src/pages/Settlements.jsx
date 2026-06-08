@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import api from "../api/axios";
+import { getMyGroups } from "../api/groups";
+import { getSettlements, getSimplified } from "../api/settlements";
 import AppShell from "../components/AppShell";
 import { useAuth } from "../context/AuthContext";
 
@@ -17,7 +18,7 @@ export default function Settlements() {
   const [gLoading, setGLoading] = useState(true);
 
   useEffect(() => {
-    api.get("/groups/").then(r => {
+    getMyGroups().then(r => {
       setGroups(r.data);
       if (r.data.length > 0) selectGroup(r.data[0].group_id);
     }).finally(() => setGLoading(false));
@@ -27,8 +28,8 @@ export default function Settlements() {
     setSelected(gid); setLoading(true);
     try {
       const [s, r] = await Promise.all([
-        api.get(`/settlements/${gid}/simplified`),
-        api.get(`/settlements/${gid}`),
+        getSimplified(gid),
+        getSettlements(gid),
       ]);
       setSimple(s.data); setRaw(r.data);
     } catch {} finally { setLoading(false); }

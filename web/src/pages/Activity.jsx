@@ -18,7 +18,7 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import api from "../api/axios";
+import { getTimeline } from "../api/timeline";
 import AppShell from "../components/AppShell";
 
 const STYLES = `
@@ -122,7 +122,7 @@ export default function Activity() {
 
   useEffect(() => {
     // FIX #11: single API call instead of 2N+1 fan-out
-    api.get("/timeline/?limit=200")
+    getTimeline()
       .then(r => setFeed(r.data || []))
       .catch(() => {})
       .finally(() => setLoading(false));

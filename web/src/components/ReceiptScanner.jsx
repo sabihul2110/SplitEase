@@ -11,7 +11,7 @@
  *   compact        — if true, renders a smaller icon-only button (for modals)
  */
 import { useState, useRef } from "react";
-import api from "../api/axios";
+import { scanReceipt } from "../api/ai";
 
 const STYLES = `
   .rs-btn {
@@ -214,9 +214,7 @@ export default function ReceiptScanner({ onResult, compact = false }) {
     try {
       const fd = new FormData();
       fd.append("file", file);
-      const { data } = await api.post("/ai/scan-receipt", fd, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const { data } = await scanReceipt(fd);
       setResult(data);
     } catch (ex) {
       setError(ex?.response?.data?.detail || "Scan failed. Try a clearer image.");
