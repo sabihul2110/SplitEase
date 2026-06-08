@@ -19,14 +19,7 @@ export default function Login() {
     e.preventDefault(); setError(""); setLoading(true);
     try {
       const { data } = await api.post("/auth/login", form);
-      localStorage.setItem(
-        "expense_user",
-        JSON.stringify({
-          access_token: data.access_token
-        })
-      );
-      const { data: me } = await api.get("/auth/me");
-      login({ ...data, ...me });
+      login(data);
       navigate(next, { replace: true });
     } catch (err) {
       setError(err.response?.data?.detail || "Invalid email or password.");

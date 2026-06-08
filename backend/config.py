@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     # ── JWT ────────────────────────────────────────────────────────────────
     JWT_SECRET:         str = "dev_secret_change_me"
     JWT_ALGORITHM:      str = "HS256"
-    JWT_EXPIRE_MINUTES: int = 60
+    JWT_EXPIRE_MINUTES: int = 1440
 
     # ── CORS ───────────────────────────────────────────────────────────────
     ALLOWED_ORIGINS: str = "http://localhost:5173"
@@ -36,6 +36,14 @@ class Settings(BaseSettings):
 
     # ── Sentry ─────────────────────────────────────────────────────────────
     SENTRY_DSN: str = ""
+
+    # ── Email (Brevo) ──────────────────────────────────────────────────────
+    BREVO_SMTP_KEY: str = ""
+    BREVO_API_KEY: str = ""
+    BREVO_SENDER_EMAIL: str = "sabihul2024@gmail.com"
+
+    # ── Frontend URL ───────────────────────────────────────────────────────
+    APP_BASE_URL: str = "http://localhost:5173"
 
     # ── Env ────────────────────────────────────────────────────────────────
     TESTING: bool = False
@@ -85,6 +93,9 @@ ALLOWED_ORIGINS: list[str] = [
 INVITE_EXPIRY_HOURS: int       = settings.INVITE_EXPIRY_HOURS
 GEMINI_API_KEY:      str       = settings.GEMINI_API_KEY
 SENTRY_DSN:          str       = settings.SENTRY_DSN
+BREVO_SMTP_KEY: str = settings.BREVO_SMTP_KEY or settings.BREVO_API_KEY
+BREVO_SENDER_EMAIL: str = settings.BREVO_SENDER_EMAIL
+APP_BASE_URL:        str       = settings.APP_BASE_URL
 
 VALID_SOURCE_TYPES: frozenset[str] = frozenset({
     "salary", "pocket_money", "stipend", "other"

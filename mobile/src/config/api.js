@@ -21,9 +21,11 @@ const V1 = '/api/v1';
 
 export const ENDPOINTS = {
   // Auth
-  login:  `${V1}/auth/login`,
-  signup: `${V1}/auth/signup`,
-  me:     `${V1}/auth/me`,
+  login:           `${V1}/auth/login`,
+  signup:          `${V1}/auth/signup`,
+  me:              `${V1}/auth/me`,
+  forgotPassword:  `${V1}/auth/forgot-password`,
+  resetPassword:   `${V1}/auth/reset-password`,
 
   // Groups
   groups:            `${V1}/groups/`,

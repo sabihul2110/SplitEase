@@ -16,6 +16,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from repositories import settlement_repository, group_repository
+from services.settlement_service import simplify_debts
 from dependencies import get_current_user
 
 router = APIRouter()
@@ -34,8 +35,11 @@ def raw_settlements(group_id: int, current_user: dict = Depends(get_current_user
 @router.get("/{group_id}/simplified")
 def simplified_settlements(group_id: int, current_user: dict = Depends(get_current_user)):
     """Returns minimal transactions needed to settle all debts."""
+    is_admin = current_user.get("role") == "admin"
+    if not is_admin and not group_repository.is_group_member(group_id, current_user["user_id"]):
+        raise HTTPException(status_code=403, detail="Not a member of this group.")
     rows = settlement_repository.calculate_settlements(group_id, current_user["user_id"])
-    return settlement_repository.simplify_debts(rows)
+    return simplify_debts(rows)
 
 
 class BulkSettlementRequest(BaseModel):

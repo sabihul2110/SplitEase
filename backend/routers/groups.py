@@ -178,6 +178,12 @@ def has_expenses_bulk(
     return group_repository.fetch_groups_has_expenses(allowed_ids)
 
 
+@router.delete("/admin/wipe-groups")
+def wipe_all_groups(current_user: dict = Depends(require_admin)):
+    """Admin only: delete every group, expense, payment, and settlement."""
+    return group_repository.admin_wipe_groups()
+
+
 @router.delete("/{group_id}/members/{user_id}")
 def leave_group(group_id: int, user_id: int, current_user: dict = Depends(get_current_user)):
     """
@@ -202,10 +208,3 @@ def leave_group(group_id: int, user_id: int, current_user: dict = Depends(get_cu
 
     group_repository.remove_group_member(group_id, user_id)
     return {"message": "Left the group."}
-
-
-
-@router.delete("/admin/wipe-groups")
-def wipe_all_groups(current_user: dict = Depends(require_admin)):
-    """Admin only: delete every group, expense, payment, and settlement."""
-    return group_repository.admin_wipe_groups()

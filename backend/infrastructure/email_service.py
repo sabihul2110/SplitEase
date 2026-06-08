@@ -1,45 +1,16 @@
-# SplitEase/backend/email_service.py
+# backend/infrastructure/email_service.py
 
 import logging
-import os
 import requests
+from config import BREVO_SMTP_KEY, BREVO_SENDER_EMAIL, APP_BASE_URL
 
 logger = logging.getLogger("splitease.email")
 
-# Fallback to SMTP_KEY if API_KEY isn't explicitly set
-BREVO_API_KEY = os.getenv("BREVO_API_KEY", os.getenv("BREVO_SMTP_KEY", ""))
-SENDER_EMAIL  = os.getenv("BREVO_SENDER_EMAIL", "")
-APP_BASE_URL  = os.getenv("APP_BASE_URL", "http://localhost:5173")
-
 def send_reset_email(to_email: str, name: str, token: str) -> None:
-    if not BREVO_API_KEY or not SENDER_EMAIL:
+    if not BREVO_SMTP_KEY or not BREVO_SENDER_EMAIL:
         raise RuntimeError("Email not configured — check your Brevo env vars.")
     
     reset_link = f"{APP_BASE_URL}/reset-password?token={token}"
-
-    # html = f"""
-    # <div style="font-family:sans-serif;max-width:460px;margin:0 auto;padding:32px 24px;
-    #             background:#0a0d14;color:#f0f4ff;border-radius:12px;border:1px solid #242a3d;">
-    #   <img src="https://raw.githubusercontent.com/sabihul2110/SplitEase/main/mobile/assets/icon.png" 
-    #        alt="SplitEase Logo" 
-    #        style="width:56px;height:56px;border-radius:14px;margin-bottom:20px;display:block;">
-    #   <h2 style="color:#f0f4ff;margin:0 0 8px;font-size:20px;">Reset your password</h2>
-    #   <p style="color:#8892b0;margin:0 0 24px;line-height:1.6;">
-    #     Hi {name}, click below to reset your SplitEase password.
-    #     This link expires in <strong style="color:#f0f4ff;">15 minutes</strong>.
-    #   </p>
-    #   <a href="{reset_link}"
-    #      style="display:inline-block;padding:12px 28px;background:#2563eb;color:#fff;
-    #             border-radius:8px;text-decoration:none;font-weight:700;font-size:15px;
-    #             margin-bottom:24px;">
-    #     Reset Password
-    #   </a>
-    #   <p style="color:#4a5578;font-size:13px;margin:0;">
-    #     If you didn't request this, you can safely ignore this email.
-    #     Your password will not change.
-    #   </p>
-    # </div>
-    # """
 
     html = f"""
     <div style="font-family:sans-serif;max-width:460px;margin:0 auto;padding:32px 24px;
@@ -80,10 +51,11 @@ def send_reset_email(to_email: str, name: str, token: str) -> None:
     </div>
     """
 
+
     url = "https://api.brevo.com/v3/smtp/email"
     
     payload = {
-        "sender": {"name": "SplitEase", "email": SENDER_EMAIL},
+        "sender": {"name": "SplitEase", "email": BREVO_SENDER_EMAIL},
         "to": [{"email": to_email, "name": name}],
         "subject": "Reset your SplitEase password",
         "htmlContent": html
@@ -91,12 +63,13 @@ def send_reset_email(to_email: str, name: str, token: str) -> None:
     
     headers = {
         "accept": "application/json",
-        "api-key": BREVO_API_KEY,
+        "api-key": BREVO_SMTP_KEY,
         "content-type": "application/json"
     }
 
     try:
         # 10 second timeout prevents the frontend from hanging indefinitely
+        
         response = requests.post(url, json=payload, headers=headers, timeout=10)
         response.raise_for_status() 
         logger.info("Reset email sent to=%s", to_email)

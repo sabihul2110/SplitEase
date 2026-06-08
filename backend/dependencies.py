@@ -16,35 +16,12 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
     """
-    Decodes JWT, then validates token_version against DB.
-    Returns decoded payload: {user_id, email, role, token_version}.
+    Decodes and validates the JWT.
+    token_version DB check removed for latency — free tier cross-region
+    round-trip added ~150ms to every authenticated request.
+    Re-enable when Redis is available for caching.
     """
-    payload = decode_token(token)
-
-    conn = get_connection()
-    cur  = conn.cursor()
-    cur.execute(
-        "SELECT token_version FROM Users WHERE user_id = %s",
-        (payload.get("user_id"),),
-    )
-    row = cur.fetchone()
-    cur.close(); conn.close()
-
-    if row is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User no longer exists.",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    if payload.get("token_version", 0) < row[0]:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Session expired. Please log in again.",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    return payload
+    return decode_token(token)
 
 
 def require_admin(current_user: dict = Depends(get_current_user)) -> dict:

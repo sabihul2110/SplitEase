@@ -16,10 +16,10 @@ export const changePassword = (payload) =>
   client.post(ENDPOINTS.changePass, payload);
 
 export const forgotPassword = (email) =>
-  client.post('/api/v1/auth/forgot-password', { email });
+  client.post(ENDPOINTS.forgotPassword, { email });
 
 export const resetPassword = (payload) =>
-  client.post('/api/v1/auth/reset-password', payload);
+  client.post(ENDPOINTS.resetPassword, payload);
 
 export const updateMe = (payload) =>
   client.put(ENDPOINTS.updateMe, payload);

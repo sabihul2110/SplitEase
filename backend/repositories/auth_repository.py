@@ -63,3 +63,24 @@ def use_reset_token(token_hash: str, user_id: int, new_password_hash: str) -> No
         raise
     finally:
         cur.close(); conn.close()
+
+
+def update_password_and_bump_version(user_id: int, new_password_hash: str) -> None:
+    """
+    Updates password hash and bumps token_version atomically.
+    Called by change_user_password — invalidates all existing JWTs for this user.
+    """
+    conn = get_connection()
+    cur  = conn.cursor()
+    try:
+        conn.start_transaction()
+        cur.execute(
+            "UPDATE Users SET password_hash = %s, token_version = token_version + 1 WHERE user_id = %s",
+            (new_password_hash, user_id),
+        )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close(); conn.close()

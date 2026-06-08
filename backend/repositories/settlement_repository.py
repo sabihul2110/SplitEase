@@ -20,41 +20,6 @@ def calculate_settlements(group_id: int, user_id: int) -> list[dict]:
     return results
 
 
-def simplify_debts(rows: list[dict]) -> list[dict]:
-    creditors = []
-    debtors   = []
-    for r in rows:
-        balance = float(r.get("net_balance", 0))
-        entry = {
-            "user_id": r["user_id"],
-            "name":    r["user_name"],
-            "upi_id":  r.get("upi_id"),
-        }
-        if balance > 0:
-            creditors.append([entry, balance])
-        elif balance < 0:
-            debtors.append([entry, -balance])
-    settlements = []
-    i = j = 0
-    while i < len(debtors) and j < len(creditors):
-        debtor,   debt   = debtors[i]
-        creditor, credit = creditors[j]
-        amount = min(debt, credit)
-        settlements.append({
-            "from":         debtor["name"],
-            "from_user_id": debtor["user_id"],
-            "to":           creditor["name"],
-            "to_user_id":   creditor["user_id"],
-            "to_upi_id":    creditor["upi_id"],
-            "amount":       round(amount, 2),
-        })
-        debtors[i][1]   -= amount
-        creditors[j][1] -= amount
-        if debtors[i][1]   == 0: i += 1
-        if creditors[j][1] == 0: j += 1
-    return settlements
-
-
 def fetch_settlements_for_groups(group_ids: list[int]) -> dict[int, list[dict]]:
     if not group_ids:
         return {}
