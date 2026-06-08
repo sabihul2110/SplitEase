@@ -14,6 +14,7 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
+  Keyboard,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
@@ -69,12 +70,13 @@ function StatusBadge({ status }) {
 }
 
 function ProgressBar({ pct, color }) {
+  const safeWidth = isNaN(pct) ? 0 : Math.min(Math.max(pct, 0), 100);
   return (
     <View style={styles.progressWrap}>
       <View
         style={[
           styles.progressBar,
-          { width: `${Math.min(pct, 100)}%`, backgroundColor: color },
+          { width: `${safeWidth}%`, backgroundColor: color },
         ]}
       />
     </View>
@@ -96,46 +98,50 @@ function LoanCard({ item, isLent, onRefresh, idx, showToast, setAlert }) {
   const dateLbl = isLent ? "Lent on" : "Borrowed on";
   const amtLabel = isLent ? "Amount Lent" : "Amount Borrowed";
 
-  const pct =
-    item.amount > 0
-      ? Math.round(((item.amount - item.remaining_amount) / item.amount) * 100)
-      : 100;
+  const safeAmt = Number(item.amount) || 0;
+  const safeRem = Number(item.remaining_amount) || 0;
+  const pct = safeAmt > 0 ? Math.round(((safeAmt - safeRem) / safeAmt) * 100) : 100;
 
-  const dateStr = dateField
-    ? new Date(dateField + "T00:00:00").toLocaleDateString("en-IN", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      })
-    : "—";
+  let dateStr = "—";
+  if (dateField) {
+    const d = new Date(dateField + "T00:00:00");
+    if (!isNaN(d.getTime())) {
+      dateStr = d.toLocaleDateString("en-IN", {
+        day: "numeric", month: "short", year: "numeric",
+      });
+    }
+  }
 
   async function handleRepay() {
+    Keyboard.dismiss();
     setRepayErr("");
-    const amt = parseFloat(repayAmt);
-    if (isNaN(amt) || amt <= 0) {
+    const amountInput = parseFloat(repayAmt);
+    if (isNaN(amountInput) || amountInput <= 0) {
       setRepayErr("Enter a valid amount");
       return;
     }
-    if (amt > item.remaining_amount) {
-      setRepayErr(`Max ₹${item.remaining_amount.toLocaleString("en-IN")}`);
+    if (amountInput > safeRem) {
+      setRepayErr(`Max ₹${safeRem.toLocaleString("en-IN")}`);
       return;
     }
     setSaving(true);
     try {
       await (isLent
-        ? loansApi.repayLoan(idField, amt)
-        : loansApi.repayBorrow(idField, amt));
+        ? loansApi.repayLoan(idField, amountInput)
+        : loansApi.repayBorrow(idField, amountInput));
       setRepayAmt("");
       showToast?.("Repayment recorded");
-      onRefresh();
+      if (onRefresh) onRefresh();
     } catch (ex) {
-      setRepayErr(ex?.response?.data?.detail || "Failed");
+      const detail = ex?.response?.data?.detail;
+      setRepayErr(Array.isArray(detail) ? detail[0]?.msg : (typeof detail === "string" ? detail : "Failed"));
     } finally {
       setSaving(false);
     }
   }
 
   function handleDelete() {
+    Keyboard.dismiss();
     setAlert({
       title: "Delete record?",
       message: "This cannot be undone.",
@@ -197,7 +203,7 @@ function LoanCard({ item, isLent, onRefresh, idx, showToast, setAlert }) {
           >
             {item.status === "repaid"
               ? "Done"
-              : `₹${item.remaining_amount.toLocaleString("en-IN")} left`}
+              : `₹${safeRem.toLocaleString("en-IN")} left`}
           </Text>
         </View>
         <ProgressBar
@@ -220,7 +226,7 @@ function LoanCard({ item, isLent, onRefresh, idx, showToast, setAlert }) {
                 setRepayAmt(v);
                 setRepayErr("");
               }}
-              placeholder={`Max ₹${item.remaining_amount.toLocaleString("en-IN")}`}
+              placeholder={`Max ₹${safeRem.toLocaleString("en-IN")}`}
               placeholderTextColor={COLORS.text3}
               keyboardType="decimal-pad"
             />
@@ -278,6 +284,7 @@ function AddLoanModal({ visible, onClose, isLent, onSuccess }) {
   }, [visible]);
 
   async function handleSubmit() {
+    Keyboard.dismiss();
     if (!personName.trim()) {
       setError(`${isLent ? "Borrower" : "Lender"} name is required`);
       return;
@@ -696,18 +703,17 @@ export default function LoansScreen() {
         : i.status === "repaid",
   );
 
-  const totalLent = loans.reduce((s, l) => s + l.amount, 0);
+  const totalLent = loans.reduce((s, l) => s + (Number(l.amount) || 0), 0);
   const outstandingLent = loans
     .filter((l) => l.status === "active")
-    .reduce((s, l) => s + l.remaining_amount, 0);
-  const recoveredLent =
-    totalLent - loans.reduce((s, l) => s + l.remaining_amount, 0);
-  const totalBorrow = borrows.reduce((s, b) => s + b.amount, 0);
+    .reduce((s, l) => s + (Number(l.remaining_amount) || 0), 0);
+  const recoveredLent = totalLent - outstandingLent;
+
+  const totalBorrow = borrows.reduce((s, b) => s + (Number(b.amount) || 0), 0);
   const outstandingBorrow = borrows
     .filter((b) => b.status === "active")
-    .reduce((s, b) => s + b.remaining_amount, 0);
-  const repaidBorrow =
-    totalBorrow - borrows.reduce((s, b) => s + b.remaining_amount, 0);
+    .reduce((s, b) => s + (Number(b.remaining_amount) || 0), 0);
+  const repaidBorrow = totalBorrow - outstandingBorrow;
 
   const sumCards = isLent
     ? [
@@ -905,7 +911,7 @@ export default function LoansScreen() {
           <LoanCard
             item={item}
             isLent={isLent}
-            onRefresh={load}
+            onRefresh={() => load(true)}
             idx={index}
             showToast={showToast}
             setAlert={setAlert}
@@ -915,9 +921,12 @@ export default function LoansScreen() {
       />
       <AddLoanModal
         visible={showAdd}
-        onClose={() => setShowAdd(false)}
+        onClose={() => {
+          Keyboard.dismiss();
+          setShowAdd(false);
+        }}
         isLent={isLent}
-        onSuccess={() => { showToast(isLent ? "Loan recorded" : "Borrow recorded"); load(); }}
+        onSuccess={() => { showToast(isLent ? "Loan recorded" : "Borrow recorded"); load(true); }}
       />
       <Toast config={toast} />
       <AppAlert config={alert} />

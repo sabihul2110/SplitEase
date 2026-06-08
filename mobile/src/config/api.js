@@ -72,13 +72,13 @@ export const ENDPOINTS = {
 
   // Loans (money lent by current user)
   loans:      `${V1}/loans/`,
-  loanRepay:  (id) => `${V1}/loans/${id}/repay/`,
-  delLoan:    (id) => `${V1}/loans/${id}/`,
+  loanRepay:  (id) => `${V1}/loans/${id}/repay`,
+  delLoan:    (id) => `${V1}/loans/${id}`,
 
   // Borrows (money borrowed by current user)
   borrows:     `${V1}/borrows/`,
-  borrowRepay: (id) => `${V1}/borrows/${id}/repay/`,
-  delBorrow:   (id) => `${V1}/borrows/${id}/`,
+  borrowRepay: (id) => `${V1}/borrows/${id}/repay`,
+  delBorrow:   (id) => `${V1}/borrows/${id}`,
 
   // Personal expenses
   personalExpenses:   `${V1}/personal-expenses/`,
