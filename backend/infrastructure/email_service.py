@@ -47,7 +47,7 @@ def send_reset_email(to_email: str, name: str, token: str) -> None:
     payload = {
         "sender": {"name": "SplitEase", "email": BREVO_SENDER_EMAIL},
         "to": [{"email": to_email, "name": name}],
-        "subject": "SplitEase Recovery Code: " + token,
+        "subject": "SplitEase: Your password reset code",
         "htmlContent": html
     }
     

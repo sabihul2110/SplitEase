@@ -14,11 +14,11 @@ def fetch_group_expenses(group_id: int, user_id: int) -> list[dict]:
         JOIN   Users u             ON u.user_id         = e.payer_id
         JOIN   Categories c        ON c.category_id     = e.category_id
         LEFT JOIN Subcategories sc ON sc.subcategory_id = e.subcategory_id
+        JOIN   Group_Members gm ON gm.group_id = e.group_id AND gm.user_id = %s
         WHERE  e.group_id = %s
-          AND  e.group_id IN (SELECT group_id FROM Group_Members WHERE user_id = %s)
         ORDER  BY e.expense_date DESC, e.expense_id DESC
         """,
-        (group_id, user_id),
+        (user_id, group_id),
     )
     rows = cur.fetchall()
     cur.close(); conn.close()

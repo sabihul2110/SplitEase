@@ -12,11 +12,11 @@ def fetch_group_payments(group_id: int, user_id: int) -> list[dict]:
         FROM   Payments p
         JOIN   Users payer ON payer.user_id = p.payer_id
         JOIN   Users payee ON payee.user_id = p.payee_id
+        JOIN   Group_Members gm ON gm.group_id = p.group_id AND gm.user_id = %s
         WHERE  p.group_id = %s
-          AND  p.group_id IN (SELECT group_id FROM Group_Members WHERE user_id = %s)
         ORDER  BY p.payment_date DESC, p.payment_id DESC
         """,
-        (group_id, user_id),
+        (user_id, group_id),
     )
     rows = cur.fetchall()
     cur.close(); conn.close()

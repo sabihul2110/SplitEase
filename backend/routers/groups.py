@@ -60,7 +60,7 @@ def subcategories(category_id: int, current_user: dict = Depends(get_current_use
 def create_group(body: CreateGroupRequest, current_user: dict = Depends(get_current_user)):
     if len(body.user_ids) < 2:
         raise HTTPException(status_code=400, detail="A group needs at least 2 members.")
-    group_id = group_repository.insert_group(body.group_name, body.user_ids)
+    group_id = group_repository.insert_group(body.group_name, body.user_ids, current_user["user_id"])
     return {"group_id": group_id, "message": "Group created."}
 
 
@@ -139,10 +139,9 @@ def members_bulk(
     if is_admin:
         allowed_ids = body.group_ids
     else:
-        allowed_ids = [
-            gid for gid in body.group_ids
-            if group_repository.is_group_member(gid, current_user["user_id"])
-        ]
+        allowed_ids = list(
+            group_repository.is_member_of_any(body.group_ids, current_user["user_id"])
+        )
 
     if not allowed_ids:
         return {}
@@ -167,10 +166,9 @@ def has_expenses_bulk(
     if is_admin:
         allowed_ids = body.group_ids
     else:
-        allowed_ids = [
-            gid for gid in body.group_ids
-            if group_repository.is_group_member(gid, current_user["user_id"])
-        ]
+        allowed_ids = list(
+            group_repository.is_member_of_any(body.group_ids, current_user["user_id"])
+        )
 
     if not allowed_ids:
         return {}

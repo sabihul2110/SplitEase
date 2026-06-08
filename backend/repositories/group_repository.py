@@ -96,14 +96,14 @@ def fetch_groups_has_expenses(group_ids: list[int]) -> dict[int, bool]:
     return {gid: (gid in has) for gid in group_ids}
 
 
-def insert_group(group_name: str, user_ids: list[int]) -> int:
+def insert_group(group_name: str, user_ids: list[int], created_by: int) -> int:
     conn = get_connection()
     cur  = conn.cursor()
     try:
         conn.start_transaction()
         cur.execute(
-            "INSERT INTO `Groups` (group_name) VALUES (%s)",
-            (group_name.strip(),),
+            "INSERT INTO `Groups` (group_name, created_by) VALUES (%s, %s)",
+            (group_name.strip(), created_by),
         )
         group_id = cur.lastrowid
         for uid in user_ids:
@@ -138,16 +138,59 @@ def update_group(group_id: int, group_name: str) -> None:
 
 
 def update_group_members(group_id: int, user_ids: list[int]) -> None:
+    """
+    Diff-based member update — never deletes members who have expenses or payments
+    in the group. Only adds new members and removes members with zero financial
+    history in the group.
+    """
     conn = get_connection()
     cur  = conn.cursor()
     try:
         conn.start_transaction()
-        cur.execute("DELETE FROM Group_Members WHERE group_id = %s", (group_id,))
-        for uid in user_ids:
+
+        # Current members
+        cur.execute(
+            "SELECT user_id FROM Group_Members WHERE group_id = %s",
+            (group_id,),
+        )
+        current_ids = {row[0] for row in cur.fetchall()}
+        new_ids     = set(user_ids)
+
+        # Add new members
+        to_add = new_ids - current_ids
+        for uid in to_add:
             cur.execute(
                 "INSERT INTO Group_Members (group_id, user_id) VALUES (%s, %s)",
                 (group_id, uid),
             )
+
+        # Remove only members with no financial history in this group
+        to_remove = current_ids - new_ids
+        for uid in to_remove:
+            cur.execute(
+                """
+                SELECT COUNT(*) FROM (
+                    SELECT expense_id FROM Expenses
+                    WHERE group_id = %s AND payer_id = %s
+                    UNION ALL
+                    SELECT es.expense_id FROM Expense_Splits es
+                    JOIN Expenses e ON e.expense_id = es.expense_id
+                    WHERE e.group_id = %s AND es.user_id = %s
+                    UNION ALL
+                    SELECT payment_id FROM Payments
+                    WHERE group_id = %s AND (payer_id = %s OR payee_id = %s)
+                ) AS history
+                """,
+                (group_id, uid, group_id, uid, group_id, uid, uid),
+            )
+            count = cur.fetchone()[0]
+            if count == 0:
+                cur.execute(
+                    "DELETE FROM Group_Members WHERE group_id = %s AND user_id = %s",
+                    (group_id, uid),
+                )
+            # If count > 0: silently keep them — they have history, can't remove safely
+
         conn.commit()
     except Exception:
         conn.rollback()
@@ -202,7 +245,7 @@ def fetch_group_creator(group_id: int) -> int | None:
     conn = get_connection()
     cur  = conn.cursor()
     cur.execute(
-        "SELECT user_id FROM Group_Members WHERE group_id = %s ORDER BY joined_at ASC LIMIT 1",
+        "SELECT created_by FROM `Groups` WHERE group_id = %s",
         (group_id,),
     )
     row = cur.fetchone()

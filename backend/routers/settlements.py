@@ -68,10 +68,9 @@ def bulk_settlements(
     if is_admin:
         allowed_ids = body.group_ids
     else:
-        allowed_ids = [
-            gid for gid in body.group_ids
-            if group_repository.is_group_member(gid, current_user["user_id"])
-        ]
+        allowed_ids = list(
+            group_repository.is_member_of_any(body.group_ids, current_user["user_id"])
+        )
 
     if not allowed_ids:
         return {}
