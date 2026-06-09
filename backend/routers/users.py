@@ -53,12 +53,15 @@ def update_me(
     # Return fresh row so frontend can sync AuthContext
     conn = get_connection()
     cur  = conn.cursor(dictionary=True)
-    cur.execute(
-        "SELECT user_id, name, email, upi_id, role FROM Users WHERE user_id = %s",
-        (user_id,),
-    )
-    user = cur.fetchone()
-    cur.close(); conn.close()
+    try:
+        cur.execute(
+            "SELECT user_id, name, email, upi_id, role FROM Users WHERE user_id = %s",
+            (user_id,),
+        )
+        user = cur.fetchone()
+    finally:
+        cur.close()
+        conn.close()
 
     if not user:
         raise HTTPException(status_code=404, detail="User not found.")

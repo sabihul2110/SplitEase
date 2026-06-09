@@ -22,6 +22,7 @@ def _get_pool() -> MySQLConnectionPool:
                     pool_name="splitease",
                     pool_size=10,
                     pool_reset_session=True,
+                    pool_get_timeout=5,
                     **DB_CONFIG,
                 )
     return _pool

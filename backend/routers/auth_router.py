@@ -108,12 +108,15 @@ def login(body: LoginRequest, request: Request):
 def get_me(current_user: dict = Depends(get_current_user)):
     conn = get_connection()
     cur  = conn.cursor(dictionary=True)
-    cur.execute(
-        "SELECT user_id, name, email, role, upi_id FROM Users WHERE user_id = %s",
-        (current_user["user_id"],),
-    )
-    user = cur.fetchone()
-    cur.close(); conn.close()
+    try:
+        cur.execute(
+            "SELECT user_id, name, email, role, upi_id FROM Users WHERE user_id = %s",
+            (current_user["user_id"],),
+        )
+        user = cur.fetchone()
+    finally:
+        cur.close()
+        conn.close()
     if not user:
         raise HTTPException(401, "User no longer exists.")
     return user

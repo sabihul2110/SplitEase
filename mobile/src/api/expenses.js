@@ -9,8 +9,8 @@ export const addExpense     = (groupId, payload) =>
 export const editExpense    = (id, payload)  => client.put(ENDPOINTS.delExpense(id), payload);
 export const deleteExpense  = (id)           => client.delete(ENDPOINTS.delExpense(id));
 export const getSettlementStatus = (groupId) =>
-  client.get(`/expenses/${groupId}/settlement-status`);
-export const getExpenseSplits = (id)         => client.get(`/expenses/${id}/splits`);
+  client.get(`/api/v1/expenses/${groupId}/settlement-status`);
+export const getExpenseSplits = (id)         => client.get(`/api/v1/expenses/${id}/splits`);
 export const getTimeline    = (limit = 200)  =>
   client.get(`${ENDPOINTS.timeline}?limit=${limit}`);
 export const getPersonalExpenses = ()        => client.get(ENDPOINTS.personalExpenses);
