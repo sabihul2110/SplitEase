@@ -49,7 +49,7 @@ def get_db():
             cur.execute(...)
             rows = cur.fetchall()
     """
-    conn = _get_pool().get_connection()
+    conn = get_connection()  # <--- FIX: Now it waits in the queue!
     cur  = conn.cursor(dictionary=True)
     try:
         yield conn, cur
