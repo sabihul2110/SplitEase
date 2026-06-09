@@ -154,7 +154,7 @@ function PersonalForm({ onSuccess }) {
     setSaving(true);
     try {
       await expensesApi.addPersonalExpense({
-        description: desc.trim(),
+        category: desc.trim(),
         amount: parseFloat(amount),
         expense_date: date,
         note: note.trim() || null,
@@ -167,8 +167,8 @@ function PersonalForm({ onSuccess }) {
 
   return (
     <View style={styles.form}>
-      <Field label="Description" error={errs.desc}>
-        <StyledInput value={desc} onChangeText={v => { setDesc(v); setErrs(p => ({...p, desc: null})); }} placeholder="e.g. Coffee, Fuel…" />
+      <Field label="Category / Description" error={errs.desc}>
+        <StyledInput value={desc} onChangeText={v => { setDesc(v); setErrs(p => ({...p, desc: null})); }} placeholder="e.g. Coffee, Fuel, Groceries…" />
       </Field>
       <Field label="Amount" error={errs.amount}>
         <AmountInput value={amount} onChangeText={v => { setAmount(v); setErrs(p => ({...p, amount: null})); }} />
@@ -203,11 +203,15 @@ function IncomeForm({ onSuccess }) {
 
     setSaving(true);
     try {
+      const rawSource = source.trim().toLowerCase().replace(/\s+/g, '_');
+      const VALID = ['salary', 'pocket_money', 'stipend', 'other'];
+      const source_type = VALID.includes(rawSource) ? rawSource : 'other';
+
       await expensesApi.addIncome({
-        source: source.trim(),
+        source_type,
         amount: parseFloat(amount),
         income_date: date,
-        note: note.trim() || null,
+        note: source.trim() !== source_type ? source.trim() : (note.trim() || null),
       });
       onSuccess();
     } catch (err) {
@@ -217,8 +221,25 @@ function IncomeForm({ onSuccess }) {
 
   return (
     <View style={styles.form}>
-      <Field label="Source" error={errs.source}>
-        <StyledInput value={source} onChangeText={v => { setSource(v); setErrs(p => ({...p, source: null})); }} placeholder="e.g. Salary, Freelance…" />
+      <Field label="Source Type" error={errs.source}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 }}>
+          {['salary', 'pocket_money', 'stipend', 'other'].map(opt => (
+            <TouchableOpacity
+              key={opt}
+              style={{
+                paddingHorizontal: 14, paddingVertical: 7,
+                borderRadius: R.full, borderWidth: 1,
+                borderColor: source === opt ? C.success + '80' : C.border,
+                backgroundColor: source === opt ? C.successLo : C.surface2,
+              }}
+              onPress={() => { setSource(opt); setErrs(p => ({...p, source: null})); }}
+            >
+              <Text style={{ fontSize: F.sm, color: source === opt ? C.success : C.text2, fontWeight: source === opt ? W.bold : W.regular }}>
+                {opt === 'pocket_money' ? 'Pocket Money' : opt.charAt(0).toUpperCase() + opt.slice(1)}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </Field>
       <Field label="Amount" error={errs.amount}>
         <AmountInput value={amount} onChangeText={v => { setAmount(v); setErrs(p => ({...p, amount: null})); }} />

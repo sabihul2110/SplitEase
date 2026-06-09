@@ -1682,29 +1682,17 @@ export default function GroupsScreen() {
         member_count: (membersBulk[g.group_id] || []).length,
       }));
 
-      // Fetch balances for all groups in parallel
-      const balanceResults = await Promise.allSettled(
-        merged.map((g) =>
-          settlementsApi.getSettlements(g.group_id).then((r) => ({
-            group_id: g.group_id,
-            data: r.data,
-          })),
-        ),
-      );
+      const bulkRes = await settlementsApi.getSettlementsBulk(groupIds);
+      const bulkData = bulkRes.data || {};
 
       const balanceMap = {};
-      balanceResults.forEach((result) => {
-        if (result.status === "fulfilled") {
-          const { group_id, data } = result.value;
-          // data is an array of { user_id, net_balance } or similar
-          // find the current user's balance
-          const mine = Array.isArray(data)
-            ? data.find((row) => row.user_id === user?.user_id)
-            : null;
-          balanceMap[group_id] = mine
-            ? parseFloat(mine.net_balance ?? mine.balance ?? 0)
-            : 0;
-        }
+      Object.entries(bulkData).forEach(([gid, rows]) => {
+        const mine = Array.isArray(rows)
+          ? rows.find((row) => row.user_id === user?.user_id)
+          : null;
+        balanceMap[parseInt(gid)] = mine
+          ? parseFloat(mine.net_balance ?? mine.balance ?? 0)
+          : 0;
       });
 
       const withBalances = merged.map((g) => ({
