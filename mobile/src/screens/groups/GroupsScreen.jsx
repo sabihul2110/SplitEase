@@ -1494,7 +1494,7 @@ function ContextMenu({ group, currentUserId, onClose, onSelect, onLeave, onDelet
           <Text style={[cmStyles.itemText, { color: C.warning }]}>Leave Group</Text>
         </TouchableOpacity>
 
-        {isCreator && (
+        {(group.created_by === currentUserId || group._isAdmin) && (
           <TouchableOpacity style={cmStyles.item} onPress={onDelete} activeOpacity={0.7}>
             <Icons.trash size={18} color={C.danger} />
             <Text style={[cmStyles.itemText, { color: C.danger }]}>Delete Group</Text>
@@ -1855,7 +1855,7 @@ export default function GroupsScreen() {
   }
 
   function openContextMenu(group) {
-    setContextGroup(group);
+    setContextGroup({ ...group, _isAdmin: user?.role === 'admin' });
   }
 
   function closeContextMenu() {
