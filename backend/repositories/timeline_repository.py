@@ -209,5 +209,3 @@ def fetch_unified_timeline(user_id: int, limit: int = 100, offset: int = 0) -> l
             r["sub"] = f"₹{r['amount']} borrowed"
 
     return rows
-
-    return rows
