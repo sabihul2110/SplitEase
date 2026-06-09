@@ -106,8 +106,7 @@ def fetch_unified_timeline(user_id: int, limit: int = 100, offset: int = 0) -> l
                 NULL                                                AS my_share,
                 remaining_amount                                    AS receivable,
                 CONCAT('Lent to ', borrower_name)                   AS label,
-                IFNULL(note,
-                       CONCAT('₹', CAST(amount AS CHAR), ' lent'))  AS sub,
+                note AS sub,
                 loan_id                                             AS ref_id,
                 NULL                                                AS group_id,
                 NULL                                                AS group_name,
@@ -125,8 +124,7 @@ def fetch_unified_timeline(user_id: int, limit: int = 100, offset: int = 0) -> l
                 NULL                                                    AS my_share,
                 remaining_amount                                        AS receivable,
                 CONCAT('Borrowed from ', lender_name)                   AS label,
-                IFNULL(note,
-                       CONCAT('₹', CAST(amount AS CHAR), ' borrowed'))  AS sub,
+                note AS sub,
                 borrow_id                                               AS ref_id,
                 NULL                                                    AS group_id,
                 NULL                                                    AS group_name,
@@ -203,5 +201,13 @@ def fetch_unified_timeline(user_id: int, limit: int = 100, offset: int = 0) -> l
         r.pop("created_at", None)
         if r.get("my_share")   is not None: r["my_share"]   = float(r["my_share"])
         if r.get("receivable") is not None: r["receivable"] = float(r["receivable"])
+        
+        # Safely format the loan/borrow subtitles in Python to avoid SQL collation crashes
+        if r["type"] == "loan_given" and not r.get("sub"):
+            r["sub"] = f"₹{r['amount']} lent"
+        elif r["type"] == "loan_taken" and not r.get("sub"):
+            r["sub"] = f"₹{r['amount']} borrowed"
+
+    return rows
 
     return rows
