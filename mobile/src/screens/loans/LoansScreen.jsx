@@ -1,7 +1,7 @@
 // mobile/src/screens/loans/LoansScreen.jsx
 
 import { useFocusEffect } from "@react-navigation/native";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -88,6 +88,11 @@ function LoanCard({ item, isLent, onRefresh, idx, showToast, setAlert }) {
   const [repayErr, setRepayErr] = useState("");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
   const accentColor = isLent ? "#f59e0b" : "#818cf8";
   const btnColor = isLent ? COLORS.success : "#6366f1";
@@ -126,21 +131,22 @@ function LoanCard({ item, isLent, onRefresh, idx, showToast, setAlert }) {
     }
     setSaving(true);
     
-    // CRITICAL ANDROID FIX: Buffer to let the keyboard fully dismiss
-    // before the API call finishes and potentially unmounts this TextInput.
+
     setTimeout(async () => {
       try {
         await (isLent
           ? loansApi.repayLoan(idField, amountInput)
           : loansApi.repayBorrow(idField, amountInput));
+        if (!mountedRef.current) return;
         setRepayAmt("");
         showToast?.("Repayment recorded");
         if (onRefresh) onRefresh();
       } catch (ex) {
+        if (!mountedRef.current) return;
         const detail = ex?.response?.data?.detail;
         setRepayErr(Array.isArray(detail) ? detail[0]?.msg : (typeof detail === "string" ? detail : "Failed"));
       } finally {
-        setSaving(false);
+        if (mountedRef.current) setSaving(false);
       }
     }, 250);
   }
@@ -361,7 +367,7 @@ function AddLoanModal({ visible, onClose, isLent, onSuccess }) {
     >
       <KeyboardAvoidingView
         style={addStyles.overlay}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <TouchableOpacity
           style={StyleSheet.absoluteFill}
@@ -826,6 +832,7 @@ export default function LoansScreen() {
         data={loading ? [] : visible}
         keyExtractor={(item) => String(isLent ? item.loan_id : item.borrow_id)}
         showsVerticalScrollIndicator={false}
+        removeClippedSubviews={false}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -938,7 +945,7 @@ export default function LoansScreen() {
         visible={showAdd}
         onClose={() => {
           Keyboard.dismiss();
-          setTimeout(() => setShowAdd(false), 150);
+          setTimeout(() => setShowAdd(false), Platform.OS === 'android' ? 300 : 150);
         }}
         isLent={isLent}
         onSuccess={() => { showToast(isLent ? "Loan recorded" : "Borrow recorded"); load(true); }}
