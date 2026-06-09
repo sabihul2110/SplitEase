@@ -43,16 +43,21 @@ def get_connection():
 @contextmanager
 def get_db():
     """
-    Context manager that guarantees connection + cursor are always closed.
-    Usage:
-        with get_db() as (conn, cur):
-            cur.execute(...)
-            rows = cur.fetchall()
+    Context manager that guarantees connection + cursor are always closed safely.
     """
-    conn = get_connection()  # <--- FIX: Now it waits in the queue!
-    cur  = conn.cursor(dictionary=True)
+    conn = get_connection()
+    # buffered=True forces the driver to fully drain the socket, preventing 'Unread result' errors
+    cur  = conn.cursor(dictionary=True, buffered=True)
     try:
         yield conn, cur
     finally:
-        cur.close()
-        conn.close()
+        # Safely teardown without masking original exceptions
+        try:
+            cur.close()
+        except Exception:
+            pass
+            
+        try:
+            conn.close()
+        except Exception:
+            pass
