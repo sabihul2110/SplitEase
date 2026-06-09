@@ -18,7 +18,7 @@ from schemas.users import UpdateUserRequest
 import mysql.connector
 
 from repositories import user_repository
-from core.database import get_connection
+from core.database import get_connection, get_db
 from core.dependencies import get_current_user, require_admin
 
 router = APIRouter()
@@ -50,18 +50,12 @@ def update_me(
     except mysql.connector.IntegrityError:
         raise HTTPException(status_code=409, detail="That email is already in use by another account.")
 
-    # Return fresh row so frontend can sync AuthContext
-    conn = get_connection()
-    cur  = conn.cursor(dictionary=True)
-    try:
+    with get_db() as (conn, cur):
         cur.execute(
             "SELECT user_id, name, email, upi_id, role FROM Users WHERE user_id = %s",
             (user_id,),
         )
         user = cur.fetchone()
-    finally:
-        cur.close()
-        conn.close()
 
     if not user:
         raise HTTPException(status_code=404, detail="User not found.")

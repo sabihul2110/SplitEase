@@ -30,3 +30,23 @@ def _get_pool() -> MySQLConnectionPool:
 
 def get_connection():
     return _get_pool().get_connection()
+
+
+from contextlib import contextmanager
+
+@contextmanager
+def get_db():
+    """
+    Context manager that guarantees connection + cursor are always closed.
+    Usage:
+        with get_db() as (conn, cur):
+            cur.execute(...)
+            rows = cur.fetchall()
+    """
+    conn = _get_pool().get_connection()
+    cur  = conn.cursor(dictionary=True)
+    try:
+        yield conn, cur
+    finally:
+        cur.close()
+        conn.close()

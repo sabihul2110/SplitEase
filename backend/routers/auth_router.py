@@ -18,7 +18,7 @@ from services.auth_service import (
 )
 
 from core.dependencies import get_current_user
-from core.database import get_connection
+from core.database import get_connection, get_db
 from infrastructure.email_service import send_reset_email
 
 logger = logging.getLogger("splitease.auth")
@@ -106,17 +106,12 @@ def login(body: LoginRequest, request: Request):
 
 @router.get("/me")
 def get_me(current_user: dict = Depends(get_current_user)):
-    conn = get_connection()
-    cur  = conn.cursor(dictionary=True)
-    try:
+    with get_db() as (conn, cur):
         cur.execute(
             "SELECT user_id, name, email, role, upi_id FROM Users WHERE user_id = %s",
             (current_user["user_id"],),
         )
         user = cur.fetchone()
-    finally:
-        cur.close()
-        conn.close()
     if not user:
         raise HTTPException(401, "User no longer exists.")
     return user
