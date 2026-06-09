@@ -55,7 +55,7 @@ check("GET /health", requests.get(f"{BASE}/health"))
 
 # ── 2. Auth ───────────────────────────────────────────────────────────────────
 section("2. Auth — signup + login + me")
-email = f"test_{rand()}@test.invalid"
+email = f"test_{rand()}@example.com"
 password = "TestPass123!"
 
 ok, r = check("POST /auth/signup", requests.post(f"{BASE}/api/v1/auth/signup", json={
@@ -85,7 +85,7 @@ if ok:
         requests.post(f"{BASE}/api/v1/auth/forgot-password", json={"email": email}))
 
     check("POST /auth/forgot-password — unknown email (should still 200)",
-        requests.post(f"{BASE}/api/v1/auth/forgot-password", json={"email": "nobody@nowhere.invalid"}))
+        requests.post(f"{BASE}/api/v1/auth/forgot-password", json={"email": "nobody@example.com"}))
 else:
     print(f"  {WARN} Skipping auth-dependent tests — signup failed")
     sys.exit(1)
