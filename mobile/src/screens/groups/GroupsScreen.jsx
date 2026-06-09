@@ -328,8 +328,7 @@ const lcStyles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   cardSelected: {
-    backgroundColor: 'rgba(59,130,246,0.10)',
-    borderColor: '#3b82f6',
+    backgroundColor: 'rgba(59,130,246,0.07)',
   },
   checkbox: {
     width: 26,
@@ -1457,25 +1456,136 @@ const modalS = StyleSheet.create({
   createText: { fontSize: F.md, fontWeight: W.bold, color: "#fff" },
 });
 
+// ─── Context menu (long-press sheet) ─────────────────────────────────────────
+function ContextMenu({ group, currentUserId, onClose, onSelect, onLeave, onDelete, onOpen }) {
+  if (!group) return null;
+  const isCreator = group.created_by === currentUserId;
+
+  return (
+    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
+      <TouchableOpacity style={StyleSheet.absoluteFill} onPress={onClose} activeOpacity={1}>
+        <View style={cmStyles.backdrop} />
+      </TouchableOpacity>
+      <View style={cmStyles.sheet}>
+        {/* Group identity strip */}
+        <View style={cmStyles.identity}>
+          <GroupAvatar name={group.group_name} size={36} />
+          <View style={{ flex: 1 }}>
+            <Text style={cmStyles.identityName} numberOfLines={1}>{group.group_name}</Text>
+            <Text style={cmStyles.identityMeta}>{group.members?.length || group.member_count || 0} members</Text>
+          </View>
+        </View>
+
+        <View style={cmStyles.divider} />
+
+        {/* Actions */}
+        <TouchableOpacity style={cmStyles.item} onPress={onOpen} activeOpacity={0.7}>
+          <Icons.groups size={18} color={C.text2} />
+          <Text style={cmStyles.itemText}>Open Group</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={cmStyles.item} onPress={onSelect} activeOpacity={0.7}>
+          <Icons.checkCircle size={18} color={C.primary} />
+          <Text style={[cmStyles.itemText, { color: C.primary }]}>Select</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={cmStyles.item} onPress={onLeave} activeOpacity={0.7}>
+          <Icons.logout size={18} color={C.warning} />
+          <Text style={[cmStyles.itemText, { color: C.warning }]}>Leave Group</Text>
+        </TouchableOpacity>
+
+        {isCreator && (
+          <TouchableOpacity style={cmStyles.item} onPress={onDelete} activeOpacity={0.7}>
+            <Icons.trash size={18} color={C.danger} />
+            <Text style={[cmStyles.itemText, { color: C.danger }]}>Delete Group</Text>
+          </TouchableOpacity>
+        )}
+
+        <View style={cmStyles.divider} />
+
+        <TouchableOpacity style={[cmStyles.item, { justifyContent: 'center' }]} onPress={onClose} activeOpacity={0.7}>
+          <Text style={[cmStyles.itemText, { color: C.text3, textAlign: 'center' }]}>Cancel</Text>
+        </TouchableOpacity>
+      </View>
+    </Modal>
+  );
+}
+
+const cmStyles = StyleSheet.create({
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  sheet: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: C.surface,
+    borderTopLeftRadius: R.xxl,
+    borderTopRightRadius: R.xxl,
+    borderTopWidth: 1,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderColor: C.border,
+    paddingBottom: 28,
+    paddingTop: 8,
+  },
+  identity: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SP.md,
+    paddingHorizontal: SP.base,
+    paddingVertical: SP.md,
+  },
+  identityName: {
+    fontSize: F.md,
+    fontWeight: W.bold,
+    color: C.text,
+  },
+  identityMeta: {
+    fontSize: F.xs,
+    color: C.text3,
+    marginTop: 2,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: C.border,
+    marginHorizontal: 0,
+  },
+  item: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SP.md,
+    paddingHorizontal: SP.base,
+    paddingVertical: 15,
+  },
+  itemText: {
+    fontSize: F.md,
+    fontWeight: W.medium,
+    color: C.text2,
+  },
+});
+
 // ─── Selection action bar ─────────────────────────────────────────────────────
 function SelectionBar({ count, onCancel, actions, onLeave, onDelete }) {
   const { canLeave, canDelete } = actions;
   return (
     <View style={selStyles.bar}>
-      <TouchableOpacity onPress={onCancel} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-        <Icons.close size={20} color={C.text2} />
+      <TouchableOpacity onPress={onCancel} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+        <Icons.close size={22} color={C.text2} />
       </TouchableOpacity>
       <Text style={selStyles.count}>{count} selected</Text>
-      <View style={{ flexDirection: 'row', gap: SP.sm, alignItems: 'center' }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
         {canLeave && (
-          <TouchableOpacity style={[selStyles.btn, { backgroundColor: C.warningLo, borderColor: C.warning + '40' }]} onPress={onLeave}>
-            <Icons.logout size={14} color={C.warning} />
+          <TouchableOpacity style={selStyles.btn} onPress={onLeave} hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}>
+            <Icons.logout size={18} color={C.warning} />
             <Text style={[selStyles.btnText, { color: C.warning }]}>Leave</Text>
           </TouchableOpacity>
         )}
         {canDelete && (
-          <TouchableOpacity style={[selStyles.btn, { backgroundColor: C.dangerLo, borderColor: C.danger + '40' }]} onPress={onDelete}>
-            <Icons.trash size={14} color={C.danger} />
+          <TouchableOpacity style={selStyles.btn} onPress={onDelete} hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}>
+            <Icons.trash size={18} color={C.danger} />
             <Text style={[selStyles.btnText, { color: C.danger }]}>Delete</Text>
           </TouchableOpacity>
         )}
@@ -1489,28 +1599,28 @@ const selStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: SP.base,
-    paddingVertical: SP.sm + 2,
-    backgroundColor: C.surface2,
+    paddingVertical: SP.md,
+    backgroundColor: C.surface,
     borderBottomWidth: 1,
-    borderBottomColor: C.border2,
+    borderBottomColor: C.border,
     gap: SP.md,
+    minHeight: 56,
   },
   count: {
     flex: 1,
-    fontSize: F.md,
+    fontSize: F.lg,
     fontWeight: W.bold,
     color: C.text,
+    letterSpacing: -0.2,
   },
   btn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    borderWidth: 1,
-    borderRadius: R.full,
     paddingHorizontal: SP.md,
-    paddingVertical: 7,
+    paddingVertical: 8,
   },
-  btnText: { fontSize: F.sm, fontWeight: W.bold },
+  btnText: { fontSize: F.sm, fontWeight: W.semibold },
 });
 
 // ─── Sort / filter helpers ────────────────────────────────────────────────────
@@ -1737,9 +1847,19 @@ export default function GroupsScreen() {
     }
   }, [route.params?.openCreate]);
 
+  const [contextGroup, setContextGroup] = useState(null);
+
   function enterSelectMode(groupId) {
     setSelectMode(true);
     setSelected(new Set([groupId]));
+  }
+
+  function openContextMenu(group) {
+    setContextGroup(group);
+  }
+
+  function closeContextMenu() {
+    setContextGroup(null);
   }
 
   function toggleSelect(groupId) {
@@ -1894,14 +2014,11 @@ export default function GroupsScreen() {
     try {
       await groupsApi.deleteGroup(group.group_id, force);
       setGroups((p) => p.filter((g) => g.group_id !== group.group_id));
-      setLongPress(null);
       showToast("Group deleted");
     } catch (err) {
       const s = err?.response?.status;
       const d = err?.response?.data?.detail;
-      setLongPress(null);
       if (s === 409) {
-        // Re-use the modal but with a force-confirm callback
         setDeleteTarget({ ...group, _force: true, _message: d });
       } else if (s === 403) {
         setDeleteTarget({ ...group, _forbidden: true, _message: d });
@@ -1965,11 +2082,35 @@ export default function GroupsScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={["top", "left", "right"]}>
-      <Header
-        groupCount={groups.length}
-        onCreate={() => setShowCreate(true)}
-        onJoin={() => setShowJoin(true)}
-      />
+      {selectMode ? (
+        <SelectionBar
+          count={selected.size}
+          onCancel={exitSelectMode}
+          actions={getSelectionActions()}
+          onLeave={() => setAlert({
+            title: `Leave ${selected.size > 1 ? selected.size + ' Groups' : 'Group'}`,
+            message: 'You must have zero balance to leave. Cannot be undone.',
+            buttons: [
+              { text: 'Cancel', style: 'cancel', onPress: () => setAlert(null) },
+              { text: 'Leave', style: 'destructive', onPress: () => { setAlert(null); handleBulkLeave(); } },
+            ],
+          })}
+          onDelete={() => setAlert({
+            title: `Delete ${selected.size > 1 ? selected.size + ' Groups' : 'Group'}`,
+            message: 'All expenses and payments will be permanently removed.',
+            buttons: [
+              { text: 'Cancel', style: 'cancel', onPress: () => setAlert(null) },
+              { text: 'Delete', style: 'destructive', onPress: () => { setAlert(null); handleBulkDelete(); } },
+            ],
+          })}
+        />
+      ) : (
+        <Header
+          groupCount={groups.length}
+          onCreate={() => setShowCreate(true)}
+          onJoin={() => setShowJoin(true)}
+        />
+      )}
 
       {/* Search + sort row */}
       <View style={s.toolRow}>
@@ -2018,7 +2159,13 @@ export default function GroupsScreen() {
                 navigateGroup(item);
               }
             }}
-            onLongPress={() => enterSelectMode(item.group_id)}
+            onLongPress={() => {
+              if (selectMode) {
+                toggleSelect(item.group_id);
+              } else {
+                openContextMenu(item);
+              }
+            }}
             isFirst={index === 0}
             isLast={index === sorted.length - 1}
             isSelectMode={selectMode}
@@ -2026,31 +2173,6 @@ export default function GroupsScreen() {
           />
         )}
       />
-
-      {/* Selection mode action bar */}
-      {selectMode && (
-        <SelectionBar
-          count={selected.size}
-          onCancel={exitSelectMode}
-          actions={getSelectionActions()}
-          onLeave={() => setAlert({
-            title: `Leave ${selected.size > 1 ? selected.size + ' Groups' : 'Group'}`,
-            message: 'You must have zero balance to leave. This cannot be undone.',
-            buttons: [
-              { text: 'Cancel', style: 'cancel', onPress: () => setAlert(null) },
-              { text: 'Leave', style: 'destructive', onPress: () => { setAlert(null); handleBulkLeave(); } },
-            ],
-          })}
-          onDelete={() => setAlert({
-            title: `Delete ${selected.size > 1 ? selected.size + ' Groups' : 'Group'}`,
-            message: 'All expenses and payments will be permanently removed.',
-            buttons: [
-              { text: 'Cancel', style: 'cancel', onPress: () => setAlert(null) },
-              { text: 'Delete', style: 'destructive', onPress: () => { setAlert(null); handleBulkDelete(); } },
-            ],
-          })}
-        />
-      )}
 
       {/* Modals */}
       <CreateGroupModal
@@ -2070,6 +2192,42 @@ export default function GroupsScreen() {
         }}
       />
 
+      <ContextMenu
+        group={contextGroup}
+        currentUserId={user?.user_id}
+        onClose={closeContextMenu}
+        onOpen={() => {
+          const g = contextGroup;
+          closeContextMenu();
+          navigateGroup(g);
+        }}
+        onSelect={() => {
+          const g = contextGroup;
+          closeContextMenu();
+          enterSelectMode(g.group_id);
+        }}
+        onLeave={() => {
+          const g = contextGroup;
+          closeContextMenu();
+          setAlert({
+            title: 'Leave Group',
+            message: 'You must have zero balance to leave.',
+            buttons: [
+              { text: 'Cancel', style: 'cancel', onPress: () => setAlert(null) },
+              { text: 'Leave', style: 'destructive', onPress: () => {
+                setAlert(null);
+                setSelected(new Set([g.group_id]));
+                setTimeout(() => handleBulkLeave(), 0);
+              }},
+            ],
+          });
+        }}
+        onDelete={() => {
+          const g = contextGroup;
+          closeContextMenu();
+          setDeleteTarget(g);
+        }}
+      />
       <Toast config={toast} />
       <AppAlert config={alert} />
       <DeleteConfirmModal
