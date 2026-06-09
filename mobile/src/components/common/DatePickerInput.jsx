@@ -14,7 +14,12 @@ export default function DatePickerInput({ value, onChange, accentColor }) {
     const d = new Date(value);
     return { year: d.getFullYear(), month: d.getMonth() };
   });
+  const [showMonthPicker, setShowMonthPicker] = useState(false);
+  const [showYearPicker, setShowYearPicker]   = useState(false);
   const today = new Date();
+  const currentYear = today.getFullYear();
+  const YEARS = Array.from({ length: 10 }, (_, i) => currentYear - 9 + i); // last 10 years
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
   function openPicker() {
     const d = new Date(value);
@@ -40,6 +45,7 @@ export default function DatePickerInput({ value, onChange, accentColor }) {
     setShow(false);
   }
 
+  // Fixed grid: always 6 rows × 7 cols so modal height never changes
   function buildWeeks() {
     const { year, month } = calMonth;
     const firstDay = new Date(year, month, 1).getDay();
@@ -47,9 +53,10 @@ export default function DatePickerInput({ value, onChange, accentColor }) {
     const cells = [];
     for (let i = 0; i < firstDay; i++) cells.push(null);
     for (let d = 1; d <= daysInMonth; d++) cells.push(d);
-    while (cells.length % 7 !== 0) cells.push(null);
+    // Pad to exactly 42 cells (6 rows) so height is always fixed
+    while (cells.length < 42) cells.push(null);
     const weeks = [];
-    for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
+    for (let i = 0; i < 42; i += 7) weeks.push(cells.slice(i, i + 7));
     return weeks;
   }
 
@@ -77,13 +84,69 @@ export default function DatePickerInput({ value, onChange, accentColor }) {
               <TouchableOpacity onPress={prevMonth} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
                 <Icons.chevronLeft size={20} color={COLORS.text2} />
               </TouchableOpacity>
-              <Text style={styles.monthLabel}>
-                {new Date(year, month).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
-              </Text>
+
+              {/* Tappable month + year labels */}
+              <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+                <TouchableOpacity
+                  onPress={() => { setShowMonthPicker(true); setShowYearPicker(false); }}
+                  style={styles.quickPickBtn}
+                >
+                  <Text style={styles.monthLabel}>{MONTHS[month]}</Text>
+                  <Icons.chevronRight size={11} color={COLORS.text3} style={{ transform: [{ rotate: '90deg' }] }} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => { setShowYearPicker(true); setShowMonthPicker(false); }}
+                  style={styles.quickPickBtn}
+                >
+                  <Text style={styles.monthLabel}>{year}</Text>
+                  <Icons.chevronRight size={11} color={COLORS.text3} style={{ transform: [{ rotate: '90deg' }] }} />
+                </TouchableOpacity>
+              </View>
+
               <TouchableOpacity onPress={nextMonth} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
                 <Icons.chevronRight size={20} color={COLORS.text2} />
               </TouchableOpacity>
             </View>
+
+            {/* Month quick-picker overlay */}
+            {showMonthPicker && (
+              <View style={styles.quickPickOverlay}>
+                {MONTHS.map((m, i) => {
+                  const isActive = i === month;
+                  const isFut = new Date(year, i) > today;
+                  return (
+                    <TouchableOpacity
+                      key={m}
+                      style={[styles.quickPickItem, isActive && { backgroundColor: accent + '22' }, isFut && { opacity: 0.35 }]}
+                      disabled={isFut}
+                      onPress={() => { setCalMonth(p => ({ ...p, month: i })); setShowMonthPicker(false); }}
+                    >
+                      <Text style={[styles.quickPickText, isActive && { color: accent, fontWeight: '700' }]}>{m}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
+
+            {/* Year quick-picker overlay */}
+            {showYearPicker && (
+              <View style={styles.quickPickOverlay}>
+                {YEARS.map(y => {
+                  const isActive = y === year;
+                  const isFut = y > currentYear;
+                  return (
+                    <TouchableOpacity
+                      key={y}
+                      style={[styles.quickPickItem, isActive && { backgroundColor: accent + '22' }, isFut && { opacity: 0.35 }]}
+                      disabled={isFut}
+                      onPress={() => { setCalMonth(p => ({ ...p, year: y })); setShowYearPicker(false); }}
+                    >
+                      <Text style={[styles.quickPickText, isActive && { color: accent, fontWeight: '700' }]}>{y}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
 
             {/* Day-of-week headers */}
             <View style={styles.dowRow}>
@@ -163,6 +226,49 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     padding: 20,
     width: '100%',
+    minHeight: 380,
+  },
+  quickPickBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: COLORS.surface2 || '#171c2c',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  quickPickOverlay: {
+    position: 'absolute',
+    top: 56,
+    left: 8,
+    right: 8,
+    backgroundColor: COLORS.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    padding: 8,
+    gap: 4,
+    zIndex: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  quickPickItem: {
+    width: '30%',
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  quickPickText: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.text2,
+    fontWeight: '500',
   },
   monthRow: {
     flexDirection: 'row',

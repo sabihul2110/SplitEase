@@ -220,7 +220,7 @@ function formatActivity(ts) {
 
 // ─── List Card ─────────────────────────────────────────────────────────────────
 
-function ListCard({ group, onPress, onLongPress, isFirst, isLast }) {
+function ListCard({ group, onPress, onLongPress, isFirst, isLast, isSelectMode, isSelected }) {
   const memberCount = group.members?.length || group.member_count || 0;
   const activity = formatActivity(
     group.last_activity || group.updated_at || group.created_at,
@@ -258,13 +258,20 @@ function ListCard({ group, onPress, onLongPress, isFirst, isLast }) {
         lcStyles.card,
         isFirst && lcStyles.cardFirst,
         isLast && lcStyles.cardLast,
+        isSelected && lcStyles.cardSelected,
       ]}
       onPress={onPress}
       onLongPress={onLongPress}
       delayLongPress={400}
       activeOpacity={0.6}
     >
-      <GroupAvatar name={group.group_name} size={42} />
+      {isSelectMode ? (
+        <View style={[lcStyles.checkbox, isSelected && lcStyles.checkboxOn]}>
+          {isSelected && <Icons.check size={13} color="#fff" />}
+        </View>
+      ) : (
+        <GroupAvatar name={group.group_name} size={42} />
+      )}
       <View style={lcStyles.info}>
         <Text style={lcStyles.name} numberOfLines={1}>
           {group.group_name}
@@ -319,6 +326,24 @@ const lcStyles = StyleSheet.create({
     borderBottomLeftRadius: R.xl,
     borderBottomRightRadius: R.xl,
     borderBottomWidth: 1,
+  },
+  cardSelected: {
+    backgroundColor: 'rgba(59,130,246,0.10)',
+    borderColor: '#3b82f6',
+  },
+  checkbox: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: 2,
+    borderColor: '#2e3650',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  checkboxOn: {
+    backgroundColor: '#3b82f6',
+    borderColor: '#3b82f6',
   },
   info: { flex: 1, gap: 3 },
   name: {
@@ -1432,6 +1457,62 @@ const modalS = StyleSheet.create({
   createText: { fontSize: F.md, fontWeight: W.bold, color: "#fff" },
 });
 
+// ─── Selection action bar ─────────────────────────────────────────────────────
+function SelectionBar({ count, onCancel, actions, onLeave, onDelete }) {
+  const { canLeave, canDelete } = actions;
+  return (
+    <View style={selStyles.bar}>
+      <TouchableOpacity onPress={onCancel} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+        <Icons.close size={20} color={C.text2} />
+      </TouchableOpacity>
+      <Text style={selStyles.count}>{count} selected</Text>
+      <View style={{ flexDirection: 'row', gap: SP.sm, alignItems: 'center' }}>
+        {canLeave && (
+          <TouchableOpacity style={[selStyles.btn, { backgroundColor: C.warningLo, borderColor: C.warning + '40' }]} onPress={onLeave}>
+            <Icons.logout size={14} color={C.warning} />
+            <Text style={[selStyles.btnText, { color: C.warning }]}>Leave</Text>
+          </TouchableOpacity>
+        )}
+        {canDelete && (
+          <TouchableOpacity style={[selStyles.btn, { backgroundColor: C.dangerLo, borderColor: C.danger + '40' }]} onPress={onDelete}>
+            <Icons.trash size={14} color={C.danger} />
+            <Text style={[selStyles.btnText, { color: C.danger }]}>Delete</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </View>
+  );
+}
+
+const selStyles = StyleSheet.create({
+  bar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: SP.base,
+    paddingVertical: SP.sm + 2,
+    backgroundColor: C.surface2,
+    borderBottomWidth: 1,
+    borderBottomColor: C.border2,
+    gap: SP.md,
+  },
+  count: {
+    flex: 1,
+    fontSize: F.md,
+    fontWeight: W.bold,
+    color: C.text,
+  },
+  btn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    borderWidth: 1,
+    borderRadius: R.full,
+    paddingHorizontal: SP.md,
+    paddingVertical: 7,
+  },
+  btnText: { fontSize: F.sm, fontWeight: W.bold },
+});
+
 // ─── Sort / filter helpers ────────────────────────────────────────────────────
 
 const SORT_OPTIONS = [
@@ -1640,8 +1721,9 @@ export default function GroupsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
-  const [longPress, setLongPress] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState(new Set());
 
   // UI state
   const [search, setSearch] = useState("");
@@ -1654,6 +1736,98 @@ export default function GroupsScreen() {
       navigation.setParams({ openCreate: false });
     }
   }, [route.params?.openCreate]);
+
+  function enterSelectMode(groupId) {
+    setSelectMode(true);
+    setSelected(new Set([groupId]));
+  }
+
+  function toggleSelect(groupId) {
+    setSelected(prev => {
+      const next = new Set(prev);
+      next.has(groupId) ? next.delete(groupId) : next.add(groupId);
+      return next;
+    });
+  }
+
+  function exitSelectMode() {
+    setSelectMode(false);
+    setSelected(new Set());
+  }
+
+  // Determine what actions are available for current selection
+  function getSelectionActions() {
+    const selectedGroups = groups.filter(g => selected.has(g.group_id));
+    
+    const canLeave = selectedGroups.length > 0;
+    
+    const canDelete = selectedGroups.length > 0 && selectedGroups.every(
+      g => g.created_by === user?.user_id || user?.role === 'admin'
+    );
+    return { canLeave, canDelete, selectedGroups };
+  }
+
+  async function handleBulkLeave() {
+    const { selectedGroups } = getSelectionActions();
+    const promises = selectedGroups.map(g =>
+      groupsApi.leaveGroup(g.group_id, user.user_id)
+        .then(() => ({ ok: true, g }))
+        .catch(err => ({ ok: false, g, err }))
+    );
+    const results = await Promise.all(promises);
+    const failed = results.filter(r => !r.ok);
+    const succeeded = results.filter(r => r.ok);
+    if (succeeded.length) {
+      setGroups(prev => prev.filter(g => !succeeded.some(r => r.g.group_id === g.group_id)));
+      showToast(succeeded.length === 1 ? 'Left group' : `Left ${succeeded.length} groups`);
+    }
+    if (failed.length) {
+      const detail = failed[0].err?.response?.data?.detail;
+      setAlert({
+        title: 'Could not leave',
+        message: typeof detail === 'string' ? detail : `Failed to leave ${failed.length} group(s). You may have unsettled balances.`,
+        buttons: [{ text: 'OK', onPress: () => setAlert(null) }],
+      });
+    }
+    exitSelectMode();
+  }
+
+  async function handleBulkDelete(force = false) {
+    const { selectedGroups } = getSelectionActions();
+    const promises = selectedGroups.map(g =>
+      groupsApi.deleteGroup(g.group_id, force)
+        .then(() => ({ ok: true, g }))
+        .catch(err => ({ ok: false, g, err }))
+    );
+    const results = await Promise.all(promises);
+    const failed = results.filter(r => !r.ok);
+    const succeeded = results.filter(r => r.ok);
+    if (succeeded.length) {
+      setGroups(prev => prev.filter(g => !succeeded.some(r => r.g.group_id === g.group_id)));
+      showToast(succeeded.length === 1 ? 'Group deleted' : `Deleted ${succeeded.length} groups`);
+    }
+    const conflict = failed.find(r => r.err?.response?.status === 409);
+    const forbidden = failed.find(r => r.err?.response?.status === 403);
+    if (conflict && !force) {
+      setAlert({
+        title: 'Unsettled Balances',
+        message: `Some groups have unsettled balances. Delete anyway?`,
+        buttons: [
+          { text: 'Cancel', onPress: () => { setAlert(null); exitSelectMode(); } },
+          { text: 'Delete Anyway', style: 'destructive', onPress: () => { setAlert(null); handleBulkDelete(true); } },
+        ],
+      });
+      return;
+    }
+    if (forbidden) {
+      setAlert({
+        title: 'Not Allowed',
+        message: 'You can only delete groups you created.',
+        buttons: [{ text: 'OK', onPress: () => setAlert(null) }],
+      });
+    }
+    exitSelectMode();
+  }
 
   const [alert, setAlert] = useState(null);
 
@@ -1741,12 +1915,12 @@ export default function GroupsScreen() {
     }
   }
 
-  function handleCreated(newGroup) {
-    load();
+  async function handleCreated(newGroup) {
     navigation.navigate("GroupDetail", {
       groupId: newGroup.group_id,
       groupName: newGroup.group_name,
     });
+    load();
   }
 
   // Derived data
@@ -1835,13 +2009,48 @@ export default function GroupsScreen() {
         renderItem={({ item, index }) => (
           <ListCard
             group={item}
-            onPress={() => navigateGroup(item)}
-            onLongPress={() => setLongPress(item)}
+            onPress={() => {
+              if (selectMode) {
+                toggleSelect(item.group_id);
+                // Auto-exit if last item deselected
+                if (selected.has(item.group_id) && selected.size === 1) exitSelectMode();
+              } else {
+                navigateGroup(item);
+              }
+            }}
+            onLongPress={() => enterSelectMode(item.group_id)}
             isFirst={index === 0}
             isLast={index === sorted.length - 1}
+            isSelectMode={selectMode}
+            isSelected={selected.has(item.group_id)}
           />
         )}
       />
+
+      {/* Selection mode action bar */}
+      {selectMode && (
+        <SelectionBar
+          count={selected.size}
+          onCancel={exitSelectMode}
+          actions={getSelectionActions()}
+          onLeave={() => setAlert({
+            title: `Leave ${selected.size > 1 ? selected.size + ' Groups' : 'Group'}`,
+            message: 'You must have zero balance to leave. This cannot be undone.',
+            buttons: [
+              { text: 'Cancel', style: 'cancel', onPress: () => setAlert(null) },
+              { text: 'Leave', style: 'destructive', onPress: () => { setAlert(null); handleBulkLeave(); } },
+            ],
+          })}
+          onDelete={() => setAlert({
+            title: `Delete ${selected.size > 1 ? selected.size + ' Groups' : 'Group'}`,
+            message: 'All expenses and payments will be permanently removed.',
+            buttons: [
+              { text: 'Cancel', style: 'cancel', onPress: () => setAlert(null) },
+              { text: 'Delete', style: 'destructive', onPress: () => { setAlert(null); handleBulkDelete(); } },
+            ],
+          })}
+        />
+      )}
 
       {/* Modals */}
       <CreateGroupModal
@@ -1861,99 +2070,6 @@ export default function GroupsScreen() {
         }}
       />
 
-      {/* Long-press action sheet */}
-      <Modal
-        visible={!!longPress}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setLongPress(null)}
-      >
-        <TouchableOpacity
-          style={StyleSheet.absoluteFill}
-          onPress={() => setLongPress(null)}
-          activeOpacity={1}
-        >
-          <View style={s.sheet}>
-            <View style={modalS.handle} />
-            <View
-              style={{
-                paddingHorizontal: SP.base,
-                paddingVertical: SP.md,
-                borderBottomWidth: 1,
-                borderBottomColor: C.border,
-              }}
-            >
-              <Text
-                style={{ fontSize: F.md, fontWeight: W.bold, color: C.text }}
-                numberOfLines={1}
-              >
-                {longPress?.group_name}
-              </Text>
-              <Text style={{ fontSize: F.xs, color: C.text3, marginTop: 2 }}>
-                {longPress?.members?.length || 0} members
-              </Text>
-            </View>
-
-            <TouchableOpacity
-              style={s.sheetItem}
-              onPress={() => {
-                const g = longPress;
-                setLongPress(null);
-                navigateGroup(g);
-              }}
-            >
-              <View style={[s.sheetIconBox, { backgroundColor: C.primaryLo }]}>
-                <Icons.groups size={16} color={C.primary} />
-              </View>
-              <Text style={[s.sheetItemText, { color: C.text }]}>
-                Open Group
-              </Text>
-              <Icons.chevronRight size={14} color={C.text3} />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={s.sheetItem}
-              onPress={() => {
-                const g = longPress;
-                setLongPress(null);
-                setDeleteTarget(g);
-              }}
-            >
-              <View style={[s.sheetIconBox, { backgroundColor: C.dangerLo }]}>
-                <Icons.trash size={16} color={C.danger} />
-              </View>
-              <Text style={[s.sheetItemText, { color: C.danger }]}>
-                Delete Group
-              </Text>
-              <Icons.chevronRight size={14} color={C.text3} />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                s.sheetItem,
-                {
-                  borderTopWidth: 1,
-                  borderTopColor: C.border,
-                  marginTop: SP.xs,
-                },
-              ]}
-              onPress={() => setLongPress(null)}
-            >
-              <Text
-                style={{
-                  fontSize: F.md,
-                  fontWeight: W.semibold,
-                  color: C.text2,
-                  flex: 1,
-                  textAlign: "center",
-                }}
-              >
-                Cancel
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
       <Toast config={toast} />
       <AppAlert config={alert} />
       <DeleteConfirmModal

@@ -7,7 +7,7 @@ import {
   RefreshControl, ScrollView, Linking, ActivityIndicator, Platform, Share, Animated, LayoutAnimation, UIManager
 } from 'react-native';
 
-// Enable LayoutAnimation for Android (only if NOT on New Architecture)
+
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   const isNewArch = global._IS_FABRIC === true;
   if (!isNewArch) {
@@ -285,7 +285,7 @@ function ExpenseRow({ item, currentUserName, onDelete, onEdit, settlementBadge, 
         </View>
       </TouchableOpacity>
 
-      {/* Right side — amount + actions + chevron */}
+      {/* Right side */}
       <View style={styles.ledgerRight}>
         <Text style={styles.ledgerAmt}>₹{fmtAmount(item.total_amount)}</Text>
         <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
@@ -507,7 +507,7 @@ function SettlementRow({ item, currentUserName, members, onRemind, reminding, on
     <View style={[styles.settleCard, { borderColor: cardBorder, backgroundColor: cardBg }]}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: SP.sm }}>
 
-        {/* Avatars + arrow inline */}
+        {/* Avatars */}
         <Avatar name={item.from} size={32} variant={isDebtor ? 'danger' : 'auto'} />
         <View style={{ flex: 1, minWidth: 0 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -535,7 +535,7 @@ function SettlementRow({ item, currentUserName, members, onRemind, reminding, on
         </Text>
       </View>
 
-      {/* Action row — only if there's something to do */}
+      {/* Action row  */}
       {(isDebtor || isCreditor) && (
         <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 6 }}>
           {isDebtor && upiLink && (
@@ -616,7 +616,7 @@ function MemberRow({ member, currentUserName }) {
   );
 }
 
-// ─── Tab bar — FIXED: single indicator only ───────────────────────────────────
+// ─── Tab bar ───────────────────────────────────
 const TABS = ['Ledger', 'Settlements', 'Members'];
 
 function TabBar({ active, counts, onSelect }) {
@@ -679,7 +679,7 @@ function BalanceBanner({ netBalances, currentUserName }) {
   );
 }
 
-// ─── Empty state — SVG icon, no emoji ────────────────────────────────────────
+// ────────────────── Empty state ──────────────────
 function Empty({ icon: IconComp, iconColor = C.text3, title, subtitle }) {
   return (
     <View style={styles.empty}>
@@ -727,7 +727,7 @@ export default function GroupDetailScreen() {
   }
 
   function getExpenseBadge(expenseId, payerName) {
-    // payer's own split doesn't count toward settlement status
+    
     const payerMember = members.find(m => m.name === payerName);
     const payerId = payerMember?.user_id;
     const splits = splitStatuses.filter(
@@ -751,16 +751,18 @@ export default function GroupDetailScreen() {
     else setLoading(true);
     try {
       setSettLoaded(false);
-      const [expRes, payRes, memRes, statusRes] = await Promise.all([
+      const [expRes, payRes, memRes, statusRes] = await Promise.allSettled([
         expensesApi.getExpenses(groupId),
         settlementsApi.getPayments(groupId),
         groupsApi.getMembers(groupId),
         expensesApi.getSettlementStatus(groupId),
       ]);
-      setExpenses(expRes.data      || []);
-      setPayments(payRes.data      || []);
-      setMembers(memRes.data       || []);
-      setSplitStatuses(statusRes.data || []);
+      setExpenses(expRes.status === 'fulfilled'    ? (expRes.value.data    || []) : []);
+      setPayments(payRes.status === 'fulfilled'    ? (payRes.value.data    || []) : []);
+      setMembers(memRes.status === 'fulfilled'     ? (memRes.value.data    || []) : []);
+      setSplitStatuses(statusRes.status === 'fulfilled' ? (statusRes.value.data || []) : []);
+      
+      if (memRes.status === 'rejected') throw memRes.reason;
     } catch (err) {
       setAlert({
         title: 'Failed to load',
@@ -776,12 +778,12 @@ export default function GroupDetailScreen() {
   const loadSettlements = useCallback(async () => {
     setSettLoading(true);
     try {
-      const [raw, simp] = await Promise.all([
+      const [raw, simp] = await Promise.allSettled([
         settlementsApi.getSettlements(groupId),
         settlementsApi.getSimplified(groupId),
       ]);
-      setNetBalances(raw.data  || []);
-      setSimplified(simp.data  || []);
+      setNetBalances(raw.status  === 'fulfilled' ? (raw.value.data  || []) : []);
+      setSimplified(simp.status  === 'fulfilled' ? (simp.value.data || []) : []);
       setSettLoaded(true);
    } catch {
       setAlert({ title: 'Error', message: 'Could not load settlements.', buttons: [{ text: 'OK', onPress: () => setAlert(null) }] });
