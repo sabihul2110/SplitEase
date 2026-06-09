@@ -27,11 +27,18 @@ def _get_pool() -> MySQLConnectionPool:
     return _pool
 
 
-def get_connection():
-    return _get_pool().get_connection()
-
-
+import time
+from mysql.connector.errors import PoolError
 from contextlib import contextmanager
+
+def get_connection():
+    # Attempting to grab a connection for up to 5 seconds
+    for _ in range(25):
+        try:
+            return _get_pool().get_connection()
+        except PoolError:
+            time.sleep(0.2)
+    raise RuntimeError("Database connection pool exhausted")
 
 @contextmanager
 def get_db():

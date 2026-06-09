@@ -100,9 +100,15 @@ check("GET /auth/me (after update)", requests.get(f"{BASE}/api/v1/auth/me", head
 
 # ── 4. Groups ─────────────────────────────────────────────────────────────────
 section("4. Groups — create + read + bulk")
+
+# Create a second user to form a valid group
+email2 = f"test_{rand()}@example.com"
+r2_reg = requests.post(f"{BASE}/api/v1/auth/signup", json={"name": "User 2", "email": email2, "password": password})
+user2_id = r2_reg.json()["user_id"] if r2_reg.status_code == 201 else 999
+
 ok_g, r_g = check("POST /groups/ (expect 201)",
     requests.post(f"{BASE}/api/v1/groups/", headers=H, json={
-        "group_name": f"Test Group {rand(4)}", "user_ids": [user_id]
+        "group_name": f"Test Group {rand(4)}", "user_ids": [user_id, user2_id]
     }), 201)
 
 group_id = None

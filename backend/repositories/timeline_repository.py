@@ -1,30 +1,16 @@
 # backend/repositories/timeline_repository.py
-from core.database import get_connection
+# from core.database import get_connection
+
+from core.database import get_db
 
 
 def fetch_unified_timeline(user_id: int, limit: int = 100, offset: int = 0) -> list[dict]:
     """
     Returns a unified, date-sorted feed of all financial events for a user.
     Single UNION ALL query — replaces 8 sequential round-trips.
-
-    Shape of each row:
-    {
-        "type":       str,
-        "date":       str,          # YYYY-MM-DD
-        "amount":     float,
-        "my_share":   float | None,
-        "receivable": float | None,
-        "label":      str,
-        "sub":        str,
-        "ref_id":     int,
-        "group_id":   int | None,
-        "group_name": str | None,
-    }
     """
-    conn = get_connection()
-    cur  = conn.cursor(dictionary=True)
-
-    cur.execute(
+    with get_db() as (conn, cur):
+        cur.execute(
         """
         SELECT type, date, amount, my_share, receivable,
                label, sub, ref_id, group_id, group_name
@@ -210,8 +196,6 @@ def fetch_unified_timeline(user_id: int, limit: int = 100, offset: int = 0) -> l
     )
 
     rows = cur.fetchall()
-    cur.close()
-    conn.close()
 
     for r in rows:
         r["date"]     = str(r["date"])   if r.get("date")   else ""
