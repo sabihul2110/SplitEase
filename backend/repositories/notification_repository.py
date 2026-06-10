@@ -1,5 +1,5 @@
 # backend/repositories/notification_repository.py
-from core.database import get_connection
+from core.database import get_connection, get_db
 
 
 def get_unread_count(user_id: int) -> int:
@@ -41,25 +41,21 @@ def fetch_notifications(user_id: int, limit: int, offset: int) -> list[dict]:
 
 
 def mark_notification_read(notification_id: int, user_id: int) -> None:
-    conn = get_connection()
-    cur  = conn.cursor()
-    cur.execute(
-        "UPDATE Notifications SET is_read = 1 WHERE notification_id = %s AND user_id = %s",
-        (notification_id, user_id),
-    )
-    conn.commit()
-    cur.close(); conn.close()
+    with get_db() as (conn, cur):
+        cur.execute(
+            "UPDATE Notifications SET is_read = 1 WHERE notification_id = %s AND user_id = %s",
+            (notification_id, user_id),
+        )
+        conn.commit()
 
 
 def mark_all_read(user_id: int) -> None:
-    conn = get_connection()
-    cur  = conn.cursor()
-    cur.execute(
-        "UPDATE Notifications SET is_read = 1 WHERE user_id = %s",
-        (user_id,),
-    )
-    conn.commit()
-    cur.close(); conn.close()
+    with get_db() as (conn, cur):
+        cur.execute(
+            "UPDATE Notifications SET is_read = 1 WHERE user_id = %s",
+            (user_id,),
+        )
+        conn.commit()
 
 
 def delete_read_notifications(user_id: int) -> int:

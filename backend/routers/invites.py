@@ -124,20 +124,17 @@ def join_group_via_invite(token: str, user_id: int) -> dict:
     if group_repository.is_group_member(group_id, user_id):
         return {"group_id": group_id, "group_name": group_name, "already_member": True}
 
-    conn = _get_connection()
-    cur  = conn.cursor()
-    try:
-        conn.start_transaction()
-        cur.execute(
-            "INSERT INTO Group_Members (group_id, user_id) VALUES (%s, %s)",
-            (group_id, user_id),
-        )
-        conn.commit()
-    except Exception:
-        conn.rollback()
-        # Race condition on duplicate insert is safe to ignore
-    finally:
-        cur.close(); conn.close()
+    from core.database import get_db
+    with get_db() as (conn, cur):
+        try:
+            conn.start_transaction()
+            cur.execute(
+                "INSERT INTO Group_Members (group_id, user_id) VALUES (%s, %s)",
+                (group_id, user_id),
+            )
+            conn.commit()
+        except Exception:
+            conn.rollback()
 
     return {"group_id": group_id, "group_name": group_name, "already_member": False}
 

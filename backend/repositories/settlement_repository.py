@@ -1,23 +1,20 @@
 # backend/repositories/settlement_repository.py
-from core.database import get_connection
+from core.database import get_connection, get_db
 
 
 def calculate_settlements(group_id: int, user_id: int) -> list[dict]:
-    conn = get_connection()
-    cur  = conn.cursor(dictionary=True)
-    cur.execute(
-        "SELECT 1 FROM Group_Members WHERE group_id = %s AND user_id = %s",
-        (group_id, user_id),
-    )
-    if cur.fetchone() is None:
-        cur.close(); conn.close()
-        return []
-    cur.callproc("Calculate_Settlements", [group_id])
-    results = []
-    for result in cur.stored_results():
-        results = result.fetchall()
-    cur.close(); conn.close()
-    return results
+    with get_db() as (conn, cur):
+        cur.execute(
+            "SELECT 1 FROM Group_Members WHERE group_id = %s AND user_id = %s",
+            (group_id, user_id),
+        )
+        if cur.fetchone() is None:
+            return []
+        cur.callproc("Calculate_Settlements", [group_id])
+        results = []
+        for result in cur.stored_results():
+            results = result.fetchall()
+        return results
 
 
 def fetch_settlements_for_groups(group_ids: list[int]) -> dict[int, list[dict]]:

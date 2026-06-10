@@ -29,14 +29,13 @@ def create_reset_token(user_id: int, token_hash: str, expires_at: str) -> None:
 
 def get_reset_token(token_hash: str) -> dict | None:
     """
-    Look up a reset token by hash.
-    Only returns rows that are unused AND not yet expired.
-    Expired/used tokens return None — validation happens at the DB, not the caller.
+    Look up a reset token by hash — returns the row regardless of used/expired
+    status so the service layer can return a specific error message to the user.
     """
     conn = get_connection()
     cur  = conn.cursor(dictionary=True)
     cur.execute(
-        "SELECT * FROM PasswordResetTokens WHERE token = %s AND used = 0 AND expires_at > NOW()",
+        "SELECT * FROM PasswordResetTokens WHERE token = %s",
         (token_hash,),
     )
     row = cur.fetchone()
