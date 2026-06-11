@@ -8,6 +8,7 @@ import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { signup } from "../api/auth";
 import { useAuth } from "../context/AuthContext";
+import PasswordInput from "../components/ui/PasswordInput";
 
 export default function Signup() {
   const { login } = useAuth();
@@ -21,7 +22,7 @@ export default function Signup() {
 
   async function onSubmit(e) {
     e.preventDefault(); setError("");
-    if (form.password.length < 6) { setError("Password must be at least 6 characters."); return; }
+    if (form.password.length < 8) { setError("Password must be at least 8 characters."); return; }
     setLoading(true);
     try {
       const { data } = await signup({ ...form, upi_id: form.upi_id.trim() || null });
@@ -71,8 +72,12 @@ export default function Signup() {
             </div>
             <div className="form-group">
               <label className="form-label">Password</label>
-              <input type="password" required placeholder="Min. 6 characters"
-                value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} />
+              <PasswordInput
+                required
+                placeholder="Min. 8 characters"
+                value={form.password}
+                onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+              />
             </div>
             <div className="form-group" style={{ marginBottom: 20 }}>
               <label className="form-label">

@@ -1,7 +1,7 @@
 // --- web/src/pages/admin/AdminGroups.jsx ---
 
 import { useState, useEffect } from "react";
-import { getAllGroups, deleteGroup, wipeAllGroups } from "../../api/groups";
+import { getAllGroups, deleteGroup as deleteGroupApi, wipeAllGroups } from "../../api/groups";
 
 export default function AdminGroups() {
   const [groups,  setGroups]  = useState([]);
@@ -10,10 +10,14 @@ export default function AdminGroups() {
   useEffect(() => {
     getAllGroups().then(r => setGroups(r.data)).finally(() => setLoading(false));
   }, []);
-  async function deleteGroup(id, name) {
+  async function handleDeleteGroup(id, name) {
     if (!confirm(`Delete "${name}"? All expenses and payments will be removed.`)) return;
-    await deleteGroup(id, true);
-    setGroups(p => p.filter(g => g.group_id !== id));
+    try {
+      await deleteGroupApi(id, true);
+      setGroups(p => p.filter(g => g.group_id !== id));
+    } catch (e) {
+      alert(e.response?.data?.detail || "Failed to delete group.");
+    }
   }
 
   async function deleteAllGroups() {
@@ -61,7 +65,7 @@ export default function AdminGroups() {
                     {new Date(g.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "2-digit" })}
                   </td>
                   <td>
-                    <button className="btn btn-danger btn-xs" onClick={() => deleteGroup(g.group_id, g.group_name)}>Delete</button>
+                    <button className="btn btn-danger btn-xs" onClick={() => handleDeleteGroup(g.group_id, g.group_name)}>Delete</button>
                   </td>
                 </tr>
               ))}

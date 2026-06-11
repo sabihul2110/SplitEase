@@ -7,6 +7,7 @@ import { createExpense, getCategories, getSubcategories } from "../api/expenses"
 import { useAuth } from "../context/AuthContext";
 import AppShell from "../components/AppShell";
 import ReceiptScanner from "../components/ReceiptScanner";
+import DateInput from "../components/ui/DateInput";
 
 export default function AddExpense() {
   const { id }  = useParams();
@@ -156,7 +157,7 @@ export default function AddExpense() {
             </div>
             <div className="form-group">
               <label className="form-label">Date</label>
-              <input type="date" required value={form.expense_date} onChange={e => set("expense_date", e.target.value)} />
+              <DateInput required value={form.expense_date} onChange={e => set("expense_date", e.target.value)} />
             </div>
           </div>
 

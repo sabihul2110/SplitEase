@@ -107,7 +107,7 @@ export default function NotificationBell() {
     } catch {}
   }
 
-  async function markAllRead() {
+  async function handleMarkAllRead() {
     try {
       await markAllRead();
       setCount(0);
@@ -185,7 +185,7 @@ export default function NotificationBell() {
             </span>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               {count > 0 && (
-                <button onClick={markAllRead} style={{ fontSize: 12, color: "var(--primary-h)", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}>
+                <button onClick={handleMarkAllRead} style={{ fontSize: 12, color: "var(--primary-h)", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}>
                   Mark all
                 </button>
               )}

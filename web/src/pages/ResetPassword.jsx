@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useSearchParams, Link, useNavigate } from "react-router-dom";
 import { resetPassword } from "../api/auth";
+import PasswordInput from "../components/ui/PasswordInput";
 
 
 export default function ResetPassword() {
@@ -61,13 +62,21 @@ export default function ResetPassword() {
                 </div>
                 <div className="form-group">
                   <label className="form-label">New password</label>
-                  <input type="password" required placeholder="At least 6 characters"
-                    value={pass} onChange={e => setPass(e.target.value)} />
+                  <PasswordInput
+                    required
+                    placeholder="At least 8 characters"
+                    value={pass}
+                    onChange={e => setPass(e.target.value)}
+                  />
                 </div>
                 <div className="form-group" style={{ marginBottom: 20 }}>
                   <label className="form-label">Confirm password</label>
-                  <input type="password" required placeholder="Repeat new password"
-                    value={confirm} onChange={e => setConfirm(e.target.value)} />
+                  <PasswordInput
+                    required
+                    placeholder="Repeat new password"
+                    value={confirm}
+                    onChange={e => setConfirm(e.target.value)}
+                  />
                 </div>
                 <button className="btn btn-primary btn-lg" style={{ width: "100%" }} disabled={loading}>
                   {loading ? "Resetting…" : "Reset Password →"}

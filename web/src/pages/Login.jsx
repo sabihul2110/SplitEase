@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { login as loginRequest } from "../api/auth";
 import { useAuth } from "../context/AuthContext";
+import PasswordInput from "../components/ui/PasswordInput";
 
 export default function Login() {
   const { login } = useAuth();
@@ -55,8 +56,12 @@ export default function Login() {
             </div>
             <div className="form-group" style={{ marginBottom: 20 }}>
               <label className="form-label">Password</label>
-              <input type="password" required placeholder="Enter password"
-                value={form.password} onChange={e => setForm(f => ({...f, password: e.target.value}))} />
+              <PasswordInput
+                required
+                placeholder="Enter password"
+                value={form.password}
+                onChange={e => setForm(f => ({...f, password: e.target.value}))}
+              />
             </div>
             
             <div style={{ textAlign: "right", marginBottom: 4 }}>

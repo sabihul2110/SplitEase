@@ -6,6 +6,7 @@ import { getMembers } from "../api/groups";
 import { createPayment } from "../api/payments";
 import { useAuth } from "../context/AuthContext";
 import AppShell from "../components/AppShell";
+import DateInput from "../components/ui/DateInput";
 
 export default function AddPayment() {
   const { id }  = useParams();
@@ -79,7 +80,7 @@ export default function AddPayment() {
               </div>
               <div className="form-group">
                 <label className="form-label">Date</label>
-                <input type="date" required value={form.payment_date} onChange={e => set("payment_date", e.target.value)} />
+                <DateInput required value={form.payment_date} onChange={e => set("payment_date", e.target.value)} />
               </div>
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
