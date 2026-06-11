@@ -93,7 +93,8 @@ ALLOWED_ORIGINS: list[str] = [
 INVITE_EXPIRY_HOURS: int       = settings.INVITE_EXPIRY_HOURS
 GEMINI_API_KEY:      str       = settings.GEMINI_API_KEY
 SENTRY_DSN:          str       = settings.SENTRY_DSN
-BREVO_SMTP_KEY: str = settings.BREVO_SMTP_KEY or settings.BREVO_API_KEY
+# BREVO_SMTP_KEY: str = settings.BREVO_SMTP_KEY or settings.BREVO_API_KEY
+BREVO_API_KEY: str = settings.BREVO_API_KEY
 BREVO_SENDER_EMAIL: str = settings.BREVO_SENDER_EMAIL
 APP_BASE_URL:        str       = settings.APP_BASE_URL
 
