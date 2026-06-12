@@ -1,21 +1,5 @@
 // SplitEase/mobile/src/context/AuthContext.jsx
-//
-// Auth state + splash screen.
-//
-// SPLASH EXPLANATION — why you see white then dark:
-// There are TWO splash layers on Android:
-//   1. Native splash (white screen) — controlled by app.json "splash.backgroundColor"
-//      THIS is the white screen. Fix it in app.json by setting:
-//        "splash": { "backgroundColor": "#0d0e14", "resizeMode": "contain", "image": "./assets/icon.png" }
-//      This change requires a new build (eas build), NOT an OTA update.
-//   2. JS splash (this file) — the dark screen with the icon.
-//      This is what we control here.
-//
-// WHY THE ICON WAS TINY/INVISIBLE:
-//   adaptive-icon.png has a TRANSPARENT background — on a dark screen, the logo
-//   blends into the background and looks like a small dark shape.
-//   icon.png has the dark rounded-square background BAKED IN — it's visible and
-//   looks correct at any size. Always use icon.png for the JS splash.
+
 
 import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -66,8 +50,12 @@ export function AuthProvider({ children }) {
   }
 
   async function login(userData) {
-    setUser(userData);
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
+    const enriched = {
+      ...userData,
+      email_verified: userData.email_verified ?? false,
+    };
+    setUser(enriched);
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(enriched));
   }
 
   async function logout() {

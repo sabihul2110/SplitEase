@@ -8,29 +8,29 @@
  * watches user state and swaps Auth ↔ Main stacks.
  */
 
-import React, { useState } from "react";
+import { useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Image,
+    Image,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as authApi from "../../api/auth";
-import { useAuth } from "../../context/AuthContext";
-import {
-  COLORS,
-  FONT_SIZE,
-  FONT_WEIGHT,
-  SPACING,
-  RADIUS,
-} from "../../constants/theme";
-import Input from "../../components/common/Input";
 import Button from "../../components/common/Button";
+import Input from "../../components/common/Input";
+import {
+    COLORS,
+    FONT_SIZE,
+    FONT_WEIGHT,
+    RADIUS,
+    SPACING,
+} from "../../constants/theme";
+import { useAuth } from "../../context/AuthContext";
 
 export default function LoginScreen({ navigation }) {
   const { login } = useAuth();
@@ -92,8 +92,10 @@ export default function LoginScreen({ navigation }) {
               style={styles.logoImage}
               resizeMode="contain"
             />
-            <Text style={styles.appName}>SplitEase</Text>
-            <Text style={styles.tagline}>Split expenses, not friendships.</Text>
+            <Text style={styles.appName}>
+              Split<Text style={{ color: COLORS.primary }}>Ease</Text>
+            </Text>
+            <Text style={{ color: COLORS.text2 }}>Split Fair. Settle Fast.</Text>
           </View>
 
           {/* Form card */}

@@ -18,6 +18,9 @@ export const changePassword = (payload) =>
 export const forgotPassword = (email) =>
   client.post(ENDPOINTS.forgotPassword, { email });
 
+export const verifyEmail        = (token) => client.post(ENDPOINTS.verifyEmail,        { token });
+export const resendVerification = ()      => client.post(ENDPOINTS.resendVerification);
+
 export const resetPassword = (payload) =>
   client.post(ENDPOINTS.resetPassword, payload);
 

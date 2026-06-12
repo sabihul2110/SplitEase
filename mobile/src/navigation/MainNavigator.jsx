@@ -16,6 +16,7 @@ import { Icons } from "../components/icons/icons";
 
 // Screens
 import DashboardScreen from "../screens/dashboard/DashboardScreen";
+import VerifyEmailScreen from "../screens/auth/VerifyEmailScreen";
 import GroupsScreen from "../screens/groups/GroupsScreen";
 import GroupDetailScreen from "../screens/groups/GroupDetailScreen";
 import ExpensesScreen from "../screens/expenses/ExpensesScreen";
@@ -54,6 +55,7 @@ function DashboardStack() {
       <DashStack.Screen name="Account"        component={AccountScreen} />
       <DashStack.Screen name="Settings"       component={SettingsScreen} />
       <DashStack.Screen name="Notifications"  component={NotificationsScreen} />
+      <DashStack.Screen name="VerifyEmail"    component={VerifyEmailScreen} />
     </DashStack.Navigator>
   );
 }

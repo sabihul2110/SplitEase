@@ -27,20 +27,37 @@ export default function ForgotPasswordScreen({ navigation }) {
       await authApi.forgotPassword(email.trim().toLowerCase());
       navigation.navigate('ResetPassword');
     } catch (err) {
-      const errMsg = err.response?.data?.detail || 'Could not connect to server.';
-      setAlert({
-        title: 'Failed to send OTP',
-        message: errMsg,
-        buttons: [
-          {
-            text: 'OK',
-            onPress: () => {
-              setAlert(null);
-              navigation.navigate('ResetPassword');
+      const httpStatus = err.response?.status;
+      const errMsg = err.response?.data?.detail;
+
+      if (httpStatus === 429) {
+        setAlert({
+          title: 'Too Many Attempts',
+          message: 'You have requested too many reset codes. Please wait a few minutes before trying again.',
+          buttons: [{ text: 'OK', onPress: () => setAlert(null) }],
+        });
+      } else if (httpStatus === 503) {
+        setAlert({
+          title: 'Email Service Unavailable',
+          message: 'We could not send the reset email right now. Please try again in a few minutes.',
+          buttons: [{ text: 'OK', onPress: () => setAlert(null) }],
+        });
+      } else {
+        // Unknown errors: redirect anyway (don't leak whether email exists)
+        setAlert({
+          title: 'Something Went Wrong',
+          message: errMsg || 'Could not connect to server. Please check your connection.',
+          buttons: [
+            {
+              text: 'OK',
+              onPress: () => {
+                setAlert(null);
+                navigation.navigate('ResetPassword');
+              },
             },
-          },
-        ],
-      });
+          ],
+        });
+      }
     } finally {
       setLoading(false);
     }

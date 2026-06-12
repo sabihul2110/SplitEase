@@ -40,9 +40,10 @@ CREATE TABLE Users (
     password_hash VARCHAR(255)             NULL,
     upi_id        VARCHAR(100)             NULL,
     role          ENUM('user','admin') NOT NULL DEFAULT 'user',
-    token_version INT                  NOT NULL DEFAULT 0
+    token_version  INT                  NOT NULL DEFAULT 0
         COMMENT 'Incremented on every password change to invalidate old JWTs',
-    created_at    TIMESTAMP            NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    email_verified TINYINT(1)           NOT NULL DEFAULT 0,
+    created_at     TIMESTAMP            NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT pk_users PRIMARY KEY (user_id),
     CONSTRAINT uq_email UNIQUE      (email)
 );
@@ -292,6 +293,7 @@ CREATE TABLE Borrows (
     INDEX idx_borrows_user (borrower_user_id, status)
 );
 
+
 -- ─────────────────────────────────────────────
 --  15. PAYMENT_ALLOCATIONS
 -- ─────────────────────────────────────────────
@@ -307,6 +309,7 @@ CREATE TABLE Payment_Allocations (
     CONSTRAINT chk_alloc_amt    CHECK (allocated_amt > 0)
 );
 
+
 -- ─────────────────────────────────────────────
 -- 16. Password Reset Tokens 
 -- ─────────────────────────────────────────────
@@ -317,6 +320,22 @@ CREATE TABLE IF NOT EXISTS PasswordResetTokens (
     expires_at DATETIME NOT NULL,
     used       TINYINT(1) NOT NULL DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE
+);
+
+
+-- ─────────────────────────────────────────────
+-- 17. Email Verification Tokens
+-- ─────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS EmailVerificationTokens (
+    id         INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    user_id    INT          NOT NULL,
+    token      VARCHAR(64)  NOT NULL,
+    expires_at DATETIME     NOT NULL,
+    used       TINYINT(1)   NOT NULL DEFAULT 0,
+    created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_evt_token (token),
+    KEY        idx_evt_user (user_id),
     FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE
 );
 

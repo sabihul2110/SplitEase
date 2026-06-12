@@ -44,7 +44,7 @@ def login_user(email: str, password: str) -> dict | None:
 def register_user(name: str, email: str, password: str, upi_id: str | None = None) -> dict:
     """
     Create account. Assigns admin role to first user.
-    Returns same shape as login_user.
+    Returns same shape as login_user, plus raw_verification_token for email dispatch.
     """
     role = "admin" if user_repository.count_users() == 0 else "user"
     user_id = user_repository.insert_user_with_auth(
@@ -54,6 +54,7 @@ def register_user(name: str, email: str, password: str, upi_id: str | None = Non
         upi_id=upi_id,
         role=role,
     )
+    token_data = generate_verification_token(user_id, email)
     return {
         "access_token": create_access_token({
             "user_id":       user_id,
@@ -61,11 +62,12 @@ def register_user(name: str, email: str, password: str, upi_id: str | None = Non
             "role":          role,
             "token_version": 0,
         }),
-        "token_type": "bearer",
-        "user_id":    user_id,
-        "name":       name,
-        "role":       role,
-        "email":      email,
+        "token_type":              "bearer",
+        "user_id":                 user_id,
+        "name":                    name,
+        "role":                    role,
+        "email":                   email,
+        "raw_verification_token":  token_data["raw_token"],
     }
 
 
@@ -114,6 +116,39 @@ def complete_password_reset(raw_token: str, new_password: str) -> bool:
         raise ValueError("Reset link has expired. Please request a new one.")
 
     auth_repository.use_reset_token(token_hash, row["user_id"], hash_password(new_password))
+    return True
+
+
+def generate_verification_token(user_id: int, email: str) -> dict:
+    """
+    Generate a 6-digit OTP for email verification, store its hash, return raw token.
+    """
+    raw_token = "".join(random.choices(string.digits, k=6))
+    token_hash = _hash_token(raw_token)
+    expires_at = (
+        datetime.now(timezone.utc) + timedelta(minutes=15)
+    ).strftime("%Y-%m-%d %H:%M:%S")
+    auth_repository.create_verification_token(user_id, token_hash, expires_at)
+    return {"raw_token": raw_token}
+
+
+def complete_email_verification(raw_token: str, user_id: int) -> bool:
+    """
+    Validate verification OTP and mark account as verified.
+    Raises ValueError with reason on failure.
+    """
+    token_hash = _hash_token(raw_token)
+    row = auth_repository.get_verification_token(token_hash, user_id)
+    if not row:
+        raise ValueError("Invalid or expired verification code.")
+    if row["used"]:
+        raise ValueError("This code has already been used.")
+    expires = row["expires_at"]
+    if hasattr(expires, "tzinfo") and expires.tzinfo is None:
+        expires = expires.replace(tzinfo=timezone.utc)
+    if datetime.now(timezone.utc) > expires:
+        raise ValueError("Verification code has expired. Please request a new one.")
+    auth_repository.use_verification_token(token_hash, user_id)
     return True
 
 

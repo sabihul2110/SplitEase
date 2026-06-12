@@ -50,7 +50,16 @@ export default function ResetPassword() {
             </div>
           ) : (
             <>
-              <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 20 }}>Set new password</div>
+              <div style={{ marginBottom: 20 }}>
+                <Link to="/login" style={{
+                  display: "inline-flex", alignItems: "center", gap: 4,
+                  color: "var(--primary)", fontSize: 14, fontWeight: 500,
+                  textDecoration: "none", marginBottom: 16,
+                }}>
+                  ‹ Back to login
+                </Link>
+                <div style={{ fontSize: 17, fontWeight: 700 }}>Set new password</div>
+              </div>
               {error && <div className="alert alert-error" style={{ marginBottom: 16 }}>⚠ {error}</div>}
               <form onSubmit={onSubmit}>
                 <div className="form-group">

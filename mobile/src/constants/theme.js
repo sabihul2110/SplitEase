@@ -34,8 +34,8 @@ export const COLORS = {
   // Text
   text:     '#f0f1f5',
   text2:    '#9095a8',
-  text3:    '#4e5260',
-
+  text3: '#4e5260',
+  
   // Misc
   white:    '#ffffff',
   black:    '#000000',

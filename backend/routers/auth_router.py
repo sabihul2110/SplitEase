@@ -15,11 +15,12 @@ from services.auth_service import (
     login_user, register_user,
     initiate_password_reset, complete_password_reset,
     change_user_password,
+    generate_verification_token, complete_email_verification,
 )
 
 from core.dependencies import get_current_user
 from core.database import get_connection, get_db
-from infrastructure.email_service import send_reset_email
+from infrastructure.email_service import send_reset_email, send_verification_email
 
 logger = logging.getLogger("splitease.auth")
 router = APIRouter(tags=["Auth"])
@@ -27,10 +28,13 @@ router = APIRouter(tags=["Auth"])
 # ── Rate limiters ──────────────────────────────────────────────────────────
 _LOGIN_WINDOW   = 60;  _LOGIN_MAX   = 10
 _FORGOT_WINDOW  = 300; _FORGOT_MAX  = 3
+_VERIFY_WINDOW  = 300; _VERIFY_MAX  = 3   
 _login_attempts:  dict[str, list[float]] = defaultdict(list)
 _forgot_attempts: dict[str, list[float]] = defaultdict(list)
+_verify_attempts: dict[str, list[float]] = defaultdict(list)
 _login_lock  = threading.Lock()
 _forgot_lock = threading.Lock()
+_verify_lock = threading.Lock()
 
 def _rate_check(store, lock, ip, window, max_attempts, retry_after):
     now = time.monotonic()
@@ -78,7 +82,10 @@ def _rate_check(store, lock, ip, window, max_attempts, retry_after):
 
 # ── Routes ─────────────────────────────────────────────────────────────────
 @router.post("/signup", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
-def signup(body: SignupRequest):
+def signup(body: SignupRequest, request: Request):
+    client_ip = request.client.host if request.client else "unknown"
+    _rate_check(_verify_attempts, _verify_lock, client_ip, _VERIFY_WINDOW, _VERIFY_MAX, _VERIFY_WINDOW)
+
     if len(body.password) < 8:
         raise HTTPException(400, "Password must be at least 8 characters.")
     try:
@@ -90,6 +97,20 @@ def signup(body: SignupRequest):
         )
     except mysql.connector.IntegrityError:
         raise HTTPException(409, "An account with this email already exists.")
+
+    sent = send_verification_email(
+        result["email"],
+        result["name"],
+        result["raw_verification_token"],
+    )
+    if not sent:
+        # Account created successfully but email failed — inform the caller.
+        # The client should show a warning and offer a resend button.
+        raise HTTPException(
+            status_code=status.HTTP_207_MULTI_STATUS,
+            detail="Account created, but we could not send the verification email. Use 'Resend verification' to try again.",
+        )
+
     return AuthResponse(**result)
 
 
@@ -108,7 +129,7 @@ def login(body: LoginRequest, request: Request):
 def get_me(current_user: dict = Depends(get_current_user)):
     with get_db() as (conn, cur):
         cur.execute(
-            "SELECT user_id, name, email, role, upi_id FROM Users WHERE user_id = %s",
+            "SELECT user_id, name, email, role, upi_id, email_verified FROM Users WHERE user_id = %s",
             (current_user["user_id"],),
         )
         user = cur.fetchone()
@@ -141,23 +162,66 @@ def change_password(
 
 
 @router.post("/forgot-password")
-def forgot_password(
+async def forgot_password(
     body:             ForgotPasswordRequest,
     request:          Request,
-    background_tasks: BackgroundTasks,
 ):
     client_ip = request.client.host if request.client else "unknown"
     _rate_check(_forgot_attempts, _forgot_lock, client_ip, _FORGOT_WINDOW, _FORGOT_MAX, _FORGOT_WINDOW)
 
     result = initiate_password_reset(body.email)
     if result:
-        background_tasks.add_task(
-            send_reset_email,
+        sent = send_reset_email(
             result["user"]["email"],
             result["user"]["name"],
             result["raw_token"],
         )
+        if not sent:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="We could not send the reset email right now. Please try again in a few minutes.",
+            )
     return {"message": "If that email is registered, a reset link has been sent."}
+
+
+@router.post("/verify-email", status_code=status.HTTP_200_OK)
+def verify_email(
+    body: dict,                                  # { "token": "123456" }
+    current_user: dict = Depends(get_current_user),
+):
+    """Consume the 6-digit OTP to mark the account as verified."""
+    raw_token = (body.get("token") or "").strip()
+    if not raw_token:
+        raise HTTPException(400, "Verification code is required.")
+    try:
+        complete_email_verification(raw_token, current_user["user_id"])
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    return {"message": "Email verified successfully."}
+
+
+@router.post("/resend-verification")
+async def resend_verification(
+    request: Request,
+    current_user: dict = Depends(get_current_user),
+):
+    """Re-sends the account verification OTP. Rate-limited per IP."""
+    client_ip = request.client.host if request.client else "unknown"
+    _rate_check(_verify_attempts, _verify_lock, client_ip, _VERIFY_WINDOW, _VERIFY_MAX, _VERIFY_WINDOW)
+
+    from services.auth_service import generate_verification_token   # import here to avoid circular
+    token_data = generate_verification_token(current_user["user_id"], current_user["email"])
+    sent = send_verification_email(
+        current_user["email"],
+        current_user["name"],
+        token_data["raw_token"],
+    )
+    if not sent:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="We could not send the verification email right now. Please try again in a few minutes.",
+        )
+    return {"message": "Verification code sent."}
 
 
 @router.post("/reset-password")

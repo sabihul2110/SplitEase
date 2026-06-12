@@ -68,6 +68,71 @@ def use_reset_token(token_hash: str, user_id: int, new_password_hash: str) -> No
         cur.close(); conn.close()
 
 
+def create_verification_token(user_id: int, token_hash: str, expires_at: str) -> None:
+    """
+    Invalidates any existing unused verification tokens for the user, then inserts a new one.
+    token_hash is SHA-256(raw_token) — never store the raw token.
+    """
+    conn = get_connection()
+    cur  = conn.cursor()
+    try:
+        conn.start_transaction()
+        cur.execute(
+            "UPDATE EmailVerificationTokens SET used=1 WHERE user_id=%s AND used=0",
+            (user_id,),
+        )
+        cur.execute(
+            "INSERT INTO EmailVerificationTokens (user_id, token, expires_at) VALUES (%s, %s, %s)",
+            (user_id, token_hash, expires_at),
+        )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close(); conn.close()
+
+
+def get_verification_token(token_hash: str, user_id: int) -> dict | None:
+    """
+    Look up a verification token by hash and user_id — returns the row regardless
+    of used/expired status so the service layer can return a specific error message.
+    """
+    conn = get_connection()
+    cur  = conn.cursor(dictionary=True)
+    cur.execute(
+        "SELECT * FROM EmailVerificationTokens WHERE token=%s AND user_id=%s",
+        (token_hash, user_id),
+    )
+    row = cur.fetchone()
+    cur.close(); conn.close()
+    return row
+
+
+def use_verification_token(token_hash: str, user_id: int) -> None:
+    """
+    Atomically: marks token used + sets email_verified=1 on the user row.
+    """
+    conn = get_connection()
+    cur  = conn.cursor()
+    try:
+        conn.start_transaction()
+        cur.execute(
+            "UPDATE EmailVerificationTokens SET used=1 WHERE token=%s",
+            (token_hash,),
+        )
+        cur.execute(
+            "UPDATE Users SET email_verified=1 WHERE user_id=%s",
+            (user_id,),
+        )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close(); conn.close()
+
+
 def update_password_and_bump_version(user_id: int, new_password_hash: str) -> None:
     """
     Updates password hash and bumps token_version atomically.

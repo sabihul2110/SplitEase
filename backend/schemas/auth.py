@@ -15,12 +15,13 @@ class LoginRequest(BaseModel):
 
 
 class AuthResponse(BaseModel):
-    access_token: str
-    token_type:   str = "bearer"
-    user_id:      int
-    name:         str
-    role:         str
-    email:        str
+    access_token:             str
+    token_type:               str = "bearer"
+    user_id:                  int
+    name:                     str
+    role:                     str
+    email:                    str
+    raw_verification_token:   str | None = None
 
 
 class ChangePasswordRequest(BaseModel):

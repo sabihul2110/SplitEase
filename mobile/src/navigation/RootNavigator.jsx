@@ -18,6 +18,7 @@ import { COLORS } from '../constants/theme';
 import LoginScreen    from '../screens/auth/LoginScreen';
 import SignupScreen   from '../screens/auth/SignupScreen';
 
+import VerifyEmailScreen from '../screens/auth/VerifyEmailScreen';
 import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
 import ResetPasswordScreen  from '../screens/auth/ResetPasswordScreen';
 
@@ -50,16 +51,18 @@ export default function RootNavigator() {
       theme={NAV_THEME}
     >
       <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {user ? (
+        {user && user.email_verified === false && !user.skip_verify ? (
+          <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} />
+        ) : user ? (
+          // Fully authenticated
           <Stack.Screen name="Main" component={MainNavigator} />
         ) : (
+          // Not logged in
           <Stack.Group>
-            <Stack.Screen name="Login"  component={LoginScreen}  />
-            <Stack.Screen name="Signup" component={SignupScreen} />
-
+            <Stack.Screen name="Login"          component={LoginScreen} />
+            <Stack.Screen name="Signup"         component={SignupScreen} />
             <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
-            <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
-            
+            <Stack.Screen name="ResetPassword"  component={ResetPasswordScreen} />
           </Stack.Group>
         )}
       </Stack.Navigator>

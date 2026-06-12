@@ -7,7 +7,7 @@
 
 
 // 🎚️ TOGGLE THIS: Set to 'true' to use laptop's Python backend
-const USE_LOCAL_BACKEND = false; 
+const USE_LOCAL_BACKEND = true; 
 
 export const BASE_URL = (__DEV__ && USE_LOCAL_BACKEND)
   ? 'http://192.168.29.115:8000'
@@ -25,7 +25,9 @@ export const ENDPOINTS = {
   signup:          `${V1}/auth/signup`,
   me:              `${V1}/auth/me`,
   forgotPassword:  `${V1}/auth/forgot-password`,
-  resetPassword:   `${V1}/auth/reset-password`,
+  resetPassword: `${V1}/auth/reset-password`,
+  verifyEmail:          `${V1}/auth/verify-email`,
+  resendVerification:   `${V1}/auth/resend-verification`,
 
   // Groups
   groups:            `${V1}/groups/`,

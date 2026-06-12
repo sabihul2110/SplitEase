@@ -5,42 +5,75 @@
  * New user registration. First user to sign up becomes admin automatically (backend handles this).
  */
 
-import React, { useState } from "react";
+import { useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Alert,
-  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as authApi from "../../api/auth";
-import { useAuth } from "../../context/AuthContext";
+import Button from "../../components/common/Button";
+import AppAlert from "../../components/common/AppAlert";
+import Input from "../../components/common/Input";
 import {
   COLORS,
   FONT_SIZE,
   FONT_WEIGHT,
-  SPACING,
   RADIUS,
+  SPACING,
 } from "../../constants/theme";
-import Input from "../../components/common/Input";
-import Button from "../../components/common/Button";
+import { useAuth } from "../../context/AuthContext";
 
 export default function SignupScreen({ navigation }) {
   const { login } = useAuth();
   const [form, setForm] = useState({
-    name: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-    upi_id: "",
+    name: "", email: "", password: "", confirmPassword: "", upi_id: "",
   });
-  const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState({});
+  const [loading,    setLoading]    = useState(false);
+  const [errors,     setErrors]     = useState({});
+  const [step,       setStep]       = useState("form");
+  const [otp,        setOtp]        = useState("");
+  const [otpError,   setOtpError]   = useState("");
+  const [verifying,  setVerifying]  = useState(false);
+  const [resending, setResending] = useState(false);
+  const [alertConfig, setAlertConfig] = useState(null);
+
+  function showAlert(title, message) {
+    setAlertConfig({
+      title,
+      message,
+      buttons: [{ text: "OK", onPress: () => setAlertConfig(null) }],
+    });
+  }
+  
+  async function handleVerify() {
+    if (otp.length !== 6) { setOtpError("Enter the 6-digit code from your email."); return; }
+    setVerifying(true); setOtpError("");
+    try {
+      await authApi.verifyEmail(otp.trim());
+      navigation.replace("Main");
+    } catch (err) {
+      setOtpError(err.response?.data?.detail || "Invalid or expired code.");
+    } finally { setVerifying(false); }
+  }
+
+  async function handleResend() {
+    setResending(true); setOtpError("");
+    try {
+      await authApi.resendVerification();
+    } catch (err) {
+      const s = err.response?.status;
+      setOtpError(s === 429
+        ? "Too many attempts. Please wait a few minutes."
+        : "Could not resend. Please try again shortly.");
+    } finally { setResending(false); }
+  }
 
   function set(field, value) {
     setForm((f) => ({ ...f, [field]: value }));
@@ -73,20 +106,82 @@ export default function SignupScreen({ navigation }) {
 
       const { data } = await authApi.signup(payload);
 
+      // Login immediately so JWT is available for verify-email endpoint
       await login({
-        access_token: data.access_token,
-        user_id: data.user_id,
-        name: data.name,
-        email: data.email,
-        role: data.role,
+        access_token:   data.access_token,
+        user_id:        data.user_id,
+        name:           data.name,
+        email:          data.email,
+        role:           data.role,
+        email_verified: data.email_verified ?? false,
       });
+      setStep("verify");
     } catch (err) {
-      const msg =
-        err.response?.data?.detail || "Signup failed. Please try again.";
-      Alert.alert("Signup Failed", msg);
+      const httpStatus = err.response?.status;
+      if (httpStatus === 429) {
+        showAlert("Too Many Attempts", "Please wait a few minutes before trying again.");
+      } else if (httpStatus === 503) {
+        showAlert("Email Unavailable", "Account created but verification email could not be sent. You can resend from your profile.");
+      } else {
+        showAlert("Signup Failed", err.response?.data?.detail || "Signup failed. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
+  }
+
+  if (step === "verify") {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <KeyboardAvoidingView style={styles.kav} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+          <AppAlert config={alertConfig} />
+          <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+            <View style={styles.logoWrap}>
+              <Image source={require("../../../assets/adaptive-icon.png")}
+                style={styles.logoImage} resizeMode="contain" />
+              <Text style={styles.appName}>SplitEase</Text>
+            </View>
+            <View style={styles.card}>
+              <Text style={styles.heading}>Verify your email</Text>
+              <Text style={styles.subheading}>
+                We sent a 6-digit code to{"\n"}
+                <Text style={{ color: COLORS.text, fontWeight: FONT_WEIGHT.semibold }}>{form.email}</Text>
+              </Text>
+              <Input
+                label="6-Digit Code"
+                value={otp}
+                onChangeText={v => { setOtp(v.replace(/\D/g, "")); setOtpError(""); }}
+                placeholder="123456"
+                keyboardType="number-pad"
+                maxLength={6}
+                autoFocus
+                error={otpError}
+                style={{ textAlign: "center", letterSpacing: 12, fontSize: 24, fontWeight: FONT_WEIGHT.bold }}
+              />
+              <Button
+                title={verifying ? "Verifying…" : "Verify Email"}
+                onPress={handleVerify}
+                loading={verifying}
+                fullWidth size="lg"
+              />
+              <TouchableOpacity onPress={handleResend} disabled={resending}
+                style={{ alignItems: "center", paddingVertical: SPACING.sm }}>
+                <Text style={{ fontSize: FONT_SIZE.sm, color: COLORS.text2 }}>
+                  Didn't receive it?{" "}
+                  <Text style={{ color: COLORS.primary, fontWeight: FONT_WEIGHT.semibold }}>
+                    {resending ? "Sending…" : "Resend code"}
+                  </Text>
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => navigation.replace("Main")}
+                style={{ alignItems: "center" }}>
+                <Text style={{ fontSize: FONT_SIZE.xs, color: COLORS.text3 }}>Skip for now</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    );
   }
 
   return (
@@ -95,6 +190,7 @@ export default function SignupScreen({ navigation }) {
         style={styles.kav}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
+        <AppAlert config={alertConfig} />
         <ScrollView
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
@@ -106,8 +202,10 @@ export default function SignupScreen({ navigation }) {
               style={styles.logoImage}
               resizeMode="contain"
             />
-            <Text style={styles.appName}>SplitEase</Text>
-            <Text style={styles.tagline}>Split expenses, not friendships.</Text>
+            <Text style={styles.appName}>
+              Split<Text style={{ color: COLORS.primary }}>Ease</Text>
+            </Text>
+            <Text style={{ color: COLORS.text2 }}>Split Fair. Settle Fast.</Text>
           </View>
 
           {/* Form card */}

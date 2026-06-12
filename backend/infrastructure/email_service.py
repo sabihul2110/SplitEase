@@ -6,8 +6,8 @@ from core.config import BREVO_API_KEY, BREVO_SENDER_EMAIL
 
 logger = logging.getLogger("splitease.email")
 
-def _send_brevo_email(to_email: str, name: str, subject: str, sender_name: str, html_content: str) -> None:
-    """Internal helper to execute the Brevo API request."""
+def _send_brevo_email(to_email: str, name: str, subject: str, sender_name: str, html_content: str) -> bool:
+    """Internal helper to execute the Brevo API request. Returns True on success, False on failure."""
     if not BREVO_API_KEY or not BREVO_SENDER_EMAIL:
         raise RuntimeError("Email configuration missing. Check Brevo environment variables.")
 
@@ -32,10 +32,11 @@ def _send_brevo_email(to_email: str, name: str, subject: str, sender_name: str, 
         logger.info("Email sent successfully | To: %s | Subject: %s", to_email, subject)
     except requests.exceptions.RequestException as e:
         logger.error("Brevo API delivery failure: %s", str(e))
-        raise
+        return False
+    return True
 
 
-def send_reset_email(to_email: str, name: str, token: str) -> None:
+def send_reset_email(to_email: str, name: str, token: str) -> bool:
     """Sends a formal password reset OTP."""
     html = f"""
     <div style="font-family:sans-serif;max-width:460px;margin:0 auto;padding:32px 24px;
@@ -65,7 +66,7 @@ def send_reset_email(to_email: str, name: str, token: str) -> None:
     </div>
     """
     
-    _send_brevo_email(
+    return _send_brevo_email(
         to_email=to_email,
         name=name,
         subject="[SplitEase] Password Reset Authorization",
@@ -74,7 +75,7 @@ def send_reset_email(to_email: str, name: str, token: str) -> None:
     )
 
 
-def send_verification_email(to_email: str, name: str, token: str) -> None:
+def send_verification_email(to_email: str, name: str, token: str) -> bool:
     """Sends a formal account onboarding/verification OTP."""
     html = f"""
     <div style="font-family:sans-serif;max-width:460px;margin:0 auto;padding:32px 24px;
@@ -104,7 +105,7 @@ def send_verification_email(to_email: str, name: str, token: str) -> None:
     </div>
     """
     
-    _send_brevo_email(
+    return _send_brevo_email(
         to_email=to_email,
         name=name,
         subject="[SplitEase] Complete Your Account Registration",

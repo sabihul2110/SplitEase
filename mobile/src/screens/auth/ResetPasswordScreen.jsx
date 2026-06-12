@@ -8,6 +8,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as authApi from "../../api/auth";
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS } from '../../constants/theme';
+import { Icons } from '../../components/icons/icons';
 import Input  from '../../components/common/Input';
 import Button from '../../components/common/Button';
 
@@ -52,6 +53,14 @@ export default function ResetPasswordScreen({ navigation }) {
     <SafeAreaView style={styles.safe}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+          <TouchableOpacity
+            style={styles.back}
+            onPress={() => navigation.navigate('Login')}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Icons.chevronLeft size={20} color={COLORS.primary} />
+            <Text style={styles.backText}>Back to login</Text>
+          </TouchableOpacity>
           <View style={styles.logoWrap}>
             <Image 
               source={require('../../../assets/icon.png')} 
@@ -119,6 +128,16 @@ export default function ResetPasswordScreen({ navigation }) {
 const styles = StyleSheet.create({
   safe:    { flex: 1, backgroundColor: COLORS.bg },
   scroll:  { flexGrow: 1, padding: SPACING.base, justifyContent: 'center' },
+  back:    {
+    position: 'absolute',
+    top: SPACING.base,
+    left: SPACING.base,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    zIndex: 10,
+  },
+  backText: { color: COLORS.primary, fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.medium },
   logoWrap:  { alignItems: 'center', gap: SPACING.sm, marginBottom: SPACING.xl },
   logoImage: { width: 64, height: 64, borderRadius: 16 },
   appName:   { fontSize: FONT_SIZE['2xl'], fontWeight: FONT_WEIGHT.extrabold, color: COLORS.text, letterSpacing: 0.5 },

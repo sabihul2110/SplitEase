@@ -6,9 +6,9 @@
 
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { signup } from "../api/auth";
-import { useAuth } from "../context/AuthContext";
+import { resendVerification, signup, verifyEmail } from "../api/auth";
 import PasswordInput from "../components/ui/PasswordInput";
+import { useAuth } from "../context/AuthContext";
 
 export default function Signup() {
   const { login } = useAuth();
@@ -19,6 +19,11 @@ export default function Signup() {
   const [form, setForm] = useState({ name: "", email: "", password: "", upi_id: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState("form");   // "form" | "verify"
+  const [otp, setOtp] = useState("");
+  const [verifying, setVerifying] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [pendingData, setPendingData] = useState(null);  // holds token+user after signup
 
   async function onSubmit(e) {
     e.preventDefault(); setError("");
@@ -26,27 +31,128 @@ export default function Signup() {
     setLoading(true);
     try {
       const { data } = await signup({ ...form, upi_id: form.upi_id.trim() || null });
+      // Login to get JWT in context (needed for /verify-email which requires auth)
       login(data);
+      setPendingData(data);
+      setStep("verify");
+    } catch (err) {
+      const status = err.response?.status;
+      if (status === 207) {
+        // Account created but email send failed — skip verification, go to dashboard
+        login(err.response.data);
+        setError("Account created! Verification email could not be sent. Resend from your profile.");
+        setTimeout(() => navigate(next, { replace: true }), 4000);
+      } else if (status === 429) {
+        setError("Too many signup attempts from this network. Please wait a few minutes.");
+      } else if (status === 503) {
+        setError("Our email service is temporarily unavailable. Please try again in a few minutes.");
+      } else {
+        setError(err.response?.data?.detail || "Signup failed.");
+      }
+    } finally { setLoading(false); }
+  }
+
+  async function onVerify(e) {
+    e.preventDefault(); setError("");
+    if (otp.length !== 6) { setError("Enter the 6-digit code from your email."); return; }
+    setVerifying(true);
+    try {
+      await verifyEmail(otp.trim());   // calls POST /auth/verify-email
       navigate(next, { replace: true });
     } catch (err) {
-      setError(err.response?.data?.detail || "Signup failed.");
-    } finally { setLoading(false); }
+      setError(err.response?.data?.detail || "Invalid or expired code.");
+    } finally { setVerifying(false); }
+  }
+
+  async function onResend(e) {
+    e.preventDefault(); setError(""); setResending(true);
+    try {
+      await resendVerification();      // calls POST /auth/resend-verification
+      setError("");
+    } catch (err) {
+      const status = err.response?.status;
+      setError(status === 429
+        ? "Too many attempts. Please wait a few minutes."
+        : "Could not resend. Please try again shortly.");
+    } finally { setResending(false); }
+  }
+
+  if (step === "verify") {
+    return (
+      <div className="auth-wrap">
+        <div style={{ width: "100%", maxWidth: 380 }} className="fade-up">
+          <div style={{ textAlign: "center", marginBottom: 28 }}>
+            <img
+              src="/logo.svg"
+              alt="SplitEase Logo"
+              style={{ width: 64, height: 64, margin: "0 auto 12px", display: "block" }}
+            />
+            <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-0.025em" }}>
+              Split <span style={{ color: '#2563eb' }}>Ease</span>
+            </div>
+            <div style={{ fontSize: 14, color: "var(--text2)", marginTop: 4 }}>
+              Split fair. Settle fast.
+            </div>
+          </div>
+          <div className="auth-card">
+            <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 8 }}>Verify your email</div>
+            <p style={{ fontSize: 14, color: "var(--text2)", marginBottom: 20, lineHeight: 1.5 }}>
+              We sent a 6-digit code to <strong style={{ color: "var(--text)" }}>{form.email}</strong>.
+              Enter it below to activate your account.
+            </p>
+            {error && <div className="alert alert-error" style={{ marginBottom: 16 }}>⚠ {error}</div>}
+            <form onSubmit={onVerify}>
+              <div className="form-group" style={{ marginBottom: 20 }}>
+                <label className="form-label">Verification code</label>
+                <input
+                  required autoFocus maxLength="6" placeholder="123456"
+                  style={{ letterSpacing: "0.5em", fontSize: 20, fontWeight: 700, textAlign: "center" }}
+                  value={otp} onChange={e => { setOtp(e.target.value.replace(/\D/g, "")); setError(""); }}
+                />
+              </div>
+              <button className="btn btn-primary btn-lg" style={{ width: "100%" }} disabled={verifying}>
+                {verifying ? "Verifying…" : "Verify Email →"}
+              </button>
+            </form>
+            <div className="divider" style={{ margin: "20px 0" }} />
+            <div style={{ textAlign: "center", fontSize: 14, color: "var(--text2)" }}>
+              Didn't receive it?{" "}
+              <button onClick={onResend} disabled={resending}
+                style={{ background: "none", border: "none", color: "var(--primary-h)",
+                         fontWeight: 600, cursor: "pointer", fontSize: 14, padding: 0 }}>
+                {resending ? "Sending…" : "Resend code"}
+              </button>
+            </div>
+            <div style={{ textAlign: "center", marginTop: 12 }}>
+              <button onClick={() => { navigate(next, { replace: true }); }}
+                style={{ background: "none", border: "none", color: "var(--text3)",
+                         fontSize: 13, cursor: "pointer" }}>
+                Skip for now
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="auth-wrap">
       <div style={{ width: "100%", maxWidth: 380 }} className="fade-up">
-        {/* Updated Logo Header */}
         <div style={{ textAlign: "center", marginBottom: 28 }}>
           <img 
             src="/logo.svg" 
             alt="SplitEase Logo" 
             style={{ width: 64, height: 64, margin: "0 auto 12px", display: "block" }} 
           />
-          <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-0.025em" }}>SplitEase</div>
-          {/* FIX S9: subtitle changed to neutral copy — no admin disclosure */}
+          {/* <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-0.025em" }}>
+            Split <span style={{ color: '#2563eb' }}>Ease</span>
+          </div> */}
+          <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-0.025em" }}>
+            Split<span style={{ color: '#2563eb', marginLeft: 3 }}>Ease</span>
+          </div>
           <div style={{ fontSize: 14, color: "var(--text2)", marginTop: 4 }}>
-            Split expenses, not friendships.
+            Split fair. Settle fast.
           </div>
         </div>
 

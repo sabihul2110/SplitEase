@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { login as loginRequest } from "../api/auth";
-import { useAuth } from "../context/AuthContext";
 import PasswordInput from "../components/ui/PasswordInput";
+import { useAuth } from "../context/AuthContext";
 
 export default function Login() {
   const { login } = useAuth();
@@ -36,8 +36,10 @@ export default function Login() {
             alt="SplitEase Logo" 
             style={{ width: 64, height: 64, margin: "0 auto 12px", display: "block" }} 
           />
-          <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-0.025em" }}>SplitEase</div>
-          <div style={{ fontSize: 14, color: "var(--text2)", marginTop: 4 }}>Split expenses, not friendships.</div>
+          <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-0.025em" }}>
+            Split<span style={{ color: '#2563eb', marginLeft: 3 }}>Ease</span>
+          </div>
+          <div style={{ fontSize: 14, color: "var(--text2)", marginTop: 4 }}>Split fair. Settle fast.</div>
         </div>
 
         <div style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: 32, width: '100%' }}>
@@ -54,7 +56,7 @@ export default function Login() {
               <input type="email" required autoFocus placeholder="you@college.edu"
                 value={form.email} onChange={e => setForm(f => ({...f, email: e.target.value}))} />
             </div>
-            <div className="form-group" style={{ marginBottom: 20 }}>
+            <div className="form-group" style={{ marginBottom: 15 }}>
               <label className="form-label">Password</label>
               <PasswordInput
                 required
@@ -64,7 +66,7 @@ export default function Login() {
               />
             </div>
             
-            <div style={{ textAlign: "right", marginBottom: 4 }}>
+            <div style={{ textAlign: "right", marginBottom: 8 }}>
               <a href="/forgot-password" style={{ fontSize: 13, color: "var(--primary-h)", fontWeight: 500, textDecoration: "none" }}>
                 Forgot password?
               </a>

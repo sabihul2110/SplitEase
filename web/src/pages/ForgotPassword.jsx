@@ -8,16 +8,27 @@ export default function ForgotPassword() {
   const [email,   setEmail]   = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const [error, setError] = useState("");
 
   async function onSubmit(e) {
-    e.preventDefault(); setLoading(true);
-    try { 
-      await forgotPassword(email); 
-    } catch {} 
-    
-    // Always redirect to the OTP page, even if it failed (security practice)
-    setLoading(false);
-    navigate("/reset-password");
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    try {
+      await forgotPassword(email);
+      navigate("/reset-password");
+    } catch (err) {
+      const status = err.response?.status;
+      if (status === 429) {
+        setError("Too many attempts. Please wait a few minutes before trying again.");
+      } else if (status === 503) {
+        setError("Our email service is temporarily unavailable. Please try again in a few minutes.");
+      } else {
+        navigate("/reset-password");
+      }
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -38,6 +49,15 @@ export default function ForgotPassword() {
           <p style={{ fontSize: 14, color: "var(--text2)", marginBottom: 20, lineHeight: 1.5 }}>
             Enter your email and we'll send you a 6-digit reset code.
           </p>
+          {error && (
+            <div style={{
+              background: "var(--error-bg, #2d1a1a)", color: "var(--error, #f87171)",
+              borderRadius: 8, padding: "10px 14px", fontSize: 13,
+              marginBottom: 16, lineHeight: 1.5,
+            }}>
+              {error}
+            </div>
+          )}
           <form onSubmit={onSubmit}>
             <div className="form-group" style={{ marginBottom: 20 }}>
               <label className="form-label">Email address</label>

@@ -35,6 +35,26 @@ function fmt(n) {
 }
 
 // ── Top bar (Avatar → Account, Bell → Notifications) ───────────────────────
+
+function VerifyBanner({ onPress }) {
+  return (
+    <TouchableOpacity
+      style={styles.verifyBanner}
+      onPress={onPress}
+      activeOpacity={0.8}
+    >
+      <Icons.info size={14} color="#f59e0b" />
+      <Text style={styles.verifyBannerText}>
+        Your email isn't verified.{" "}
+        <Text style={{ fontWeight: FONT_WEIGHT.semibold, color: "#f59e0b" }}>
+          Tap to verify →
+        </Text>
+      </Text>
+    </TouchableOpacity>
+  );
+}
+
+
 function TopBar({ initials, unreadCount = 0, onAvatar, onBell }) {
   return (
     <View style={styles.topBar}>
@@ -181,6 +201,7 @@ function GroupRow({ group, onPress }) {
 export default function DashboardScreen() {
   const { user } = useAuth();
   const navigation = useNavigation();
+  const isUnverified = user && user.email_verified === false;
   const [groups, setGroups] = useState([]);
   const [owedToYou, setOwedToYou] = useState(0);
   const [youOwe, setYouOwe] = useState(0);
@@ -280,6 +301,10 @@ export default function DashboardScreen() {
         ListHeaderComponent={() => (
           <View style={styles.header}>
             {/* ── Global header bar ── */}
+            {isUnverified && (
+              <VerifyBanner onPress={() => navigation.navigate("VerifyEmail")} />
+            )}
+
             <TopBar
               initials={initials}
               unreadCount={unreadCount}
@@ -427,6 +452,23 @@ const styles = StyleSheet.create({
   brandLogo: {
     width: 28,
     height: 28,
+  },
+  verifyBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginHorizontal: SPACING.base,
+    backgroundColor: "rgba(245,158,11,0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(245,158,11,0.25)",
+    borderRadius: RADIUS.lg,
+    paddingHorizontal: SPACING.base,
+    paddingVertical: 10,
+  },
+  verifyBannerText: {
+    fontSize: FONT_SIZE.sm,
+    color: "rgba(245,158,11,0.85)",
+    flex: 1,
   },
   topBarBrand: {
     fontSize: FONT_SIZE.lg,
