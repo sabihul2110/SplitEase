@@ -1,6 +1,6 @@
 // SplitEase/mobile/src/screens/auth/VerifyEmailScreen.jsx
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   View, Text, StyleSheet, TouchableOpacity,
   KeyboardAvoidingView, Platform, ScrollView, Image,
@@ -8,9 +8,45 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as authApi from "../../api/auth";
 import Input from "../../components/common/Input";
+import Svg, { Path, Polyline } from "react-native-svg";
 import Button from "../../components/common/Button";
 import { useAuth } from "../../context/AuthContext";
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS } from "../../constants/theme";
+
+import { TextInput } from "react-native";
+import { useRef } from "react";
+
+function OtpBoxes({ value, onChange }) {
+  const ref = useRef(null);
+  const digits = value.split("").concat(Array(6).fill("")).slice(0, 6);
+  return (
+    <View style={{ position: "relative" }}>
+      {/* Hidden real input captures keyboard */}
+      <TextInput
+        ref={ref}
+        value={value}
+        onChangeText={v => onChange(v.replace(/\D/g, "").slice(0, 6))}
+        keyboardType="number-pad"
+        maxLength={6}
+        autoFocus
+        caretHidden
+        style={{ position: "absolute", opacity: 0, width: "100%", height: "100%", zIndex: 1 }}
+      />
+      {/* Visual boxes */}
+      <TouchableOpacity activeOpacity={1} onPress={() => ref.current?.focus()}
+        style={{ flexDirection: "row", gap: 8, justifyContent: "center" }}>
+        {digits.map((d, i) => (
+          <View key={i} style={[s.otpBox,
+            value.length === i && s.otpBoxActive,
+            d ? s.otpBoxFilled : null
+          ]}>
+            <Text style={s.otpDigit}>{d || ""}</Text>
+          </View>
+        ))}
+      </TouchableOpacity>
+    </View>
+  );
+}
 
 export default function VerifyEmailScreen() {
   const { user, updateUser } = useAuth();
@@ -19,13 +55,27 @@ export default function VerifyEmailScreen() {
   const [verifying, setVerifying] = useState(false);
   const [resending, setResending] = useState(false);
   const [resent,    setResent]    = useState(false);
+  const [sending,   setSending]   = useState(true); // true = auto-sending on mount
+
+  // Auto-send OTP when screen opens (covers login→verify and banner→verify flows)
+  useEffect(() => {
+    async function autoSend() {
+      try {
+        await authApi.resendVerification();
+        setResent(false);
+      } catch {
+      } finally {
+        setSending(false);
+      }
+    }
+    autoSend();
+  }, []);
 
   async function handleVerify() {
     if (otp.length !== 6) { setError("Enter the 6-digit code from your email."); return; }
     setVerifying(true); setError("");
     try {
       await authApi.verifyEmail(otp.trim());
-      // Mark verified → RootNavigator will switch to Main automatically
       await updateUser({ email_verified: true });
     } catch (err) {
       setError(err.response?.data?.detail || "Invalid or expired code.");
@@ -46,8 +96,7 @@ export default function VerifyEmailScreen() {
   }
 
   async function handleSkip() {
-    // Let them in but keep email_verified: false so banners show
-    await updateUser({ email_verified: false, skip_verify: true });
+    await updateUser({ skip_verify: true });
   }
 
   return (
@@ -67,7 +116,11 @@ export default function VerifyEmailScreen() {
 
           <View style={s.card}>
             <View style={s.iconCircle}>
-              <Text style={s.iconEmoji}>✉️</Text>
+              <Svg width={28} height={28} viewBox="0 0 24 24" fill="none"
+                stroke="#3b82f6" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <Path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                <Polyline points="22,6 12,13 2,6"/>
+              </Svg>
             </View>
 
             <Text style={s.heading}>Check your inbox</Text>
@@ -90,16 +143,7 @@ export default function VerifyEmailScreen() {
               </View>
             )}
 
-            <Input
-              label="Verification code"
-              value={otp}
-              onChangeText={v => { setOtp(v.replace(/\D/g, "")); setError(""); }}
-              placeholder="123456"
-              keyboardType="number-pad"
-              maxLength={6}
-              autoFocus
-              style={{ textAlign: "center", letterSpacing: 14, fontSize: 26, fontWeight: FONT_WEIGHT.bold }}
-            />
+            <OtpBoxes value={otp} onChange={v => { setOtp(v); setError(""); }} />
 
             <Button
               title={verifying ? "Verifying…" : "Verify Email"}
@@ -172,4 +216,26 @@ const s = StyleSheet.create({
   resendText:  { fontSize: FONT_SIZE.sm, color: COLORS.text2 },
   skipBtn:     { alignItems: "center" },
   skipText:    { fontSize: FONT_SIZE.xs, color: COLORS.text3 },
+  otpBox: {
+    width: 46, height: 54,
+    borderRadius: RADIUS.md,
+    borderWidth: 1.5,
+    borderColor: COLORS.border2,
+    backgroundColor: COLORS.surface2,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  otpBoxActive: {
+    borderColor: COLORS.primary,
+    backgroundColor: "rgba(37,99,235,0.06)",
+  },
+  otpBoxFilled: {
+    borderColor: COLORS.primaryH,
+  },
+  otpDigit: {
+    fontSize: FONT_SIZE["3xl"],
+    fontWeight: FONT_WEIGHT.bold,
+    color: COLORS.text,
+    letterSpacing: 0,
+  },
 });
