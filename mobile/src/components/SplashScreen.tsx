@@ -211,7 +211,7 @@ export default function SplashScreen({ onFinish }: Props) {
               strokeOpacity={0.4}
             />
 
-            <Line
+            {/* <Line
               x1="-35" y1="-35" x2="35" y2="35"
               stroke="#13141c"
               strokeWidth="4"
@@ -222,7 +222,7 @@ export default function SplashScreen({ onFinish }: Props) {
               stroke="#13141c"
               strokeWidth="4"
               strokeLinecap="round"
-            />
+            /> */}
           </G>
         </Svg>
       </AnimatedView>

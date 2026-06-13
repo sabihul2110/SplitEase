@@ -25,9 +25,17 @@ import RootNavigator    from './src/navigation/RootNavigator';
 import { COLORS } from './src/constants/theme';
 import { OTAUpdateModal } from './src/components/global/OTAUpdateModal';
 import SplashScreen from './src/components/SplashScreen';
+import * as ExpoSplashScreen from 'expo-splash-screen';
+
+ExpoSplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function App() {
   const [showSplash, setShowSplash] = React.useState(true);
+
+  React.useEffect(() => {
+    // Hide native splash immediately — our animated one takes over
+    ExpoSplashScreen.hideAsync().catch(() => {});
+  }, []);
 
   if (showSplash) {
     return <SplashScreen onFinish={() => setShowSplash(false)} />;
