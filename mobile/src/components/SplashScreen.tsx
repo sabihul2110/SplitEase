@@ -30,8 +30,8 @@ const T = {
   b4:      380,
   textIn:  750,
   dotsIn: 1050,
-  fadeOut: 3200,
-  totalMs: 2700,
+  fadeOut: 2000,
+  totalMs: 2400,
 };
 
 const SLICES = [
@@ -250,13 +250,16 @@ export default function SplashScreen({ onFinish }: Props) {
 
 const styles = StyleSheet.create({
   container: {
-    flex:            1,
+    position:        'absolute',
+    top:             0,
+    left:            0,
     width:           SW,
     height:          SH,
     backgroundColor: '#0a0b0f',
     alignItems:      'center',
     justifyContent:  'center',
     gap:             20,
+    zIndex:          999,
   },
 
   logoSquircle: {
