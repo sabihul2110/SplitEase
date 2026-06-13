@@ -9,10 +9,14 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0d0e14"
+      "backgroundColor": "#0a0b0f"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.splitease.app",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -30,7 +34,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#0d0e14",
+          "backgroundColor": "#0a0b0f",
           "image": "./assets/splash-icon.png",
           "resizeMode": "contain"
         }

@@ -70,15 +70,7 @@ export function AuthProvider({ children }) {
   }
 
   if (!authChecked) {
-    return (
-      <View style={styles.splash}>
-        <Animated.Image
-          source={require("../../assets/splash-icon.png")}
-          style={[styles.splashIcon, { opacity: fadeIn }]}
-          resizeMode="contain"
-        />
-      </View>
-    );
+    return null;
   }
 
   return (
