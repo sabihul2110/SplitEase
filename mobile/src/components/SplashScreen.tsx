@@ -30,7 +30,7 @@ const T = {
   b4:      380,
   textIn:  750,
   dotsIn: 1050,
-  fadeOut: 2300,
+  fadeOut: 3200,
   totalMs: 2700,
 };
 

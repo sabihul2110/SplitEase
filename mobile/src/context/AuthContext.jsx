@@ -70,7 +70,9 @@ export function AuthProvider({ children }) {
   }
 
   if (!authChecked) {
-    return null;
+    return (
+      <View style={styles.splash} />
+    );
   }
 
   return (
