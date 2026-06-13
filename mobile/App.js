@@ -24,10 +24,16 @@ import { AuthProvider } from './src/context/AuthContext';
 import RootNavigator    from './src/navigation/RootNavigator';
 import { COLORS } from './src/constants/theme';
 import { OTAUpdateModal } from './src/components/global/OTAUpdateModal';
+import SplashScreen from './src/components/SplashScreen';
 
 export default function App() {
+  const [showSplash, setShowSplash] = React.useState(true);
+
+  if (showSplash) {
+    return <SplashScreen onFinish={() => setShowSplash(false)} />;
+  }
+
   return (
-    // 2. Replace <View> with <GestureHandlerRootView>
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: COLORS.bg }}>
       <SafeAreaProvider>
         <StatusBar style="light" backgroundColor={COLORS.bg} />
