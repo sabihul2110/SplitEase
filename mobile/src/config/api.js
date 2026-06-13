@@ -7,7 +7,7 @@
 
 
 // 🎚️ TOGGLE THIS: Set to 'true' to use laptop's Python backend
-const USE_LOCAL_BACKEND = true; 
+const USE_LOCAL_BACKEND = false; 
 
 export const BASE_URL = (__DEV__ && USE_LOCAL_BACKEND)
   ? 'http://192.168.29.115:8000'
