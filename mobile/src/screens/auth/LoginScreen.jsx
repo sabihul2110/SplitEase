@@ -51,11 +51,12 @@ export default function LoginScreen({ navigation }) {
         password,
       );
       await login({
-        access_token: data.access_token,
-        user_id: data.user_id,
-        name: data.name,
-        email: data.email,
-        role: data.role,
+        access_token:   data.access_token,
+        user_id:        data.user_id,
+        name:           data.name,
+        email:          data.email,
+        role:           data.role,
+        email_verified: data.email_verified ?? false,
       });
     } catch (err) {
       setAuthError(err.response?.data?.detail || 'Incorrect email or password.');
