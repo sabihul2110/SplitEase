@@ -30,28 +30,24 @@ import * as ExpoSplashScreen from 'expo-splash-screen';
 ExpoSplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function App() {
-  const [showSplash, setShowSplash] = React.useState(true);
-  const [authReady, setAuthReady]   = React.useState(false);
+  const [splashDone, setSplashDone] = React.useState(false);
 
   React.useEffect(() => {
     ExpoSplashScreen.hideAsync().catch(() => {});
   }, []);
 
-  const handleSplashFinish = () => setShowSplash(false);
-  const handleAuthReady    = () => setAuthReady(true);
-
-  if (showSplash || !authReady) {
-    return <SplashScreen onFinish={handleSplashFinish} />;
-  }
-
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: COLORS.bg }}>
       <SafeAreaProvider>
         <StatusBar style="light" backgroundColor={COLORS.bg} />
-        <AuthProvider onReady={handleAuthReady}>
+        <AuthProvider>
           <RootNavigator />
           <OTAUpdateModal />
         </AuthProvider>
+
+        {!splashDone && (
+          <SplashScreen onFinish={() => setSplashDone(true)} />
+        )}
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

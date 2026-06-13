@@ -10,7 +10,7 @@ import { COLORS } from "../constants/theme";
 
 const AuthContext = createContext(null);
 
-export function AuthProvider({ children, onReady }) {
+export function AuthProvider({ children }) {
   const [user,        setUser]        = useState(null);
   const [authChecked, setAuthChecked] = useState(false);
 
@@ -46,7 +46,6 @@ export function AuthProvider({ children, onReady }) {
       setUser(null);
     } finally {
       setAuthChecked(true);
-      onReady?.();
     }
   }
 
