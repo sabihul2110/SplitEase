@@ -11,6 +11,7 @@ export default function VerifyEmail() {
   const [success,   setSuccess]   = useState("");
   const [verifying, setVerifying] = useState(false);
   const [resending, setResending] = useState(false);
+  const [focused, setFocused] = useState(false);
 
   useEffect(() => {
     async function autoSend() {
@@ -63,8 +64,8 @@ export default function VerifyEmail() {
         {/* Logo header */}
         <div style={{ textAlign: "center", marginBottom: 28 }}>
           <img src="/logo.svg" alt="SplitEase"
-            style={{ width: 64, height: 64, margin: "0 auto 12px", display: "block" }} />
-          <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-0.025em" }}>
+            style={{ width: 56, height: 56, margin: "0 auto 10px", display: "block" }} />
+          <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: "-0.025em" }}>
             Split<span style={{ color: "#2563eb" }}>Ease</span>
           </div>
         </div>
@@ -73,13 +74,13 @@ export default function VerifyEmail() {
           {/* Mail icon */}
           <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
             <div style={{
-              width: 56, height: 56, borderRadius: "50%",
-              background: "rgba(37,99,235,0.10)",
-              border: "1px solid rgba(37,99,235,0.2)",
+              width: 52, height: 52, borderRadius: "50%",
+              background: "var(--surface2)",
+              border: "1px solid var(--border)",
               display: "flex", alignItems: "center", justifyContent: "center",
             }}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
-                stroke="#3b82f6" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+                stroke="var(--text2)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
                 <polyline points="22,6 12,13 2,6"/>
               </svg>
@@ -89,68 +90,106 @@ export default function VerifyEmail() {
           <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 6, textAlign: "center" }}>
             Check your inbox
           </div>
-          <p style={{ fontSize: 14, color: "var(--text2)", marginBottom: 20, lineHeight: 1.5, textAlign: "center" }}>
+          <p style={{ fontSize: 13, color: "var(--text2)", marginBottom: 20, lineHeight: 1.6, textAlign: "center" }}>
             We sent a 6-digit code to{" "}
-            <strong style={{ color: "var(--text)" }}>{user?.email}</strong>
+            <span style={{ color: "var(--text)", fontWeight: 600 }}>{user?.email}</span>
           </p>
 
-          {error   && <div className="alert alert-error"   style={{ marginBottom: 16 }}>⚠ {error}</div>}
-          {success && <div className="alert alert-success" style={{ marginBottom: 16 }}>✓ {success}</div>}
+          {error && (
+            <div style={{
+              fontSize: 13, color: "var(--danger)", marginBottom: 16,
+              padding: "9px 12px", borderRadius: 8,
+              background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.18)",
+            }}>⚠ {error}</div>
+          )}
+          {success && (
+            <div style={{
+              fontSize: 13, color: "var(--text2)", marginBottom: 16,
+              padding: "9px 12px", borderRadius: 8,
+              background: "var(--surface2)", border: "1px solid var(--border)",
+              display: "flex", alignItems: "center", gap: 7,
+            }}>
+              <span style={{ color: "var(--success)" }}>✓</span> {success}
+            </div>
+          )}
 
           <form onSubmit={onVerify}>
-            <div className="form-group" style={{ marginBottom: 20 }}>
-              <label className="form-label">Verification code</label>
-              {/* OTP boxes */}
-              <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 4 }}>
-                {Array.from({ length: 6 }, (_, i) => (
-                  <div key={i} style={{
-                    width: 44, height: 52,
-                    border: `1.5px solid ${otp.length === i ? "var(--primary)" : otp[i] ? "var(--primary-h)" : "var(--border2)"}`,
-                    borderRadius: 8,
-                    background: otp.length === i ? "rgba(37,99,235,0.06)" : "var(--surface2)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 22, fontWeight: 700, color: "var(--text)",
-                    transition: "border-color 0.15s",
-                  }}>
-                    {otp[i] || ""}
-                  </div>
-                ))}
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--text3)", marginBottom: 10 }}>
+                Verification code
               </div>
-              <div
-                onClick={() => document.getElementById("otp-input").focus()}
-                style={{ position: "absolute", inset: 0, cursor: "text", zIndex: 1 }}
-              />
-              <input
-                id="otp-input"
-                required autoFocus maxLength="6"
-                value={otp}
-                onChange={e => { setOtp(e.target.value.replace(/\D/g, "")); setError(""); }}
-                style={{
-                  position: "absolute", opacity: 0, pointerEvents: "none",
-                  width: 1, height: 1,
-                }}
-              />
+              {/* OTP boxes — clicking anywhere on the row focuses the input */}
+              <div style={{ position: "relative" }}
+                onClick={() => document.getElementById("otp-input").focus()}>
+                <div style={{ display: "flex", gap: 8, justifyContent: "center", cursor: "text" }}>
+                  {Array.from({ length: 6 }, (_, i) => {
+                    const isActive = focused && otp.length === i;
+                    const isFilled = !!otp[i];
+                    return (
+                      <div key={i} style={{
+                        width: 44, height: 52,
+                        border: `1.5px solid ${isActive ? "var(--primary)" : isFilled ? "var(--border2)" : "var(--border)"}`,
+                        borderRadius: 8,
+                        background: isActive ? "rgba(37,99,235,0.04)" : "var(--surface2)",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: 22, fontWeight: 700, color: "var(--text)",
+                        transition: "border-color 0.12s, background 0.12s",
+                        userSelect: "none",
+                      }}>
+                        {otp[i] || ""}
+                      </div>
+                    );
+                  })}
+                </div>
+                {/* Hidden input — NOT position:absolute with inset:0 to avoid blocking buttons */}
+                <input
+                  id="otp-input"
+                  autoFocus
+                  maxLength="6"
+                  value={otp}
+                  onChange={e => { setOtp(e.target.value.replace(/\D/g, "")); setError(""); setSuccess(""); }}
+                  onFocus={() => setFocused(true)}
+                  onBlur={() => setFocused(false)}
+                  style={{
+                    position: "absolute", bottom: 0, left: "50%",
+                    width: 1, height: 1, opacity: 0,
+                    border: "none", outline: "none", padding: 0,
+                    pointerEvents: "none",
+                  }}
+                />
+              </div>
             </div>
-            <button className="btn btn-primary btn-lg" style={{ width: "100%" }} disabled={verifying}>
+
+            <button
+              type="submit"
+              className="btn btn-primary btn-lg"
+              style={{ width: "100%" }}
+              disabled={verifying}
+            >
               {verifying ? "Verifying…" : "Verify Email →"}
             </button>
           </form>
 
-          <div className="divider" style={{ margin: "20px 0" }} />
+          <div style={{ margin: "20px 0", height: 1, background: "var(--border)" }} />
 
-          <div style={{ textAlign: "center", fontSize: 14, color: "var(--text2)" }}>
+          <div style={{ textAlign: "center", fontSize: 13, color: "var(--text3)" }}>
             Didn't receive it?{" "}
-            <button onClick={onResend} disabled={resending}
+            <button
+              type="button"
+              onClick={onResend}
+              disabled={resending}
               style={{ background: "none", border: "none", color: "var(--primary-h)",
-                       fontWeight: 600, cursor: "pointer", fontSize: 14, padding: 0 }}>
+                       fontWeight: 600, cursor: "pointer", fontSize: 13, padding: 0 }}>
               {resending ? "Sending…" : "Resend code"}
             </button>
           </div>
 
-          <div style={{ textAlign: "center", marginTop: 12 }}>
-            <button onClick={onSkip}
+          <div style={{ textAlign: "center", marginTop: 10 }}>
+            <button
+              type="button"
+              onClick={onSkip}
               style={{ background: "none", border: "none", color: "var(--text3)",
-                       fontSize: 13, cursor: "pointer", padding: 0 }}>
+                       fontSize: 12, cursor: "pointer", padding: 0 }}>
               Skip for now
             </button>
           </div>
