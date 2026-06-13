@@ -31,21 +31,24 @@ ExpoSplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function App() {
   const [showSplash, setShowSplash] = React.useState(true);
+  const [authReady, setAuthReady]   = React.useState(false);
 
   React.useEffect(() => {
-    // Hide native splash immediately — our animated one takes over
     ExpoSplashScreen.hideAsync().catch(() => {});
   }, []);
 
-  if (showSplash) {
-    return <SplashScreen onFinish={() => setShowSplash(false)} />;
+  const handleSplashFinish = () => setShowSplash(false);
+  const handleAuthReady    = () => setAuthReady(true);
+
+  if (showSplash || !authReady) {
+    return <SplashScreen onFinish={handleSplashFinish} />;
   }
 
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: COLORS.bg }}>
       <SafeAreaProvider>
         <StatusBar style="light" backgroundColor={COLORS.bg} />
-        <AuthProvider>
+        <AuthProvider onReady={handleAuthReady}>
           <RootNavigator />
           <OTAUpdateModal />
         </AuthProvider>
