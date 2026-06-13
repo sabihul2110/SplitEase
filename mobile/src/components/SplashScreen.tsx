@@ -1,4 +1,4 @@
-// SplitEase/mobile/src/components/layout/SplashScreen.tsx
+// SplitEase/mobile/src/components/SplashScreen.tsx
 
 
 import React, { useEffect } from 'react';

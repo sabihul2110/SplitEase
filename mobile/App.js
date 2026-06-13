@@ -24,7 +24,8 @@ import { AuthProvider } from './src/context/AuthContext';
 import RootNavigator    from './src/navigation/RootNavigator';
 import { COLORS } from './src/constants/theme';
 import { OTAUpdateModal } from './src/components/global/OTAUpdateModal';
-import SplashScreen from './src/components/SplashScreen';
+// import SplashScreen from './src/components/SplashScreen';
+import SplashScreen from './src/components/SplashScreenNew';
 import * as ExpoSplashScreen from 'expo-splash-screen';
 
 ExpoSplashScreen.preventAutoHideAsync().catch(() => {});
