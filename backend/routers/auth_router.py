@@ -211,9 +211,16 @@ async def resend_verification(
 
     from services.auth_service import generate_verification_token   # import here to avoid circular
     token_data = generate_verification_token(current_user["user_id"], current_user["email"])
+
+    # Fetch name from DB since JWT payload doesn't include it
+    with get_db() as (conn, cur):
+        cur.execute("SELECT name FROM Users WHERE user_id = %s", (current_user["user_id"],))
+        row = cur.fetchone()
+    user_name = row["name"] if row else "User"
+
     sent = send_verification_email(
         current_user["email"],
-        current_user["name"],
+        user_name,
         token_data["raw_token"],
     )
     if not sent:

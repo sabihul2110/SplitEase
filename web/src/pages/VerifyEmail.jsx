@@ -7,7 +7,7 @@ import { useAuth } from "../context/AuthContext";
 
 export default function VerifyEmail() {
   const navigate = useNavigate();
-  const { refreshUser } = useAuth();   // add this to AuthContext if not present
+  const { refreshUser } = useAuth();
   const [otp,       setOtp]       = useState("");
   const [error,     setError]     = useState("");
   const [verifying, setVerifying] = useState(false);
@@ -19,7 +19,7 @@ export default function VerifyEmail() {
     setVerifying(true);
     try {
       await verifyEmail(otp.trim());
-      await refreshUser?.();   // update user.email_verified in context
+      await refreshUser?.();
       navigate("/dashboard", { replace: true });
     } catch (err) {
       setError(err.response?.data?.detail || "Invalid or expired code.");

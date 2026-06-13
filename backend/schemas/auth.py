@@ -22,6 +22,7 @@ class AuthResponse(BaseModel):
     role:                     str
     email:                    str
     raw_verification_token:   str | None = None
+    email_verified: bool = False
 
 
 class ChangePasswordRequest(BaseModel):

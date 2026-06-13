@@ -1,8 +1,5 @@
 // --- web/src/pages/Signup.jsx ---
-// FIX S9: Removed "First signup becomes admin" subtitle.
-//         Disclosing this behaviour publicly tells any attacker that
-//         the very first registered account gets elevated privileges —
-//         an invitation to race-register before the real admin does.
+
 
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
@@ -19,11 +16,11 @@ export default function Signup() {
   const [form, setForm] = useState({ name: "", email: "", password: "", upi_id: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState("form");   // "form" | "verify"
+  const [step, setStep] = useState("form");
   const [otp, setOtp] = useState("");
   const [verifying, setVerifying] = useState(false);
   const [resending, setResending] = useState(false);
-  const [pendingData, setPendingData] = useState(null);  // holds token+user after signup
+  const [pendingData, setPendingData] = useState(null);
 
   async function onSubmit(e) {
     e.preventDefault(); setError("");
@@ -31,14 +28,12 @@ export default function Signup() {
     setLoading(true);
     try {
       const { data } = await signup({ ...form, upi_id: form.upi_id.trim() || null });
-      // Login to get JWT in context (needed for /verify-email which requires auth)
       login(data);
       setPendingData(data);
       setStep("verify");
     } catch (err) {
       const status = err.response?.status;
       if (status === 207) {
-        // Account created but email send failed — skip verification, go to dashboard
         login(err.response.data);
         setError("Account created! Verification email could not be sent. Resend from your profile.");
         setTimeout(() => navigate(next, { replace: true }), 4000);
@@ -57,7 +52,7 @@ export default function Signup() {
     if (otp.length !== 6) { setError("Enter the 6-digit code from your email."); return; }
     setVerifying(true);
     try {
-      await verifyEmail(otp.trim());   // calls POST /auth/verify-email
+      await verifyEmail(otp.trim());
       navigate(next, { replace: true });
     } catch (err) {
       setError(err.response?.data?.detail || "Invalid or expired code.");
@@ -67,7 +62,7 @@ export default function Signup() {
   async function onResend(e) {
     e.preventDefault(); setError(""); setResending(true);
     try {
-      await resendVerification();      // calls POST /auth/resend-verification
+      await resendVerification();
       setError("");
     } catch (err) {
       const status = err.response?.status;
@@ -145,9 +140,6 @@ export default function Signup() {
             alt="SplitEase Logo" 
             style={{ width: 64, height: 64, margin: "0 auto 12px", display: "block" }} 
           />
-          {/* <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-0.025em" }}>
-            Split <span style={{ color: '#2563eb' }}>Ease</span>
-          </div> */}
           <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-0.025em" }}>
             Split<span style={{ color: '#2563eb', marginLeft: 3 }}>Ease</span>
           </div>

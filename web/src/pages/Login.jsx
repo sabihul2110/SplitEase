@@ -21,7 +21,11 @@ export default function Login() {
     try {
       const { data } = await loginRequest(form);
       login(data);
-      navigate(next, { replace: true });
+      if (data.email_verified === false) {
+        navigate("/verify-email", { replace: true });
+      } else {
+        navigate(next, { replace: true });
+      }
     } catch (err) {
       setError(err.response?.data?.detail || "Invalid email or password.");
     } finally { setLoading(false); }

@@ -1,12 +1,5 @@
 // SplitEase/mobile/src/screens/auth/LoginScreen.jsx
 
-/**
- * LoginScreen.jsx
- *
- * JWT login. On success → stores user in AsyncStorage via AuthContext.login()
- * Navigation to Main happens automatically because RootNavigator
- * watches user state and swaps Auth ↔ Main stacks.
- */
 
 import { useState } from "react";
 import {
@@ -57,8 +50,6 @@ export default function LoginScreen({ navigation }) {
         email.trim().toLowerCase(),
         password,
       );
-
-      // Backend returns: { access_token, token_type, user_id, name, email, role }
       await login({
         access_token: data.access_token,
         user_id: data.user_id,
@@ -66,7 +57,6 @@ export default function LoginScreen({ navigation }) {
         email: data.email,
         role: data.role,
       });
-      // Navigation happens automatically via RootNavigator
     } catch (err) {
       setAuthError(err.response?.data?.detail || 'Incorrect email or password.');
     } finally {
@@ -205,7 +195,7 @@ const styles = StyleSheet.create({
   },
   tagline: {
     fontSize: FONT_SIZE.base,
-    color: COLORS.text2, // Boosted from text3 for better readability against dark bg
+    color: COLORS.text2,
   },
   card: {
     backgroundColor: COLORS.surface,

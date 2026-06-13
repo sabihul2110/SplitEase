@@ -1,16 +1,5 @@
 // --- web/src/context/AuthContext.jsx ---
 
-/**
- * AuthContext.jsx
- *
- * Global auth state. Persists across refresh via localStorage.
- *
- * On first load:
- * - Reads saved user from localStorage
- * - Calls /auth/me to validate the token is still good
- * - If token is expired/invalid → clears state, user goes to login
- * - Shows a loading screen while validating (prevents empty state flash)
- */
 
 import { createContext, useContext, useState, useEffect } from "react";
 import { getMe } from "../api/auth";
@@ -19,9 +8,8 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user,         setUser]         = useState(null);
-  const [authChecked,  setAuthChecked]  = useState(false); // true once validation is done
+  const [authChecked,  setAuthChecked]  = useState(false);
 
-  // On mount: restore from localStorage and validate token
   useEffect(() => {
     async function validateSession() {
       try {
@@ -44,7 +32,6 @@ export function AuthProvider({ children }) {
         localStorage.setItem("expense_user", JSON.stringify(freshUser));
 
       } catch {
-        // Token invalid or expired → clear everything
         localStorage.removeItem("expense_user");
         setUser(null);
       } finally {
@@ -65,8 +52,16 @@ export function AuthProvider({ children }) {
     localStorage.removeItem("expense_user");
   }
 
-  // Show nothing until auth is validated — prevents flash of empty state
-  // Show nothing until auth is validated — prevents flash of empty state
+  async function refreshUser() {
+    try {
+      const { data } = await getMe();
+      const saved = JSON.parse(localStorage.getItem("expense_user") || "{}");
+      const freshUser = { ...saved, ...data };
+      setUser(freshUser);
+      localStorage.setItem("expense_user", JSON.stringify(freshUser));
+    } catch {}
+  }
+
   if (!authChecked) {
     return (
       <div style={{
@@ -92,7 +87,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, authChecked }}>
+    <AuthContext.Provider value={{ user, login, logout, authChecked, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

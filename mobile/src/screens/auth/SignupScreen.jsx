@@ -1,9 +1,5 @@
 // SplitEase/mobile/src/screens/auth/SignupScreen.jsx
 
-/**
- * SignupScreen.jsx
- * New user registration. First user to sign up becomes admin automatically (backend handles this).
- */
 
 import { useState } from "react";
 import {
@@ -106,7 +102,6 @@ export default function SignupScreen({ navigation }) {
 
       const { data } = await authApi.signup(payload);
 
-      // Login immediately so JWT is available for verify-email endpoint
       await login({
         access_token:   data.access_token,
         user_id:        data.user_id,

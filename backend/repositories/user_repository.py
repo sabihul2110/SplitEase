@@ -26,7 +26,7 @@ def fetch_user_by_email(email: str) -> dict | None:
     conn = get_connection()
     cur  = conn.cursor(dictionary=True)
     cur.execute(
-        "SELECT user_id, name, email, password_hash, role, token_version FROM Users WHERE email = %s",
+        "SELECT user_id, name, email, password_hash, role, token_version, email_verified FROM Users WHERE email = %s",
         (email.strip().lower(),),
     )
     row = cur.fetchone()

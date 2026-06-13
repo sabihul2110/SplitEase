@@ -33,11 +33,12 @@ def login_user(email: str, password: str) -> dict | None:
             "role":          user["role"],
             "token_version": user.get("token_version", 0),
         }),
-        "token_type": "bearer",
-        "user_id":    user["user_id"],
-        "name":       user["name"],
-        "role":       user["role"],
-        "email":      user["email"],
+        "token_type":    "bearer",
+        "user_id":       user["user_id"],
+        "name":          user["name"],
+        "role":          user["role"],
+        "email":         user["email"],
+        "email_verified": bool(user.get("email_verified", False)),
     }
 
 
@@ -67,6 +68,7 @@ def register_user(name: str, email: str, password: str, upi_id: str | None = Non
         "name":                    name,
         "role":                    role,
         "email":                   email,
+        "email_verified":          False,  # always False on fresh signup
         "raw_verification_token":  token_data["raw_token"],
     }
 
