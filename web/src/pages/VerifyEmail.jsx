@@ -12,16 +12,22 @@ export default function VerifyEmail() {
   const [verifying, setVerifying] = useState(false);
   const [resending, setResending] = useState(false);
   const [focused, setFocused] = useState(false);
+  const [codeSent, setCodeSent] = useState(false);
+  const [sending, setSending] = useState(true);
 
   useEffect(() => {
     async function autoSend() {
       try {
         await resendVerification();
-        setSuccess("A verification code has been sent to your email.");
+        setCodeSent(true);
       } catch (err) {
-        if (err.response?.status !== 429) {
-          setError("Could not send code automatically. Use 'Resend code' below.");
+        if (err.response?.status === 429) {
+          setCodeSent(true); // already sent recently, treat as sent
+        } else {
+          setError("Could not send code. Use 'Resend code' below.");
         }
+      } finally {
+        setSending(false);
       }
     }
     autoSend();
@@ -71,13 +77,29 @@ export default function VerifyEmail() {
         </div>
 
         <div className="auth-card">
-          {/* Mail icon */}
+          {/* Mail icon with animation */}
+          <style>{`
+            @keyframes ve-drop { 
+              0%   { opacity: 0; transform: translateY(-10px) scale(0.9); }
+              60%  { transform: translateY(2px) scale(1.02); }
+              100% { opacity: 1; transform: translateY(0) scale(1); }
+            }
+            @keyframes ve-pulse {
+              0%, 100% { box-shadow: 0 0 0 0 rgba(37,99,235,0); }
+              50%       { box-shadow: 0 0 0 6px rgba(37,99,235,0.08); }
+            }
+            @keyframes ve-flap {
+              0%,100% { d: path("M22,6 12,13 2,6"); }
+              50%     { d: path("M22,4 12,11 2,4"); }
+            }
+          `}</style>
           <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
             <div style={{
-              width: 52, height: 52, borderRadius: "50%",
+              width: 56, height: 56, borderRadius: "50%",
               background: "var(--surface2)",
               border: "1px solid var(--border)",
               display: "flex", alignItems: "center", justifyContent: "center",
+              animation: "ve-drop 0.45s cubic-bezier(0.34,1.56,0.64,1) both, ve-pulse 2.4s ease-in-out 0.6s infinite",
             }}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
                 stroke="var(--text2)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -90,9 +112,17 @@ export default function VerifyEmail() {
           <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 6, textAlign: "center" }}>
             Check your inbox
           </div>
-          <p style={{ fontSize: 13, color: "var(--text2)", marginBottom: 20, lineHeight: 1.6, textAlign: "center" }}>
-            We sent a 6-digit code to{" "}
-            <span style={{ color: "var(--text)", fontWeight: 600 }}>{user?.email}</span>
+          <p style={{ fontSize: 13, color: "var(--text2)", marginBottom: 20, lineHeight: 1.6, textAlign: "center", minHeight: 40 }}>
+            {sending ? (
+              <span style={{ color: "var(--text3)" }}>Sending code…</span>
+            ) : codeSent ? (
+              <>
+                Code sent to{" "}
+                <span style={{ color: "var(--text)", fontWeight: 600 }}>{user?.email}</span>
+              </>
+            ) : (
+              <span style={{ color: "var(--text3)" }}>Enter code from your email below.</span>
+            )}
           </p>
 
           {error && (
@@ -101,16 +131,6 @@ export default function VerifyEmail() {
               padding: "9px 12px", borderRadius: 8,
               background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.18)",
             }}>⚠ {error}</div>
-          )}
-          {success && (
-            <div style={{
-              fontSize: 13, color: "var(--text2)", marginBottom: 16,
-              padding: "9px 12px", borderRadius: 8,
-              background: "var(--surface2)", border: "1px solid var(--border)",
-              display: "flex", alignItems: "center", gap: 7,
-            }}>
-              <span style={{ color: "var(--success)" }}>✓</span> {success}
-            </div>
           )}
 
           <form onSubmit={onVerify}>

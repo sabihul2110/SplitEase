@@ -1,20 +1,17 @@
 // SplitEase/mobile/src/screens/auth/VerifyEmailScreen.jsx
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   View, Text, StyleSheet, TouchableOpacity,
   KeyboardAvoidingView, Platform, ScrollView, Image,
+  TextInput, Animated,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as authApi from "../../api/auth";
-import Input from "../../components/common/Input";
 import Svg, { Path, Polyline } from "react-native-svg";
 import Button from "../../components/common/Button";
 import { useAuth } from "../../context/AuthContext";
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS } from "../../constants/theme";
-
-import { TextInput } from "react-native";
-import { useRef } from "react";
 
 function OtpBoxes({ value, onChange }) {
   const ref = useRef(null);
@@ -55,15 +52,40 @@ export default function VerifyEmailScreen() {
   const [verifying, setVerifying] = useState(false);
   const [resending, setResending] = useState(false);
   const [resent,    setResent]    = useState(false);
-  const [sending,   setSending]   = useState(true); // true = auto-sending on mount
+  const [sending,   setSending]   = useState(true);
+  const [codeSent,  setCodeSent]  = useState(false);
 
-  // Auto-send OTP when screen opens (covers login→verify and banner→verify flows)
+  // Icon drop-in animation
+  const iconAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.spring(iconAnim, {
+      toValue: 1, tension: 60, friction: 8, useNativeDriver: true,
+    }).start();
+  }, []);
+
+  // Subtitle pulse when code arrives
+  const subAnim = useRef(new Animated.Value(0)).current;
+  function pulseSubtitle() {
+    subAnim.setValue(0);
+    Animated.timing(subAnim, {
+      toValue: 1, duration: 350, useNativeDriver: true,
+    }).start();
+  }
+
   useEffect(() => {
     async function autoSend() {
       try {
         await authApi.resendVerification();
-        setResent(false);
-      } catch {
+        setCodeSent(true);
+        pulseSubtitle();
+      } catch (err) {
+        const status = err.response?.status;
+        if (status === 429) {
+          setCodeSent(true); // already sent recently
+          pulseSubtitle();
+        } else {
+          setError("Could not send code. Tap 'Resend code' below.");
+        }
       } finally {
         setSending(false);
       }
@@ -83,13 +105,14 @@ export default function VerifyEmailScreen() {
   }
 
   async function handleResend() {
-    setResending(true); setError(""); setResent(false);
+    setResending(true); setError("");
     try {
       await authApi.resendVerification();
-      setResent(true);
+      setCodeSent(true);
+      pulseSubtitle();
     } catch (err) {
-      const s = err.response?.status;
-      setError(s === 429
+      const status = err.response?.status;
+      setError(status === 429
         ? "Too many attempts. Please wait a few minutes."
         : "Could not resend. Please try again shortly.");
     } finally { setResending(false); }
@@ -115,31 +138,36 @@ export default function VerifyEmailScreen() {
           </View>
 
           <View style={s.card}>
-            <View style={s.iconCircle}>
-              <Svg width={28} height={28} viewBox="0 0 24 24" fill="none"
-                stroke="#3b82f6" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            {/* Animated icon */}
+            <Animated.View style={[s.iconCircle, {
+              transform: [
+                { scale: iconAnim.interpolate({ inputRange: [0,1], outputRange: [0.7, 1] }) },
+                { translateY: iconAnim.interpolate({ inputRange: [0,1], outputRange: [-12, 0] }) },
+              ],
+              opacity: iconAnim,
+            }]}>
+              <Svg width={26} height={26} viewBox="0 0 24 24" fill="none"
+                stroke={COLORS.text2} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <Path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
                 <Polyline points="22,6 12,13 2,6"/>
               </Svg>
-            </View>
+            </Animated.View>
 
             <Text style={s.heading}>Check your inbox</Text>
-            <Text style={s.sub}>
-              We sent a 6-digit code to{"\n"}
-              <Text style={{ color: COLORS.text, fontWeight: FONT_WEIGHT.semibold }}>
-                {user?.email}
-              </Text>
-            </Text>
+
+            {/* Subtitle — shows sending state then fades to email when sent */}
+            <Animated.Text style={[s.sub, {
+              opacity: sending ? 0.5 : subAnim.interpolate({ inputRange: [0,1], outputRange: [0.5, 1] }),
+            }]}>
+              {sending ? "Sending code…" : codeSent
+                ? <>Code sent to{"\n"}<Text style={{ color: COLORS.text, fontWeight: FONT_WEIGHT.semibold }}>{user?.email}</Text></>
+                : "Enter code from your email below."
+              }
+            </Animated.Text>
 
             {!!error && (
               <View style={s.errorBanner}>
                 <Text style={s.errorText}>⚠ {error}</Text>
-              </View>
-            )}
-
-            {resent && (
-              <View style={s.successBanner}>
-                <Text style={s.successText}>✓ Code resent — check your inbox.</Text>
               </View>
             )}
 
@@ -191,13 +219,12 @@ const s = StyleSheet.create({
     alignItems: "stretch",
   },
   iconCircle: {
-    width: 56, height: 56, borderRadius: 28,
-    backgroundColor: "rgba(37,99,235,0.10)",
-    borderWidth: 1, borderColor: "rgba(37,99,235,0.2)",
+    width: 54, height: 54, borderRadius: 27,
+    backgroundColor: COLORS.surface2,
+    borderWidth: 1, borderColor: COLORS.border,
     alignItems: "center", justifyContent: "center",
     alignSelf: "center", marginBottom: 4,
   },
-  iconEmoji: { fontSize: 26 },
   heading:  { fontSize: FONT_SIZE["2xl"], fontWeight: FONT_WEIGHT.bold, color: COLORS.text, textAlign: "center" },
   sub:      { fontSize: FONT_SIZE.base, color: COLORS.text2, textAlign: "center", lineHeight: 22 },
   errorBanner: {
@@ -206,12 +233,6 @@ const s = StyleSheet.create({
     borderRadius: RADIUS.md, padding: SPACING.md,
   },
   errorText:   { fontSize: FONT_SIZE.sm, color: COLORS.danger },
-  successBanner: {
-    backgroundColor: "rgba(16,185,129,0.08)",
-    borderWidth: 1, borderColor: "rgba(16,185,129,0.2)",
-    borderRadius: RADIUS.md, padding: SPACING.md,
-  },
-  successText: { fontSize: FONT_SIZE.sm, color: COLORS.success },
   resendBtn:   { alignItems: "center", paddingVertical: SPACING.sm },
   resendText:  { fontSize: FONT_SIZE.sm, color: COLORS.text2 },
   skipBtn:     { alignItems: "center" },
