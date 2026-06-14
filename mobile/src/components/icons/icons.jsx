@@ -622,6 +622,20 @@ export const Icons = {
       <Rect x="14" y="14" width="7" height="7" rx="1" />
     </Svg>
   ),
+  archive: ({ size = 24, color = "currentColor" }) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
+      <Path d="M3 3h18v4H3z" />
+      <Path d="M5 7v13a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V7" />
+      <Path d="M10 12h4" />
+    </Svg>
+  ),
+  history: ({ size = 24, color = "currentColor" }) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
+      <Path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+      <Path d="M3 3v5h5" />
+      <Path d="M12 7v5l4 2" />
+    </Svg>
+  ),
   info: ({ size = 20, color = "currentColor" }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
       <Circle cx="12" cy="12" r="10" />

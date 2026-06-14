@@ -672,7 +672,7 @@ const addStyles = StyleSheet.create({
   },
 });
 
-export default function LoansScreen() {
+export default function LoansScreen({ navigation }) {
   const [loans, setLoans] = useState([]);
   const [borrows, setBorrows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -789,16 +789,26 @@ export default function LoansScreen() {
       <ScreenHeader
         title="Loans"
         actions={
-          <TouchableOpacity
-            style={styles.addHeaderBtn}
-            onPress={() => setShowAdd(true)}
-            activeOpacity={0.85}
-          >
-            <Icons.plus size={15} color="#fff" />
-            <Text style={styles.addHeaderBtnText}>
-              {isLent ? "Add Loan" : "Add Borrow"}
-            </Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <TouchableOpacity
+              style={[styles.addHeaderBtn, { backgroundColor: COLORS.surface2, borderWidth: 1, borderColor: COLORS.border }]}
+              onPress={() => navigation.navigate('People')}
+              activeOpacity={0.85}
+            >
+              <Icons.users size={15} color={COLORS.text} />
+              <Text style={[styles.addHeaderBtnText, { color: COLORS.text }]}>People</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.addHeaderBtn}
+              onPress={() => setShowAdd(true)}
+              activeOpacity={0.85}
+            >
+              <Icons.plus size={15} color="#fff" />
+              <Text style={styles.addHeaderBtnText}>
+                {isLent ? "Add Loan" : "Add Borrow"}
+              </Text>
+            </TouchableOpacity>
+          </View>
         }
       />
 

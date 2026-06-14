@@ -23,7 +23,9 @@ import ExpensesScreen from "../screens/expenses/ExpensesScreen";
 import AddGroupExpenseScreen from "../screens/groups/AddGroupExpenseScreen";
 import AddGroupPaymentScreen from "../screens/groups/AddGroupPaymentScreen";
 import AddExpenseScreen from "../screens/expenses/AddExpenseScreen";
-import LoansScreen from "../screens/loans/LoansScreen";
+import LoansScreen        from "../screens/loans/LoansScreen";
+import PeopleScreen       from "../screens/loans/PeopleScreen";
+import PersonLedgerScreen from "../screens/loans/PersonLedgerScreen";
 import ActivityScreen from "../screens/activity/ActivityScreen";
 import SettlementsScreen from "../screens/settlements/SettlementsScreen";
 import NotificationsScreen from "../screens/notifications/NotificationsScreen";
@@ -86,7 +88,9 @@ const LoanStack = createNativeStackNavigator();
 function LoansStack() {
   return (
     <LoanStack.Navigator screenOptions={{ headerShown: false }}>
-      <LoanStack.Screen name="LoansHome" component={LoansScreen} />
+      <LoanStack.Screen name="LoansHome"      component={LoansScreen} />
+      <LoanStack.Screen name="People"         component={PeopleScreen} />
+      <LoanStack.Screen name="PersonLedger"   component={PersonLedgerScreen} />
     </LoanStack.Navigator>
   );
 }

@@ -7,10 +7,11 @@
 
 
 // 🎚️ TOGGLE THIS: Set to 'true' to use laptop's Python backend
-const USE_LOCAL_BACKEND = false; 
+const USE_LOCAL_BACKEND = true; 
 
 export const BASE_URL = (__DEV__ && USE_LOCAL_BACKEND)
-  ? 'http://192.168.29.115:8000'
+  // ? 'http://192.168.29.115:8000' // home
+  ? 'http://192.168.1.47:8000'
   : 'https://splitease-4hcc.onrender.com';
 
 
@@ -97,6 +98,15 @@ export const ENDPOINTS = {
 
   // Reminders
   remind: (groupId) => `${V1}/groups/${groupId}/remind`,
+
+  // People / Ledger
+  people:           `${V1}/people/`,
+  personDetail:     (id) => `${V1}/people/${id}`,
+  deletePerson:     (id) => `${V1}/people/${id}`,
+  personEntries:    (id) => `${V1}/people/${id}/entries`,
+  addEntry:         (id) => `${V1}/people/${id}/entries`,
+  repayEntry:       (id) => `${V1}/people/entries/${id}/repay`,
+  deleteEntry:      (id) => `${V1}/people/entries/${id}`,
 
   // Leave group
   leaveGroup: (groupId, userId) => `${V1}/groups/${groupId}/members/${userId}`,

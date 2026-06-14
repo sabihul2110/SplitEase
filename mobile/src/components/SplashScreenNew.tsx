@@ -26,7 +26,7 @@ const T = {
   b4Delay:    440,
   bladeDur:   380,
   hubDelay:   40,
-  spinDelay:  20,
+  spinDelay:  0,
   spinDur:    900,
   dotsIn:     400,
   fadeOut:    2200,

@@ -325,7 +325,48 @@ CREATE TABLE IF NOT EXISTS PasswordResetTokens (
 
 
 -- ─────────────────────────────────────────────
--- 17. Email Verification Tokens
+--  17. PEOPLE
+-- ─────────────────────────────────────────────
+CREATE TABLE People (
+    person_id       INT           NOT NULL AUTO_INCREMENT,
+    owner_user_id   INT           NOT NULL,
+    display_name    VARCHAR(150)  NOT NULL,
+    linked_user_id  INT               NULL
+        COMMENT 'FK to Users for registered user linking — NULL for custom persons (Phase 1)',
+    created_at      TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT pk_people          PRIMARY KEY (person_id),
+    CONSTRAINT uq_person_per_user UNIQUE      (owner_user_id, display_name),
+    CONSTRAINT fk_people_owner    FOREIGN KEY (owner_user_id)  REFERENCES Users(user_id)  ON DELETE CASCADE,
+    CONSTRAINT fk_people_linked   FOREIGN KEY (linked_user_id) REFERENCES Users(user_id)  ON DELETE SET NULL,
+    INDEX idx_people_owner (owner_user_id)
+);
+
+
+-- ─────────────────────────────────────────────
+--  18. LEDGER_ENTRIES
+-- ─────────────────────────────────────────────
+CREATE TABLE Ledger_Entries (
+    entry_id         INT           NOT NULL AUTO_INCREMENT,
+    person_id        INT           NOT NULL,
+    created_by       INT           NOT NULL,
+    direction        ENUM('lent','borrowed') NOT NULL,
+    amount           DECIMAL(10,2) NOT NULL,
+    remaining_amount DECIMAL(10,2) NOT NULL,
+    note             VARCHAR(255)      NULL,
+    entry_date       DATE          NOT NULL,
+    status           ENUM('active','repaid') NOT NULL DEFAULT 'active',
+    created_at       TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT pk_ledger          PRIMARY KEY (entry_id),
+    CONSTRAINT fk_ledger_person   FOREIGN KEY (person_id)  REFERENCES People(person_id)  ON DELETE CASCADE,
+    CONSTRAINT fk_ledger_creator  FOREIGN KEY (created_by) REFERENCES Users(user_id)     ON DELETE CASCADE,
+    CONSTRAINT chk_ledger_amt     CHECK (amount > 0),
+    CONSTRAINT chk_ledger_remain  CHECK (remaining_amount >= 0),
+    INDEX idx_ledger_person (person_id, status)
+);
+
+
+-- ─────────────────────────────────────────────
+-- 19. Email Verification Tokens
 -- ─────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS EmailVerificationTokens (
     id         INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
