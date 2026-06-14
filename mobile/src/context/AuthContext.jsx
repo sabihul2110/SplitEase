@@ -1,9 +1,9 @@
 // SplitEase/mobile/src/context/AuthContext.jsx
 
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { View, StyleSheet } from "react-native";
+import { View, Animated, StyleSheet } from "react-native";
 import * as ExpoSplashScreen from 'expo-splash-screen';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
