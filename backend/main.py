@@ -29,7 +29,7 @@ if SENTRY_DSN:
 from routers import (
     auth_router, users, groups, expenses, payments,
     settlements, invites, notifications, personal_expenses,
-    income, loans, people, timeline, borrows, ai_agent,
+    income, loans, people, ledger_notifications, timeline, borrows, ai_agent,
 )
 
 configure_logging()
@@ -69,7 +69,7 @@ api_v1.include_router(notifications.router,                                   ta
 api_v1.include_router(personal_expenses.router,                               tags=["Personal Expenses"])
 api_v1.include_router(income.router,                                          tags=["Income"])
 api_v1.include_router(loans.router,                                           tags=["Loans"])
-api_v1.include_router(people.router,                                          tags=["People"])
+api_v1.include_router(ledger_notifications.router,                            tags=["Ledger Notifications"])
 api_v1.include_router(timeline.router,                                        tags=["Timeline"])
 api_v1.include_router(borrows.router,                                         tags=["Borrows"])
 api_v1.include_router(ai_agent.router,                                        tags=["AI Agent"])

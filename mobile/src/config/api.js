@@ -100,13 +100,24 @@ export const ENDPOINTS = {
   remind: (groupId) => `${V1}/groups/${groupId}/remind`,
 
   // People / Ledger
-  people:           `${V1}/people/`,
-  personDetail:     (id) => `${V1}/people/${id}`,
-  deletePerson:     (id) => `${V1}/people/${id}`,
-  personEntries:    (id) => `${V1}/people/${id}/entries`,
-  addEntry:         (id) => `${V1}/people/${id}/entries`,
-  repayEntry:       (id) => `${V1}/people/entries/${id}/repay`,
-  deleteEntry:      (id) => `${V1}/people/entries/${id}`,
+  people:              `${V1}/people/`,
+  personDetail:        (id) => `${V1}/people/${id}`,
+  deletePerson:        (id) => `${V1}/people/${id}`,
+  personEntries:       (id) => `${V1}/people/${id}/entries`,
+  addEntry:            (id) => `${V1}/people/${id}/entries`,
+  repayEntry:          (id) => `${V1}/people/entries/${id}/repay`,
+  deleteEntry:         (id) => `${V1}/people/entries/${id}`,
+  acceptEntry:         (id) => `${V1}/people/entries/${id}/accept`,
+  rejectEntry:         (id) => `${V1}/people/entries/${id}/reject`,
+  pendingRequests:     `${V1}/people/pending-requests`,
+  userSearch:          (q)  => `${V1}/users/search?q=${encodeURIComponent(q)}`,
+  pushToken:           `${V1}/users/push-token`,
+
+  // Ledger notifications
+  ledgerNotifs:        `${V1}/ledger-notifications/`,
+  ledgerUnreadCount:   `${V1}/ledger-notifications/unread-count`,
+  ledgerNotifRead:     (id) => `${V1}/ledger-notifications/${id}/read`,
+  ledgerNotifReadAll:  `${V1}/ledger-notifications/read-all`,
 
   // Leave group
   leaveGroup: (groupId, userId) => `${V1}/groups/${groupId}/members/${userId}`,

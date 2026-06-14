@@ -24,24 +24,23 @@ import { AuthProvider } from './src/context/AuthContext';
 import RootNavigator    from './src/navigation/RootNavigator';
 import { COLORS } from './src/constants/theme';
 import { OTAUpdateModal } from './src/components/global/OTAUpdateModal';
+import { usePushNotifications } from './src/hooks/usePushNotifications';
 // import SplashScreen from './src/components/SplashScreen';
 import SplashScreen from './src/components/SplashScreenNew';
-import * as ExpoSplashScreen from 'expo-splash-screen';
-
-ExpoSplashScreen.preventAutoHideAsync().catch(() => {});
+function AppInner() {
+  usePushNotifications();
+  return null;
+}
 
 export default function App() {
   const [splashDone, setSplashDone] = React.useState(false);
-
-  React.useEffect(() => {
-    ExpoSplashScreen.hideAsync().catch(() => {});
-  }, []);
 
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: COLORS.bg }}>
       <SafeAreaProvider>
         <StatusBar style="light" backgroundColor={COLORS.bg} />
         <AuthProvider>
+          <AppInner />
           <RootNavigator />
           <OTAUpdateModal />
         </AuthProvider>

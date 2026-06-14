@@ -2,13 +2,14 @@
 
 
 import { useFocusEffect } from '@react-navigation/native';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
-  FlatList, Keyboard, Modal, Platform, RefreshControl,
+  ActivityIndicator, FlatList, Keyboard, Modal, Platform, RefreshControl,
   ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as peopleApi from '../../api/people';
+import * as ledgerNotifsApi from '../../api/ledgerNotifications';
 import AppAlert from '../../components/common/AppAlert';
 import Toast from '../../components/common/Toast';
 import { LoadingState } from '../../components/common/Ui';
@@ -99,11 +100,43 @@ function PersonCard({ item, onPress, onLongPress, onDelete, isSelecting, isSelec
 
 // ── Add person modal ─────────────────────────────────────────────────────────
 function AddPersonModal({ visible, onClose, onSuccess }) {
-  const [name, setName]     = useState('');
-  const [error, setError]   = useState('');
-  const [saving, setSaving] = useState(false);
+  const [name, setName]             = useState('');
+  const [error, setError]           = useState('');
+  const [saving, setSaving]         = useState(false);
+  const [searchResults, setSearchResults] = useState([]);
+  const [selectedUser, setSelectedUser]   = useState(null); // registered user if chosen
+  const [searching, setSearching]   = useState(false);
+  const searchTimeout               = useRef(null);
 
-  function reset() { setName(''); setError(''); setSaving(false); }
+  function reset() {
+    setName(''); setError(''); setSaving(false);
+    setSearchResults([]); setSelectedUser(null);
+  }
+
+  function handleNameChange(val) {
+    setName(val);
+    setSelectedUser(null);
+    setError('');
+    if (searchTimeout.current) clearTimeout(searchTimeout.current);
+    if (val.trim().length < 2) { setSearchResults([]); return; }
+    setSearching(true);
+    searchTimeout.current = setTimeout(async () => {
+      try {
+        const res = await peopleApi.searchUsers(val.trim());
+        setSearchResults(res.data || []);
+      } catch {
+        setSearchResults([]);
+      } finally {
+        setSearching(false);
+      }
+    }, 350);
+  }
+
+  function selectRegisteredUser(user) {
+    setName(user.name);
+    setSelectedUser(user);
+    setSearchResults([]);
+  }
 
   async function handleSubmit() {
     Keyboard.dismiss();
@@ -111,7 +144,10 @@ function AddPersonModal({ visible, onClose, onSuccess }) {
     setSaving(true); setError('');
     setTimeout(async () => {
       try {
-        await peopleApi.createPerson({ display_name: name.trim() });
+        await peopleApi.createPerson({
+          display_name:   name.trim(),
+          linked_user_id: selectedUser?.user_id || null,
+        });
         reset();
         onClose();
         setTimeout(() => onSuccess?.(), 300);
@@ -149,24 +185,79 @@ function AddPersonModal({ visible, onClose, onSuccess }) {
             )}
 
             <View style={{ gap: SPACING.xs }}>
-              <Text style={modal.label}>NAME</Text>
+              <Text style={modal.label}>NAME OR EMAIL</Text>
               <View style={modal.inputRow}>
-                <Icons.profile size={15} color={COLORS.text3} />
+                {selectedUser
+                  ? <Icons.checkCircle size={15} color={COLORS.success} />
+                  : <Icons.search size={15} color={COLORS.text3} />
+                }
                 <TextInput
                   style={modal.inputText}
                   value={name}
-                  onChangeText={v => { setName(v); setError(''); }}
-                  placeholder="e.g. Rahul, Mom, Priya…"
+                  onChangeText={handleNameChange}
+                  placeholder="Search by name or email…"
                   placeholderTextColor={COLORS.text3}
                   autoCapitalize="words"
                   autoFocus
                 />
+                {searching && <ActivityIndicator size="small" color={COLORS.text3} />}
+                {selectedUser && (
+                  <TouchableOpacity onPress={() => { setSelectedUser(null); setName(''); }}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                    <Icons.close size={14} color={COLORS.text3} />
+                  </TouchableOpacity>
+                )}
               </View>
+
+              {/* Registered user results */}
+              {searchResults.length > 0 && !selectedUser && (
+                <View style={modal.searchResults}>
+                  <Text style={modal.searchResultsLabel}>REGISTERED USERS</Text>
+                  {searchResults.map(u => (
+                    <TouchableOpacity
+                      key={u.user_id}
+                      style={modal.searchResultRow}
+                      onPress={() => selectRegisteredUser(u)}
+                    >
+                      <View style={modal.searchResultAvatar}>
+                        <Text style={modal.searchResultAvatarText}>
+                          {u.name[0]?.toUpperCase() || '?'}
+                        </Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={modal.searchResultName}>{u.name}</Text>
+                        <Text style={modal.searchResultEmail}>{u.email}</Text>
+                      </View>
+                      <Icons.chevronRight size={14} color={COLORS.text3} />
+                    </TouchableOpacity>
+                  ))}
+                  <View style={modal.searchDivider} />
+                  <TouchableOpacity
+                    style={modal.searchResultRow}
+                    onPress={() => setSearchResults([])}
+                  >
+                    <Icons.profile size={15} color={COLORS.text3} />
+                    <Text style={[modal.searchResultName, { color: COLORS.text2 }]}>
+                      Add "{name}" as custom person
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {selectedUser && (
+                <View style={modal.selectedBadge}>
+                  <Icons.checkCircle size={14} color={COLORS.success} />
+                  <Text style={modal.selectedBadgeText}>
+                    Linked to registered user — entries will require their acknowledgement
+                  </Text>
+                </View>
+              )}
             </View>
 
             <Text style={modal.hint}>
-              You can record multiple loans and borrows under this person. 
-              No account needed — anyone works.
+              {selectedUser
+                ? 'Entries with this person will be shared — they must accept before becoming active.'
+                : 'No account needed — anyone works. Or search to link a registered user.'}
             </Text>
           </View>
 
@@ -191,8 +282,9 @@ function AddPersonModal({ visible, onClose, onSuccess }) {
 
 // ── Main screen ──────────────────────────────────────────────────────────────
 export default function PeopleScreen({ navigation }) {
-  const [people, setPeople]         = useState([]);
-  const [loading, setLoading]       = useState(true);
+  const [people, setPeople]           = useState([]);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [loading, setLoading]         = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch]         = useState('');
   const [showAdd, setShowAdd]       = useState(false);
@@ -267,8 +359,12 @@ export default function PeopleScreen({ navigation }) {
   const load = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true); else setLoading(true);
     try {
-      const res = await peopleApi.getPeople();
-      setPeople(res.data || []);
+      const [peopleRes, countRes] = await Promise.all([
+        peopleApi.getPeople(),
+        ledgerNotifsApi.getLedgerUnread(),
+      ]);
+      setPeople(peopleRes.data || []);
+      setPendingCount(countRes.data?.count || 0);
     } catch {
       setPeople([]);
     } finally {
@@ -306,10 +402,22 @@ export default function PeopleScreen({ navigation }) {
           showBack
           onBack={() => navigation.goBack()}
           actions={
-            <TouchableOpacity style={styles.addBtn} onPress={() => setShowAdd(true)} activeOpacity={0.85}>
-              <Icons.plus size={15} color="#fff" />
-              <Text style={styles.addBtnText}>Add Person</Text>
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <TouchableOpacity
+                style={[styles.addBtn, { backgroundColor: COLORS.surface2, borderWidth: 1, borderColor: COLORS.border }]}
+                onPress={() => navigation.navigate('PendingRequests')}
+                activeOpacity={0.85}
+              >
+                <Icons.bell size={15} color={pendingCount > 0 ? COLORS.warning : COLORS.text} />
+                <Text style={[styles.addBtnText, { color: pendingCount > 0 ? COLORS.warning : COLORS.text }]}>
+                  {pendingCount > 0 ? `Requests (${pendingCount})` : 'Requests'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.addBtn} onPress={() => setShowAdd(true)} activeOpacity={0.85}>
+                <Icons.plus size={15} color="#fff" />
+                <Text style={styles.addBtnText}>Add Person</Text>
+              </TouchableOpacity>
+            </View>
           }
         />
       )}
@@ -596,4 +704,32 @@ const modal = StyleSheet.create({
     paddingVertical: 13, borderRadius: RADIUS.lg, backgroundColor: '#818cf8',
   },
   submitText: { fontSize: FONT_SIZE.md, fontWeight: FONT_WEIGHT.bold, color: '#fff' },
+  searchResults: {
+    backgroundColor: COLORS.surface2, borderRadius: RADIUS.lg,
+    borderWidth: 1, borderColor: COLORS.border, overflow: 'hidden',
+  },
+  searchResultsLabel: {
+    fontSize: 9, fontWeight: FONT_WEIGHT.bold, color: COLORS.text3,
+    letterSpacing: 0.9, textTransform: 'uppercase',
+    paddingHorizontal: SPACING.md, paddingTop: SPACING.sm, paddingBottom: 4,
+  },
+  searchResultRow: {
+    flexDirection: 'row', alignItems: 'center', gap: SPACING.sm,
+    paddingHorizontal: SPACING.md, paddingVertical: 10,
+  },
+  searchResultAvatar: {
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center',
+  },
+  searchResultAvatarText: { fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.bold, color: '#fff' },
+  searchResultName: { fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.semibold, color: COLORS.text },
+  searchResultEmail: { fontSize: FONT_SIZE.xs, color: COLORS.text3 },
+  searchDivider: { height: 1, backgroundColor: COLORS.border, marginHorizontal: SPACING.md },
+  selectedBadge: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 6,
+    backgroundColor: 'rgba(16,185,129,0.08)',
+    borderRadius: RADIUS.md, borderWidth: 1,
+    borderColor: 'rgba(16,185,129,0.2)', padding: SPACING.sm,
+  },
+  selectedBadgeText: { flex: 1, fontSize: FONT_SIZE.xs, color: COLORS.success, lineHeight: 16 },
 });

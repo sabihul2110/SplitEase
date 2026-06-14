@@ -50,14 +50,18 @@ def fetch_people(owner_user_id: int) -> list[dict]:
     return rows
 
 
-def insert_person(owner_user_id: int, display_name: str) -> int:
+def insert_person(
+    owner_user_id:  int,
+    display_name:   str,
+    linked_user_id: int | None = None,
+) -> int:
     conn = get_connection()
     cur  = conn.cursor()
     try:
         conn.start_transaction()
         cur.execute(
-            "INSERT INTO People (owner_user_id, display_name) VALUES (%s, %s)",
-            (owner_user_id, display_name.strip()),
+            "INSERT INTO People (owner_user_id, display_name, linked_user_id) VALUES (%s, %s, %s)",
+            (owner_user_id, display_name.strip(), linked_user_id),
         )
         new_id = cur.lastrowid
         conn.commit()
@@ -132,25 +136,27 @@ def fetch_entries(person_id: int, owner_user_id: int) -> list[dict]:
 
 
 def insert_entry(
-    person_id:  int,
-    created_by: int,
-    direction:  str,
-    amount:     float,
-    note:       str | None,
-    entry_date: str,
+    person_id:   int,
+    created_by:  int,
+    direction:   str,
+    amount:      float,
+    note:        str | None,
+    entry_date:  str,
+    is_pending:  bool = False,
 ) -> int:
     conn = get_connection()
     cur  = conn.cursor()
     try:
         conn.start_transaction()
-        amt = round(float(amount), 2)
+        amt    = round(float(amount), 2)
+        status = "pending" if is_pending else "active"
         cur.execute(
             """
             INSERT INTO Ledger_Entries
                 (person_id, created_by, direction, amount, remaining_amount, note, entry_date, status)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, 'active')
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """,
-            (person_id, created_by, direction, amt, amt, note or None, entry_date),
+            (person_id, created_by, direction, amt, amt, note or None, entry_date, status),
         )
         new_id = cur.lastrowid
         conn.commit()
@@ -160,6 +166,115 @@ def insert_entry(
         raise
     finally:
         cur.close(); conn.close()
+
+
+def accept_entry(entry_id: int, recipient_user_id: int) -> dict:
+    """
+    Accept a pending entry. Only callable by the linked user who received the request.
+    Verifies via People.linked_user_id that the caller is the intended recipient.
+    """
+    conn = get_connection()
+    cur  = conn.cursor(dictionary=True)
+    try:
+        conn.start_transaction()
+        cur.execute(
+            """
+            SELECT le.entry_id, le.status, le.person_id,
+                   le.created_by, le.direction, le.amount,
+                   p.linked_user_id, p.owner_user_id, p.display_name
+            FROM   Ledger_Entries le
+            JOIN   People p ON p.person_id = le.person_id
+            WHERE  le.entry_id = %s
+            FOR UPDATE
+            """,
+            (entry_id,),
+        )
+        row = cur.fetchone()
+        if not row:
+            raise ValueError("Entry not found.")
+        if row["status"] != "pending":
+            raise ValueError("Entry is not pending.")
+        if row["linked_user_id"] != recipient_user_id:
+            raise ValueError("Not authorised to accept this entry.")
+        cur.execute(
+            "UPDATE Ledger_Entries SET status = 'active' WHERE entry_id = %s",
+            (entry_id,),
+        )
+        conn.commit()
+        return row
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close(); conn.close()
+
+
+def reject_entry(entry_id: int, recipient_user_id: int) -> dict:
+    """
+    Reject a pending entry. Sets status to 'rejected'.
+    Creator can see it and delete/re-request.
+    """
+    conn = get_connection()
+    cur  = conn.cursor(dictionary=True)
+    try:
+        conn.start_transaction()
+        cur.execute(
+            """
+            SELECT le.entry_id, le.status, le.person_id,
+                   le.created_by, le.direction, le.amount,
+                   p.linked_user_id, p.owner_user_id, p.display_name
+            FROM   Ledger_Entries le
+            JOIN   People p ON p.person_id = le.person_id
+            WHERE  le.entry_id = %s
+            FOR UPDATE
+            """,
+            (entry_id,),
+        )
+        row = cur.fetchone()
+        if not row:
+            raise ValueError("Entry not found.")
+        if row["status"] != "pending":
+            raise ValueError("Entry is not pending.")
+        if row["linked_user_id"] != recipient_user_id:
+            raise ValueError("Not authorised to reject this entry.")
+        cur.execute(
+            "UPDATE Ledger_Entries SET status = 'rejected' WHERE entry_id = %s",
+            (entry_id,),
+        )
+        conn.commit()
+        return row
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close(); conn.close()
+
+
+def fetch_pending_entries_for_user(linked_user_id: int) -> list[dict]:
+    """Entries where this user is the linked recipient and status is pending."""
+    conn = get_connection()
+    cur  = conn.cursor(dictionary=True)
+    cur.execute(
+        """
+        SELECT le.entry_id, le.direction, le.amount, le.note,
+               le.entry_date, le.created_at,
+               p.display_name AS person_name, p.person_id,
+               u.name AS requested_by
+        FROM   Ledger_Entries le
+        JOIN   People p ON p.person_id = le.person_id
+        JOIN   Users  u ON u.user_id   = le.created_by
+        WHERE  p.linked_user_id = %s AND le.status = 'pending'
+        ORDER  BY le.created_at DESC
+        """,
+        (linked_user_id,),
+    )
+    rows = cur.fetchall()
+    cur.close(); conn.close()
+    for r in rows:
+        r["amount"]     = float(r["amount"])
+        r["entry_date"] = str(r["entry_date"])
+        r["created_at"] = str(r["created_at"])
+    return rows
 
 
 def record_entry_repayment(entry_id: int, owner_user_id: int, repayment_amount: float) -> dict:
@@ -201,6 +316,29 @@ def record_entry_repayment(entry_id: int, owner_user_id: int, repayment_amount: 
         raise
     finally:
         cur.close(); conn.close()
+
+
+def fetch_entry_with_person(entry_id: int, user_id: int) -> dict | None:
+    """Fetch entry details including person's linked_user_id for notification routing."""
+    conn = get_connection()
+    cur  = conn.cursor(dictionary=True)
+    cur.execute(
+        """
+        SELECT le.entry_id, le.direction, le.amount, le.remaining_amount,
+               le.status, p.linked_user_id, p.owner_user_id, p.display_name
+        FROM   Ledger_Entries le
+        JOIN   People p ON p.person_id = le.person_id
+        WHERE  le.entry_id = %s
+          AND  (p.owner_user_id = %s OR p.linked_user_id = %s)
+        """,
+        (entry_id, user_id, user_id),
+    )
+    row = cur.fetchone()
+    cur.close(); conn.close()
+    if row:
+        row["amount"]           = float(row["amount"])
+        row["remaining_amount"] = float(row["remaining_amount"])
+    return row
 
 
 def delete_entry(entry_id: int, owner_user_id: int) -> bool:

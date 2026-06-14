@@ -1,15 +1,27 @@
 // SplitEase/mobile/src/context/AuthContext.jsx
 
 
-import React, { createContext, useContext, useState, useEffect, useRef } from "react";
+import React, { createContext, useContext, useState, useEffect } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { View, Animated, StyleSheet } from "react-native";
+import { View, StyleSheet } from "react-native";
 import * as ExpoSplashScreen from 'expo-splash-screen';
+import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
 import client from "../api/client";
 import { STORAGE_KEY, ENDPOINTS } from "../config/api";
 import { COLORS } from "../constants/theme";
 
-ExpoSplashScreen.preventAutoHideAsync();
+ExpoSplashScreen.preventAutoHideAsync().catch(() => {});
+
+async function registerPushTokenSilently() {
+  try {
+    if (!Device.isDevice) return;
+    const { status } = await Notifications.getPermissionsAsync();
+    if (status !== 'granted') return;
+    const tokenData = await Notifications.getExpoPushTokenAsync();
+    await client.post(ENDPOINTS.pushToken, { token: tokenData.data });
+  } catch {}
+}
 
 const AuthContext = createContext(null);
 
@@ -60,6 +72,7 @@ export function AuthProvider({ children }) {
     };
     setUser(enriched);
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(enriched));
+    registerPushTokenSilently();
   }
 
   async function logout() {

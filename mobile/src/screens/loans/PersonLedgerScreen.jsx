@@ -109,7 +109,7 @@ function NetBar({ entries }) {
 function EntryCard({ item, onRefresh, showToast, setAlert, isSelecting, isSelected, onLongPress, onSelect }) {
   const [repayAmt, setRepayAmt] = useState('');
   const [repayErr, setRepayErr] = useState('');
-  const [saving, setSaving]     = useState(false);
+  const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const mountedRef = useRef(true);
 
@@ -118,14 +118,16 @@ function EntryCard({ item, onRefresh, showToast, setAlert, isSelecting, isSelect
     return () => { mountedRef.current = false; };
   }, []);
 
-  const isLent     = item.direction === 'lent';
-  const accentColor = isLent ? '#f59e0b' : '#818cf8';
-  const dirLabel   = isLent ? 'Lent' : 'Borrowed';
-  const dateLabel  = isLent ? 'Lent on' : 'Borrowed on';
+  const isLent = item.direction === 'lent';
+  const isPending = item.status === 'pending';
+  const isRejected = item.status === 'rejected';
+  const accentColor = isPending ? COLORS.text3 : isRejected ? COLORS.danger : isLent ? '#f59e0b' : '#818cf8';
+  const dirLabel = isLent ? 'Lent' : 'Borrowed';
+  const dateLabel = isLent ? 'Lent on' : 'Borrowed on';
 
   const safeAmt = Number(item.amount) || 0;
   const safeRem = Number(item.remaining_amount) || 0;
-  const pct     = safeAmt > 0 ? Math.round(((safeAmt - safeRem) / safeAmt) * 100) : 100;
+  const pct = safeAmt > 0 ? Math.round(((safeAmt - safeRem) / safeAmt) * 100) : 100;
 
   let dateStr = '—';
   if (item.entry_date) {
@@ -182,7 +184,12 @@ function EntryCard({ item, onRefresh, showToast, setAlert, isSelecting, isSelect
 
   return (
     <TouchableOpacity
-      style={[styles.entryCard, isSelected && styles.entryCardSelected]}
+      style={[
+        styles.entryCard,
+        isSelected && styles.entryCardSelected,
+        isPending && styles.entryCardPending,
+        isRejected && styles.entryCardRejected,
+      ]}
       onLongPress={onLongPress}
       onPress={isSelecting ? onSelect : undefined}
       activeOpacity={isSelecting ? 0.7 : 1}
@@ -211,18 +218,37 @@ function EntryCard({ item, onRefresh, showToast, setAlert, isSelecting, isSelect
 
       {item.note ? <Text style={styles.entryNote}>{item.note}</Text> : null}
 
-      {/* Progress */}
-      <View>
-        <View style={styles.progressHead}>
-          <Text style={styles.progressLabel}>
-            {item.status === 'repaid' ? 'Fully settled' : `${pct}% settled`}
-          </Text>
-          <Text style={[styles.progressRight, { color: item.status === 'repaid' ? COLORS.success : accentColor }]}>
-            {item.status === 'repaid' ? 'Done' : `₹${safeRem.toLocaleString('en-IN')} left`}
+      {isPending && (
+        <View style={styles.statusBanner}>
+          <Icons.clockPending size={13} color={COLORS.warning} />
+          <Text style={[styles.statusBannerText, { color: COLORS.warning }]}>
+            Awaiting acknowledgement from the other person
           </Text>
         </View>
-        <ProgressBar pct={pct} color={item.status === 'repaid' ? COLORS.success : accentColor} />
-      </View>
+      )}
+      {isRejected && (
+        <View style={[styles.statusBanner, { backgroundColor: 'rgba(255,69,58,0.08)', borderColor: 'rgba(255,69,58,0.2)' }]}>
+          <Icons.close size={13} color={COLORS.danger} />
+          <Text style={[styles.statusBannerText, { color: COLORS.danger }]}>
+            Declined — delete and re-request if needed
+          </Text>
+        </View>
+      )}
+
+      {/* Progress — only for active/repaid */}
+      {!isPending && !isRejected && (
+        <View>
+          <View style={styles.progressHead}>
+            <Text style={styles.progressLabel}>
+              {item.status === 'repaid' ? 'Fully settled' : `${pct}% settled`}
+            </Text>
+            <Text style={[styles.progressRight, { color: item.status === 'repaid' ? COLORS.success : accentColor }]}>
+              {item.status === 'repaid' ? 'Done' : `₹${safeRem.toLocaleString('en-IN')} left`}
+            </Text>
+          </View>
+          <ProgressBar pct={pct} color={item.status === 'repaid' ? COLORS.success : accentColor} />
+        </View>
+      )}
 
       <Text style={styles.entryDate}>{dateLabel} {dateStr}</Text>
 
@@ -707,6 +733,22 @@ const styles = StyleSheet.create({
     borderColor: COLORS.primary,
     backgroundColor: 'rgba(99,102,241,0.06)',
   },
+  entryCardPending: {
+    borderColor: 'rgba(245,158,11,0.4)',
+    backgroundColor: 'rgba(245,158,11,0.04)',
+  },
+  entryCardRejected: {
+    borderColor: 'rgba(255,69,58,0.3)',
+    backgroundColor: 'rgba(255,69,58,0.04)',
+  },
+  statusBanner: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 6,
+    backgroundColor: 'rgba(245,158,11,0.08)',
+    borderRadius: RADIUS.sm, borderWidth: 1,
+    borderColor: 'rgba(245,158,11,0.2)',
+    padding: SPACING.sm,
+  },
+  statusBannerText: { flex: 1, fontSize: FONT_SIZE.xs, lineHeight: 16 },
   selectionIndicator: {
     position: 'absolute',
     top: SPACING.base,
