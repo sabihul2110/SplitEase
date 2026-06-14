@@ -3,10 +3,13 @@
 
 import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { View, Image, Animated, StyleSheet } from "react-native";
+import { View, Animated, StyleSheet } from "react-native";
+import * as ExpoSplashScreen from 'expo-splash-screen';
 import client from "../api/client";
 import { STORAGE_KEY, ENDPOINTS } from "../config/api";
 import { COLORS } from "../constants/theme";
+
+ExpoSplashScreen.preventAutoHideAsync();
 
 const AuthContext = createContext(null);
 
@@ -46,6 +49,7 @@ export function AuthProvider({ children }) {
       setUser(null);
     } finally {
       setAuthChecked(true);
+      await ExpoSplashScreen.hideAsync();
     }
   }
 

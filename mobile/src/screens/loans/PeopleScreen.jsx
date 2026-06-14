@@ -23,7 +23,7 @@ function fmt(n) {
 }
 
 // ── Person card ──────────────────────────────────────────────────────────────
-function PersonCard({ item, onPress }) {
+function PersonCard({ item, onPress, onLongPress, onDelete, isSelecting, isSelected }) {
   const net = item.net_balance;
   const isOwed = net > 0;
   const isOwe  = net < 0;
@@ -53,7 +53,13 @@ function PersonCard({ item, onPress }) {
   const avatarBg = AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
 
   return (
-    <TouchableOpacity style={styles.personCard} onPress={onPress} activeOpacity={0.78}>
+    <TouchableOpacity
+      style={[styles.personCard, isSelected && styles.personCardSelected]}
+      onPress={onPress}
+      onLongPress={onLongPress}
+      activeOpacity={0.78}
+      delayLongPress={350}
+    >
       {/* Avatar */}
       <View style={[styles.avatar, { backgroundColor: avatarBg }]}>
         <Text style={styles.avatarText}>{initials || '?'}</Text>
@@ -70,8 +76,23 @@ function PersonCard({ item, onPress }) {
         )}
       </View>
 
-      {/* Right chevron */}
-      <Icons.chevronRight size={18} color={COLORS.text3} />
+      {/* Right side — chevron or selection indicator */}
+      {isSelecting ? (
+        isSelected
+          ? <Icons.checkSquare size={20} color={COLORS.primary} />
+          : <Icons.square size={20} color={COLORS.text3} />
+      ) : (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACING.sm }}>
+          <TouchableOpacity
+            onPress={onDelete}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            style={styles.personDelBtn}
+          >
+            <Icons.trash size={15} color={COLORS.danger} />
+          </TouchableOpacity>
+          <Icons.chevronRight size={18} color={COLORS.text3} />
+        </View>
+      )}
     </TouchableOpacity>
   );
 }
@@ -170,13 +191,73 @@ function AddPersonModal({ visible, onClose, onSuccess }) {
 
 // ── Main screen ──────────────────────────────────────────────────────────────
 export default function PeopleScreen({ navigation }) {
-  const [people, setPeople]       = useState([]);
-  const [loading, setLoading]     = useState(true);
+  const [people, setPeople]         = useState([]);
+  const [loading, setLoading]       = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [search, setSearch]       = useState('');
-  const [showAdd, setShowAdd]     = useState(false);
-  const [toast, setToast]         = useState({ msg: '', type: 'success' });
-  const [alert, setAlert]         = useState(null);
+  const [search, setSearch]         = useState('');
+  const [showAdd, setShowAdd]       = useState(false);
+  const [toast, setToast]           = useState({ msg: '', type: 'success' });
+  const [alert, setAlert]           = useState(null);
+  const [selected, setSelected]     = useState(new Set());
+  const isSelecting                 = selected.size > 0;
+
+  function toggleSelect(personId) {
+    setSelected(prev => {
+      const next = new Set(prev);
+      next.has(personId) ? next.delete(personId) : next.add(personId);
+      return next;
+    });
+  }
+
+  function clearSelection() { setSelected(new Set()); }
+
+  function handleDeleteSingle(personId, displayName) {
+    setAlert({
+      title: `Delete ${displayName}?`,
+      message: 'This will delete all their entries too. Cannot be undone.',
+      buttons: [
+        { text: 'Cancel', style: 'cancel', onPress: () => setAlert(null) },
+        {
+          text: 'Delete', style: 'destructive',
+          onPress: async () => {
+            setAlert(null);
+            try {
+              await peopleApi.deletePerson(personId);
+              showToast(`${displayName} deleted`);
+              load(true);
+            } catch {
+              showToast('Failed to delete', 'error');
+            }
+          },
+        },
+      ],
+    });
+  }
+
+  function handleBulkDelete() {
+    setAlert({
+      title: `Delete ${selected.size} people?`,
+      message: 'All their entries will be deleted too. Cannot be undone.',
+      buttons: [
+        { text: 'Cancel', style: 'cancel', onPress: () => setAlert(null) },
+        {
+          text: 'Delete', style: 'destructive',
+          onPress: async () => {
+            setAlert(null);
+            const ids = [...selected];
+            clearSelection();
+            try {
+              await Promise.all(ids.map(id => peopleApi.deletePerson(id)));
+              showToast(`${ids.length} ${ids.length === 1 ? 'person' : 'people'} deleted`);
+              load(true);
+            } catch {
+              showToast('Some deletions failed', 'error');
+            }
+          },
+        },
+      ],
+    });
+  }
 
   function showToast(msg, type = 'success') {
     setToast({ msg, type });
@@ -207,18 +288,31 @@ export default function PeopleScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
-      <ScreenHeader
-        title="People"
-        compact
-        showBack
-        onBack={() => navigation.goBack()}
-        actions={
-          <TouchableOpacity style={styles.addBtn} onPress={() => setShowAdd(true)} activeOpacity={0.85}>
-            <Icons.plus size={15} color="#fff" />
-            <Text style={styles.addBtnText}>Add Person</Text>
+      {isSelecting ? (
+        <View style={styles.selectionBar}>
+          <TouchableOpacity onPress={clearSelection} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Icons.close size={20} color={COLORS.text} />
           </TouchableOpacity>
-        }
-      />
+          <Text style={styles.selectionCount}>{selected.size} selected</Text>
+          <TouchableOpacity style={styles.bulkDeleteBtn} onPress={handleBulkDelete}>
+            <Icons.trash size={15} color="#fff" />
+            <Text style={styles.bulkDeleteText}>Delete</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <ScreenHeader
+          title="People"
+          compact
+          showBack
+          onBack={() => navigation.goBack()}
+          actions={
+            <TouchableOpacity style={styles.addBtn} onPress={() => setShowAdd(true)} activeOpacity={0.85}>
+              <Icons.plus size={15} color="#fff" />
+              <Text style={styles.addBtnText}>Add Person</Text>
+            </TouchableOpacity>
+          }
+        />
+      )}
 
       <FlatList
         data={loading ? [] : filtered}
@@ -293,10 +387,17 @@ export default function PeopleScreen({ navigation }) {
         renderItem={({ item }) => (
           <PersonCard
             item={item}
-            onPress={() => navigation.navigate('PersonLedger', {
-              personId: item.person_id,
-              personName: item.display_name,
-            })}
+            isSelecting={isSelecting}
+            isSelected={selected.has(item.person_id)}
+            onPress={() => {
+              if (isSelecting) { toggleSelect(item.person_id); return; }
+              navigation.navigate('PersonLedger', {
+                personId: item.person_id,
+                personName: item.display_name,
+              });
+            }}
+            onLongPress={() => toggleSelect(item.person_id)}
+            onDelete={() => handleDeleteSingle(item.person_id, item.display_name)}
           />
         )}
         contentContainerStyle={[styles.list, { paddingBottom: TAB_BAR_HEIGHT + SPACING.base }]}
@@ -395,6 +496,43 @@ const styles = StyleSheet.create({
     marginTop: SPACING.sm, backgroundColor: '#818cf8',
   },
   emptyBtnText: { fontSize: FONT_SIZE.md, fontWeight: FONT_WEIGHT.bold, color: '#fff' },
+  personCardSelected: {
+    borderColor: COLORS.primary,
+    backgroundColor: 'rgba(99,102,241,0.06)',
+  },
+  personDelBtn: {
+    padding: 4,
+  },
+  selectionBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.base,
+    paddingVertical: SPACING.md,
+    backgroundColor: COLORS.bg,
+    gap: SPACING.md,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  selectionCount: {
+    flex: 1,
+    fontSize: FONT_SIZE.base,
+    fontWeight: FONT_WEIGHT.bold,
+    color: COLORS.text,
+  },
+  bulkDeleteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: COLORS.danger,
+    borderRadius: RADIUS.full,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 8,
+  },
+  bulkDeleteText: {
+    fontSize: FONT_SIZE.sm,
+    fontWeight: FONT_WEIGHT.bold,
+    color: '#fff',
+  },
 });
 
 const modal = StyleSheet.create({

@@ -18,6 +18,21 @@ const PATHS = [
 ];
 
 // ── Timing ──
+// const T = {
+//   b1Start:    200,
+//   b1Duration: 750,
+//   b2Delay:    0,
+//   b3Delay:    220,
+//   b4Delay:    440,
+//   bladeDur:   380,
+//   hubDelay:   40,
+//   spinDelay:  0,
+//   spinDur:    900,
+//   dotsIn:     400,
+//   fadeOut:    2200,
+//   totalMs:    2600,
+// };
+
 const T = {
   b1Start:    200,
   b1Duration: 750,
@@ -29,8 +44,8 @@ const T = {
   spinDelay:  0,
   spinDur:    900,
   dotsIn:     400,
-  fadeOut:    2200,
-  totalMs:    2600,
+  fadeOut:    1500,
+  totalMs:    1800,
 };
 
 // ── Dot ──
