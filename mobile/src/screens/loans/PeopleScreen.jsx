@@ -203,7 +203,6 @@ function AddPersonModal({ visible, onClose, onSuccess }) {
                   placeholder="Search by name or email…"
                   placeholderTextColor={COLORS.text3}
                   autoCapitalize="words"
-                  autoFocus
                 />
                 {searching && <ActivityIndicator size="small" color={COLORS.text3} />}
                 {selectedUser && (
