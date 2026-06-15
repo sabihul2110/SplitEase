@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as peopleApi from '../../api/people';
+import * as ledgerNotifsApi from '../../api/ledgerNotifications';
 import AppAlert from '../../components/common/AppAlert';
 import Toast from '../../components/common/Toast';
 import { LoadingState } from '../../components/common/Ui';
@@ -122,8 +123,12 @@ export default function PendingRequestsScreen({ navigation }) {
     setProcessing(entryId);
     try {
       await peopleApi.acceptEntry(entryId);
-      setRequests(prev => prev.filter(r => r.entry_id !== entryId));
+      const updated = requests.filter(r => r.entry_id !== entryId);
+      setRequests(updated);
       showToast('Entry accepted');
+      if (updated.length === 0) {
+        try { await ledgerNotifsApi.markAllLedgerRead(); } catch {}
+      }
     } catch (err) {
       const detail = err?.response?.data?.detail;
       showToast(typeof detail === 'string' ? detail : 'Failed', 'error');

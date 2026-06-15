@@ -168,6 +168,34 @@ def insert_entry(
         cur.close(); conn.close()
 
 
+def get_or_create_reciprocal_person(
+    owner_user_id:  int,
+    display_name:   str,
+    linked_user_id: int,
+) -> int:
+    """Get existing person or create a reciprocal People record."""
+    conn = get_connection()
+    cur  = conn.cursor(dictionary=True)
+    try:
+        # Check if reciprocal already exists
+        cur.execute(
+            "SELECT person_id FROM People WHERE owner_user_id = %s AND linked_user_id = %s",
+            (owner_user_id, linked_user_id),
+        )
+        row = cur.fetchone()
+        if row:
+            return row["person_id"]
+        cur.close(); conn.close()
+        return insert_person(owner_user_id, display_name, linked_user_id)
+    except Exception:
+        raise
+    finally:
+        try: cur.close()
+        except: pass
+        try: conn.close()
+        except: pass
+
+
 def accept_entry(entry_id: int, recipient_user_id: int) -> dict:
     """
     Accept a pending entry. Only callable by the linked user who received the request.
@@ -201,6 +229,10 @@ def accept_entry(entry_id: int, recipient_user_id: int) -> dict:
             (entry_id,),
         )
         conn.commit()
+        # Fetch creator's name for the reciprocal People record
+        cur.execute("SELECT name FROM Users WHERE user_id = %s", (row["created_by"],))
+        creator = cur.fetchone()
+        row["creator_name"] = creator["name"] if creator else "Unknown"
         return row
     except Exception:
         conn.rollback()

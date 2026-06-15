@@ -8,7 +8,7 @@
 // Here: Settings is accessed from MenuScreen (More tab).
 
 import React from "react";
-import { Platform } from "react-native";
+import { Platform, View } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { COLORS } from "../constants/theme";
@@ -34,8 +34,8 @@ import AccountScreen from "../screens/account/AccountScreen";
 import SettingsScreen from "../screens/settings/SettingsScreen";
 import MenuScreen from "../screens/menu/MenuScreen";
 
-// ── Tab icon component ──────────────────────────────────────────────────────
-function TabIcon({ name, focused }) {
+
+function TabIcon({ name, focused, badgeCount }) {
   const iconMap = {
     Dashboard: Icons.dashboard,
     Expenses:  Icons.expenses,
@@ -45,7 +45,19 @@ function TabIcon({ name, focused }) {
   };
   const IconComponent = iconMap[name];
   if (!IconComponent) return null;
-  return <IconComponent size={24} color={focused ? COLORS.primary : COLORS.text3} />;
+  return (
+    <View style={{ width: 24, height: 24 }}>
+      <IconComponent size={24} color={focused ? COLORS.primary : COLORS.text3} />
+      {badgeCount > 0 && (
+        <View style={{
+          position: 'absolute', top: -3, right: -3,
+          width: 9, height: 9, borderRadius: 5,
+          backgroundColor: COLORS.danger,
+          borderWidth: 1.5, borderColor: COLORS.surface,
+        }} />
+      )}
+    </View>
+  );
 }
 
 // ── Stacks ──────────────────────────────────────────────────────────────────
@@ -116,6 +128,22 @@ function MoreTabStack() {
 const Tab = createBottomTabNavigator();
 
 export default function MainNavigator() {
+  const [ledgerBadge, setLedgerBadge] = React.useState(0);
+
+  React.useEffect(() => {
+    let active = true;
+    async function fetchBadge() {
+      try {
+        const client = require('../api/client').default;
+        const res = await client.get('/api/v1/ledger-notifications/unread-count');
+        if (active) setLedgerBadge(res.data?.count || 0);
+      } catch { if (active) setLedgerBadge(0); }
+    }
+    fetchBadge();
+    const interval = setInterval(fetchBadge, 30000); // refresh every 30s
+    return () => { active = false; clearInterval(interval); };
+  }, []);
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -149,7 +177,11 @@ export default function MainNavigator() {
           letterSpacing: 0.2,
         },
         tabBarIcon: ({ focused }) => (
-          <TabIcon name={route.name} focused={focused} />
+          <TabIcon
+            name={route.name}
+            focused={focused}
+            badgeCount={route.name === 'Loans' ? ledgerBadge : 0}
+          />
         ),
       })}
     >

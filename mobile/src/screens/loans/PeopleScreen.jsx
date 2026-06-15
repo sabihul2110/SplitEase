@@ -182,7 +182,11 @@ function AddPersonModal({ visible, onClose, onSuccess }) {
             </TouchableOpacity>
           </View>
 
-          <View style={{ padding: SPACING.base, gap: SPACING.md }}>
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ padding: SPACING.base, gap: SPACING.md }}
+          >
             {!!error && (
               <View style={modal.errorBanner}>
                 <Text style={modal.errorText}>{error}</Text>
@@ -263,7 +267,7 @@ function AddPersonModal({ visible, onClose, onSuccess }) {
                 ? 'Entries with this person will be shared — they must accept before becoming active.'
                 : 'No account needed — anyone works. Or search to link a registered user.'}
             </Text>
-          </View>
+          </ScrollView>
 
           <View style={modal.footer}>
             <TouchableOpacity style={modal.cancelBtn} onPress={onClose}>

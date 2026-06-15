@@ -62,6 +62,17 @@ def accept_entry(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
+    # Auto-create reciprocal People record for the accepting user
+    # so they can see the ledger entry from their own People screen
+    try:
+        people_repository.get_or_create_reciprocal_person(
+            owner_user_id  = current_user["user_id"],
+            display_name   = row.get("creator_name", "Unknown"),
+            linked_user_id = row["created_by"],
+        )
+    except Exception:
+        pass  # Non-fatal — entry is accepted, person card creation failed
+
     msg = f"{row['display_name']} accepted your ledger entry of ₹{float(row['amount']):,.0f}."
     ledger_notification_repository.create_ledger_notif(
         recipient_id = row["created_by"],
