@@ -13,7 +13,7 @@ FIX S5: DELETE now prevents an admin from deleting themselves if they are
         the last admin in the system. Orphaning all admin access is blocked.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from schemas.users import UpdateUserRequest
 import mysql.connector
 
@@ -155,3 +155,25 @@ def reset_my_data_force(current_user: dict = Depends(get_current_user)):
 def admin_wipe(current_user: dict = Depends(require_admin)):
     result = user_repository.admin_wipe_app(current_user["user_id"])
     return result
+
+
+from repositories import push_repository as _push_repo
+
+@router.get("/search")
+def search_users(
+    q: str = Query(..., min_length=1),
+    current_user: dict = Depends(get_current_user),
+):
+    return _push_repo.search_users(q.strip(), current_user["user_id"])
+
+
+@router.post("/push-token")
+def save_push_token(
+    body: dict,
+    current_user: dict = Depends(get_current_user),
+):
+    token = body.get("token", "").strip()
+    if not token:
+        raise HTTPException(status_code=422, detail="Token is required.")
+    _push_repo.save_push_token(current_user["user_id"], token)
+    return {"message": "Push token saved."}

@@ -19,28 +19,6 @@ def get_pending_requests(current_user: dict = Depends(get_current_user)):
     return people_repository.fetch_pending_entries_for_user(current_user["user_id"])
 
 
-@router.get("/users/search")
-def search_users(
-    q: str = Query(..., min_length=1),
-    current_user: dict = Depends(get_current_user),
-):
-    if len(q.strip()) < 1:
-        return []
-    return push_repository.search_users(q, current_user["user_id"])
-
-
-@router.post("/users/push-token")
-def save_push_token(
-    body: dict,
-    current_user: dict = Depends(get_current_user),
-):
-    token = body.get("token", "").strip()
-    if not token:
-        raise HTTPException(status_code=422, detail="Token is required.")
-    push_repository.save_push_token(current_user["user_id"], token)
-    return {"message": "Push token saved."}
-
-
 # ── People CRUD ───────────────────────────────────────────────────────────────
 
 @router.get("/people/")
