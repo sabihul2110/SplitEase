@@ -6,11 +6,6 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#0a0b0f"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.splitease.app",
@@ -43,14 +38,11 @@
     "runtimeVersion": {
       "policy": "appVersion"
     },
-    "updates": {
-      "url": "https://u.expo.dev/7644269a-572f-4859-adfa-294444863d68"
-    },
     "extra": {
       "eas": {
-        "projectId": "7644269a-572f-4859-adfa-294444863d68"
+        "projectId": "65d9e537-7893-4341-a5d7-5531ef671f7e"
       }
     },
-    "owner": "sabihul2110"
+    "owner": "spliteaseapp"
   }
 }

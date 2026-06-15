@@ -4,8 +4,9 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useRef, useState } from 'react';
 import {
-  ActivityIndicator, FlatList, Keyboard, Modal, Platform, RefreshControl,
-  ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,
+  ActivityIndicator, FlatList, Keyboard, KeyboardAvoidingView, Modal,
+  Platform, RefreshControl, ScrollView, StyleSheet, Text, TextInput,
+  TouchableOpacity, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as peopleApi from '../../api/people';
@@ -161,7 +162,10 @@ function AddPersonModal({ visible, onClose, onSuccess }) {
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={modal.overlay}>
+      <KeyboardAvoidingView
+        style={modal.overlay}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
         <TouchableOpacity style={StyleSheet.absoluteFill} onPress={onClose} activeOpacity={1} />
         <View style={modal.sheet}>
           <View style={modal.handle} />
@@ -275,7 +279,7 @@ function AddPersonModal({ visible, onClose, onSuccess }) {
             </TouchableOpacity>
           </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

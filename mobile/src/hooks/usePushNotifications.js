@@ -46,7 +46,8 @@ async function registerForPush() {
 
   try {
     const tokenData = await Notifications.getExpoPushTokenAsync({
-      projectId: '7644269a-572f-4859-adfa-294444863d68',
+      // projectId: '7644269a-572f-4859-adfa-294444863d68', // sabihul2110
+      projectId: '65d9e537-7893-4341-a5d7-5531ef671f7e', // splitease acc.
     });
     const token = tokenData.data;
     await client.post(ENDPOINTS.pushToken, { token });

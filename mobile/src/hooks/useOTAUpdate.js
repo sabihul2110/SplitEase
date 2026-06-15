@@ -1,12 +1,5 @@
 // SplitEase/mobile/src/hooks/useOTAUpdate.js
-//
-// Full state-machine OTA hook.
-//
-// FIX: Added `autoCheck` parameter (default: true for backward compat).
-// AccountScreen passes autoCheck=false so the hook doesn't fire on every
-// screen mount/focus — user taps "Check for Updates" manually instead.
-// SettingsScreen also passes autoCheck=false for the same reason.
-// OTAUpdateModal (background check) keeps autoCheck=true.
+
 //
 // States:
 //   idle        → no check done yet (or dismissed)
@@ -65,8 +58,7 @@ export function useOTAUpdate({ autoCheck = true } = {}) {
       return;
     }
     _check();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
+  }, []);
   const downloadUpdate = useCallback(async () => {
     if (__DEV__) {
       setState("downloading");
