@@ -121,10 +121,16 @@ def delete_user(user_id: int) -> None:
 
 
 def get_user_pending_settlements(user_id: int) -> list[dict]:
+    """
+    Returns all outstanding debts before allowing data reset.
+    Checks: group balances, active loans (money owed TO user), active borrows (user owes money).
+    """
     conn = get_connection()
     cur  = conn.cursor(dictionary=True)
+
+    # Group balances
     cur.execute("""
-        SELECT g.group_id, g.group_name,
+        SELECT g.group_id, g.group_name, 'group' AS debt_type,
             (
                 IFNULL((SELECT SUM(total_amount) FROM Expenses WHERE group_id = g.group_id AND payer_id = %s), 0)
                 - IFNULL((SELECT SUM(es.amount_owed) FROM Expense_Splits es JOIN Expenses e ON e.expense_id = es.expense_id WHERE e.group_id = g.group_id AND es.user_id = %s), 0)
@@ -135,11 +141,42 @@ def get_user_pending_settlements(user_id: int) -> list[dict]:
         JOIN Group_Members gm ON gm.group_id = g.group_id AND gm.user_id = %s
         HAVING ABS(net_balance) > 0.01
     """, (user_id, user_id, user_id, user_id, user_id))
-    rows = cur.fetchall()
+    group_rows = cur.fetchall()
+
+    # Active loans (others owe this user — user should collect first)
+    cur.execute("""
+        SELECT loan_id AS id, borrower_name AS counterparty,
+               'loan' AS debt_type, remaining_amount AS net_balance
+        FROM Loans
+        WHERE lender_user_id = %s AND status = 'active'
+    """, (user_id,))
+    loan_rows = cur.fetchall()
+
+    # Active borrows (user owes someone — must repay first)
+    cur.execute("""
+        SELECT borrow_id AS id, lender_name AS counterparty,
+               'borrow' AS debt_type, remaining_amount AS net_balance
+        FROM Borrows
+        WHERE borrower_user_id = %s AND status = 'active'
+    """, (user_id,))
+    borrow_rows = cur.fetchall()
+
+    # Active ledger entries
+    cur.execute("""
+        SELECT le.entry_id AS id, p.display_name AS counterparty,
+               le.direction AS debt_type, le.remaining_amount AS net_balance
+        FROM Ledger_Entries le
+        JOIN People p ON p.person_id = le.person_id
+        WHERE p.owner_user_id = %s AND le.status = 'active'
+    """, (user_id,))
+    ledger_rows = cur.fetchall()
+
     cur.close(); conn.close()
-    for r in rows:
+
+    all_rows = group_rows + loan_rows + borrow_rows + ledger_rows
+    for r in all_rows:
         r["net_balance"] = float(r["net_balance"])
-    return rows
+    return all_rows
 
 
 def reset_user_data(user_id: int) -> dict:
@@ -165,6 +202,32 @@ def reset_user_data(user_id: int) -> dict:
         cur.execute("DELETE FROM Borrows WHERE borrower_user_id = %s", (user_id,))
         borrows = cur.rowcount
         cur.execute("DELETE FROM Notifications WHERE user_id = %s", (user_id,))
+        cur.execute("DELETE FROM Ledger_Notifications WHERE recipient_id = %s OR sender_id = %s", (user_id, user_id))
+
+        # Delete ledger entries this user created (cascades from their People records on other users too)
+        # First: remove mirror entries on OTHER users' People screens that point back at this user
+        # These are entries created_by this user sitting under another user's person card
+        cur.execute(
+            """
+            DELETE le FROM Ledger_Entries le
+            JOIN People p ON p.person_id = le.person_id
+            WHERE le.created_by = %s AND p.owner_user_id != %s
+            """,
+            (user_id, user_id),
+        )
+        # Unlink People records on other users that were linked to this user
+        # (don't delete — just sever the link so the person card remains as custom)
+        cur.execute(
+            "UPDATE People SET linked_user_id = NULL WHERE linked_user_id = %s",
+            (user_id,),
+        )
+        # Now delete this user's own People + Ledger_Entries (cascade handles entries)
+        cur.execute("DELETE FROM People WHERE owner_user_id = %s", (user_id,))
+        # Bump token_version so any active sessions get 401'd on next request
+        cur.execute(
+            "UPDATE Users SET token_version = token_version + 1 WHERE user_id = %s",
+            (user_id,),
+        )
 
         # Group expenses they paid
         cur.execute("DELETE FROM Expenses WHERE payer_id = %s", (user_id,))
@@ -204,6 +267,7 @@ def admin_wipe_app(admin_user_id: int) -> dict:
     try:
         conn.start_transaction()
         cur.execute("DELETE FROM Notifications")
+        cur.execute("DELETE FROM Ledger_Notifications")
         cur.execute("DELETE FROM Invites")
         cur.execute("DELETE FROM Payments")
         cur.execute("DELETE FROM Expense_Splits")
@@ -214,6 +278,13 @@ def admin_wipe_app(admin_user_id: int) -> dict:
         cur.execute("DELETE FROM Income")
         cur.execute("DELETE FROM Loans")
         cur.execute("DELETE FROM Borrows")
+        cur.execute("DELETE FROM Ledger_Entries")
+        cur.execute("DELETE FROM People")
+        # Bump token_version for all non-admin users → their JWTs fail on next /me call → auto logout
+        cur.execute(
+            "UPDATE Users SET token_version = token_version + 1 WHERE user_id != %s",
+            (admin_user_id,),
+        )
         cur.execute("DELETE FROM Users WHERE user_id != %s", (admin_user_id,))
         conn.commit()
         return {"wiped": True}

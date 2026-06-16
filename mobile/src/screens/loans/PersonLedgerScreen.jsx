@@ -276,8 +276,8 @@ function EntryCard({ item, onRefresh, showToast, setAlert, isSelecting, isSelect
         </View>
       )}
 
-      {/* Delete — hidden during multi-select */}
-      {!isSelecting && (
+      {/* Delete — only creator can delete, hidden during multi-select */}
+      {!isSelecting && item.can_delete !== false && (
         <View style={{ alignItems: 'flex-end' }}>
           <TouchableOpacity style={styles.delBtn} onPress={handleDelete} disabled={deleting}>
             <Text style={styles.delText}>{deleting ? 'Deleting…' : 'Delete'}</Text>
@@ -615,8 +615,8 @@ export default function PersonLedgerScreen({ navigation, route }) {
             setAlert={setAlert}
             isSelecting={isSelecting}
             isSelected={selected.has(item.entry_id)}
-            onLongPress={() => toggleSelect(item.entry_id)}
-            onSelect={() => toggleSelect(item.entry_id)}
+            onLongPress={() => item.can_delete !== false && toggleSelect(item.entry_id)}
+            onSelect={() => item.can_delete !== false && toggleSelect(item.entry_id)}
           />
         )}
         contentContainerStyle={[styles.list, { paddingBottom: TAB_BAR_HEIGHT + SPACING.base }]}

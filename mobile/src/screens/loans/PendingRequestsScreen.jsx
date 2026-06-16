@@ -28,11 +28,11 @@ function RequestCard({ item, onAccept, onReject }) {
 
   const wrappedAccept = async () => {
     setProcessing('accept');
-    try { await onAccept(); } finally { setProcessing(null); }
+    try { await onAccept(); } catch { /* parent shows toast */ } finally { setProcessing(null); }
   };
   const wrappedReject = async () => {
     setProcessing('reject');
-    try { await onReject(); } finally { setProcessing(null); }
+    try { await onReject(); } catch { /* parent shows toast */ } finally { setProcessing(null); }
   };
   const isLent      = item.direction === 'lent';
   const accentColor = isLent ? '#f59e0b' : '#818cf8';
@@ -133,11 +133,17 @@ export default function PendingRequestsScreen({ navigation, route }) {
   }, [load]));
 
   async function handleAccept(entryId) {
-    await peopleApi.acceptEntry(entryId);
-    const updated = requests.filter(r => r.entry_id !== entryId);
-    setRequests(updated);
-    showToast('Entry accepted');
-    try { await ledgerNotifsApi.markAllLedgerRead(); } catch {}
+    try {
+      await peopleApi.acceptEntry(entryId);
+      const updated = requests.filter(r => r.entry_id !== entryId);
+      setRequests(updated);
+      showToast('Entry accepted');
+      try { await ledgerNotifsApi.markAllLedgerRead(); } catch {}
+      global.__refreshLedgerBadge?.();
+    } catch (err) {
+      const detail = err?.response?.data?.detail;
+      showToast(typeof detail === 'string' ? detail : 'Failed to accept', 'error');
+    }
   }
 
   function confirmReject(entryId, name) {
@@ -150,11 +156,17 @@ export default function PendingRequestsScreen({ navigation, route }) {
           text: 'Decline', style: 'destructive',
           onPress: async () => {
             setAlert(null);
-            await peopleApi.rejectEntry(entryId);
-            const updated = requests.filter(r => r.entry_id !== entryId);
-            setRequests(updated);
-            showToast('Request declined');
-            try { await ledgerNotifsApi.markAllLedgerRead(); } catch {}
+            try {
+              await peopleApi.rejectEntry(entryId);
+              const updated = requests.filter(r => r.entry_id !== entryId);
+              setRequests(updated);
+              showToast('Request declined');
+              try { await ledgerNotifsApi.markAllLedgerRead(); } catch {}
+              global.__refreshLedgerBadge?.();
+            } catch (err) {
+              const detail = err?.response?.data?.detail;
+              showToast(typeof detail === 'string' ? detail : 'Failed to decline', 'error');
+            }
           },
         },
       ],

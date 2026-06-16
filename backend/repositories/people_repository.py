@@ -117,13 +117,15 @@ def fetch_entries(person_id: int, owner_user_id: int) -> list[dict]:
         """
         SELECT le.entry_id, le.person_id, le.direction,
                le.amount, le.remaining_amount, le.note,
-               le.entry_date, le.status, le.created_at
+               le.entry_date, le.status, le.created_at,
+               le.created_by,
+               (le.created_by = %s) AS can_delete
         FROM   Ledger_Entries le
         JOIN   People p ON p.person_id = le.person_id
         WHERE  le.person_id = %s AND p.owner_user_id = %s
         ORDER  BY le.entry_date DESC, le.entry_id DESC
         """,
-        (person_id, owner_user_id),
+        (owner_user_id, person_id, owner_user_id),
     )
     rows = cur.fetchall()
     cur.close(); conn.close()
@@ -132,6 +134,7 @@ def fetch_entries(person_id: int, owner_user_id: int) -> list[dict]:
         r["remaining_amount"] = float(r["remaining_amount"])
         r["entry_date"]       = str(r["entry_date"])
         r["created_at"]       = str(r["created_at"])
+        r["can_delete"]       = bool(r["can_delete"])
     return rows
 
 
@@ -514,21 +517,60 @@ def fetch_entry_with_person(entry_id: int, user_id: int) -> dict | None:
 
 
 def delete_entry(entry_id: int, owner_user_id: int) -> bool:
+    """
+    Only the original creator (created_by) may delete an entry.
+    The mirror entry on the other user's People screen is also removed atomically.
+    """
     conn = get_connection()
-    cur  = conn.cursor()
+    cur  = conn.cursor(dictionary=True)
     try:
         conn.start_transaction()
+
+        # Verify caller is the creator
+        cur.execute(
+            """
+            SELECT le.entry_id, le.created_by, le.amount, le.entry_date,
+                   le.direction, p.owner_user_id
+            FROM   Ledger_Entries le
+            JOIN   People p ON p.person_id = le.person_id
+            WHERE  le.entry_id = %s
+            """,
+            (entry_id,),
+        )
+        row = cur.fetchone()
+        if not row:
+            return False
+        if row["created_by"] != owner_user_id:
+            raise ValueError("Only the person who created this entry can delete it.")
+
+        # Delete the entry itself
+        cur.execute("DELETE FROM Ledger_Entries WHERE entry_id = %s", (entry_id,))
+
+        # Also delete any mirror entry (same creator, same amount+date, on a different person card)
         cur.execute(
             """
             DELETE le FROM Ledger_Entries le
             JOIN   People p ON p.person_id = le.person_id
-            WHERE  le.entry_id = %s AND p.owner_user_id = %s
+            WHERE  le.created_by = %s
+              AND  le.amount     = %s
+              AND  le.entry_date = %s
+              AND  le.entry_id  != %s
+              AND  p.owner_user_id != %s
             """,
-            (entry_id, owner_user_id),
+            (
+                row["created_by"],
+                float(row["amount"]),
+                str(row["entry_date"]),
+                entry_id,
+                owner_user_id,
+            ),
         )
-        deleted = cur.rowcount > 0
+
         conn.commit()
-        return deleted
+        return True
+    except ValueError:
+        conn.rollback()
+        raise
     except Exception:
         conn.rollback()
         raise

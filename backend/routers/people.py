@@ -144,7 +144,10 @@ def delete_entry(
     entry_id: int,
     current_user: dict = Depends(get_current_user),
 ):
-    deleted = people_repository.delete_entry(entry_id, current_user["user_id"])
+    try:
+        deleted = people_repository.delete_entry(entry_id, current_user["user_id"])
+    except ValueError as exc:
+        raise HTTPException(status_code=403, detail=str(exc))
     if not deleted:
         raise HTTPException(status_code=404, detail="Entry not found.")
     return {"message": "Entry deleted."}
