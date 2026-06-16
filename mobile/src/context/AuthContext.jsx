@@ -80,6 +80,11 @@ export function AuthProvider({ children }) {
     await AsyncStorage.removeItem(STORAGE_KEY);
   }
 
+  React.useEffect(() => {
+    global.__authLogout = logout;
+    return () => { global.__authLogout = null; };
+  }, [logout]);
+
   async function updateUser(updates) {
     const updated = { ...user, ...updates };
     setUser(updated);

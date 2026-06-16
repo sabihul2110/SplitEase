@@ -53,8 +53,9 @@ client.interceptors.response.use(
       try {
         await AsyncStorage.removeItem(STORAGE_KEY);
       } catch {}
-      // Navigate to Login screen, resetting the stack
-      if (_navigationRef?.isReady()) {
+      if (global.__authLogout) {
+        global.__authLogout();
+      } else if (_navigationRef?.isReady()) {
         _navigationRef.resetRoot({
           index: 0,
           routes: [{ name: 'Auth', params: { screen: 'Login' } }],
