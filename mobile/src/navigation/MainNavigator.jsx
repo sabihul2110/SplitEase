@@ -150,6 +150,11 @@ export default function MainNavigator() {
     fetchBadgeRef.current?.();
   }, []);
 
+  React.useEffect(() => {
+    global.__refreshLedgerBadge = () => fetchBadgeRef.current?.();
+    return () => { global.__refreshLedgerBadge = null; };
+  }, []);
+
   return (
     <Tab.Navigator
       screenListeners={{

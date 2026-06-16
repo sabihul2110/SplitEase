@@ -677,11 +677,12 @@ export default function LoansScreen({ navigation }) {
   const [borrows, setBorrows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [pageTab, setPageTab] = useState("lent"); // lent | borrowed
-  const [filterTab, setFilterTab] = useState("all"); // all | active | repaid
+  const [pageTab, setPageTab] = useState("lent");
+  const [filterTab, setFilterTab] = useState("all");
   const [showAdd, setShowAdd] = useState(false);
   const [toast, setToast]   = useState({ msg: '', type: 'success' });
   const [alert, setAlert]   = useState(null);
+  const [peopleDot, setPeopleDot] = useState(false);
 
   function showToast(msg, type = 'success') {
     setToast({ msg, type });
@@ -710,6 +711,12 @@ export default function LoansScreen({ navigation }) {
   useFocusEffect(
     useCallback(() => {
       load();
+      import('../../api/ledgerNotifications').then(({ getLedgerUnread }) => {
+        getLedgerUnread().then(res => {
+          setPeopleDot((res.data?.count || 0) > 0);
+        }).catch(() => setPeopleDot(false));
+      });
+      global.__refreshLedgerBadge?.();
     }, [load]),
   );
 
@@ -792,11 +799,24 @@ export default function LoansScreen({ navigation }) {
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <TouchableOpacity
               style={[styles.addHeaderBtn, { backgroundColor: COLORS.surface2, borderWidth: 1, borderColor: COLORS.border }]}
-              onPress={() => navigation.navigate('People')}
+              onPress={() => {
+                setPeopleDot(false);
+                navigation.navigate('People');
+              }}
               activeOpacity={0.85}
             >
-              <Icons.users size={15} color={COLORS.text} />
-              <Text style={[styles.addHeaderBtnText, { color: COLORS.text }]}>People</Text>
+              <View style={{ position: 'relative' }}>
+                <Icons.users size={15} color={peopleDot ? COLORS.primary : COLORS.text} />
+                {peopleDot && (
+                  <View style={{
+                    position: 'absolute', top: -3, right: -4,
+                    width: 8, height: 8, borderRadius: 4,
+                    backgroundColor: COLORS.danger,
+                    borderWidth: 1.5, borderColor: COLORS.surface,
+                  }} />
+                )}
+              </View>
+              <Text style={[styles.addHeaderBtnText, { color: peopleDot ? COLORS.primary : COLORS.text }]}>People</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.addHeaderBtn}

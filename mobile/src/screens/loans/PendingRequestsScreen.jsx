@@ -23,7 +23,17 @@ function fmt(n) {
   return Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
 }
 
-function RequestCard({ item, onAccept, onReject, processing }) {
+function RequestCard({ item, onAccept, onReject }) {
+  const [processing, setProcessing] = React.useState(null);
+
+  const wrappedAccept = async () => {
+    setProcessing('accept');
+    try { await onAccept(); } finally { setProcessing(null); }
+  };
+  const wrappedReject = async () => {
+    setProcessing('reject');
+    try { await onReject(); } finally { setProcessing(null); }
+  };
   const isLent      = item.direction === 'lent';
   const accentColor = isLent ? '#f59e0b' : '#818cf8';
 
@@ -65,10 +75,10 @@ function RequestCard({ item, onAccept, onReject, processing }) {
       <View style={styles.actions}>
         <TouchableOpacity
           style={styles.rejectBtn}
-          onPress={onReject}
-          disabled={processing}
+          onPress={wrappedReject}
+          disabled={processing !== null}
         >
-          {processing ? <ActivityIndicator size="small" color={COLORS.danger} /> : (
+          {processing === 'reject' ? <ActivityIndicator size="small" color={COLORS.danger} /> : (
             <>
               <Icons.close size={14} color={COLORS.danger} />
               <Text style={styles.rejectText}>Decline</Text>
@@ -77,10 +87,10 @@ function RequestCard({ item, onAccept, onReject, processing }) {
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.acceptBtn}
-          onPress={onAccept}
-          disabled={processing}
+          onPress={wrappedAccept}
+          disabled={processing !== null}
         >
-          {processing ? <ActivityIndicator size="small" color="#fff" /> : (
+          {processing === 'accept' ? <ActivityIndicator size="small" color="#fff" /> : (
             <>
               <Icons.check size={14} color="#fff" />
               <Text style={styles.acceptText}>Accept</Text>
@@ -117,23 +127,17 @@ export default function PendingRequestsScreen({ navigation, route }) {
     }
   }, []);
 
-  useFocusEffect(useCallback(() => { load(); }, [load]));
+  useFocusEffect(useCallback(() => {
+    load();
+    ledgerNotifsApi.markAllLedgerRead().catch(() => {});
+  }, [load]));
 
   async function handleAccept(entryId) {
-    setProcessing(String(entryId));
-    try {
-      await peopleApi.acceptEntry(entryId);
-      const updated = requests.filter(r => r.entry_id !== entryId);
-      setRequests(updated);
-      showToast('Entry accepted');
-      // Always mark all ledger notifs read so the badge clears on PeopleScreen
-      try { await ledgerNotifsApi.markAllLedgerRead(); } catch {}
-    } catch (err) {
-      const detail = err?.response?.data?.detail;
-      showToast(typeof detail === 'string' ? detail : 'Failed', 'error');
-    } finally {
-      setProcessing(null);
-    }
+    await peopleApi.acceptEntry(entryId);
+    const updated = requests.filter(r => r.entry_id !== entryId);
+    setRequests(updated);
+    showToast('Entry accepted');
+    try { await ledgerNotifsApi.markAllLedgerRead(); } catch {}
   }
 
   function confirmReject(entryId, name) {
@@ -146,18 +150,11 @@ export default function PendingRequestsScreen({ navigation, route }) {
           text: 'Decline', style: 'destructive',
           onPress: async () => {
             setAlert(null);
-            setProcessing(String(entryId));
-            try {
-              await peopleApi.rejectEntry(entryId);
-              const updated = requests.filter(r => r.entry_id !== entryId);
-              setRequests(updated);
-              showToast('Request declined');
-              try { await ledgerNotifsApi.markAllLedgerRead(); } catch {}
-            } catch {
-              showToast('Failed', 'error');
-            } finally {
-              setProcessing(null);
-            }
+            await peopleApi.rejectEntry(entryId);
+            const updated = requests.filter(r => r.entry_id !== entryId);
+            setRequests(updated);
+            showToast('Request declined');
+            try { await ledgerNotifsApi.markAllLedgerRead(); } catch {}
           },
         },
       ],
@@ -200,7 +197,6 @@ export default function PendingRequestsScreen({ navigation, route }) {
         renderItem={({ item }) => (
           <RequestCard
             item={item}
-            processing={processing === String(item.entry_id)}
             onAccept={() => handleAccept(item.entry_id)}
             onReject={() => confirmReject(item.entry_id, item.requested_by)}
           />

@@ -285,7 +285,7 @@ def accept_entry(entry_id: int, recipient_user_id: int) -> dict:
                 )
         recip_person_id = recip_person["person_id"] if recip_person else cur.lastrowid
 
-        # 4. Check if a mirror entry already exists for user 2 (idempotent)
+        # 4. Check if a mirror Ledger_Entry already exists for user 2 (idempotent)
         cur.execute(
             """
             SELECT entry_id FROM Ledger_Entries
@@ -297,7 +297,6 @@ def accept_entry(entry_id: int, recipient_user_id: int) -> dict:
              float(row["amount"]), str(row["entry_date"])),
         )
         if not cur.fetchone():
-            # Mirror direction: if user 1 lent, user 2 borrowed (and vice versa)
             mirror_direction = "borrowed" if row["direction"] == "lent" else "lent"
             cur.execute(
                 """
@@ -308,7 +307,7 @@ def accept_entry(entry_id: int, recipient_user_id: int) -> dict:
                 """,
                 (
                     recip_person_id,
-                    row["created_by"],          # original creator owns this entry
+                    row["created_by"],
                     mirror_direction,
                     float(row["amount"]),
                     float(row["remaining_amount"]),
@@ -316,6 +315,62 @@ def accept_entry(entry_id: int, recipient_user_id: int) -> dict:
                     str(row["entry_date"]),
                 ),
             )
+
+        # 5. Sync to Loans / Borrows tables for the accepting user (user 2)
+        #    direction='lent' by user 1 means user 2 borrowed
+        #    direction='borrowed' by user 1 means user 2 lent
+        amt = float(row["amount"])
+        note = row["note"]
+        entry_date = str(row["entry_date"])
+        creator_id = row["created_by"]
+
+        # Fetch creator's display name for the Loans/Borrows record
+        cur.execute("SELECT name FROM Users WHERE user_id = %s", (creator_id,))
+        creator_user = cur.fetchone()
+        creator_display = creator_user["name"] if creator_user else creator_name
+
+        if row["direction"] == "lent":
+            # User 1 lent → user 2 needs a Borrows row (they borrowed)
+            cur.execute(
+                """
+                SELECT borrow_id FROM Borrows
+                WHERE borrower_user_id = %s AND lender_name = %s
+                  AND amount = %s AND borrow_date = %s
+                LIMIT 1
+                """,
+                (recipient_user_id, creator_display, amt, entry_date),
+            )
+            if not cur.fetchone():
+                cur.execute(
+                    """
+                    INSERT INTO Borrows
+                        (borrower_user_id, lender_name, amount, remaining_amount,
+                         note, borrow_date, status)
+                    VALUES (%s, %s, %s, %s, %s, %s, 'active')
+                    """,
+                    (recipient_user_id, creator_display, amt, amt, note, entry_date),
+                )
+        else:
+            # User 1 borrowed → user 2 needs a Loans row (they lent)
+            cur.execute(
+                """
+                SELECT loan_id FROM Loans
+                WHERE lender_user_id = %s AND borrower_name = %s
+                  AND amount = %s AND loan_date = %s
+                LIMIT 1
+                """,
+                (recipient_user_id, creator_display, amt, entry_date),
+            )
+            if not cur.fetchone():
+                cur.execute(
+                    """
+                    INSERT INTO Loans
+                        (lender_user_id, borrower_name, amount, remaining_amount,
+                         note, loan_date, status)
+                    VALUES (%s, %s, %s, %s, %s, %s, 'active')
+                    """,
+                    (recipient_user_id, creator_display, amt, amt, note, entry_date),
+                )
 
         conn.commit()
         return row
