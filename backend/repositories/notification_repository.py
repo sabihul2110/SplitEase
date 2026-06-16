@@ -119,6 +119,31 @@ def get_group_name(group_id: int) -> str:
     return row[0] if row else "your group"
 
 
+def create_ledger_outcome_notification(
+    recipient_id: int,
+    sender_id:    int,
+    message:      str,
+) -> None:
+    """Write an entry_outcome notification to the main Notifications table.
+    This is what User 1 (the creator) sees in their bell after User 2
+    accepts or rejects their ledger entry request.
+    """
+    conn = get_connection()
+    cur  = conn.cursor()
+    try:
+        cur.execute(
+            """
+            INSERT INTO Notifications
+                (user_id, from_user_id, type, message, group_id)
+            VALUES (%s, %s, 'entry_outcome', %s, NULL)
+            """,
+            (recipient_id, sender_id, message),
+        )
+        conn.commit()
+    finally:
+        cur.close(); conn.close()
+
+
 def get_user_by_id_in_group(user_id: int, group_id: int) -> dict | None:
     conn = get_connection()
     cur  = conn.cursor(dictionary=True)

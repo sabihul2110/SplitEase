@@ -55,6 +55,26 @@ function timeAgo(dateStr) {
   return "Just now";
 }
 
+// function getNotifMeta(type) {
+//   if (type === "payment" || type === "settlement")
+//     return {
+//       Icon: Icons.checkCircle,
+//       color: COLORS.success,
+//       bg: "rgba(16,185,129,0.12)",
+//     };
+//   if (type === "expense")
+//     return {
+//       Icon: Icons.receipt,
+//       color: COLORS.primary,
+//       bg: "rgba(37,99,235,0.12)",
+//     };
+//   return {
+//     Icon: Icons.bell,
+//     color: COLORS.warning,
+//     bg: "rgba(245,158,11,0.12)",
+//   };
+// }
+
 function getNotifMeta(type) {
   if (type === "payment" || type === "settlement")
     return {
@@ -67,6 +87,12 @@ function getNotifMeta(type) {
       Icon: Icons.receipt,
       color: COLORS.primary,
       bg: "rgba(37,99,235,0.12)",
+    };
+  if (type === "entry_outcome")
+    return {
+      Icon: Icons.users,
+      color: "#818cf8",
+      bg: "rgba(129,140,248,0.12)",
     };
   return {
     Icon: Icons.bell,

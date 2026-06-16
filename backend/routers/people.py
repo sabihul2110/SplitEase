@@ -5,7 +5,7 @@ Route order matters — static paths before dynamic {person_id} paths.
 
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query
 from schemas.people import PersonCreate, EntryCreate, EntryRepay
-from repositories import people_repository, push_repository, ledger_notification_repository
+from repositories import people_repository, push_repository, ledger_notification_repository, notification_repository
 from services.push_service import send_push
 from core.dependencies import get_current_user
 
@@ -62,13 +62,22 @@ def accept_entry(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
-    msg = f"{row['display_name']} accepted your ledger entry of ₹{float(row['amount']):,.0f}."
+    acceptor_name = row.get("creator_name") or row["display_name"]
+    msg = f"{acceptor_name} accepted your ledger entry of ₹{float(row['amount']):,.0f}."
+
+    # Ledger notification → drives the red dot on User 1's Loans tab
     ledger_notification_repository.create_ledger_notif(
         recipient_id = row["created_by"],
         sender_id    = current_user["user_id"],
         notif_type   = "entry_accepted",
         message      = msg,
         entry_id     = entry_id,
+    )
+    # Main notification → User 1 sees it in their bell with full message
+    notification_repository.create_ledger_outcome_notification(
+        recipient_id = row["created_by"],
+        sender_id    = current_user["user_id"],
+        message      = msg,
     )
     creator_token = push_repository.get_push_token(row["created_by"])
     background_tasks.add_task(
@@ -88,13 +97,21 @@ def reject_entry(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
-    msg = f"{row['display_name']} rejected your ledger entry of ₹{float(row['amount']):,.0f}."
+    msg = f"{row['display_name']} declined your ledger entry of ₹{float(row['amount']):,.0f}."
+
+    
     ledger_notification_repository.create_ledger_notif(
         recipient_id = row["created_by"],
         sender_id    = current_user["user_id"],
         notif_type   = "entry_rejected",
         message      = msg,
         entry_id     = entry_id,
+    )
+    
+    notification_repository.create_ledger_outcome_notification(
+        recipient_id = row["created_by"],
+        sender_id    = current_user["user_id"],
+        message      = msg,
     )
     creator_token = push_repository.get_push_token(row["created_by"])
     background_tasks.add_task(

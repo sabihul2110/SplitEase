@@ -367,8 +367,9 @@ def accept_entry(entry_id: int, recipient_user_id: int) -> dict:
         creator_user = cur.fetchone()
         creator_display = creator_user["name"] if creator_user else creator_name
 
+        # --- Sync Loans/Borrows for the ACCEPTOR (User 2) ---
         if row["direction"] == "lent":
-            # User 1 lent → user 2 needs a Borrows row (they borrowed)
+            # User 1 lent → User 2 borrowed → User 2 needs a Borrows row
             cur.execute(
                 """
                 SELECT borrow_id FROM Borrows
@@ -389,7 +390,7 @@ def accept_entry(entry_id: int, recipient_user_id: int) -> dict:
                     (recipient_user_id, creator_display, amt, amt, note, entry_date),
                 )
         else:
-            # User 1 borrowed → user 2 needs a Loans row (they lent)
+            # User 1 borrowed → User 2 lent → User 2 needs a Loans row
             cur.execute(
                 """
                 SELECT loan_id FROM Loans
@@ -408,6 +409,54 @@ def accept_entry(entry_id: int, recipient_user_id: int) -> dict:
                     VALUES (%s, %s, %s, %s, %s, %s, 'active')
                     """,
                     (recipient_user_id, creator_display, amt, amt, note, entry_date),
+                )
+
+        # --- Sync Loans/Borrows for the CREATOR ---
+        cur.execute("SELECT name FROM Users WHERE user_id = %s", (recipient_user_id,))
+        acceptor_user = cur.fetchone()
+        acceptor_display = acceptor_user["name"] if acceptor_user else row["display_name"]
+
+        if row["direction"] == "lent":
+            # User 1 lent → User 1 needs a Loans row
+            cur.execute(
+                """
+                SELECT loan_id FROM Loans
+                WHERE lender_user_id = %s AND borrower_name = %s
+                  AND amount = %s AND loan_date = %s
+                LIMIT 1
+                """,
+                (creator_id, acceptor_display, amt, entry_date),
+            )
+            if not cur.fetchone():
+                cur.execute(
+                    """
+                    INSERT INTO Loans
+                        (lender_user_id, borrower_name, amount, remaining_amount,
+                         note, loan_date, status)
+                    VALUES (%s, %s, %s, %s, %s, %s, 'active')
+                    """,
+                    (creator_id, acceptor_display, amt, amt, note, entry_date),
+                )
+        else:
+            # User 1 borrowed → User 1 needs a Borrows row
+            cur.execute(
+                """
+                SELECT borrow_id FROM Borrows
+                WHERE borrower_user_id = %s AND lender_name = %s
+                  AND amount = %s AND borrow_date = %s
+                LIMIT 1
+                """,
+                (creator_id, acceptor_display, amt, entry_date),
+            )
+            if not cur.fetchone():
+                cur.execute(
+                    """
+                    INSERT INTO Borrows
+                        (borrower_user_id, lender_name, amount, remaining_amount,
+                         note, borrow_date, status)
+                    VALUES (%s, %s, %s, %s, %s, %s, 'active')
+                    """,
+                    (creator_id, acceptor_display, amt, amt, note, entry_date),
                 )
 
         conn.commit()
