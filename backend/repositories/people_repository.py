@@ -148,11 +148,12 @@ def insert_entry(
     is_pending:  bool = False,
 ) -> int:
     conn = get_connection()
-    cur  = conn.cursor()
+    cur  = conn.cursor(dictionary=True)
     try:
         conn.start_transaction()
         amt    = round(float(amount), 2)
         status = "pending" if is_pending else "active"
+
         cur.execute(
             """
             INSERT INTO Ledger_Entries
@@ -162,6 +163,40 @@ def insert_entry(
             (person_id, created_by, direction, amt, amt, note or None, entry_date, status),
         )
         new_id = cur.lastrowid
+
+        # Fetch person to get display_name for the Loans/Borrows row
+        cur.execute(
+            "SELECT display_name, linked_user_id FROM People WHERE person_id = %s",
+            (person_id,),
+        )
+        person = cur.fetchone()
+        person_name = person["display_name"] if person else "Unknown"
+        is_linked   = person["linked_user_id"] is not None if person else False
+
+        # Only sync to Loans/Borrows immediately if NOT pending (custom person or no link)
+        # If pending, the sync happens in accept_entry when the other user accepts
+        if not is_pending:
+            if direction == "lent":
+                # Creator lent money → create a Loans row
+                cur.execute(
+                    """
+                    INSERT INTO Loans
+                        (lender_user_id, borrower_name, amount, remaining_amount, note, loan_date, status)
+                    VALUES (%s, %s, %s, %s, %s, %s, 'active')
+                    """,
+                    (created_by, person_name, amt, amt, note or None, entry_date),
+                )
+            else:
+                # Creator borrowed money → create a Borrows row
+                cur.execute(
+                    """
+                    INSERT INTO Borrows
+                        (borrower_user_id, lender_name, amount, remaining_amount, note, borrow_date, status)
+                    VALUES (%s, %s, %s, %s, %s, %s, 'active')
+                    """,
+                    (created_by, person_name, amt, amt, note or None, entry_date),
+                )
+
         conn.commit()
         return new_id
     except Exception:

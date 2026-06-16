@@ -52,6 +52,15 @@ export function AuthProvider({ children }) {
     localStorage.removeItem("expense_user");
   }
 
+  // Expose logout globally so axios 401 interceptor can trigger it
+  useEffect(() => {
+    window.__authLogout = () => {
+      setUser(null);
+      localStorage.removeItem("expense_user");
+    };
+    return () => { window.__authLogout = null; };
+  }, []);
+
   async function refreshUser() {
     try {
       const { data } = await getMe();

@@ -35,7 +35,12 @@ api.interceptors.response.use(
                          window.location.pathname.startsWith("/join/");
       if (!isAuthPage) {
         localStorage.removeItem("expense_user");
-        window.location.href = "/login";
+        // Use global logout if AuthContext has registered it (avoids hard reload race)
+        if (window.__authLogout) {
+          window.__authLogout();
+        } else {
+          window.location.href = "/login";
+        }
       }
     }
     return Promise.reject(error);
