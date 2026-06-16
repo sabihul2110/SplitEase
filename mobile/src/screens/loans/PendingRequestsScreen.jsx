@@ -120,7 +120,7 @@ export default function PendingRequestsScreen({ navigation, route }) {
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   async function handleAccept(entryId) {
-    setProcessing(entryId);
+    setProcessing(String(entryId));
     try {
       await peopleApi.acceptEntry(entryId);
       const updated = requests.filter(r => r.entry_id !== entryId);
@@ -146,7 +146,7 @@ export default function PendingRequestsScreen({ navigation, route }) {
           text: 'Decline', style: 'destructive',
           onPress: async () => {
             setAlert(null);
-            setProcessing(entryId);
+            setProcessing(String(entryId));
             try {
               await peopleApi.rejectEntry(entryId);
               const updated = requests.filter(r => r.entry_id !== entryId);
@@ -200,7 +200,7 @@ export default function PendingRequestsScreen({ navigation, route }) {
         renderItem={({ item }) => (
           <RequestCard
             item={item}
-            processing={processing === item.entry_id}
+            processing={processing === String(item.entry_id)}
             onAccept={() => handleAccept(item.entry_id)}
             onReject={() => confirmReject(item.entry_id, item.requested_by)}
           />

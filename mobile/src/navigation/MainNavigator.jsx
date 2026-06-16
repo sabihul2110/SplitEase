@@ -129,6 +129,7 @@ const Tab = createBottomTabNavigator();
 
 export default function MainNavigator() {
   const [ledgerBadge, setLedgerBadge] = React.useState(0);
+  const fetchBadgeRef = React.useRef(null);
 
   React.useEffect(() => {
     let active = true;
@@ -139,13 +140,21 @@ export default function MainNavigator() {
         if (active) setLedgerBadge(res.data?.count || 0);
       } catch { if (active) setLedgerBadge(0); }
     }
+    fetchBadgeRef.current = fetchBadge;
     fetchBadge();
-    const interval = setInterval(fetchBadge, 30000); // refresh every 30s
+    const interval = setInterval(fetchBadge, 15000);
     return () => { active = false; clearInterval(interval); };
+  }, []);
+
+  const handleNavStateChange = React.useCallback(() => {
+    fetchBadgeRef.current?.();
   }, []);
 
   return (
     <Tab.Navigator
+      screenListeners={{
+        state: handleNavStateChange,
+      }}
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarStyle: {

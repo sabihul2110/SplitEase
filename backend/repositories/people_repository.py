@@ -177,13 +177,25 @@ def get_or_create_reciprocal_person(
     conn = get_connection()
     cur  = conn.cursor(dictionary=True)
     try:
-        # Check if reciprocal already exists
         cur.execute(
             "SELECT person_id FROM People WHERE owner_user_id = %s AND linked_user_id = %s",
             (owner_user_id, linked_user_id),
         )
         row = cur.fetchone()
         if row:
+            return row["person_id"]
+        cur.execute(
+            "SELECT person_id FROM People WHERE owner_user_id = %s AND display_name = %s",
+            (owner_user_id, display_name.strip()),
+        )
+        row = cur.fetchone()
+        if row:
+            # Link them now
+            cur.execute(
+                "UPDATE People SET linked_user_id = %s WHERE person_id = %s",
+                (linked_user_id, row["person_id"]),
+            )
+            conn.commit()
             return row["person_id"]
         cur.close(); conn.close()
         return insert_person(owner_user_id, display_name, linked_user_id)
@@ -199,7 +211,8 @@ def get_or_create_reciprocal_person(
 def accept_entry(entry_id: int, recipient_user_id: int) -> dict:
     """
     Accept a pending entry. Only callable by the linked user who received the request.
-    Verifies via People.linked_user_id that the caller is the intended recipient.
+    Also creates/finds the reciprocal People record and inserts a mirror Ledger_Entry
+    for the accepting user so they can see it in their own People screen.
     """
     conn = get_connection()
     cur  = conn.cursor(dictionary=True)
@@ -209,6 +222,7 @@ def accept_entry(entry_id: int, recipient_user_id: int) -> dict:
             """
             SELECT le.entry_id, le.status, le.person_id,
                    le.created_by, le.direction, le.amount,
+                   le.remaining_amount, le.note, le.entry_date,
                    p.linked_user_id, p.owner_user_id, p.display_name
             FROM   Ledger_Entries le
             JOIN   People p ON p.person_id = le.person_id
@@ -224,15 +238,86 @@ def accept_entry(entry_id: int, recipient_user_id: int) -> dict:
             raise ValueError("Entry is not pending.")
         if row["linked_user_id"] != recipient_user_id:
             raise ValueError("Not authorised to accept this entry.")
+
+        # 1. Mark the original entry active
         cur.execute(
             "UPDATE Ledger_Entries SET status = 'active' WHERE entry_id = %s",
             (entry_id,),
         )
-        conn.commit()
-        # Fetch creator's name for the reciprocal People record
+
+        # 2. Fetch creator's name for the reciprocal People record
         cur.execute("SELECT name FROM Users WHERE user_id = %s", (row["created_by"],))
         creator = cur.fetchone()
-        row["creator_name"] = creator["name"] if creator else "Unknown"
+        creator_name = creator["name"] if creator else "Unknown"
+        row["creator_name"] = creator_name
+
+        # 3. Upsert reciprocal People record for the accepting user (user 2)
+        #    They need a person card pointing back at the creator (user 1)
+        cur.execute(
+            """
+            SELECT person_id FROM People
+            WHERE owner_user_id = %s AND linked_user_id = %s
+            """,
+            (recipient_user_id, row["created_by"]),
+        )
+        recip_person = cur.fetchone()
+        if not recip_person:
+            # Try by display name first
+            cur.execute(
+                """
+                SELECT person_id FROM People
+                WHERE owner_user_id = %s AND display_name = %s
+                """,
+                (recipient_user_id, creator_name),
+            )
+            recip_person = cur.fetchone()
+            if recip_person:
+                # Link the existing person card
+                cur.execute(
+                    "UPDATE People SET linked_user_id = %s WHERE person_id = %s",
+                    (row["created_by"], recip_person["person_id"]),
+                )
+            else:
+                # Create a new person card for user 2 pointing at user 1
+                cur.execute(
+                    "INSERT INTO People (owner_user_id, display_name, linked_user_id) VALUES (%s, %s, %s)",
+                    (recipient_user_id, creator_name, row["created_by"]),
+                )
+        recip_person_id = recip_person["person_id"] if recip_person else cur.lastrowid
+
+        # 4. Check if a mirror entry already exists for user 2 (idempotent)
+        cur.execute(
+            """
+            SELECT entry_id FROM Ledger_Entries
+            WHERE person_id = %s AND created_by = %s
+              AND amount = %s AND entry_date = %s
+            LIMIT 1
+            """,
+            (recip_person_id, row["created_by"],
+             float(row["amount"]), str(row["entry_date"])),
+        )
+        if not cur.fetchone():
+            # Mirror direction: if user 1 lent, user 2 borrowed (and vice versa)
+            mirror_direction = "borrowed" if row["direction"] == "lent" else "lent"
+            cur.execute(
+                """
+                INSERT INTO Ledger_Entries
+                    (person_id, created_by, direction, amount, remaining_amount,
+                     note, entry_date, status)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, 'active')
+                """,
+                (
+                    recip_person_id,
+                    row["created_by"],          # original creator owns this entry
+                    mirror_direction,
+                    float(row["amount"]),
+                    float(row["remaining_amount"]),
+                    row["note"],
+                    str(row["entry_date"]),
+                ),
+            )
+
+        conn.commit()
         return row
     except Exception:
         conn.rollback()
