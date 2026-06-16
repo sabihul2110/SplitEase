@@ -164,8 +164,8 @@ function AddPersonModal({ visible, onClose, onSuccess }) {
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose} statusBarTranslucent>
       <KeyboardAvoidingView
         style={modal.overlay}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={0}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}
       >
         <TouchableOpacity style={StyleSheet.absoluteFill} onPress={onClose} activeOpacity={1} />
         <View style={modal.sheet}>
@@ -413,7 +413,7 @@ export default function PeopleScreen({ navigation }) {
             <View style={{ flexDirection: 'row', gap: 8 }}>
               <TouchableOpacity
                 style={[styles.addBtn, { backgroundColor: COLORS.surface2, borderWidth: 1, borderColor: COLORS.border }]}
-                onPress={() => navigation.navigate('PendingRequests')}
+                onPress={() => navigation.navigate('PendingRequests', { onReturn: () => load(true) })}
                 activeOpacity={0.85}
               >
                 <Icons.bell size={15} color={pendingCount > 0 ? COLORS.warning : COLORS.text} />

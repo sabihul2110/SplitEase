@@ -25,6 +25,63 @@ def fetch_loans(user_id: int) -> list[dict]:
     return rows
 
 
+def _find_registered_user_by_name(cur, name: str) -> int | None:
+    """Return user_id if exactly one registered user matches the name (case-insensitive)."""
+    cur.execute(
+        "SELECT user_id FROM Users WHERE LOWER(name) = LOWER(%s) LIMIT 1",
+        (name.strip(),),
+    )
+    row = cur.fetchone()
+    return row[0] if row else None
+
+
+def _upsert_person_and_entry(
+    cur,
+    owner_user_id: int,
+    display_name: str,
+    linked_user_id: int | None,
+    direction: str,       # 'lent' or 'borrowed'
+    amount: float,
+    note: str | None,
+    entry_date: str,
+    status: str = 'active',
+) -> None:
+    """
+    Ensure a People record exists for owner_user_id + display_name,
+    then insert a Ledger_Entry for it.
+    If linked_user_id is set, the entry starts as 'pending' so the other
+    user must acknowledge it — otherwise it goes straight to 'active'.
+    """
+    # Upsert person
+    cur.execute(
+        """
+        INSERT INTO People (owner_user_id, display_name, linked_user_id)
+        VALUES (%s, %s, %s)
+        ON DUPLICATE KEY UPDATE
+            linked_user_id = IF(linked_user_id IS NULL AND VALUES(linked_user_id) IS NOT NULL,
+                                VALUES(linked_user_id), linked_user_id)
+        """,
+        (owner_user_id, display_name.strip(), linked_user_id),
+    )
+    cur.execute(
+        "SELECT person_id FROM People WHERE owner_user_id = %s AND display_name = %s",
+        (owner_user_id, display_name.strip()),
+    )
+    person_id = cur.fetchone()[0]
+
+    entry_status = 'pending' if linked_user_id else status
+    cur.execute(
+        """
+        INSERT INTO Ledger_Entries
+            (person_id, created_by, direction, amount, remaining_amount, note, entry_date, status)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        """,
+        (person_id, owner_user_id, direction,
+         round(amount, 2), round(amount, 2),
+         note or None, entry_date, entry_status),
+    )
+
+
 def insert_loan(
     lender_user_id: int, borrower_name: str,
     amount: float, note: str | None, loan_date: str,
@@ -44,6 +101,20 @@ def insert_loan(
              note or None, loan_date),
         )
         new_id = cur.lastrowid
+
+        # Auto-sync to People / Ledger_Entries
+        linked_uid = _find_registered_user_by_name(cur, borrower_name)
+        _upsert_person_and_entry(
+            cur,
+            owner_user_id=lender_user_id,
+            display_name=borrower_name.strip(),
+            linked_user_id=linked_uid,
+            direction='lent',
+            amount=round(float(amount), 2),
+            note=note,
+            entry_date=loan_date,
+        )
+
         conn.commit()
         return new_id
     except Exception:

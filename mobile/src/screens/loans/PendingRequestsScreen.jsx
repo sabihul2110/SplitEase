@@ -92,11 +92,11 @@ function RequestCard({ item, onAccept, onReject, processing }) {
   );
 }
 
-export default function PendingRequestsScreen({ navigation }) {
+export default function PendingRequestsScreen({ navigation, route }) {
   const [requests, setRequests]   = useState([]);
   const [loading, setLoading]     = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [processing, setProcessing] = useState(null); // entry_id being processed
+  const [processing, setProcessing] = useState(null);
   const [toast, setToast]         = useState({ msg: '', type: 'success' });
   const [alert, setAlert]         = useState(null);
 
@@ -126,9 +126,8 @@ export default function PendingRequestsScreen({ navigation }) {
       const updated = requests.filter(r => r.entry_id !== entryId);
       setRequests(updated);
       showToast('Entry accepted');
-      if (updated.length === 0) {
-        try { await ledgerNotifsApi.markAllLedgerRead(); } catch {}
-      }
+      // Always mark all ledger notifs read so the badge clears on PeopleScreen
+      try { await ledgerNotifsApi.markAllLedgerRead(); } catch {}
     } catch (err) {
       const detail = err?.response?.data?.detail;
       showToast(typeof detail === 'string' ? detail : 'Failed', 'error');
@@ -150,8 +149,10 @@ export default function PendingRequestsScreen({ navigation }) {
             setProcessing(entryId);
             try {
               await peopleApi.rejectEntry(entryId);
-              setRequests(prev => prev.filter(r => r.entry_id !== entryId));
+              const updated = requests.filter(r => r.entry_id !== entryId);
+              setRequests(updated);
               showToast('Request declined');
+              try { await ledgerNotifsApi.markAllLedgerRead(); } catch {}
             } catch {
               showToast('Failed', 'error');
             } finally {
@@ -169,7 +170,10 @@ export default function PendingRequestsScreen({ navigation }) {
         title="Pending Requests"
         compact
         showBack
-        onBack={() => navigation.goBack()}
+        onBack={() => {
+          route.params?.onReturn?.();
+          navigation.goBack();
+        }}
       />
 
       <FlatList

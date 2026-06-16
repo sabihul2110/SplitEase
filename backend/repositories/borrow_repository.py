@@ -32,6 +32,7 @@ def insert_borrow(
     note: str | None,
     borrow_date: str,
 ) -> int:
+    from repositories.loan_repository import _find_registered_user_by_name, _upsert_person_and_entry
     conn = get_connection()
     cur  = conn.cursor()
     try:
@@ -52,6 +53,20 @@ def insert_borrow(
             ),
         )
         new_id = cur.lastrowid
+
+        # Auto-sync to People / Ledger_Entries
+        linked_uid = _find_registered_user_by_name(cur, lender_name)
+        _upsert_person_and_entry(
+            cur,
+            owner_user_id=borrower_user_id,
+            display_name=lender_name.strip(),
+            linked_user_id=linked_uid,
+            direction='borrowed',
+            amount=round(float(amount), 2),
+            note=note,
+            entry_date=borrow_date,
+        )
+
         conn.commit()
         return new_id
     except Exception:
