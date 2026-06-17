@@ -367,12 +367,12 @@ export default function PeopleScreen({ navigation }) {
   const load = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true); else setLoading(true);
     try {
-      const [peopleRes, countRes] = await Promise.all([
+      const [peopleRes, requestsRes] = await Promise.all([
         peopleApi.getPeople(),
-        ledgerNotifsApi.getLedgerUnread(),
+        peopleApi.getPendingRequests(),
       ]);
       setPeople(peopleRes.data || []);
-      setPendingCount(countRes.data?.count || 0);
+      setPendingCount((requestsRes.data || []).length);
     } catch {
       setPeople([]);
     } finally {

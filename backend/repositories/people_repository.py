@@ -600,21 +600,23 @@ def fetch_entry_with_person(entry_id: int, user_id: int) -> dict | None:
     return row
 
 
-def delete_entry(entry_id: int, owner_user_id: int) -> bool:
+def delete_entry(entry_id: int, owner_user_id: int) -> dict:
     """
     Only the original creator (created_by) may delete an entry.
-    The mirror entry on the other user's People screen is also removed atomically.
+    Removes mirror entry + synced Loans/Borrows rows atomically.
+    Returns dict with deletion info for notification routing.
     """
     conn = get_connection()
     cur  = conn.cursor(dictionary=True)
     try:
         conn.start_transaction()
 
-        # Verify caller is the creator
+        # Verify caller is the creator and fetch details for notification
         cur.execute(
             """
             SELECT le.entry_id, le.created_by, le.amount, le.entry_date,
-                   le.direction, p.owner_user_id
+                   le.direction, le.note, le.status,
+                   p.owner_user_id, p.linked_user_id, p.display_name
             FROM   Ledger_Entries le
             JOIN   People p ON p.person_id = le.person_id
             WHERE  le.entry_id = %s
@@ -623,14 +625,19 @@ def delete_entry(entry_id: int, owner_user_id: int) -> bool:
         )
         row = cur.fetchone()
         if not row:
-            return False
+            return {"deleted": False, "linked_user_id": None}
         if row["created_by"] != owner_user_id:
             raise ValueError("Only the person who created this entry can delete it.")
 
-        # Delete the entry itself
+        linked_user_id = row["linked_user_id"]
+        amt            = float(row["amount"])
+        entry_date     = str(row["entry_date"])
+        direction      = row["direction"]
+
+        # Delete the primary entry
         cur.execute("DELETE FROM Ledger_Entries WHERE entry_id = %s", (entry_id,))
 
-        # Also delete any mirror entry (same creator, same amount+date, on a different person card)
+        # Delete mirror entry on the other user's People screen
         cur.execute(
             """
             DELETE le FROM Ledger_Entries le
@@ -641,17 +648,52 @@ def delete_entry(entry_id: int, owner_user_id: int) -> bool:
               AND  le.entry_id  != %s
               AND  p.owner_user_id != %s
             """,
-            (
-                row["created_by"],
-                float(row["amount"]),
-                str(row["entry_date"]),
-                entry_id,
-                owner_user_id,
-            ),
+            (row["created_by"], amt, entry_date, entry_id, owner_user_id),
         )
 
+        # If this was an accepted (active) linked entry, also clean up
+        # the synced Loans/Borrows rows for both users
+        if linked_user_id and row["status"] == "active":
+            # Fetch creator's display name for matching Borrows row on linked user's side
+            cur.execute("SELECT name FROM Users WHERE user_id = %s", (owner_user_id,))
+            creator_user = cur.fetchone()
+            creator_name = creator_user["name"] if creator_user else row["display_name"]
+
+            # Fetch linked user's display name for matching creator's Loans/Borrows row
+            cur.execute("SELECT name FROM Users WHERE user_id = %s", (linked_user_id,))
+            linked_user = cur.fetchone()
+            linked_name = linked_user["name"] if linked_user else "Unknown"
+
+            if direction == "lent":
+                # Creator had a Loans row (they lent), linked user had a Borrows row
+                cur.execute(
+                    "DELETE FROM Loans WHERE lender_user_id = %s AND borrower_name = %s AND amount = %s AND loan_date = %s",
+                    (owner_user_id, linked_name, amt, entry_date),
+                )
+                cur.execute(
+                    "DELETE FROM Borrows WHERE borrower_user_id = %s AND lender_name = %s AND amount = %s AND borrow_date = %s",
+                    (linked_user_id, creator_name, amt, entry_date),
+                )
+            else:
+                # Creator had a Borrows row, linked user had a Loans row
+                cur.execute(
+                    "DELETE FROM Borrows WHERE borrower_user_id = %s AND lender_name = %s AND amount = %s AND borrow_date = %s",
+                    (owner_user_id, linked_name, amt, entry_date),
+                )
+                cur.execute(
+                    "DELETE FROM Loans WHERE lender_user_id = %s AND borrower_name = %s AND amount = %s AND loan_date = %s",
+                    (linked_user_id, creator_name, amt, entry_date),
+                )
+
         conn.commit()
-        return True
+        return {
+            "deleted": True,
+            "linked_user_id": linked_user_id,
+            "amount": amt,
+            "direction": direction,
+            "display_name": row["display_name"],
+            "was_active": row["status"] == "active",
+        }
     except ValueError:
         conn.rollback()
         raise

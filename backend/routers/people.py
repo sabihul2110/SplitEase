@@ -158,15 +158,44 @@ def repay_entry(
 
 @router.delete("/people/entries/{entry_id}")
 def delete_entry(
-    entry_id: int,
-    current_user: dict = Depends(get_current_user),
+    entry_id:         int,
+    background_tasks: BackgroundTasks,
+    current_user:     dict = Depends(get_current_user),
 ):
     try:
-        deleted = people_repository.delete_entry(entry_id, current_user["user_id"])
+        result = people_repository.delete_entry(entry_id, current_user["user_id"])
     except ValueError as exc:
         raise HTTPException(status_code=403, detail=str(exc))
-    if not deleted:
+    if not result.get("deleted"):
         raise HTTPException(status_code=404, detail="Entry not found.")
+
+    # Notify the other party if this was an accepted shared entry
+    linked_user_id = result.get("linked_user_id")
+    if linked_user_id and result.get("was_active"):
+        amt       = result["amount"]
+        direction = result["direction"]
+        name      = result["display_name"]
+        dir_label    = "lent you" if direction == "lent" else "you lent them"
+        sender_name  = notification_repository.get_user_name(current_user["user_id"])
+        msg          = f"{sender_name} removed the shared ledger entry of ₹{amt:,.0f} ({dir_label})."
+
+        ledger_notification_repository.create_ledger_notif(
+            recipient_id = linked_user_id,
+            sender_id    = current_user["user_id"],
+            notif_type   = "entry_deleted",
+            message      = msg,
+            entry_id     = None,
+        )
+        notification_repository.create_ledger_outcome_notification(
+            recipient_id = linked_user_id,
+            sender_id    = current_user["user_id"],
+            message      = msg,
+        )
+        other_token = push_repository.get_push_token(linked_user_id)
+        background_tasks.add_task(
+            send_push, other_token, "Entry Removed", msg, {}
+        )
+
     return {"message": "Entry deleted."}
 
 

@@ -88,7 +88,7 @@ function getNotifMeta(type) {
       color: COLORS.primary,
       bg: "rgba(37,99,235,0.12)",
     };
-  if (type === "entry_outcome")
+  if (type === "entry_outcome" || type === "entry_deleted")
     return {
       Icon: Icons.users,
       color: "#818cf8",
