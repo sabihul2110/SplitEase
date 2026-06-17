@@ -157,6 +157,14 @@ def admin_wipe(current_user: dict = Depends(require_admin)):
     return result
 
 
+@router.post("/repair-my-people")
+def repair_my_people(current_user: dict = Depends(get_current_user)):
+    """One-time self-service repair for duplicate People rows from the pre-fix bug."""
+    from repositories import people_repository
+    result = people_repository.repair_duplicate_people_for_user(current_user["user_id"])
+    return result
+
+
 from repositories import push_repository as _push_repo
 
 @router.get("/search")

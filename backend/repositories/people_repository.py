@@ -293,8 +293,12 @@ def accept_entry(entry_id: int, recipient_user_id: int) -> dict:
         acceptor = cur.fetchone()
         row["acceptor_name"] = acceptor["name"] if acceptor else "Unknown"
 
-        # 3. Upsert reciprocal People record for the accepting user (user 2)
-        #    They need a person card pointing back at the creator (user 1)
+        # 3. Find or create reciprocal People record for the accepting user (user 2).
+        #    CANONICAL lookup is by linked_user_id only — never fall back to a
+        #    display_name match, since that creates duplicate People rows when
+        #    names don't match exactly (whitespace, case, edited names, etc).
+        #    A duplicate row is the root cause of "balance shows but ledger is empty"
+        #    bugs: the mirror entry attaches to one row, the user views another.
         cur.execute(
             """
             SELECT person_id FROM People
@@ -304,28 +308,13 @@ def accept_entry(entry_id: int, recipient_user_id: int) -> dict:
         )
         recip_person = cur.fetchone()
         if not recip_person:
-            # Try by display name first
             cur.execute(
-                """
-                SELECT person_id FROM People
-                WHERE owner_user_id = %s AND display_name = %s
-                """,
-                (recipient_user_id, creator_name),
+                "INSERT INTO People (owner_user_id, display_name, linked_user_id) VALUES (%s, %s, %s)",
+                (recipient_user_id, creator_name, row["created_by"]),
             )
-            recip_person = cur.fetchone()
-            if recip_person:
-                # Link the existing person card
-                cur.execute(
-                    "UPDATE People SET linked_user_id = %s WHERE person_id = %s",
-                    (row["created_by"], recip_person["person_id"]),
-                )
-            else:
-                # Create a new person card for user 2 pointing at user 1
-                cur.execute(
-                    "INSERT INTO People (owner_user_id, display_name, linked_user_id) VALUES (%s, %s, %s)",
-                    (recipient_user_id, creator_name, row["created_by"]),
-                )
-        recip_person_id = recip_person["person_id"] if recip_person else cur.lastrowid
+            recip_person_id = cur.lastrowid
+        else:
+            recip_person_id = recip_person["person_id"]
 
         # 4. Check if a mirror Ledger_Entry already exists for user 2 (idempotent)
         cur.execute(
@@ -572,6 +561,48 @@ def record_entry_repayment(entry_id: int, owner_user_id: int, repayment_amount: 
         )
         conn.commit()
         return {"entry_id": entry_id, "remaining_amount": new_remaining, "status": new_status}
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close(); conn.close()
+
+
+def repair_duplicate_people_for_user(owner_user_id: int) -> dict:
+    """
+    One-time repair: finds People rows for owner_user_id that share the same
+    linked_user_id (duplicates), merges all Ledger_Entries onto the oldest
+    row, and deletes the newer duplicate rows.
+    Call this once via a maintenance endpoint or script, not on every request.
+    """
+    conn = get_connection()
+    cur  = conn.cursor(dictionary=True)
+    try:
+        conn.start_transaction()
+        cur.execute(
+            """
+            SELECT linked_user_id, GROUP_CONCAT(person_id ORDER BY person_id) AS ids
+            FROM People
+            WHERE owner_user_id = %s AND linked_user_id IS NOT NULL
+            GROUP BY linked_user_id
+            HAVING COUNT(*) > 1
+            """,
+            (owner_user_id,),
+        )
+        dupes = cur.fetchall()
+        merged = 0
+        for d in dupes:
+            ids = [int(x) for x in d["ids"].split(",")]
+            keep_id, *drop_ids = ids
+            for drop_id in drop_ids:
+                cur.execute(
+                    "UPDATE Ledger_Entries SET person_id = %s WHERE person_id = %s",
+                    (keep_id, drop_id),
+                )
+                cur.execute("DELETE FROM People WHERE person_id = %s", (drop_id,))
+                merged += 1
+        conn.commit()
+        return {"duplicates_merged": merged}
     except Exception:
         conn.rollback()
         raise

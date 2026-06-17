@@ -165,8 +165,10 @@ function LoanCard({ item, isLent, onRefresh, idx, showToast, setAlert }) {
                 : loansApi.deleteBorrow(idField));
               showToast?.("Deleted");
               onRefresh();
-            } catch {
+            } catch (err) {
               setDeleting(false);
+              const detail = err?.response?.data?.detail;
+              showToast?.(typeof detail === "string" ? detail : "Failed to delete", "error");
             }
           },
         },
