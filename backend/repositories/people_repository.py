@@ -119,7 +119,7 @@ def fetch_entries(person_id: int, owner_user_id: int) -> list[dict]:
                le.amount, le.remaining_amount, le.note,
                le.entry_date, le.status, le.created_at,
                le.created_by,
-               (le.created_by = %s) AS can_delete
+               (le.direction = 'lent') AS can_delete
         FROM   Ledger_Entries le
         JOIN   People p ON p.person_id = le.person_id
         WHERE  le.person_id = %s AND p.owner_user_id = %s
@@ -283,11 +283,15 @@ def accept_entry(entry_id: int, recipient_user_id: int) -> dict:
             (entry_id,),
         )
 
-        # 2. Fetch creator's name for the reciprocal People record
+        # 2. Fetch creator's name (needed below for reciprocal People record display_name)
         cur.execute("SELECT name FROM Users WHERE user_id = %s", (row["created_by"],))
-        creator = cur.fetchone()
-        creator_name = creator["name"] if creator else "Unknown"
-        row["creator_name"] = creator_name
+        creator_row  = cur.fetchone()
+        creator_name = creator_row["name"] if creator_row else "Unknown"
+
+        # Fetch acceptor's name for notification message
+        cur.execute("SELECT name FROM Users WHERE user_id = %s", (recipient_user_id,))
+        acceptor = cur.fetchone()
+        row["acceptor_name"] = acceptor["name"] if acceptor else "Unknown"
 
         # 3. Upsert reciprocal People record for the accepting user (user 2)
         #    They need a person card pointing back at the creator (user 1)
@@ -362,10 +366,8 @@ def accept_entry(entry_id: int, recipient_user_id: int) -> dict:
         entry_date = str(row["entry_date"])
         creator_id = row["created_by"]
 
-        # Fetch creator's display name for the Loans/Borrows record
-        cur.execute("SELECT name FROM Users WHERE user_id = %s", (creator_id,))
-        creator_user = cur.fetchone()
-        creator_display = creator_user["name"] if creator_user else creator_name
+        # creator_name was already fetched above — reuse it
+        creator_display = creator_name
 
         # --- Sync Loans/Borrows for the ACCEPTOR (User 2) ---
         if row["direction"] == "lent":
@@ -577,6 +579,35 @@ def record_entry_repayment(entry_id: int, owner_user_id: int, repayment_amount: 
         cur.close(); conn.close()
 
 
+def get_user_net_balance(user_id: int) -> float:
+    """
+    Returns the true net balance for a user across all their Ledger_Entries.
+    Positive = they are owed money. Negative = they owe money.
+    Based on direction (lent/borrowed), NOT created_by.
+    """
+    conn = get_connection()
+    cur  = conn.cursor()
+    cur.execute(
+        """
+        SELECT COALESCE(SUM(
+            CASE
+                WHEN le.direction = 'lent'     THEN  le.remaining_amount
+                WHEN le.direction = 'borrowed' THEN -le.remaining_amount
+                ELSE 0
+            END
+        ), 0) AS net_balance
+        FROM Ledger_Entries le
+        JOIN People p ON p.person_id = le.person_id
+        WHERE p.owner_user_id = %s
+          AND le.status = 'active'
+        """,
+        (user_id,),
+    )
+    row = cur.fetchone()
+    cur.close(); conn.close()
+    return float(row[0] if row else 0)
+
+
 def fetch_entry_with_person(entry_id: int, user_id: int) -> dict | None:
     """Fetch entry details including person's linked_user_id for notification routing."""
     conn = get_connection()
@@ -626,8 +657,17 @@ def delete_entry(entry_id: int, owner_user_id: int) -> dict:
         row = cur.fetchone()
         if not row:
             return {"deleted": False, "linked_user_id": None}
-        if row["created_by"] != owner_user_id:
-            raise ValueError("Only the person who created this entry can delete it.")
+        cur.execute(
+            """
+            SELECT le.direction FROM Ledger_Entries le
+            JOIN People p ON p.person_id = le.person_id
+            WHERE le.entry_id = %s AND p.owner_user_id = %s
+            """,
+            (entry_id, owner_user_id),
+        )
+        perm_row = cur.fetchone()
+        if not perm_row or perm_row["direction"] != "lent":
+            raise ValueError("Only the lender can delete this entry.")
 
         linked_user_id = row["linked_user_id"]
         amt            = float(row["amount"])

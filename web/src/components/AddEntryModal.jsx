@@ -1,9 +1,10 @@
 // web/src/components/AddEntryModal.jsx
 
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { getMyGroups } from "../api/groups";
+import api from "../api/client";
 import { createPersonalExpense } from "../api/personalExpenses";
 import { createIncome } from "../api/income";
 import { createLoan } from "../api/loans";
@@ -225,8 +226,12 @@ export default function AddEntryModal({ onSuccess, defaultTab = "personal" }) {
   const [note, setNote] = useState("");
   const [date, setDate] = useState(todayStr());
   const [sourceType, setSourceType] = useState("other");
-  const [personName, setPersonName] = useState("");
-  const [groupId, setGroupId] = useState("");
+  const [personName, setPersonName]         = useState("");
+  const [groupId, setGroupId]               = useState("");
+  const [searchResults, setSearchResults]   = useState([]);
+  const [selectedUser, setSelectedUser]     = useState(null);
+  const [searching, setSearching]           = useState(false);
+  const searchTimeout                       = useRef(null);
   const [subcategoryId, setSubcategoryId] = useState(null);
   const [merchantName, setMerchantName] = useState("");
 
@@ -250,6 +255,8 @@ export default function AddEntryModal({ onSuccess, defaultTab = "personal" }) {
     setSourceType("other");
     setPersonName("");
     setGroupId("");
+    setSearchResults([]);
+    setSelectedUser(null);
     setSubcategoryId(null);
     setMerchantName("");
   }
@@ -320,10 +327,11 @@ export default function AddEntryModal({ onSuccess, defaultTab = "personal" }) {
           setSaving(false); return;
         }
         await createLoan({
-          borrower_name: personName.trim(),
-          amount: amt,
-          note: note.trim() || null,
-          loan_date: date,
+          borrower_name:  personName.trim(),
+          amount:         amt,
+          note:           note.trim() || null,
+          loan_date:      date,
+          linked_user_id: selectedUser?.user_id || null,
         });
       } else if (type === "borrow") {
         if (!personName.trim()) {
@@ -331,10 +339,11 @@ export default function AddEntryModal({ onSuccess, defaultTab = "personal" }) {
           setSaving(false); return;
         }
         await createBorrow({
-          lender_name: personName.trim(),
-          amount: amt,
-          note: note.trim() || null,
-          borrow_date: date,
+          lender_name:    personName.trim(),
+          amount:         amt,
+          note:           note.trim() || null,
+          borrow_date:    date,
+          linked_user_id: selectedUser?.user_id || null,
         });
       }
       setOpen(false);
@@ -345,6 +354,30 @@ export default function AddEntryModal({ onSuccess, defaultTab = "personal" }) {
     } finally {
       setSaving(false);
     }
+  }
+
+  function handlePersonNameChange(val) {
+    setPersonName(val);
+    setSelectedUser(null);
+    if (searchTimeout.current) clearTimeout(searchTimeout.current);
+    if (val.trim().length < 2) { setSearchResults([]); return; }
+    setSearching(true);
+    searchTimeout.current = setTimeout(async () => {
+      try {
+        const res = await api.get(`/users/search?q=${encodeURIComponent(val.trim())}`);
+        setSearchResults(Array.isArray(res.data) ? res.data : []);
+      } catch {
+        setSearchResults([]);
+      } finally {
+        setSearching(false);
+      }
+    }, 350);
+  }
+
+  function selectWebUser(u) {
+    setPersonName(u.name);
+    setSelectedUser(u);
+    setSearchResults([]);
   }
 
   const isRedirect = type === "group_exp" || type === "settlement";
@@ -484,17 +517,75 @@ export default function AddEntryModal({ onSuccess, defaultTab = "personal" }) {
                   </div>
                 )}
 
-                {type === "lend" && (
+                {(type === "lend" || type === "borrow") && (
                   <div className="aem-field">
-                    <label className="aem-label">Borrower Name</label>
-                    <input className="aem-input" type="text" placeholder="Who are you lending to?" value={personName} onChange={(e) => setPersonName(e.target.value)} />
-                  </div>
-                )}
+                    <label className="aem-label">
+                      {type === "lend" ? "Borrower Name" : "Lender Name"}
+                    </label>
+                    <div style={{ position: "relative" }}>
+                      <input
+                        className="aem-input"
+                        type="text"
+                        placeholder="Search registered user or type custom name…"
+                        value={personName}
+                        onChange={(e) => handlePersonNameChange(e.target.value)}
+                        style={selectedUser ? { borderColor: "var(--success)", paddingRight: 32 } : {}}
+                      />
+                      {searching && (
+                        <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", fontSize: 11, color: "var(--text3)" }}>
+                          …
+                        </span>
+                      )}
+                    </div>
 
-                {type === "borrow" && (
-                  <div className="aem-field">
-                    <label className="aem-label">Lender Name</label>
-                    <input className="aem-input" type="text" placeholder="Who are you borrowing from?" value={personName} onChange={(e) => setPersonName(e.target.value)} />
+                    {/* Search results */}
+                    {searchResults.length > 0 && !selectedUser && (
+                      <div style={{
+                        marginTop: 4, background: "var(--surface2)",
+                        border: "1px solid var(--border)", borderRadius: 9,
+                        overflow: "hidden",
+                      }}>
+                        <div style={{ fontSize: 9, fontWeight: 700, color: "var(--text3)", letterSpacing: "0.09em", textTransform: "uppercase", padding: "8px 12px 4px" }}>
+                          REGISTERED USERS
+                        </div>
+                        {searchResults.map(u => (
+                          <button key={u.user_id}
+                            onClick={() => selectWebUser(u)}
+                            style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "8px 12px", background: "none", border: "none", cursor: "pointer", textAlign: "left", transition: "background 0.1s" }}
+                            onMouseEnter={e => e.currentTarget.style.background = "var(--surface3)"}
+                            onMouseLeave={e => e.currentTarget.style.background = "none"}
+                          >
+                            <div style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--primary)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#fff", flexShrink: 0 }}>
+                              {u.name[0]?.toUpperCase()}
+                            </div>
+                            <div>
+                              <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{u.name}</div>
+                              <div style={{ fontSize: 11, color: "var(--text3)" }}>{u.email}</div>
+                            </div>
+                          </button>
+                        ))}
+                        <div style={{ borderTop: "1px solid var(--border)", margin: "0 12px" }} />
+                        <button
+                          onClick={() => setSearchResults([])}
+                          style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "none", border: "none", cursor: "pointer", fontSize: 13, color: "var(--text2)" }}
+                          onMouseEnter={e => e.currentTarget.style.background = "var(--surface3)"}
+                          onMouseLeave={e => e.currentTarget.style.background = "none"}
+                        >
+                          Add "{personName}" as custom person
+                        </button>
+                      </div>
+                    )}
+
+                    {selectedUser && (
+                      <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 7, padding: "7px 10px", background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: 8 }}>
+                        <span style={{ color: "var(--success)", fontSize: 13 }}>✓</span>
+                        <span style={{ fontSize: 12, color: "var(--success)" }}>
+                          Linked to registered user — entry will need their acknowledgement
+                        </span>
+                        <button onClick={() => { setSelectedUser(null); setPersonName(""); }}
+                          style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", color: "var(--text3)", fontSize: 14 }}>✕</button>
+                      </div>
+                    )}
                   </div>
                 )}
 

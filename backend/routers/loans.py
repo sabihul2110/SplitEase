@@ -8,10 +8,11 @@ POST /loans/{id}/repay               → record a partial or full repayment
 DELETE /loans/{id}                   → delete loan record (owner only)
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from schemas.loans import LoanIn, RepaymentIn
 
-from repositories import loan_repository
+from repositories import loan_repository, ledger_notification_repository, notification_repository, push_repository
+from services.push_service import send_push
 from core.dependencies import get_current_user
 
 router = APIRouter()
@@ -35,21 +36,46 @@ def list_loans(current_user: dict = Depends(get_current_user)):
 
 @router.post("/loans/", status_code=status.HTTP_201_CREATED)
 def add_loan(
-    body: LoanIn,
-    current_user: dict = Depends(get_current_user),
+    body:              LoanIn,
+    background_tasks:  BackgroundTasks,
+    current_user:      dict = Depends(get_current_user),
 ):
     if body.amount <= 0:
         raise HTTPException(status_code=422, detail="Loan amount must be positive.")
     if not body.borrower_name.strip():
         raise HTTPException(status_code=422, detail="Borrower name is required.")
-    new_id = loan_repository.insert_loan(
-        lender_user_id = current_user["user_id"],
-        borrower_name  = body.borrower_name,
-        amount         = body.amount,
-        note           = body.note,
-        loan_date      = body.loan_date,
+
+    result = loan_repository.insert_loan(
+        lender_user_id  = current_user["user_id"],
+        borrower_name   = body.borrower_name,
+        amount          = body.amount,
+        note            = body.note,
+        loan_date       = body.loan_date,
+        linked_user_id  = body.linked_user_id,
     )
-    return {"loan_id": new_id, "message": f"Loan to {body.borrower_name} recorded."}
+
+    if body.linked_user_id:
+        sender_name = notification_repository.get_user_name(current_user["user_id"])
+        msg = f"{sender_name} recorded ₹{body.amount:,.0f} — lent you. Please accept or reject."
+        ledger_notification_repository.create_ledger_notif(
+            recipient_id = body.linked_user_id,
+            sender_id    = current_user["user_id"],
+            notif_type   = "entry_request",
+            message      = msg,
+            entry_id     = result["entry_id"],
+        )
+        token = push_repository.get_push_token(body.linked_user_id)
+        background_tasks.add_task(
+            send_push, token, "New Ledger Request", msg,
+            {"entry_id": result["entry_id"], "screen": "PendingRequests"},
+        )
+
+    return {
+        "loan_id": result["loan_id"],
+        "status":  result["status"],
+        "message": f"Loan to {body.borrower_name} recorded."
+                    + (" Awaiting their acceptance." if result["status"] == "pending" else ""),
+    }
 
 
 @router.post("/loans/{loan_id}/repay", status_code=status.HTTP_200_OK)
@@ -73,8 +99,31 @@ def repay_loan(
 
 @router.delete("/loans/{loan_id}", status_code=status.HTTP_200_OK)
 def delete_loan(
-    loan_id: int,
-    current_user: dict = Depends(get_current_user),
+    loan_id:           int,
+    background_tasks:  BackgroundTasks,
+    current_user:      dict = Depends(get_current_user),
 ):
-    loan_repository.delete_loan(loan_id, current_user["user_id"])
+    result = loan_repository.delete_loan(loan_id, current_user["user_id"])
+    if not result.get("deleted"):
+        raise HTTPException(status_code=404, detail="Loan not found.")
+
+    linked_user_id = result.get("linked_user_id")
+    if linked_user_id:
+        sender_name = notification_repository.get_user_name(current_user["user_id"])
+        msg = f"{sender_name} removed the shared ledger entry of ₹{result['amount']:,.0f} (lent you)."
+        ledger_notification_repository.create_ledger_notif(
+            recipient_id = linked_user_id,
+            sender_id    = current_user["user_id"],
+            notif_type   = "entry_deleted",
+            message      = msg,
+            entry_id     = None,
+        )
+        notification_repository.create_ledger_outcome_notification(
+            recipient_id = linked_user_id,
+            sender_id    = current_user["user_id"],
+            message      = msg,
+        )
+        token = push_repository.get_push_token(linked_user_id)
+        background_tasks.add_task(send_push, token, "Entry Removed", msg, {})
+
     return {"message": "Loan record deleted."}

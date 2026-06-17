@@ -62,7 +62,7 @@ def accept_entry(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
-    acceptor_name = row.get("creator_name") or row["display_name"]
+    acceptor_name = row.get("acceptor_name") or row["display_name"]
     msg = f"{acceptor_name} accepted your ledger entry of ₹{float(row['amount']):,.0f}."
 
     # Ledger notification → drives the red dot on User 1's Loans tab

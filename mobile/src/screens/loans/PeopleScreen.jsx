@@ -380,7 +380,11 @@ export default function PeopleScreen({ navigation }) {
     }
   }, []);
 
-  useFocusEffect(useCallback(() => { load(); }, [load]));
+  useFocusEffect(useCallback(() => {
+    load();
+    ledgerNotifsApi.markAllLedgerRead().catch(() => {});
+    global.__refreshLedgerBadge?.();
+  }, [load]));
 
   const filtered = search.trim()
     ? people.filter(p => p.display_name.toLowerCase().includes(search.toLowerCase()))

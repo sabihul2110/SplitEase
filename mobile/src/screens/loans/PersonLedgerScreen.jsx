@@ -175,7 +175,11 @@ function EntryCard({ item, onRefresh, showToast, setAlert, isSelecting, isSelect
               await peopleApi.deleteEntry(item.entry_id);
               showToast?.('Deleted');
               onRefresh?.();
-            } catch { setDeleting(false); }
+            } catch (err) {
+              setDeleting(false);
+              const detail = err?.response?.data?.detail;
+              showToast?.(typeof detail === 'string' ? detail : 'Failed to delete', 'error');
+            }
           },
         },
       ],

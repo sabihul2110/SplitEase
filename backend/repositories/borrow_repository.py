@@ -27,48 +27,51 @@ def fetch_borrows(user_id: int) -> list[dict]:
 
 def insert_borrow(
     borrower_user_id: int,
-    lender_name: str,
-    amount: float,
-    note: str | None,
-    borrow_date: str,
-) -> int:
-    from repositories.loan_repository import _find_registered_user_by_name, _upsert_person_and_entry
+    lender_name:      str,
+    amount:           float,
+    note:             str | None,
+    borrow_date:      str,
+    linked_user_id:   int | None = None,
+) -> dict:
+    """
+    Creates Ledger_Entry (source of truth) and Borrows row (only if active).
+    If linked_user_id is set, entry is pending — the lender must accept,
+    and the Borrows row is created by accept_entry on acceptance.
+    """
+    from repositories.loan_repository import _upsert_person_and_entry
     conn = get_connection()
     cur  = conn.cursor()
     try:
         conn.start_transaction()
-        cur.execute(
-            """
-            INSERT INTO Borrows
-                (borrower_user_id, lender_name, amount, remaining_amount, note, borrow_date, status)
-            VALUES (%s, %s, %s, %s, %s, %s, 'active')
-            """,
-            (
-                borrower_user_id,
-                lender_name.strip(),
-                round(float(amount), 2),
-                round(float(amount), 2),
-                note or None,
-                borrow_date,
-            ),
-        )
-        new_id = cur.lastrowid
+        amt    = round(float(amount), 2)
+        status = 'pending' if linked_user_id else 'active'
+        new_id = 0
 
-        # Auto-sync to People / Ledger_Entries
-        linked_uid = _find_registered_user_by_name(cur, lender_name)
-        _upsert_person_and_entry(
+        if status == 'active':
+            cur.execute(
+                """
+                INSERT INTO Borrows
+                    (borrower_user_id, lender_name, amount, remaining_amount, note, borrow_date, status)
+                VALUES (%s, %s, %s, %s, %s, %s, 'active')
+                """,
+                (borrower_user_id, lender_name.strip(), amt, amt, note or None, borrow_date),
+            )
+            new_id = cur.lastrowid
+
+        entry_id = _upsert_person_and_entry(
             cur,
-            owner_user_id=borrower_user_id,
-            display_name=lender_name.strip(),
-            linked_user_id=linked_uid,
-            direction='borrowed',
-            amount=round(float(amount), 2),
-            note=note,
-            entry_date=borrow_date,
+            owner_user_id  = borrower_user_id,
+            display_name   = lender_name.strip(),
+            linked_user_id = linked_user_id,
+            direction      = 'borrowed',
+            amount         = amt,
+            note           = note,
+            entry_date     = borrow_date,
+            status         = status,
         )
 
         conn.commit()
-        return new_id
+        return {"borrow_id": new_id, "entry_id": entry_id, "status": status}
     except Exception:
         conn.rollback()
         raise
@@ -116,16 +119,53 @@ def record_borrow_repayment(borrow_id: int, user_id: int, repayment_amount: floa
         cur.close(); conn.close()
 
 
-def delete_borrow(borrow_id: int, user_id: int) -> None:
+def delete_borrow(borrow_id: int, user_id: int) -> dict:
+    """
+    Blocks deletion if this borrow is linked to a registered lender —
+    a borrower can NEVER delete/forgive their own debt. Only unlinked
+    (custom lender) borrows can be deleted by the borrower, since there's
+    no other party being protected.
+    """
     conn = get_connection()
-    cur  = conn.cursor()
+    cur  = conn.cursor(dictionary=True)
     try:
         conn.start_transaction()
         cur.execute(
-            "DELETE FROM Borrows WHERE borrow_id = %s AND borrower_user_id = %s",
+            "SELECT borrow_id, lender_name, amount, borrow_date FROM Borrows WHERE borrow_id = %s AND borrower_user_id = %s",
             (borrow_id, user_id),
         )
+        borrow = cur.fetchone()
+        if not borrow:
+            return {"deleted": False}
+
+        cur.execute(
+            """
+            SELECT p.linked_user_id FROM People p
+            WHERE p.owner_user_id = %s AND p.display_name = %s
+            """,
+            (user_id, borrow["lender_name"]),
+        )
+        person = cur.fetchone()
+        if person and person["linked_user_id"]:
+            raise ValueError("Only the lender can delete this entry. You cannot forgive your own debt.")
+
+        cur.execute("DELETE FROM Borrows WHERE borrow_id = %s", (borrow_id,))
+
+        cur.execute(
+            """
+            DELETE le FROM Ledger_Entries le
+            JOIN   People p ON p.person_id = le.person_id
+            WHERE  p.owner_user_id = %s AND p.display_name = %s
+              AND  le.direction = 'borrowed' AND le.amount = %s AND le.entry_date = %s
+            """,
+            (user_id, borrow["lender_name"], float(borrow["amount"]), str(borrow["borrow_date"])),
+        )
+
         conn.commit()
+        return {"deleted": True}
+    except ValueError:
+        conn.rollback()
+        raise
     except Exception:
         conn.rollback()
         raise

@@ -8,10 +8,11 @@ POST /borrows/{id}/repay        → record repayment (reduces remaining)
 DELETE /borrows/{id}            → delete borrow record (owner only)
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from schemas.borrows import BorrowIn, BorrowRepayIn
 
-from repositories import borrow_repository
+from repositories import borrow_repository, ledger_notification_repository, notification_repository, push_repository
+from services.push_service import send_push
 from core.dependencies import get_current_user
 
 router = APIRouter()
@@ -35,21 +36,46 @@ def list_borrows(current_user: dict = Depends(get_current_user)):
 
 @router.post("/borrows/", status_code=status.HTTP_201_CREATED)
 def add_borrow(
-    body: BorrowIn,
-    current_user: dict = Depends(get_current_user),
+    body:              BorrowIn,
+    background_tasks:  BackgroundTasks,
+    current_user:      dict = Depends(get_current_user),
 ):
     if body.amount <= 0:
         raise HTTPException(status_code=422, detail="Amount must be positive.")
     if not body.lender_name.strip():
         raise HTTPException(status_code=422, detail="Lender name is required.")
-    new_id = borrow_repository.insert_borrow(
+
+    result = borrow_repository.insert_borrow(
         borrower_user_id = current_user["user_id"],
         lender_name      = body.lender_name,
         amount           = body.amount,
         note             = body.note,
         borrow_date      = body.borrow_date,
+        linked_user_id   = body.linked_user_id,
     )
-    return {"borrow_id": new_id, "message": f"Borrow from {body.lender_name} recorded."}
+
+    if body.linked_user_id:
+        sender_name = notification_repository.get_user_name(current_user["user_id"])
+        msg = f"{sender_name} recorded ₹{body.amount:,.0f} — borrowed from you. Please accept or reject."
+        ledger_notification_repository.create_ledger_notif(
+            recipient_id = body.linked_user_id,
+            sender_id    = current_user["user_id"],
+            notif_type   = "entry_request",
+            message      = msg,
+            entry_id     = result["entry_id"],
+        )
+        token = push_repository.get_push_token(body.linked_user_id)
+        background_tasks.add_task(
+            send_push, token, "New Ledger Request", msg,
+            {"entry_id": result["entry_id"], "screen": "PendingRequests"},
+        )
+
+    return {
+        "borrow_id": result["borrow_id"],
+        "status":    result["status"],
+        "message":   f"Borrow from {body.lender_name} recorded."
+                      + (" Awaiting their acceptance." if result["status"] == "pending" else ""),
+    }
 
 
 @router.post("/borrows/{borrow_id}/repay", status_code=status.HTTP_200_OK)
@@ -73,8 +99,13 @@ def repay_borrow(
 
 @router.delete("/borrows/{borrow_id}", status_code=status.HTTP_200_OK)
 def delete_borrow(
-    borrow_id: int,
-    current_user: dict = Depends(get_current_user),
+    borrow_id:         int,
+    current_user:      dict = Depends(get_current_user),
 ):
-    borrow_repository.delete_borrow(borrow_id, current_user["user_id"])
+    try:
+        result = borrow_repository.delete_borrow(borrow_id, current_user["user_id"])
+    except ValueError as exc:
+        raise HTTPException(status_code=403, detail=str(exc))
+    if not result.get("deleted"):
+        raise HTTPException(status_code=404, detail="Borrow not found.")
     return {"message": "Borrow record deleted."}

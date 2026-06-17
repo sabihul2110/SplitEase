@@ -49,22 +49,17 @@ function SumCard({ label, value, color, sub }) {
 }
 
 function StatusBadge({ status }) {
-  const isActive = status === "active";
+  const isActive  = status === "active";
+  const isPending = status === "pending";
+  const color     = isPending ? COLORS.text3 : isActive ? "#f59e0b" : "#10b981";
+  const bg        = isPending ? "rgba(150,150,150,0.1)"
+                  : isActive  ? "rgba(245,158,11,0.12)"
+                  : "rgba(16,185,129,0.10)";
+  const label     = isPending ? "Pending" : isActive ? "Active" : "Settled";
   return (
-    <View
-      style={[styles.badge, isActive ? styles.badgeActive : styles.badgeRepaid]}
-    >
-      <View
-        style={[
-          styles.badgeDot,
-          { backgroundColor: isActive ? "#f59e0b" : "#10b981" },
-        ]}
-      />
-      <Text
-        style={[styles.badgeText, { color: isActive ? "#f59e0b" : "#10b981" }]}
-      >
-        {isActive ? "Active" : "Settled"}
-      </Text>
+    <View style={[styles.badge, { backgroundColor: bg }]}>
+      <View style={[styles.badgeDot, { backgroundColor: color }]} />
+      <Text style={[styles.badgeText, { color }]}>{label}</Text>
     </View>
   );
 }
@@ -261,38 +256,75 @@ function LoanCard({ item, isLent, onRefresh, idx, showToast, setAlert }) {
         </View>
       )}
 
-      <View style={{ alignItems: "flex-end" }}>
-        <TouchableOpacity
-          style={styles.delBtn}
-          onPress={handleDelete}
-          disabled={deleting}
-        >
-          <Text style={styles.delText}>
-            {deleting ? "Deleting…" : "Delete"}
-          </Text>
-        </TouchableOpacity>
-      </View>
+      {isLent && item.status !== 'pending' && (
+        <View style={{ alignItems: "flex-end" }}>
+          <TouchableOpacity
+            style={styles.delBtn}
+            onPress={handleDelete}
+            disabled={deleting}
+          >
+            <Text style={styles.delText}>
+              {deleting ? "Deleting…" : "Delete"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+      {item.status === 'pending' && (
+        <View style={{ alignItems: 'flex-end' }}>
+          <View style={[styles.delBtn, { borderColor: 'rgba(150,150,150,0.2)', backgroundColor: 'transparent' }]}>
+            <Text style={[styles.delText, { color: COLORS.text3 }]}>Awaiting acceptance</Text>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
 
 function AddLoanModal({ visible, onClose, isLent, onSuccess }) {
-  const [personName, setPersonName] = useState("");
-  const [amount, setAmount] = useState("");
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
-  const [note, setNote] = useState("");
-  const [error, setError] = useState("");
-  const [saving, setSaving] = useState(false);
+  const [personName, setPersonName]       = useState("");
+  const [amount, setAmount]               = useState("");
+  const [date, setDate]                   = useState(new Date().toISOString().split("T")[0]);
+  const [note, setNote]                   = useState("");
+  const [error, setError]                 = useState("");
+  const [saving, setSaving]               = useState(false);
+  const [searchResults, setSearchResults] = useState([]);
+  const [selectedUser, setSelectedUser]   = useState(null); // registered user if chosen
+  const [searching, setSearching]         = useState(false);
+  const searchTimeout                     = useRef(null);
 
   useEffect(() => {
     if (visible) {
-      setPersonName("");
-      setAmount("");
+      setPersonName(""); setAmount(""); setNote(""); setError("");
+      setSearchResults([]); setSelectedUser(null);
       setDate(new Date().toISOString().split("T")[0]);
-      setNote("");
-      setError("");
     }
   }, [visible]);
+
+  function handleNameChange(v) {
+    setPersonName(v);
+    setSelectedUser(null);
+    setError("");
+    if (searchTimeout.current) clearTimeout(searchTimeout.current);
+    if (v.trim().length < 2) { setSearchResults([]); return; }
+    setSearching(true);
+    searchTimeout.current = setTimeout(async () => {
+      try {
+        const { searchUsers } = await import('../../api/people');
+        const res = await searchUsers(v.trim());
+        setSearchResults(res.data || []);
+      } catch {
+        setSearchResults([]);
+      } finally {
+        setSearching(false);
+      }
+    }, 350);
+  }
+
+  function selectRegisteredUser(user) {
+    setPersonName(user.name);
+    setSelectedUser(user);
+    setSearchResults([]);
+  }
 
   async function handleSubmit() {
     Keyboard.dismiss();
@@ -310,41 +342,35 @@ function AddLoanModal({ visible, onClose, isLent, onSuccess }) {
     }
     setSaving(true);
     setError("");
-    
-    // CRITICAL ANDROID FIX: Wait for keyboard to close before unmounting Modal
+
     setTimeout(async () => {
       try {
+        const payload = {
+          amount:         parseFloat(amount),
+          note:           note.trim() || null,
+          linked_user_id: selectedUser?.user_id || null,
+        };
         if (isLent) {
           await loansApi.addLoan({
+            ...payload,
             borrower_name: personName.trim(),
-            amount: parseFloat(amount),
-            loan_date: date,
-            note: note.trim() || null,
+            loan_date:     date,
           });
         } else {
           await loansApi.addBorrow({
+            ...payload,
             lender_name: personName.trim(),
-            amount: parseFloat(amount),
             borrow_date: date,
-            note: note.trim() || null,
           });
         }
-        
-        onClose(); // Hide modal first
-        
-        // Wait for modal exit animation before fetching new data
-        setTimeout(() => {
-          if (onSuccess) onSuccess();
-        }, 300);
-        
+        onClose();
+        setTimeout(() => { if (onSuccess) onSuccess(); }, 300);
       } catch (err) {
         const detail = err?.response?.data?.detail;
         setError(
-          Array.isArray(detail)
-            ? detail[0]?.msg
-            : typeof detail === "string"
-              ? detail
-              : "Failed to save",
+          Array.isArray(detail) ? detail[0]?.msg
+          : typeof detail === "string" ? detail
+          : "Failed to save",
         );
       } finally {
         setSaving(false);
@@ -352,47 +378,31 @@ function AddLoanModal({ visible, onClose, isLent, onSuccess }) {
     }, 250);
   }
 
-  const accentColor = isLent ? "#f59e0b" : "#818cf8";
-  const personLabel = isLent ? "BORROWER NAME" : "LENDER NAME";
-  const personPHolder = isLent ? "e.g. Rahul, Priya…" : "e.g. Amit, Mom…";
-  const submitLabel = isLent ? "Record Loan" : "Record Borrow";
-  const IconComp = isLent ? Icons.sendMoney : Icons.receiveMoney;
+  const accentColor  = isLent ? "#f59e0b" : "#818cf8";
+  const personLabel  = isLent ? "BORROWER NAME" : "LENDER NAME";
+  const personPHolder = isLent ? "Search name or add custom…" : "Search name or add custom…";
+  const submitLabel  = isLent ? "Record Loan" : "Record Borrow";
+  const IconComp     = isLent ? Icons.sendMoney : Icons.receiveMoney;
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      transparent
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <KeyboardAvoidingView
         style={addStyles.overlay}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <TouchableOpacity
-          style={StyleSheet.absoluteFill}
-          onPress={onClose}
-          activeOpacity={1}
-        />
+        <TouchableOpacity style={StyleSheet.absoluteFill} onPress={onClose} activeOpacity={1} />
         <View style={addStyles.sheet}>
           <View style={addStyles.handle} />
 
-          {/* Header */}
           <View style={addStyles.header}>
-            <View
-              style={[
-                addStyles.headerIcon,
-                { backgroundColor: accentColor + "20" },
-              ]}
-            >
+            <View style={[addStyles.headerIcon, { backgroundColor: accentColor + "20" }]}>
               <IconComp size={18} color={accentColor} />
             </View>
             <Text style={addStyles.title}>
               {isLent ? "Record a Loan" : "Record a Borrow"}
             </Text>
             <TouchableOpacity
-              style={addStyles.closeBtn}
-              onPress={onClose}
+              style={addStyles.closeBtn} onPress={onClose}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <Icons.close size={16} color={COLORS.text2} />
@@ -410,42 +420,88 @@ function AddLoanModal({ visible, onClose, isLent, onSuccess }) {
               </View>
             )}
 
-            {/* Person name */}
+            {/* Person search */}
             <View style={addStyles.field}>
               <Text style={addStyles.label}>{personLabel}</Text>
-              <View style={addStyles.inputRow}>
-                <Icons.users size={15} color={COLORS.text3} />
+              <View style={[addStyles.inputRow, selectedUser && { borderColor: COLORS.success }]}>
+                {selectedUser
+                  ? <Icons.checkCircle size={15} color={COLORS.success} />
+                  : <Icons.search size={15} color={COLORS.text3} />
+                }
                 <TextInput
                   style={addStyles.inputText}
                   value={personName}
-                  onChangeText={(v) => {
-                    setPersonName(v);
-                    setError("");
-                  }}
+                  onChangeText={handleNameChange}
                   placeholder={personPHolder}
                   placeholderTextColor={COLORS.text3}
                   autoCapitalize="words"
                   autoFocus
                 />
+                {searching && <ActivityIndicator size="small" color={COLORS.text3} />}
+                {selectedUser && (
+                  <TouchableOpacity
+                    onPress={() => { setSelectedUser(null); setPersonName(""); }}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Icons.close size={14} color={COLORS.text3} />
+                  </TouchableOpacity>
+                )}
               </View>
+
+              {/* Search results dropdown */}
+              {searchResults.length > 0 && !selectedUser && (
+                <View style={addStyles.searchResults}>
+                  <Text style={addStyles.searchResultsLabel}>REGISTERED USERS</Text>
+                  {searchResults.map(u => (
+                    <TouchableOpacity
+                      key={u.user_id}
+                      style={addStyles.searchResultRow}
+                      onPress={() => selectRegisteredUser(u)}
+                    >
+                      <View style={addStyles.searchResultAvatar}>
+                        <Text style={addStyles.searchResultAvatarText}>
+                          {u.name[0]?.toUpperCase() || '?'}
+                        </Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={addStyles.searchResultName}>{u.name}</Text>
+                        <Text style={addStyles.searchResultEmail}>{u.email}</Text>
+                      </View>
+                      <Icons.chevronRight size={14} color={COLORS.text3} />
+                    </TouchableOpacity>
+                  ))}
+                  <View style={addStyles.searchDivider} />
+                  <TouchableOpacity
+                    style={addStyles.searchResultRow}
+                    onPress={() => setSearchResults([])}
+                  >
+                    <Icons.profile size={15} color={COLORS.text3} />
+                    <Text style={[addStyles.searchResultName, { color: COLORS.text2 }]}>
+                      Add "{personName}" as custom person
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {selectedUser && (
+                <View style={addStyles.selectedBadge}>
+                  <Icons.checkCircle size={14} color={COLORS.success} />
+                  <Text style={addStyles.selectedBadgeText}>
+                    Linked to registered user — entry will need their acknowledgement
+                  </Text>
+                </View>
+              )}
             </View>
 
             {/* Amount */}
             <View style={addStyles.field}>
               <Text style={addStyles.label}>AMOUNT</Text>
               <View style={addStyles.amountWrap}>
-                <Text
-                  style={[addStyles.currencySymbol, { color: accentColor }]}
-                >
-                  ₹
-                </Text>
+                <Text style={[addStyles.currencySymbol, { color: accentColor }]}>₹</Text>
                 <TextInput
                   style={[addStyles.amountInput, { color: accentColor }]}
                   value={amount}
-                  onChangeText={(v) => {
-                    setAmount(v);
-                    setError("");
-                  }}
+                  onChangeText={(v) => { setAmount(v); setError(""); }}
                   placeholder="0.00"
                   placeholderTextColor={COLORS.text3}
                   keyboardType="decimal-pad"
@@ -458,10 +514,7 @@ function AddLoanModal({ visible, onClose, isLent, onSuccess }) {
               <Text style={addStyles.label}>DATE</Text>
               <DatePickerInput
                 value={date}
-                onChange={(v) => {
-                  setDate(v);
-                  setError("");
-                }}
+                onChange={(v) => { setDate(v); setError(""); }}
                 accentColor={accentColor}
               />
             </View>
@@ -470,30 +523,14 @@ function AddLoanModal({ visible, onClose, isLent, onSuccess }) {
             <View style={addStyles.field}>
               <Text style={addStyles.label}>
                 NOTE{"  "}
-                <Text
-                  style={{
-                    color: COLORS.text3,
-                    fontWeight: "400",
-                    textTransform: "none",
-                    letterSpacing: 0,
-                  }}
-                >
+                <Text style={{ color: COLORS.text3, fontWeight: "400", textTransform: "none", letterSpacing: 0 }}>
                   — optional
                 </Text>
               </Text>
-              <View
-                style={[
-                  addStyles.inputRow,
-                  { alignItems: "flex-start", paddingTop: 10 },
-                ]}
-              >
+              <View style={[addStyles.inputRow, { alignItems: "flex-start", paddingTop: 10 }]}>
                 <TextInput
-                  style={[
-                    addStyles.inputText,
-                    { height: 64, textAlignVertical: "top" },
-                  ]}
-                  value={note}
-                  onChangeText={setNote}
+                  style={[addStyles.inputText, { height: 64, textAlignVertical: "top" }]}
+                  value={note} onChangeText={setNote}
                   placeholder="Purpose, terms, context…"
                   placeholderTextColor={COLORS.text3}
                   multiline
@@ -502,7 +539,6 @@ function AddLoanModal({ visible, onClose, isLent, onSuccess }) {
             </View>
           </ScrollView>
 
-          {/* Footer */}
           <View style={addStyles.footer}>
             <TouchableOpacity style={addStyles.cancelBtn} onPress={onClose}>
               <Text style={addStyles.cancelText}>Cancel</Text>
@@ -670,6 +706,65 @@ const addStyles = StyleSheet.create({
     fontWeight: FONT_WEIGHT.bold,
     color: "#fff",
   },
+  searchResults: {
+    backgroundColor: COLORS.surface2,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    overflow: 'hidden',
+    marginTop: 4,
+  },
+  searchResultsLabel: {
+    fontSize: 9,
+    fontWeight: FONT_WEIGHT.bold,
+    color: COLORS.text3,
+    letterSpacing: 0.9,
+    textTransform: 'uppercase',
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.sm,
+    paddingBottom: 4,
+  },
+  searchResultRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 10,
+  },
+  searchResultAvatar: {
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: COLORS.primary,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  searchResultAvatarText: {
+    fontSize: FONT_SIZE.sm,
+    fontWeight: FONT_WEIGHT.bold,
+    color: '#fff',
+  },
+  searchResultName: {
+    fontSize: FONT_SIZE.sm,
+    fontWeight: FONT_WEIGHT.semibold,
+    color: COLORS.text,
+  },
+  searchResultEmail: { fontSize: FONT_SIZE.xs, color: COLORS.text3 },
+  searchDivider: { height: 1, backgroundColor: COLORS.border, marginHorizontal: SPACING.md },
+  selectedBadge: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    backgroundColor: 'rgba(16,185,129,0.08)',
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: 'rgba(16,185,129,0.2)',
+    padding: SPACING.sm,
+    marginTop: 4,
+  },
+  selectedBadgeText: {
+    flex: 1,
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.success,
+    lineHeight: 16,
+  },
 });
 
 export default function LoansScreen({ navigation }) {
@@ -716,7 +811,7 @@ export default function LoansScreen({ navigation }) {
           setPeopleDot((res.data?.count || 0) > 0);
         }).catch(() => setPeopleDot(false));
       });
-      global.__refreshLedgerBadge?.();
+    setTimeout(() => global.__refreshLedgerBadge?.(), 100);
     }, [load]),
   );
 

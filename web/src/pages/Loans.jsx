@@ -262,11 +262,13 @@ function LoanCard({ item, onRefresh, idx, accentColor = "#f59e0b", btnColor = "#
         </div>
       )}
 
-      <div style={{ display: "flex", justifyContent: "flex-end" }}>
-        <button className="ld-del" disabled={deleting} onClick={handleDelete}>
-          {deleting ? "Deleting…" : "Delete"}
-        </button>
-      </div>
+      {isLent && (
+        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+          <button className="ld-del" disabled={deleting} onClick={handleDelete}>
+            {deleting ? "Deleting…" : "Delete"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
