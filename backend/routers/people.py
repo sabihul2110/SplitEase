@@ -18,6 +18,37 @@ router = APIRouter()
 def get_pending_requests(current_user: dict = Depends(get_current_user)):
     return people_repository.fetch_pending_entries_for_user(current_user["user_id"])
 
+@router.post("/people/{person_id}/settle")
+def settle_up(
+    person_id:        int,
+    background_tasks: BackgroundTasks,
+    current_user:     dict = Depends(get_current_user),
+):
+    try:
+        result = people_repository.settle_up(person_id, current_user["user_id"])
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    # Notify linked user
+    linked_user_id = result.get("linked_user_id")
+    if linked_user_id:
+        amt         = result["settled_amount"]
+        net_was     = result["net_was"]
+        sender_name = notification_repository.get_user_name(current_user["user_id"])
+        msg         = (
+            f"{sender_name} marked your ledger as settled. "
+            f"Net ₹{amt:,.0f} {'paid to them' if net_was > 0 else 'received from them'}."
+        )
+        notification_repository.create_ledger_outcome_notification(
+            recipient_id=linked_user_id,
+            sender_id=current_user["user_id"],
+            message=msg,
+        )
+        token = push_repository.get_push_token(linked_user_id)
+        background_tasks.add_task(send_push, token, "Ledger Settled", msg, {})
+
+    return {"message": "Settled up.", "settled_amount": result["settled_amount"]}
+
 
 @router.get("/people/sent-requests")
 def get_sent_requests(current_user: dict = Depends(get_current_user)):

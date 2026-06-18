@@ -36,7 +36,7 @@ function ProgressBar({ pct, color }) {
 }
 
 // ── Net balance summary bar ───────────────────────────────────────────────────
-function NetBar({ entries }) {
+function NetBar({ entries, onSettleUp, settling }) {
   const net = entries.reduce((s, e) => {
     const rem = Number(e.remaining_amount);
     return e.direction === 'lent' ? s + rem : s - rem;
@@ -94,13 +94,27 @@ function NetBar({ entries }) {
           <Text style={[styles.netSubVal, { color: '#818cf8' }]}>₹{fmt(totalBorrowed)}</Text>
         </View>
       </View>
-      {!isOwed && !isOwe && activeCount > 0 && (
-        <View style={styles.netNotice}>
-          <Icons.info size={12} color={COLORS.text3} />
-          <Text style={styles.netNoticeText}>
-            Amounts cancel out but individual entries are still open. Record repayments below to close them.
+      {/* Settle Up button — shown when there is an active net balance */}
+      {(isOwed || isOwe) && (
+        <TouchableOpacity
+          style={[
+            styles.settleBtn,
+            { backgroundColor: isOwed ? 'rgba(245,158,11,0.12)' : 'rgba(129,140,248,0.12)' },
+            settling && { opacity: 0.6 },
+          ]}
+          onPress={onSettleUp}
+          disabled={settling}
+          activeOpacity={0.75}
+        >
+          <Icons.checkCircle size={16} color={isOwed ? '#f59e0b' : '#818cf8'} />
+          <Text style={[styles.settleBtnText, { color: isOwed ? '#f59e0b' : '#818cf8' }]}>
+            {settling
+              ? 'Settling…'
+              : isOwed
+              ? `Mark ₹${fmt(Math.abs(net))} as Received`
+              : `Mark ₹${fmt(Math.abs(net))} as Paid`}
           </Text>
-        </View>
+        </TouchableOpacity>
       )}
     </View>
   );
@@ -258,7 +272,7 @@ function EntryCard({ item, onRefresh, showToast, setAlert, isSelecting, isSelect
       <Text style={styles.entryDate}>{dateLabel} {dateStr}</Text>
 
       {/* Repay input (active only) */}
-      {item.status === 'active' && (
+      {/* {item.status === 'active' && (
         <View style={styles.repaySection}>
           <View style={styles.repayRow}>
             <TextInput
@@ -279,7 +293,8 @@ function EntryCard({ item, onRefresh, showToast, setAlert, isSelecting, isSelect
           </View>
           {!!repayErr && <Text style={styles.repayErr}>{repayErr}</Text>}
         </View>
-      )}
+      )} */}
+      {/* No per-entry repayment — settle via the "Settle Up" button on the net bar */}
 
       {/* Delete — only creator can delete, hidden during multi-select */}
       {!isSelecting && item.can_delete !== false && (
@@ -452,6 +467,7 @@ export default function PersonLedgerScreen({ navigation, route }) {
   const [refreshing, setRefreshing] = useState(false);
   const [showAdd, setShowAdd]       = useState(false);
   const [filterStatus, setFilterStatus] = useState('all');
+  const [settling, setSettling]     = useState(false);
   const [toast, setToast]           = useState({ msg: '', type: 'success' });
   const [alert, setAlert]           = useState(null);
   const [selected, setSelected]     = useState(new Set());
@@ -475,6 +491,35 @@ export default function PersonLedgerScreen({ navigation, route }) {
   }, [personId]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
+
+
+  async function handleSettleUp() {
+    setAlert({
+      title: 'Settle Up?',
+      message: `This will mark all active entries between you and ${personName} as settled. The net amount changes to ₹0. This cannot be undone.`,
+      buttons: [
+        { text: 'Cancel', style: 'cancel', onPress: () => setAlert(null) },
+        {
+          text: 'Settle Up', style: 'default',
+          onPress: async () => {
+            setAlert(null);
+            setSettling(true);
+            try {
+              await peopleApi.settleUp(personId);
+              showToast('Settled up successfully');
+              load(true);
+            } catch (err) {
+              const detail = err?.response?.data?.detail;
+              showToast(typeof detail === 'string' ? detail : 'Failed to settle', 'error');
+            } finally {
+              setSettling(false);
+            }
+          },
+        },
+      ],
+    });
+  }
+
 
   // Handle entry submission (called from modal with payload)
   async function handleAddEntry(payload) {
@@ -567,7 +612,13 @@ export default function PersonLedgerScreen({ navigation, route }) {
         }
         ListHeaderComponent={() => (
           <View style={styles.listHeader}>
-            {entries.length > 0 && <NetBar entries={entries} />}
+            {entries.length > 0 && (
+              <NetBar
+                entries={entries}
+                onSettleUp={handleSettleUp}
+                settling={settling}
+              />
+            )}
             <View style={styles.filterTabs}>
               {[
                 { id: 'all',     label: `All (${filterCounts.all})` },
@@ -691,6 +742,20 @@ const styles = StyleSheet.create({
     color: COLORS.text3,
     lineHeight: 16,
   },
+  settleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.base,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  settleBtnText: {
+    fontSize: FONT_SIZE.sm,
+    fontWeight: FONT_WEIGHT.bold,
+  },
 
   filterTabs: {
     flexDirection: 'row', gap: 4,
@@ -724,16 +789,18 @@ const styles = StyleSheet.create({
   progressWrap: { height: 5, borderRadius: 3, backgroundColor: COLORS.surface3, overflow: 'hidden' },
   progressBar:  { height: '100%', borderRadius: 3 },
 
-  repaySection: { gap: 5 },
-  repayRow:     { flexDirection: 'row', gap: SPACING.sm, alignItems: 'center' },
-  repayInput: {
-    flex: 1, paddingVertical: 7, paddingHorizontal: 10,
-    borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border,
-    backgroundColor: COLORS.surface2, color: COLORS.text, fontSize: FONT_SIZE.sm,
-  },
-  repayBtn: { paddingVertical: 7, paddingHorizontal: 14, borderRadius: RADIUS.md },
-  repayBtnText: { color: COLORS.white, fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.bold },
-  repayErr: { fontSize: FONT_SIZE.xs, color: COLORS.danger },
+  // repaySection: { gap: 5 },
+  // repayRow:     { flexDirection: 'row', gap: SPACING.sm, alignItems: 'center' },
+  // repayInput: {
+  //   flex: 1, paddingVertical: 7, paddingHorizontal: 10,
+  //   borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border,
+  //   backgroundColor: COLORS.surface2, color: COLORS.text, fontSize: FONT_SIZE.sm,
+  // },
+  // repayBtn: { paddingVertical: 7, paddingHorizontal: 14, borderRadius: RADIUS.md },
+  // repayBtnText: { color: COLORS.white, fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.bold },
+  // repayErr: { fontSize: FONT_SIZE.xs, color: COLORS.danger },
+
+  repaySection: { display: 'none' }, // kept for safety, repayment moved to Settle Up
 
   entryCardSelected: {
     borderColor: COLORS.primary,

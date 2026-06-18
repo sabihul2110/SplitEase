@@ -13,6 +13,7 @@ export const repayEntry        = (entryId, amt)    => client.post(ENDPOINTS.repa
 export const deleteEntry       = (entryId)         => client.delete(ENDPOINTS.deleteEntry(entryId));
 export const acceptEntry       = (entryId)         => client.post(ENDPOINTS.acceptEntry(entryId));
 export const rejectEntry       = (entryId)         => client.post(ENDPOINTS.rejectEntry(entryId));
-export const getPendingRequests = ()               => client.get(ENDPOINTS.pendingRequests);
+export const getPendingRequests = () => client.get(ENDPOINTS.pendingRequests);
+export const settleUp           = (personId)       => client.post(ENDPOINTS.settleUp(personId));
 export const getSentRequests    = ()               => client.get(ENDPOINTS.sentRequests);
 export const searchUsers       = (q)               => client.get(ENDPOINTS.userSearch(q));

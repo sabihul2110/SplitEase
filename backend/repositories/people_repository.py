@@ -617,6 +617,132 @@ def record_entry_repayment(entry_id: int, owner_user_id: int, repayment_amount: 
         cur.close(); conn.close()
 
 
+def settle_up(person_id: int, owner_user_id: int) -> dict:
+    """
+    Record a net settlement between this owner and a person.
+    Marks all active entries as repaid and inserts one 'settlement' entry
+    that records the final cash transfer. Net becomes 0 after this.
+    """
+    conn = get_connection()
+    cur  = conn.cursor(dictionary=True)
+    try:
+        conn.start_transaction()
+
+        cur.execute(
+            "SELECT person_id, display_name, linked_user_id FROM People WHERE person_id = %s AND owner_user_id = %s",
+            (person_id, owner_user_id),
+        )
+        person = cur.fetchone()
+        if not person:
+            raise ValueError("Person not found.")
+
+        # Net balance from active non-settlement entries only
+        cur.execute(
+            """
+            SELECT COALESCE(SUM(
+                CASE
+                    WHEN le.direction = 'lent'     THEN  le.remaining_amount
+                    WHEN le.direction = 'borrowed' THEN -le.remaining_amount
+                    ELSE 0
+                END
+            ), 0) AS net_balance
+            FROM Ledger_Entries le
+            WHERE le.person_id = %s
+              AND le.status = 'active'
+              AND le.direction IN ('lent', 'borrowed')
+            """,
+            (person_id,),
+        )
+        net_row = cur.fetchone()
+        net = float(net_row["net_balance"]) if net_row else 0.0
+
+        if abs(net) < 0.005:
+            raise ValueError("Already settled — net balance is zero.")
+
+        settlement_amount = round(abs(net), 2)
+        today = __import__('datetime').date.today().isoformat()
+
+        # Mark ALL active entries for this person as repaid
+        cur.execute(
+            """
+            UPDATE Ledger_Entries
+            SET status = 'repaid', remaining_amount = 0
+            WHERE person_id = %s AND status = 'active'
+            """,
+            (person_id,),
+        )
+
+        # Insert a settlement record as an audit trail
+        # direction = 'settlement', no remaining (it's just a record of the cash transfer)
+        cur.execute(
+            """
+            INSERT INTO Ledger_Entries
+                (person_id, created_by, direction, amount, remaining_amount,
+                 note, entry_date, status)
+            VALUES (%s, %s, 'settlement', %s, 0, %s, %s, 'repaid')
+            """,
+            (
+                person_id, owner_user_id,
+                settlement_amount,
+                f"Net settlement — {'paid' if net < 0 else 'received'} ₹{settlement_amount:,.0f}",
+                today,
+            ),
+        )
+        entry_id = cur.lastrowid
+
+        # Mirror on linked user's side
+        linked_user_id = person["linked_user_id"]
+        if linked_user_id:
+            cur.execute(
+                """
+                SELECT p.person_id FROM People p
+                WHERE p.owner_user_id = %s AND p.linked_user_id = %s
+                """,
+                (linked_user_id, owner_user_id),
+            )
+            mirror_person = cur.fetchone()
+            if mirror_person:
+                mirror_person_id = mirror_person["person_id"]
+                cur.execute(
+                    """
+                    UPDATE Ledger_Entries
+                    SET status = 'repaid', remaining_amount = 0
+                    WHERE person_id = %s AND status = 'active'
+                    """,
+                    (mirror_person_id,),
+                )
+                cur.execute(
+                    """
+                    INSERT INTO Ledger_Entries
+                        (person_id, created_by, direction, amount, remaining_amount,
+                         note, entry_date, status)
+                    VALUES (%s, %s, 'settlement', %s, 0, %s, %s, 'repaid')
+                    """,
+                    (
+                        mirror_person_id, owner_user_id,
+                        settlement_amount,
+                        f"Net settlement — {'received' if net < 0 else 'paid'} ₹{settlement_amount:,.0f}",
+                        today,
+                    ),
+                )
+
+        conn.commit()
+        return {
+            "settled_amount": settlement_amount,
+            "net_was": net,
+            "entry_id": entry_id,
+            "linked_user_id": linked_user_id,
+        }
+    except ValueError:
+        conn.rollback()
+        raise
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close(); conn.close()
+
+
 def repair_duplicate_people_for_user(owner_user_id: int) -> dict:
     """
     One-time repair: finds People rows for owner_user_id that share the same

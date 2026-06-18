@@ -110,6 +110,7 @@ export const ENDPOINTS = {
   acceptEntry:         (id) => `${V1}/people/entries/${id}/accept`,
   rejectEntry:         (id) => `${V1}/people/entries/${id}/reject`,
   pendingRequests:     `${V1}/people/pending-requests`,
+  settleUp:            (id) => `${V1}/people/${id}/settle`,
   sentRequests:        `${V1}/people/sent-requests`,
   userSearch:          (q)  => `${V1}/users/search?q=${encodeURIComponent(q)}`,
   pushToken:           `${V1}/users/push-token`,
