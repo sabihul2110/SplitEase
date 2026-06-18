@@ -145,7 +145,6 @@ const NAV_ITEMS = [
   { to: "/groups",      label: "Groups",       icon: "groups"      },
   { to: "/expenses",    label: "Expenses",     icon: "expenses"    },
   { to: "/loans",       label: "Loans",        icon: "loans"       },
-  { to: "/people",      label: "People",       icon: "people"      },
   { to: "/settlements", label: "Settlements",  icon: "settlements" },
   { to: "/activity",    label: "Activity",     icon: "activity"    },
   { to: "/settings",    label: "Settings",     icon: "settings"    },

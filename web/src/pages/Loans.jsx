@@ -1,270 +1,741 @@
-// --- web/src/pages/Loans.jsx ---
-// UPDATED: Two sections — "Money I Lent" and "Money I Borrowed"
-// Each with their own summary, filter tabs, and card grid.
-
-import { useState, useEffect, useCallback } from "react";
+// web/src/pages/Loans.jsx
+// Three tabs: People Ledger | Money Lent | Money Borrowed
+import { useState, useEffect, useCallback, useRef } from "react";
 import { getLoans, deleteLoan, repayLoan, getBorrows, deleteBorrow, repayBorrow } from "../api/loans";
+import * as peopleApi from "../api/people";
 import AppShell from "../components/AppShell";
 import AddEntryModal from "../components/AddEntryModal";
 import { Icons } from "../utils/Icons";
 
-const STYLES = `
-  @keyframes ldPulse  { 0%,100%{opacity:1} 50%{opacity:0.4} }
-  @keyframes ldFadeUp {
-    from { opacity:0; transform:translateY(8px); }
-    to   { opacity:1; transform:translateY(0); }
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const fmt = (n) => Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 });
+const todayStr = () => new Date().toISOString().split("T")[0];
+
+const AVATAR_PALETTE = ["#3b82f6","#8b5cf6","#10b981","#f59e0b","#ef4444","#06b6d4","#f43f5e","#14b8a6"];
+function avatarBg(name = "") {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h);
+  return AVATAR_PALETTE[Math.abs(h) % AVATAR_PALETTE.length];
+}
+function initials(name = "") {
+  return name.split(" ").slice(0, 2).map(w => w[0]?.toUpperCase() || "").join("") || "?";
+}
+
+// ── People Ledger tab ─────────────────────────────────────────────────────────
+function PeopleLedger() {
+  const [people, setPeople]         = useState([]);
+  const [selected, setSelected]     = useState(null);
+  const [entries, setEntries]       = useState([]);
+  const [loading, setLoading]       = useState(true);
+  const [entryLoading, setEntryLoading] = useState(false);
+  const [settling, setSettling]     = useState(false);
+  const [showAddPerson, setShowAddPerson] = useState(false);
+  const [showAddEntry, setShowAddEntry]   = useState(false);
+  const [search, setSearch]         = useState("");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [toast, setToast]           = useState(null);
+  const [pendingCount, setPendingCount] = useState(0);
+
+  const notify = (msg, isErr = false) => {
+    setToast({ msg, isErr });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const loadPeople = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [pr, rr] = await Promise.allSettled([peopleApi.getPeople(), peopleApi.getPendingRequests()]);
+      setPeople(pr.status === "fulfilled" ? pr.value.data || [] : []);
+      setPendingCount(rr.status === "fulfilled" ? (rr.value.data || []).length : 0);
+    } catch { setPeople([]); }
+    finally { setLoading(false); }
+  }, []);
+
+  const loadEntries = useCallback(async (id) => {
+    setEntryLoading(true);
+    try { const r = await peopleApi.getEntries(id); setEntries(r.data || []); }
+    catch { setEntries([]); }
+    finally { setEntryLoading(false); }
+  }, []);
+
+  useEffect(() => { loadPeople(); }, [loadPeople]);
+  useEffect(() => { if (selected) loadEntries(selected); else setEntries([]); }, [selected, loadEntries]);
+
+  const selectedPerson = people.find(p => p.person_id === selected);
+  const net = selectedPerson?.net_balance ?? 0;
+
+  const filtered = search.trim()
+    ? people.filter(p => p.display_name.toLowerCase().includes(search.toLowerCase()))
+    : people;
+
+  const visibleEntries = entries.filter(e =>
+    filterStatus === "all" ? true
+    : filterStatus === "active" ? e.status === "active"
+    : e.status === "repaid"
+  );
+
+  async function handleDeletePerson(id, name) {
+    if (!window.confirm(`Delete ${name} and all their entries?`)) return;
+    try { await peopleApi.deletePerson(id); if (selected === id) setSelected(null); notify(`${name} deleted`); loadPeople(); }
+    catch { notify("Failed to delete", true); }
   }
 
-  .ld-page-tabs {
-    display: flex; gap: 0;
-    border-bottom: 2px solid var(--border);
-    margin-bottom: 28px;
-  }
-  .ld-page-tab {
-    padding: 10px 22px; font-size: 14px; font-weight: 600;
-    font-family: inherit; cursor: pointer; border: none;
-    background: transparent; color: var(--text2);
-    border-bottom: 2px solid transparent; margin-bottom: -2px;
-    transition: all 0.14s;
-  }
-  .ld-page-tab:hover { color: var(--text); }
-  .ld-page-tab.active { color: var(--text); border-bottom-color: var(--primary-h); }
-
-  .ld-summary {
-    display: grid; grid-template-columns: repeat(3, 1fr);
-    gap: 14px; margin-bottom: 22px;
-  }
-  .ld-sum-card {
-    border-radius: 12px; border: 1px solid var(--border);
-    background: var(--surface); padding: 16px 18px 14px;
-    animation: ldFadeUp 0.25s ease both;
-    transition: border-color 0.15s, box-shadow 0.15s;
-  }
-  .ld-sum-card:hover { border-color: var(--border2); box-shadow: 0 4px 18px rgba(0,0,0,0.2); }
-  .ld-sum-label { font-size: 10px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: var(--text3); margin-bottom: 9px; }
-  .ld-sum-val   { font-size: 24px; font-weight: 800; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; margin-bottom: 4px; }
-  .ld-sum-sub   { font-size: 12px; color: var(--text3); }
-
-  .ld-filter-tabs {
-    display: flex; gap: 4px;
-    background: var(--surface2); padding: 4px;
-    border-radius: 10px; border: 1px solid var(--border);
-    margin-bottom: 18px; width: fit-content;
-  }
-  .ld-ftab {
-    padding: 5px 16px; border-radius: 7px;
-    font-size: 12.5px; font-weight: 600; font-family: inherit;
-    cursor: pointer; border: none; background: transparent;
-    color: var(--text2); transition: all 0.13s;
-  }
-  .ld-ftab:hover  { color: var(--text); }
-  .ld-ftab.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 6px rgba(0,0,0,0.3); }
-
-  .ld-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 16px;
+  async function handleDeleteEntry(id) {
+    if (!window.confirm("Delete this entry?")) return;
+    try { await peopleApi.deleteEntry(id); notify("Entry deleted"); loadEntries(selected); loadPeople(); }
+    catch (err) { notify(err.response?.data?.detail || "Failed to delete", true); }
   }
 
-  .ld-card {
-    border-radius: 14px; border: 1px solid var(--border);
-    background: var(--surface); padding: 20px;
-    display: flex; flex-direction: column; gap: 13px;
-    animation: ldFadeUp 0.22s ease both;
-    transition: border-color 0.18s, box-shadow 0.18s;
+  async function handleAddEntry(payload) {
+    await peopleApi.addEntry(selected, payload);
+    notify("Entry added"); loadEntries(selected); loadPeople();
   }
-  .ld-card:hover { border-color: var(--border2); box-shadow: 0 5px 24px rgba(0,0,0,0.22); }
-  .ld-card.repaid { opacity: 0.6; }
 
-  .ld-badge {
-    display: inline-flex; align-items: center; gap: 5px;
-    font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
-    text-transform: uppercase; padding: 3px 8px; border-radius: 20px;
+  async function handleSettleUp() {
+    if (!window.confirm("Record a net settlement to bring this balance to ₹0?")) return;
+    setSettling(true);
+    try { await peopleApi.settleUp(selected); notify("Balance settled"); loadEntries(selected); loadPeople(); }
+    catch (err) { notify(err.response?.data?.detail || "Failed to settle", true); }
+    finally { setSettling(false); }
   }
-  .ld-badge-dot { width: 6px; height: 6px; border-radius: 50%; }
-  .ld-badge.active { background: rgba(245,158,11,0.12); color: #f59e0b; }
-  .ld-badge.active .ld-badge-dot { background: #f59e0b; }
-  .ld-badge.repaid { background: rgba(16,185,129,0.10); color: #10b981; }
-  .ld-badge.repaid .ld-badge-dot { background: #10b981; }
 
-  /* Borrow card has different accent */
-  .ld-card.borrow-card { border-color: rgba(99,102,241,0.15); }
-  .ld-card.borrow-card:hover { border-color: rgba(99,102,241,0.4); }
+  const totalOwedToMe = people.reduce((s, p) => p.net_balance > 0 ? s + p.net_balance : s, 0);
+  const totalIOwe     = people.reduce((s, p) => p.net_balance < 0 ? s + Math.abs(p.net_balance) : s, 0);
 
-  .ld-progress-wrap { width: 100%; height: 5px; border-radius: 3px; background: var(--surface3); overflow: hidden; }
-  .ld-progress-bar  { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+  return (
+    <>
+      {toast && (
+        <div style={{
+          position: "fixed", bottom: 24, right: 24, zIndex: 9999,
+          background: "var(--surface)", border: `1px solid ${toast.isErr ? "var(--danger)" : "var(--success)"}`,
+          padding: "12px 20px", borderRadius: 10, fontWeight: 600, fontSize: 14,
+          color: "var(--text)", boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+        }}>
+          <span style={{ color: toast.isErr ? "var(--danger)" : "var(--success)", marginRight: 8 }}>
+            {toast.isErr ? "✕" : "✓"}
+          </span>
+          {toast.msg}
+        </div>
+      )}
 
-  .ld-repay-row { display: flex; gap: 8px; align-items: center; }
-  .ld-repay-input {
-    flex: 1; padding: 7px 10px; border-radius: 8px;
-    border: 1px solid var(--border); background: var(--surface2);
-    color: var(--text); font-size: 13px; font-family: inherit;
-    outline: none; transition: border-color 0.13s;
+      <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 0,
+        border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden",
+        height: "calc(100vh - 180px)", background: "var(--surface)" }}>
+
+        {/* Left: contact list */}
+        <div style={{ borderRight: "1px solid var(--border)", display: "flex", flexDirection: "column" }}>
+
+          {/* Summary */}
+          <div style={{ display: "flex", borderBottom: "1px solid var(--border)" }}>
+            <div style={{ flex: 1, padding: "16px", borderRight: "1px solid var(--border)" }}>
+              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
+                textTransform: "uppercase", color: "var(--text3)", marginBottom: 6 }}>Owed to You</div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: "#f59e0b",
+                fontVariantNumeric: "tabular-nums" }}>₹{fmt(totalOwedToMe)}</div>
+            </div>
+            <div style={{ flex: 1, padding: "16px" }}>
+              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
+                textTransform: "uppercase", color: "var(--text3)", marginBottom: 6 }}>You Owe</div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: "#818cf8",
+                fontVariantNumeric: "tabular-nums" }}>₹{fmt(totalIOwe)}</div>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div style={{ padding: "12px", display: "flex", gap: 8,
+            borderBottom: "1px solid var(--border)" }}>
+            <input value={search} onChange={e => setSearch(e.target.value)}
+              placeholder="Search people…"
+              style={{ flex: 1, fontSize: 13, padding: "8px 12px",
+                borderRadius: 8, border: "1px solid var(--border)",
+                background: "var(--surface2)", color: "var(--text)", outline: "none" }} />
+            <button className="btn btn-primary btn-sm" onClick={() => setShowAddPerson(true)}>+ Add</button>
+          </div>
+
+          {/* Pending requests banner */}
+          {pendingCount > 0 && (
+            <div style={{ padding: "10px 14px", background: "rgba(245,158,11,0.08)",
+              borderBottom: "1px solid rgba(245,158,11,0.2)", fontSize: 13,
+              color: "var(--warning)", fontWeight: 600, cursor: "pointer" }}
+              onClick={() => window.open("/people/pending", "_self")}>
+              ⏳ {pendingCount} pending request{pendingCount > 1 ? "s" : ""} awaiting your review →
+            </div>
+          )}
+
+          {/* List */}
+          <div style={{ flex: 1, overflowY: "auto" }}>
+            {loading ? (
+              <div className="loading" style={{ padding: 32 }}><div className="spinner" /></div>
+            ) : filtered.length === 0 ? (
+              <div style={{ padding: "48px 24px", textAlign: "center", color: "var(--text3)", fontSize: 14 }}>
+                {search ? "No matches found." : "No people yet. Add someone to start tracking."}
+              </div>
+            ) : filtered.map(p => {
+              const pnet = p.net_balance;
+              const isOwed = pnet > 0, isOwe = pnet < 0;
+              const netColor = isOwed ? "#f59e0b" : isOwe ? "#818cf8" : "var(--text3)";
+              const isSelected = selected === p.person_id;
+              return (
+                <div key={p.person_id} onClick={() => setSelected(p.person_id)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 12,
+                    padding: "12px 16px", cursor: "pointer",
+                    borderBottom: "1px solid var(--border)",
+                    borderLeft: `3px solid ${isSelected ? "var(--primary)" : "transparent"}`,
+                    background: isSelected ? "var(--surface2)" : "transparent",
+                    transition: "all 0.1s",
+                  }}>
+                  <div style={{ width: 38, height: 38, borderRadius: "50%",
+                    background: avatarBg(p.display_name), display: "flex",
+                    alignItems: "center", justifyContent: "center",
+                    fontSize: 13, fontWeight: 700, color: "#fff", flexShrink: 0 }}>
+                    {initials(p.display_name)}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text)",
+                      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {p.display_name}
+                    </div>
+                    <div style={{ fontSize: 12, color: netColor, fontWeight: 600, marginTop: 2 }}>
+                      {isOwed ? `Owes you ₹${fmt(Math.abs(pnet))}`
+                        : isOwe ? `You owe ₹${fmt(Math.abs(pnet))}`
+                        : "Settled up"}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Right: entries */}
+        {selected && selectedPerson ? (
+          <div style={{ display: "flex", flexDirection: "column", background: "var(--bg)" }}>
+
+            {/* Person header */}
+            <div style={{ padding: "24px 32px", background: "var(--surface)",
+              borderBottom: "1px solid var(--border)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                  <div style={{ width: 56, height: 56, borderRadius: "50%",
+                    background: avatarBg(selectedPerson.display_name),
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 20, fontWeight: 700, color: "#fff" }}>
+                    {initials(selectedPerson.display_name)}
+                  </div>
+                  <div>
+                    <h2 style={{ fontSize: 22, fontWeight: 800, margin: "0 0 4px",
+                      letterSpacing: "-0.02em", color: "var(--text)" }}>
+                      {selectedPerson.display_name}
+                    </h2>
+                    <div style={{ fontSize: 15, fontWeight: 600,
+                      color: net > 0 ? "#f59e0b" : net < 0 ? "#818cf8" : "var(--success)" }}>
+                      {net > 0 ? `Owes you ₹${fmt(Math.abs(net))}`
+                        : net < 0 ? `You owe ₹${fmt(Math.abs(net))}`
+                        : "All settled up ✓"}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                  <button className="btn btn-ghost btn-sm"
+                    style={{ color: "var(--danger)", borderColor: "rgba(239,68,68,0.3)" }}
+                    onClick={() => handleDeletePerson(selectedPerson.person_id, selectedPerson.display_name)}>
+                    Delete Contact
+                  </button>
+                  {net !== 0 && (
+                    <button className="btn btn-sm" disabled={settling}
+                      style={{
+                        background: net > 0 ? "rgba(245,158,11,0.1)" : "rgba(129,140,248,0.1)",
+                        color: net > 0 ? "#f59e0b" : "#818cf8",
+                        border: `1px solid ${net > 0 ? "rgba(245,158,11,0.3)" : "rgba(129,140,248,0.3)"}`,
+                        fontWeight: 700,
+                      }}
+                      onClick={handleSettleUp}>
+                      {settling ? "Settling…" : `Settle Up ₹${fmt(Math.abs(net))}`}
+                    </button>
+                  )}
+                  <button className="btn btn-primary btn-sm" onClick={() => setShowAddEntry(true)}>
+                    + Add Entry
+                  </button>
+                </div>
+              </div>
+
+              {/* Mini stats */}
+              <div style={{ display: "flex", gap: 24, marginTop: 16,
+                paddingTop: 16, borderTop: "1px solid var(--border)" }}>
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
+                    textTransform: "uppercase", color: "var(--text3)", marginBottom: 4 }}>You Lent</div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: "#f59e0b",
+                    fontVariantNumeric: "tabular-nums" }}>
+                    ₹{fmt(entries.filter(e => e.direction === "lent").reduce((s, e) => s + e.amount, 0))}
+                  </div>
+                </div>
+                <div style={{ width: 1, background: "var(--border)", alignSelf: "stretch" }} />
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
+                    textTransform: "uppercase", color: "var(--text3)", marginBottom: 4 }}>You Borrowed</div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: "#818cf8",
+                    fontVariantNumeric: "tabular-nums" }}>
+                    ₹{fmt(entries.filter(e => e.direction === "borrowed").reduce((s, e) => s + e.amount, 0))}
+                  </div>
+                </div>
+                <div style={{ width: 1, background: "var(--border)", alignSelf: "stretch" }} />
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
+                    textTransform: "uppercase", color: "var(--text3)", marginBottom: 4 }}>Entries</div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text)" }}>
+                    {entries.length}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Filter tabs + entries */}
+            <div style={{ flex: 1, overflowY: "auto", padding: "24px 32px" }}>
+              <div style={{ display: "flex", gap: 4, marginBottom: 20,
+                background: "var(--surface)", padding: 4, borderRadius: 8,
+                border: "1px solid var(--border)", width: "fit-content" }}>
+                {[
+                  { id: "all",    label: `All (${entries.length})` },
+                  { id: "active", label: `Active (${entries.filter(e => e.status === "active").length})` },
+                  { id: "repaid", label: `Settled (${entries.filter(e => e.status === "repaid").length})` },
+                ].map(t => (
+                  <button key={t.id} onClick={() => setFilterStatus(t.id)}
+                    style={{
+                      padding: "6px 14px", borderRadius: 6, fontSize: 13, fontWeight: 600,
+                      cursor: "pointer", border: "none", fontFamily: "inherit",
+                      background: filterStatus === t.id ? "var(--primary)" : "transparent",
+                      color: filterStatus === t.id ? "#fff" : "var(--text2)",
+                      transition: "all 0.12s",
+                    }}>
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+
+              {entryLoading ? (
+                <div className="loading"><div className="spinner" />Loading entries…</div>
+              ) : visibleEntries.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-icon">📄</div>
+                  <div style={{ fontSize: 16, fontWeight: 600, color: "var(--text2)" }}>
+                    No {filterStatus !== "all" ? filterStatus : ""} entries yet
+                  </div>
+                  {filterStatus === "all" && (
+                    <div style={{ fontSize: 14, color: "var(--text3)", marginTop: 4 }}>
+                      Add an entry to start tracking with {selectedPerson.display_name}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 0,
+                  border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden",
+                  background: "var(--surface)" }}>
+                  {visibleEntries.map((e, idx) => {
+                    const isLent = e.direction === "lent";
+                    const isSettlement = e.direction === "settlement";
+                    const isPending = e.status === "pending";
+                    const color = isSettlement ? "var(--success)"
+                      : isPending ? "var(--text3)"
+                      : isLent ? "#f59e0b" : "#818cf8";
+                    const dateStr = e.entry_date
+                      ? new Date(e.entry_date + "T00:00:00").toLocaleDateString("en-IN",
+                          { day: "numeric", month: "short", year: "numeric" })
+                      : "—";
+                    const pct = e.amount > 0
+                      ? Math.round(((e.amount - e.remaining_amount) / e.amount) * 100)
+                      : 100;
+
+                    return (
+                      <div key={e.entry_id} style={{
+                        display: "flex", alignItems: "center", gap: 16,
+                        padding: "16px 20px",
+                        borderBottom: idx < visibleEntries.length - 1 ? "1px solid var(--border)" : "none",
+                        opacity: isPending ? 0.7 : 1,
+                      }}>
+                        {/* Direction icon */}
+                        <div style={{ width: 36, height: 36, borderRadius: 9,
+                          background: color + "18", display: "flex", alignItems: "center",
+                          justifyContent: "center", flexShrink: 0, color }}>
+                          {isSettlement ? "✓" : isLent ? "↑" : "↓"}
+                        </div>
+
+                        {/* Info */}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>
+                              {isSettlement ? "Net Settlement"
+                                : isLent ? "You lent" : "You borrowed"}
+                            </span>
+                            {isPending && (
+                              <span style={{ fontSize: 10, fontWeight: 700,
+                                background: "rgba(245,158,11,0.12)", color: "var(--warning)",
+                                padding: "2px 7px", borderRadius: 20 }}>PENDING</span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: 12, color: "var(--text3)" }}>
+                            {dateStr}{e.note ? ` · ${e.note}` : ""}
+                          </div>
+                          {!isPending && !isSettlement && e.status === "active" && (
+                            <div style={{ marginTop: 8 }}>
+                              <div style={{ height: 3, borderRadius: 2,
+                                background: "var(--surface3)", overflow: "hidden" }}>
+                                <div style={{ height: "100%", borderRadius: 2,
+                                  width: `${pct}%`, background: color,
+                                  transition: "width 0.3s ease" }} />
+                              </div>
+                              <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 4 }}>
+                                {pct}% settled · ₹{fmt(e.remaining_amount)} remaining
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Amount + delete */}
+                        <div style={{ textAlign: "right", flexShrink: 0 }}>
+                          <div style={{ fontSize: 16, fontWeight: 700, color,
+                            fontVariantNumeric: "tabular-nums" }}>
+                            ₹{fmt(e.amount)}
+                          </div>
+                          {e.status === "repaid" && (
+                            <div style={{ fontSize: 11, color: "var(--success)", fontWeight: 600, marginTop: 2 }}>
+                              Settled ✓
+                            </div>
+                          )}
+                        </div>
+                        {e.can_delete && !isSettlement && (
+                          <button onClick={() => handleDeleteEntry(e.entry_id)}
+                            className="btn btn-ghost btn-xs"
+                            style={{ color: "var(--danger)", borderColor: "rgba(239,68,68,0.2)",
+                              flexShrink: 0 }}>
+                            Delete
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center",
+            flexDirection: "column", gap: 12, color: "var(--text3)", background: "var(--bg)" }}>
+            <div style={{ width: 64, height: 64, borderRadius: 16,
+              background: "var(--surface2)", border: "1px solid var(--border)",
+              display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28 }}>
+              👤
+            </div>
+            <div style={{ fontSize: 15, fontWeight: 500 }}>Select a person to view their ledger</div>
+            <button className="btn btn-primary btn-sm" onClick={() => setShowAddPerson(true)}>
+              + Add First Person
+            </button>
+          </div>
+        )}
+      </div>
+
+      {showAddPerson && <AddPersonModal onClose={() => setShowAddPerson(false)} onSuccess={loadPeople} />}
+      {showAddEntry && selected && (
+        <AddEntryModal2
+          personName={selectedPerson?.display_name || ""}
+          onClose={() => setShowAddEntry(false)}
+          onSuccess={handleAddEntry}
+        />
+      )}
+    </>
+  );
+}
+
+// ── Add Person modal ──────────────────────────────────────────────────────────
+function AddPersonModal({ onClose, onSuccess }) {
+  const [name, setName]         = useState("");
+  const [results, setResults]   = useState([]);
+  const [selected, setSelected] = useState(null);
+  const [saving, setSaving]     = useState(false);
+  const [error, setError]       = useState("");
+
+  function handleChange(v) {
+    setName(v); setSelected(null); setError("");
+    if (v.trim().length < 2) { setResults([]); return; }
+    peopleApi.searchUsers(v.trim())
+      .then(r => setResults(r.data || []))
+      .catch(() => setResults([]));
   }
-  .ld-repay-input:focus { border-color: var(--border2); }
-  .ld-repay-input::placeholder { color: var(--text3); }
-  .ld-repay-btn {
-    padding: 7px 14px; border-radius: 8px;
-    color: #fff; border: none;
-    font-size: 12px; font-weight: 700; font-family: inherit;
-    cursor: pointer; transition: background 0.12s; white-space: nowrap;
+
+  async function submit() {
+    if (!name.trim()) return;
+    setSaving(true);
+    try {
+      await peopleApi.createPerson({ display_name: name.trim(), linked_user_id: selected?.user_id || null });
+      onSuccess(); onClose();
+    } catch (err) {
+      const d = err.response?.data?.detail;
+      setError(typeof d === "string" ? d : "Failed to add");
+      setSaving(false);
+    }
   }
-  .ld-repay-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-  .ld-err { font-size: 12px; color: #f87171; margin-top: -6px; }
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
+        <div className="modal-head">
+          <div className="modal-title">Add Person</div>
+          <button className="btn btn-ghost btn-xs" onClick={onClose}>✕</button>
+        </div>
+        <div className="modal-body" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          {error && <div className="alert alert-error">{error}</div>}
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="form-label">NAME OR EMAIL</label>
+            <input value={name} onChange={e => handleChange(e.target.value)}
+              placeholder="Search or enter a name…" autoFocus />
+          </div>
+          {results.length > 0 && !selected && (
+            <div style={{ border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
+              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.09em",
+                textTransform: "uppercase", color: "var(--text3)",
+                padding: "8px 14px", borderBottom: "1px solid var(--border)" }}>
+                Registered Users
+              </div>
+              {results.map(u => (
+                <div key={u.user_id}
+                  onClick={() => { setName(u.name); setSelected(u); setResults([]); }}
+                  style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px",
+                    cursor: "pointer", borderBottom: "1px solid var(--border)",
+                    transition: "background 0.1s" }}
+                  onMouseEnter={e => e.currentTarget.style.background = "var(--surface2)"}
+                  onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                  <div style={{ width: 28, height: 28, borderRadius: "50%",
+                    background: "var(--primary)", display: "flex", alignItems: "center",
+                    justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#fff" }}>
+                    {u.name[0]?.toUpperCase()}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600 }}>{u.name}</div>
+                    <div style={{ fontSize: 11, color: "var(--text3)" }}>{u.email}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {selected && (
+            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--success)",
+              background: "rgba(16,185,129,0.08)", padding: "10px 14px", borderRadius: 8 }}>
+              ✓ Linked to registered user — entries will need acceptance
+            </div>
+          )}
+          <div style={{ display: "flex", gap: 10 }}>
+            <button className="btn btn-ghost" style={{ flex: 1 }} onClick={onClose}>Cancel</button>
+            <button className="btn btn-primary" style={{ flex: 2 }}
+              onClick={submit} disabled={!name.trim() || saving}>
+              {saving ? "Saving…" : "Add Person"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
-  .ld-del {
-    padding: 5px 8px; border-radius: 7px;
-    background: none; border: 1px solid var(--border);
-    color: var(--text3); cursor: pointer; font-size: 11px;
-    font-family: inherit; transition: all 0.12s;
+// ── Add Entry modal (for People tab) ─────────────────────────────────────────
+function AddEntryModal2({ personName, onClose, onSuccess }) {
+  const [direction, setDirection] = useState("lent");
+  const [amount, setAmount]       = useState("");
+  const [date, setDate]           = useState(todayStr());
+  const [note, setNote]           = useState("");
+  const [saving, setSaving]       = useState(false);
+  const [error, setError]         = useState("");
+
+  async function submit(e) {
+    e.preventDefault();
+    if (!amount || +amount <= 0) { setError("Enter a valid amount"); return; }
+    setSaving(true);
+    try {
+      await onSuccess({ direction, amount: parseFloat(amount), note: note.trim() || null, entry_date: date });
+      onClose();
+    } catch (err) {
+      setError(err.response?.data?.detail || "Failed");
+      setSaving(false);
+    }
   }
-  .ld-del:hover { background: rgba(239,68,68,0.08); color: #f87171; border-color: rgba(239,68,68,0.25); }
 
-  .ld-empty { text-align: center; padding: 52px 24px; color: var(--text3); }
-  .ld-empty-icon { font-size: 38px; margin-bottom: 12px; opacity: 0.35; }
+  const accent = direction === "lent" ? "#f59e0b" : "#818cf8";
 
-  .ld-skel { animation: ldPulse 1.4s ease-in-out infinite; background: var(--surface3); border-radius: 5px; display: block; }
-`;
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth: 400 }}>
+        <div className="modal-head">
+          <div className="modal-title">Add Entry — {personName}</div>
+          <button className="btn btn-ghost btn-xs" onClick={onClose}>✕</button>
+        </div>
+        <div className="modal-body" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          {error && <div className="alert alert-error">{error}</div>}
+          <div className="split-toggle">
+            <button className={`split-opt ${direction === "lent" ? "on" : ""}`}
+              onClick={() => setDirection("lent")} type="button">↑ You Lent</button>
+            <button className={`split-opt ${direction === "borrowed" ? "on" : ""}`}
+              onClick={() => setDirection("borrowed")} type="button">↓ You Borrowed</button>
+          </div>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="form-label">AMOUNT</label>
+            <div style={{ display: "flex", alignItems: "center",
+              background: "var(--surface2)", border: "1px solid var(--border2)",
+              borderRadius: 8, paddingLeft: 12 }}>
+              <span style={{ fontSize: 22, color: accent, fontWeight: 700 }}>₹</span>
+              <input value={amount} onChange={e => setAmount(e.target.value)}
+                type="number" step="0.01" placeholder="0.00"
+                style={{ border: "none", background: "transparent", fontSize: 24,
+                  fontWeight: 800, color: accent, padding: "10px 8px", outline: "none" }} />
+            </div>
+          </div>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="form-label">DATE</label>
+            <input type="date" value={date} onChange={e => setDate(e.target.value)} />
+          </div>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="form-label">NOTE — optional</label>
+            <input value={note} onChange={e => setNote(e.target.value)} placeholder="Purpose…" />
+          </div>
+          <div style={{ display: "flex", gap: 10 }}>
+            <button className="btn btn-ghost" style={{ flex: 1 }} onClick={onClose}>Cancel</button>
+            <button className="btn" style={{ flex: 2, background: accent, color: "#fff",
+              fontWeight: 700, opacity: !amount || saving ? 0.5 : 1 }}
+              onClick={submit} disabled={!amount || saving}>
+              {saving ? "Saving…" : "Save Entry"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
-// ─────────────────────────────────────────────
-//  LoanCard — for loans given
-// ─────────────────────────────────────────────
-function LoanCard({ item, onRefresh, idx, accentColor = "#f59e0b", btnColor = "#10b981", btnHover = "#0d9e6e", isLent = true }) {
+// ── LoanCard (Normal Loans tab) ───────────────────────────────────────────────
+function LoanCard({ item, onRefresh, idx, accentColor, btnColor, btnHover, isLent }) {
   const [repayAmt, setRepayAmt] = useState("");
   const [repayErr, setRepayErr] = useState("");
-  const [saving,   setSaving]   = useState(false);
+  const [saving, setSaving]     = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   const pct = item.amount > 0
     ? Math.round(((item.amount - item.remaining_amount) / item.amount) * 100)
     : 100;
-
-  const personLabel  = isLent ? item.borrower_name : item.lender_name;
-  const dateField    = isLent ? item.loan_date      : item.borrow_date;
-  const idField      = isLent ? item.loan_id        : item.borrow_id;
-  const repayEndpt   = isLent ? `/loans/${idField}/repay/`   : `/borrows/${idField}/repay/`;
-  const deleteEndpt  = isLent ? `/loans/${idField}/`          : `/borrows/${idField}/`;
-  const directionLbl = isLent ? "Lent to"       : "Borrowed from";
-  const dateLbl      = isLent ? "Lent on"       : "Borrowed on";
-  const remainLabel  = isLent ? "Remaining to receive" : "Remaining to repay";
+  const personLabel = isLent ? item.borrower_name : item.lender_name;
+  const dateField   = isLent ? item.loan_date : item.borrow_date;
+  const idField     = isLent ? item.loan_id : item.borrow_id;
 
   async function handleRepay() {
     setRepayErr("");
     const amt = parseFloat(repayAmt);
     if (isNaN(amt) || amt <= 0) { setRepayErr("Enter a valid amount."); return; }
-    if (amt > item.remaining_amount) {
-      setRepayErr(`Max is ₹${item.remaining_amount.toLocaleString("en-IN")}`);
-      return;
-    }
+    if (amt > item.remaining_amount) { setRepayErr(`Max ₹${fmt(item.remaining_amount)}`); return; }
     setSaving(true);
     try {
       await (isLent ? repayLoan(idField, { repayment_amount: amt }) : repayBorrow(idField, { repayment_amount: amt }));
-      setRepayAmt("");
-      onRefresh();
-    } catch (ex) {
-      setRepayErr(ex?.response?.data?.detail || "Failed.");
-    } finally {
-      setSaving(false);
-    }
+      setRepayAmt(""); onRefresh();
+    } catch (ex) { setRepayErr(ex?.response?.data?.detail || "Failed."); }
+    finally { setSaving(false); }
   }
 
   async function handleDelete() {
-    if (!window.confirm(`Delete this record?`)) return;
+    if (!window.confirm("Delete this record?")) return;
     setDeleting(true);
     try { await (isLent ? deleteLoan(idField) : deleteBorrow(idField)); onRefresh(); }
     catch { setDeleting(false); }
   }
 
   return (
-    <div className={`ld-card ${item.status} ${!isLent ? "borrow-card" : ""}`}
-         style={{ animationDelay: `${idx * 0.04}s` }}>
+    <div className="card" style={{ padding: 20, display: "flex", flexDirection: "column",
+      gap: 12, transition: "border-color 0.15s, box-shadow 0.15s",
+      borderLeft: `3px solid ${item.status === "repaid" ? "var(--success)" : accentColor}` }}>
 
-      {/* Header */}
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <div>
-          <div style={{ fontSize: 12, color: "var(--text3)", marginBottom: 3 }}>{directionLbl}</div>
-          <div style={{ fontSize: 17, fontWeight: 700, color: "var(--text)", letterSpacing: "-0.01em" }}>
-            {personLabel}
+          <div style={{ fontSize: 11, color: "var(--text3)", fontWeight: 600,
+            textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>
+            {isLent ? "Lent to" : "Borrowed from"}
           </div>
+          <div style={{ fontSize: 17, fontWeight: 700, color: "var(--text)" }}>{personLabel}</div>
           <div style={{ marginTop: 6 }}>
-            <span className={`ld-badge ${item.status}`}>
-              <span className="ld-badge-dot" />
+            <span className={`badge ${item.status === "active" ? "badge-amber" : "badge-success"}`}>
               {item.status === "active" ? "Active" : "Settled"}
             </span>
+            {item.status === "pending" && (
+              <span className="badge badge-neutral" style={{ marginLeft: 6 }}>Pending</span>
+            )}
           </div>
         </div>
-        <div style={{ textAlign: "right", flexShrink: 0 }}>
-          <div style={{ fontSize: 10, color: "var(--text3)", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 3 }}>
+        <div style={{ textAlign: "right" }}>
+          <div style={{ fontSize: 11, color: "var(--text3)", fontWeight: 600,
+            textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>
             {isLent ? "Amount Lent" : "Amount Borrowed"}
           </div>
-          <div style={{ fontSize: 18, fontWeight: 800, color: accentColor, fontVariantNumeric: "tabular-nums" }}>
-            ₹{item.amount.toLocaleString("en-IN")}
+          <div style={{ fontSize: 20, fontWeight: 800, color: accentColor,
+            fontVariantNumeric: "tabular-nums" }}>
+            ₹{fmt(item.amount)}
           </div>
         </div>
       </div>
 
       {item.note && (
-        <div style={{ fontSize: 12.5, color: "var(--text3)", marginTop: -5 }}>{item.note}</div>
+        <div style={{ fontSize: 13, color: "var(--text3)" }}>{item.note}</div>
       )}
 
-      {/* Progress */}
-      <div>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-          <span style={{ fontSize: 11, color: "var(--text3)", fontWeight: 600 }}>
-            {item.status === "repaid" ? "Fully settled" : `${pct}% recovered`}
-          </span>
-          <span style={{ fontSize: 13, fontWeight: 700, fontVariantNumeric: "tabular-nums",
-            color: item.status === "repaid" ? "var(--success)" : accentColor }}>
-            {item.status === "repaid"
-              ? "Done"
-              : `₹${item.remaining_amount.toLocaleString("en-IN")} left`}
-          </span>
+      {item.status !== "pending" && (
+        <div>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+            <span style={{ fontSize: 12, color: "var(--text3)", fontWeight: 600 }}>
+              {item.status === "repaid" ? "Fully settled" : `${pct}% recovered`}
+            </span>
+            <span style={{ fontSize: 13, fontWeight: 700, fontVariantNumeric: "tabular-nums",
+              color: item.status === "repaid" ? "var(--success)" : accentColor }}>
+              {item.status === "repaid" ? "Done" : `₹${fmt(item.remaining_amount)} left`}
+            </span>
+          </div>
+          <div style={{ height: 5, borderRadius: 3, background: "var(--surface3)", overflow: "hidden" }}>
+            <div style={{ height: "100%", borderRadius: 3, width: `${pct}%`,
+              background: item.status === "repaid" ? "var(--success)" : accentColor,
+              transition: "width 0.4s ease" }} />
+          </div>
         </div>
-        <div className="ld-progress-wrap">
-          <div className="ld-progress-bar" style={{
-            width: `${pct}%`,
-            background: item.status === "repaid" ? "#10b981" : accentColor,
-          }} />
-        </div>
-      </div>
+      )}
 
       <div style={{ fontSize: 12, color: "var(--text3)" }}>
-        {dateLbl}{" "}
-        {dateField
-          ? new Date(dateField + "T00:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
-          : "—"}
+        {isLent ? "Lent" : "Borrowed"} on{" "}
+        {dateField ? new Date(dateField + "T00:00:00").toLocaleDateString("en-IN",
+          { day: "numeric", month: "short", year: "numeric" }) : "—"}
       </div>
 
-      {/* Repay form */}
       {item.status === "active" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-          <div className="ld-repay-row">
-            <input
-              className="ld-repay-input"
-              type="number" min="0" step="0.01"
-              placeholder={`Amount (max ₹${item.remaining_amount.toLocaleString("en-IN")})`}
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <div style={{ display: "flex", gap: 8 }}>
+            <input type="number" min="0" step="0.01"
+              placeholder={`Amount (max ₹${fmt(item.remaining_amount)})`}
               value={repayAmt}
               onChange={e => { setRepayAmt(e.target.value); setRepayErr(""); }}
-            />
-            <button
-              className="ld-repay-btn"
-              style={{ background: btnColor }}
+              style={{ flex: 1, padding: "7px 10px", borderRadius: 7,
+                border: "1px solid var(--border)", background: "var(--surface2)",
+                color: "var(--text)", fontSize: 13, outline: "none" }} />
+            <button onClick={handleRepay} disabled={saving || !repayAmt}
+              style={{ padding: "7px 14px", borderRadius: 7, border: "none",
+                background: btnColor, color: "#fff", fontSize: 13, fontWeight: 700,
+                cursor: "pointer", opacity: saving || !repayAmt ? 0.5 : 1,
+                transition: "background 0.12s", whiteSpace: "nowrap" }}
               onMouseEnter={e => e.currentTarget.style.background = btnHover}
-              onMouseLeave={e => e.currentTarget.style.background = btnColor}
-              disabled={saving || !repayAmt}
-              onClick={handleRepay}
-            >
+              onMouseLeave={e => e.currentTarget.style.background = btnColor}>
               {saving ? "…" : isLent ? "Record" : "Repay"}
             </button>
           </div>
-          {repayErr && <div className="ld-err">{repayErr}</div>}
+          {repayErr && <div style={{ fontSize: 12, color: "var(--danger)" }}>{repayErr}</div>}
         </div>
       )}
 
       {isLent && (
         <div style={{ display: "flex", justifyContent: "flex-end" }}>
-          <button className="ld-del" disabled={deleting} onClick={handleDelete}>
+          <button onClick={handleDelete} disabled={deleting}
+            className="btn btn-ghost btn-xs"
+            style={{ color: "var(--danger)", borderColor: "rgba(239,68,68,0.25)" }}>
             {deleting ? "Deleting…" : "Delete"}
           </button>
         </div>
@@ -273,15 +744,13 @@ function LoanCard({ item, onRefresh, idx, accentColor = "#f59e0b", btnColor = "#
   );
 }
 
-// ─────────────────────────────────────────────
-//  Main Loans page
-// ─────────────────────────────────────────────
+// ── Main Loans page ───────────────────────────────────────────────────────────
 export default function Loans() {
-  const [loans,    setLoans]    = useState([]);
-  const [borrows,  setBorrows]  = useState([]);
-  const [loading,  setLoading]  = useState(true);
-  const [pageTab,  setPageTab]  = useState("lent");   // lent | borrowed
-  const [filterTab, setFilterTab] = useState("all"); // all | active | repaid
+  const [loans, setLoans]       = useState([]);
+  const [borrows, setBorrows]   = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [pageTab, setPageTab]   = useState("people");   // people | lent | borrowed
+  const [filterTab, setFilterTab] = useState("all");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -289,158 +758,147 @@ export default function Loans() {
       const [lR, bR] = await Promise.all([getLoans(), getBorrows()]);
       setLoans(lR.data || []);
       setBorrows(bR.data || []);
-    } catch {
-      setLoans([]); setBorrows([]);
-    } finally {
-      setLoading(false);
-    }
+    } catch { setLoans([]); setBorrows([]); }
+    finally { setLoading(false); }
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
-  const items = pageTab === "lent" ? loans : borrows;
-
+  const items   = pageTab === "lent" ? loans : borrows;
   const visible = items.filter(i =>
-    filterTab === "all"    ? true
-    : filterTab === "active" ? i.status === "active"
+    filterTab === "all" ? true
+    : filterTab === "active" ? (i.status === "active" || i.status === "pending")
     : i.status === "repaid"
   );
 
-  // Summary numbers
   const totalLent        = loans.reduce((s, l) => s + l.amount, 0);
   const outstandingLent  = loans.filter(l => l.status === "active").reduce((s, l) => s + l.remaining_amount, 0);
   const totalBorrowed    = borrows.reduce((s, b) => s + b.amount, 0);
   const outstandingBorrow = borrows.filter(b => b.status === "active").reduce((s, b) => s + b.remaining_amount, 0);
 
-  const lentSummary = [
-    { label: "Total Lent",    value: totalLent,       color: "#f59e0b", sub: `${loans.length} loan${loans.length !== 1 ? "s" : ""}` },
-    { label: "Outstanding",   value: outstandingLent, color: "var(--danger)", sub: `${loans.filter(l=>l.status==="active").length} active` },
-    { label: "Recovered",     value: totalLent - loans.reduce((s,l) => s + l.remaining_amount, 0), color: "var(--success)", sub: `${loans.filter(l=>l.status==="repaid").length} fully repaid` },
+  const summaryCards = pageTab === "lent" ? [
+    { label: "Total Lent",  value: totalLent, color: "#f59e0b",
+      sub: `${loans.length} loan${loans.length !== 1 ? "s" : ""}` },
+    { label: "Outstanding", value: outstandingLent, color: "var(--danger)",
+      sub: `${loans.filter(l => l.status === "active").length} active` },
+    { label: "Recovered",   value: totalLent - loans.reduce((s, l) => s + l.remaining_amount, 0),
+      color: "var(--success)", sub: `${loans.filter(l => l.status === "repaid").length} fully repaid` },
+  ] : [
+    { label: "Total Borrowed",  value: totalBorrowed, color: "#818cf8",
+      sub: `${borrows.length} borrow${borrows.length !== 1 ? "s" : ""}` },
+    { label: "Still to Repay",  value: outstandingBorrow, color: "var(--danger)",
+      sub: `${borrows.filter(b => b.status === "active").length} active` },
+    { label: "Already Repaid",  value: totalBorrowed - borrows.reduce((s, b) => s + b.remaining_amount, 0),
+      color: "var(--success)", sub: `${borrows.filter(b => b.status === "repaid").length} fully repaid` },
   ];
 
-  const borrowSummary = [
-    { label: "Total Borrowed",  value: totalBorrowed,       color: "#818cf8", sub: `${borrows.length} borrow${borrows.length !== 1 ? "s" : ""}` },
-    { label: "Still to Repay",  value: outstandingBorrow,   color: "var(--danger)", sub: `${borrows.filter(b=>b.status==="active").length} active` },
-    { label: "Already Repaid",  value: totalBorrowed - borrows.reduce((s,b) => s + b.remaining_amount, 0), color: "var(--success)", sub: `${borrows.filter(b=>b.status==="repaid").length} fully repaid` },
-  ];
-
-  const summaryCards = pageTab === "lent" ? lentSummary : borrowSummary;
-
-  // Add Entry modal opens on "lend" or "borrow" tab based on which page tab is active
-  const modalTab = pageTab === "lent" ? "lend" : "borrow";
-  const actions  = <AddEntryModal onSuccess={load} defaultTab={modalTab} />;
+  const addModal = <AddEntryModal onSuccess={load} defaultTab={pageTab === "lent" ? "lend" : "borrow"} />;
 
   return (
-    <>
-      <style>{STYLES}</style>
+    <AppShell title="Loans & Ledger" actions={pageTab !== "people" ? addModal : null}>
+      <div style={{ marginBottom: 24 }}>
+        <h1 style={{ fontSize: 24, fontWeight: 800, letterSpacing: "-0.025em",
+          color: "var(--text)", margin: 0 }}>Loans & Ledger</h1>
+        <p style={{ fontSize: 14, color: "var(--text3)", marginTop: 4 }}>
+          Track money between people, with full net settlement support
+        </p>
+      </div>
 
-      <AppShell title="Loans" actions={actions}>
-
-        {/* Page title */}
-        <div style={{ marginBottom: 20 }}>
-          <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-0.025em", color: "var(--text)", marginBottom: 4 }}>
-            Loans
-          </h1>
-          <p style={{ fontSize: 14, color: "var(--text3)" }}>
-            Track money you've lent and borrowed
-          </p>
-        </div>
-
-        {/* Page-level tabs: Money I Lent / Money I Borrowed */}
-        <div className="ld-page-tabs">
-          <button
-            className={`ld-page-tab ${pageTab === "lent" ? "active" : ""}`}
-            onClick={() => { setPageTab("lent"); setFilterTab("all"); }}
-          >
-            <span style={{ display: "flex", alignItems: "center", gap: 7 }}>
-              {Icons.moneyLent} Money Lent
-            </span>
+      {/* Page tabs */}
+      <div style={{ display: "flex", gap: 0, borderBottom: "2px solid var(--border)",
+        marginBottom: 24 }}>
+        {[
+          { id: "people",   label: "People Ledger" },
+          { id: "lent",     label: "Money Lent" },
+          { id: "borrowed", label: "Money Borrowed" },
+        ].map(t => (
+          <button key={t.id} onClick={() => { setPageTab(t.id); setFilterTab("all"); }}
+            style={{
+              padding: "10px 20px", fontSize: 14, fontWeight: 600, fontFamily: "inherit",
+              cursor: "pointer", border: "none", background: "transparent",
+              color: pageTab === t.id ? "var(--text)" : "var(--text2)",
+              borderBottom: `2px solid ${pageTab === t.id ? "var(--primary-h)" : "transparent"}`,
+              marginBottom: -2, transition: "all 0.14s",
+            }}>
+            {t.label}
           </button>
-          <button
-            className={`ld-page-tab ${pageTab === "borrowed" ? "active" : ""}`}
-            onClick={() => { setPageTab("borrowed"); setFilterTab("all"); }}
-          >
-            <span style={{ display: "flex", alignItems: "center", gap: 7 }}>
-              {Icons.moneyBorrowed} Money Borrowed
-            </span>
-          </button>
-        </div>
+        ))}
+      </div>
 
-        {/* Summary row */}
-        <div className="ld-summary">
-          {summaryCards.map((c, i) => (
-            <div key={c.label} className="ld-sum-card" style={{ animationDelay: `${i * 0.06}s` }}>
-              <div className="ld-sum-label">{c.label}</div>
-              {loading
-                ? <span className="ld-skel" style={{ width: "55%", height: 22, marginBottom: 7 }} />
-                : <div className="ld-sum-val" style={{ color: c.color }}>
-                    ₹{c.value.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                  </div>}
-              <div className="ld-sum-sub">{c.sub}</div>
-            </div>
-          ))}
-        </div>
+      {/* People Ledger tab */}
+      {pageTab === "people" && <PeopleLedger />}
 
-        {/* Status filter */}
-        <div className="ld-filter-tabs">
-          {[
-            { id: "all",    label: `All (${items.length})` },
-            { id: "active", label: `Active (${items.filter(i=>i.status==="active").length})` },
-            { id: "repaid", label: `Settled (${items.filter(i=>i.status==="repaid").length})` },
-          ].map(t => (
-            <button key={t.id} className={`ld-ftab ${filterTab === t.id ? "active" : ""}`}
-                    onClick={() => setFilterTab(t.id)}>
-              {t.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Cards */}
-        {loading ? (
-          <div className="ld-grid">
-            {[0,1,2].map(i => (
-              <div key={i} className="ld-card">
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <span className="ld-skel" style={{ width: 110, height: 18, marginBottom: 10 }} />
-                  <span className="ld-skel" style={{ width: 70, height: 22 }} />
+      {/* Lent / Borrowed tabs */}
+      {pageTab !== "people" && (
+        <>
+          {/* Summary cards */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 20 }}>
+            {summaryCards.map(c => (
+              <div key={c.label} className="card" style={{ padding: "16px 20px" }}>
+                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
+                  textTransform: "uppercase", color: "var(--text3)", marginBottom: 8 }}>
+                  {c.label}
                 </div>
-                <span className="ld-skel" style={{ width: "100%", height: 5, borderRadius: 3 }} />
-                <span className="ld-skel" style={{ width: "40%", height: 10 }} />
+                {loading
+                  ? <div style={{ height: 24, background: "var(--surface3)",
+                      borderRadius: 4, marginBottom: 6 }} />
+                  : <div style={{ fontSize: 22, fontWeight: 800, color: c.color,
+                      fontVariantNumeric: "tabular-nums", marginBottom: 4 }}>
+                      ₹{fmt(c.value)}
+                    </div>}
+                <div style={{ fontSize: 12, color: "var(--text3)" }}>{c.sub}</div>
               </div>
             ))}
           </div>
-        ) : visible.length === 0 ? (
-          <div className="ld-empty">
-            <div className="ld-empty-icon">{pageTab === "lent" ? "🤝" : "🏦"}</div>
-            <div style={{ fontSize: 16, fontWeight: 600, color: "var(--text2)", marginBottom: 5 }}>
-              {filterTab === "all"
-                ? `No ${pageTab === "lent" ? "loans" : "borrows"} yet`
-                : `No ${filterTab} ${pageTab === "lent" ? "loans" : "borrows"}`}
-            </div>
-            <div style={{ fontSize: 13 }}>
-              {filterTab === "all"
-                ? `Use "+ Add Entry" → "${pageTab === "lent" ? "Lend Money" : "Borrow Money"}" to record one.`
-                : ""}
-            </div>
-          </div>
-        ) : (
-          <div className="ld-grid">
-            {visible.map((item, i) => (
-              <LoanCard
-                key={pageTab === "lent" ? item.loan_id : item.borrow_id}
-                item={item}
-                idx={i}
-                onRefresh={load}
-                isLent={pageTab === "lent"}
-                accentColor={pageTab === "lent" ? "#f59e0b" : "#818cf8"}
-                btnColor={pageTab === "lent" ? "#10b981" : "#6366f1"}
-                btnHover={pageTab === "lent" ? "#0d9e6e" : "#4f46e5"}
-              />
+
+          {/* Filter */}
+          <div style={{ display: "flex", gap: 4, background: "var(--surface2)", padding: 4,
+            borderRadius: 8, border: "1px solid var(--border)",
+            marginBottom: 20, width: "fit-content" }}>
+            {[
+              { id: "all",    label: `All (${items.length})` },
+              { id: "active", label: `Active (${items.filter(i => i.status === "active" || i.status === "pending").length})` },
+              { id: "repaid", label: `Settled (${items.filter(i => i.status === "repaid").length})` },
+            ].map(t => (
+              <button key={t.id} onClick={() => setFilterTab(t.id)}
+                style={{ padding: "5px 14px", borderRadius: 6, fontSize: 13, fontWeight: 600,
+                  cursor: "pointer", border: "none", fontFamily: "inherit",
+                  background: filterTab === t.id ? "var(--surface)" : "transparent",
+                  color: filterTab === t.id ? "var(--text)" : "var(--text2)",
+                  boxShadow: filterTab === t.id ? "0 1px 4px rgba(0,0,0,0.25)" : "none",
+                  transition: "all 0.12s" }}>
+                {t.label}
+              </button>
             ))}
           </div>
-        )}
 
-      </AppShell>
-    </>
+          {/* Cards grid */}
+          {loading ? (
+            <div className="loading"><div className="spinner" />Loading…</div>
+          ) : visible.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-icon">📊</div>
+              <div style={{ fontSize: 16, fontWeight: 600, color: "var(--text2)" }}>
+                {filterTab === "all"
+                  ? `No ${pageTab === "lent" ? "loans" : "borrows"} yet`
+                  : `No ${filterTab} entries`}
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 14 }}>
+              {visible.map((item, i) => (
+                <LoanCard key={pageTab === "lent" ? item.loan_id : item.borrow_id}
+                  item={item} idx={i} onRefresh={load}
+                  isLent={pageTab === "lent"}
+                  accentColor={pageTab === "lent" ? "#f59e0b" : "#818cf8"}
+                  btnColor={pageTab === "lent" ? "#10b981" : "#6366f1"}
+                  btnHover={pageTab === "lent" ? "#0d9e6e" : "#4f46e5"} />
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </AppShell>
   );
 }

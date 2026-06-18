@@ -69,7 +69,6 @@ export default function App() {
       <Route path="/settings" element={<UserRoute><Settings /></UserRoute>} />
       <Route path="/expenses" element={<UserRoute><Expenses /></UserRoute>} />
       <Route path="/loans"     element={<UserRoute><Loans /></UserRoute>} />
-      <Route path="/people"    element={<UserRoute><People /></UserRoute>} />
 
       {/* Admin — separate layout, nested admin routes */}
       <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
