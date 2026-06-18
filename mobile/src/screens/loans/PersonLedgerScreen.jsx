@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as peopleApi from '../../api/people';
+import { useAuth } from '../../context/AuthContext';
 import AppAlert from '../../components/common/AppAlert';
 import DatePickerInput from '../../components/common/DatePickerInput';
 import Toast from '../../components/common/Toast';
@@ -315,7 +316,7 @@ function AddEntryModal({ visible, onClose, personName, onSuccess }) {
     setSaving(true); setError('');
     setTimeout(async () => {
       try {
-        await onSuccess?.({ direction, amount: parseFloat(amount), note: note.trim() || null, entry_date: date });
+        await onSuccess?.({ direction, amount: parseFloat(amount), note: note.trim() || null, entry_date: date, sender_name: undefined });
         onClose();
       } catch (err) {
         const detail = err?.response?.data?.detail;
@@ -445,6 +446,7 @@ function AddEntryModal({ visible, onClose, personName, onSuccess }) {
 // ── Main screen ───────────────────────────────────────────────────────────────
 export default function PersonLedgerScreen({ navigation, route }) {
   const { personId, personName } = route.params;
+  const { user } = useAuth();
   const [entries, setEntries]       = useState([]);
   const [loading, setLoading]       = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -476,7 +478,7 @@ export default function PersonLedgerScreen({ navigation, route }) {
 
   // Handle entry submission (called from modal with payload)
   async function handleAddEntry(payload) {
-    await peopleApi.addEntry(personId, payload);
+    await peopleApi.addEntry(personId, { ...payload, sender_name: user?.name });
     showToast('Entry added');
     load(true);
   }

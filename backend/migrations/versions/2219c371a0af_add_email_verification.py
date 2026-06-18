@@ -1,3 +1,6 @@
+# SplitEase/backend/migrations/versions/2219c371a0af_add_email_verification.py
+
+
 """add_email_verification
 
 Revision ID: 2219c371a0af

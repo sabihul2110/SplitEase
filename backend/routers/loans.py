@@ -31,7 +31,7 @@ router = APIRouter()
 
 @router.get("/loans/")
 def list_loans(current_user: dict = Depends(get_current_user)):
-    return loan_repository.fetch_loans(current_user["user_id"])
+    return loan_repository.fetch_loans_with_pending(current_user["user_id"])
 
 
 @router.post("/loans/", status_code=status.HTTP_201_CREATED)

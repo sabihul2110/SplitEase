@@ -23,8 +23,8 @@ def fetch_people(owner_user_id: int) -> list[dict]:
             p.created_at,
             COALESCE(SUM(
                 CASE
-                    WHEN le.direction = 'lent'     THEN  le.remaining_amount
-                    WHEN le.direction = 'borrowed' THEN -le.remaining_amount
+                    WHEN le.direction = 'lent'     AND le.status IN ('active','repaid') THEN  le.remaining_amount
+                    WHEN le.direction = 'borrowed' AND le.status IN ('active','repaid') THEN -le.remaining_amount
                     ELSE 0
                 END
             ), 0) AS net_balance,
@@ -125,7 +125,7 @@ def fetch_entries(person_id: int, owner_user_id: int) -> list[dict]:
         WHERE  le.person_id = %s AND p.owner_user_id = %s
         ORDER  BY le.entry_date DESC, le.entry_id DESC
         """,
-        (owner_user_id, person_id, owner_user_id),
+        (person_id, owner_user_id),
     )
     rows = cur.fetchall()
     cur.close(); conn.close()
@@ -299,6 +299,7 @@ def accept_entry(entry_id: int, recipient_user_id: int) -> dict:
         #    names don't match exactly (whitespace, case, edited names, etc).
         #    A duplicate row is the root cause of "balance shows but ledger is empty"
         #    bugs: the mirror entry attaches to one row, the user views another.
+        # Look up by linked_user_id first (canonical, avoids duplicate rows)
         cur.execute(
             """
             SELECT person_id FROM People
@@ -308,11 +309,29 @@ def accept_entry(entry_id: int, recipient_user_id: int) -> dict:
         )
         recip_person = cur.fetchone()
         if not recip_person:
+            # No linked record — check if an UNLINKED record with matching name exists
+            # and upgrade it rather than creating a duplicate row
             cur.execute(
-                "INSERT INTO People (owner_user_id, display_name, linked_user_id) VALUES (%s, %s, %s)",
-                (recipient_user_id, creator_name, row["created_by"]),
+                """
+                SELECT person_id FROM People
+                WHERE owner_user_id = %s AND display_name = %s AND linked_user_id IS NULL
+                """,
+                (recipient_user_id, creator_name),
             )
-            recip_person_id = cur.lastrowid
+            unlinked = cur.fetchone()
+            if unlinked:
+                # Upgrade: attach the linked_user_id to the existing row
+                cur.execute(
+                    "UPDATE People SET linked_user_id = %s WHERE person_id = %s",
+                    (row["created_by"], unlinked["person_id"]),
+                )
+                recip_person_id = unlinked["person_id"]
+            else:
+                cur.execute(
+                    "INSERT INTO People (owner_user_id, display_name, linked_user_id) VALUES (%s, %s, %s)",
+                    (recipient_user_id, creator_name, row["created_by"]),
+                )
+                recip_person_id = cur.lastrowid
         else:
             recip_person_id = recip_person["person_id"]
 
@@ -338,7 +357,7 @@ def accept_entry(entry_id: int, recipient_user_id: int) -> dict:
                 """,
                 (
                     recip_person_id,
-                    row["created_by"],
+                    recipient_user_id,   # recipient owns this mirror entry
                     mirror_direction,
                     float(row["amount"]),
                     float(row["remaining_amount"]),
@@ -527,6 +546,36 @@ def fetch_pending_entries_for_user(linked_user_id: int) -> list[dict]:
     return rows
 
 
+def fetch_sent_pending_entries(creator_user_id: int) -> list[dict]:
+    """Entries created by this user that are still pending acceptance."""
+    conn = get_connection()
+    cur  = conn.cursor(dictionary=True)
+    cur.execute(
+        """
+        SELECT le.entry_id, le.direction, le.amount, le.note,
+               le.entry_date, le.created_at,
+               p.display_name AS person_name, p.person_id,
+               p.linked_user_id,
+               u.name AS sent_to
+        FROM   Ledger_Entries le
+        JOIN   People p ON p.person_id = le.person_id
+        LEFT JOIN Users u ON u.user_id = p.linked_user_id
+        WHERE  le.created_by = %s
+          AND  le.status = 'pending'
+          AND  p.linked_user_id IS NOT NULL
+        ORDER  BY le.created_at DESC
+        """,
+        (creator_user_id,),
+    )
+    rows = cur.fetchall()
+    cur.close(); conn.close()
+    for r in rows:
+        r["amount"]     = float(r["amount"])
+        r["entry_date"] = str(r["entry_date"])
+        r["created_at"] = str(r["created_at"])
+    return rows
+
+
 def record_entry_repayment(entry_id: int, owner_user_id: int, repayment_amount: float) -> dict:
     conn = get_connection()
     cur  = conn.cursor(dictionary=True)
@@ -664,7 +713,9 @@ def fetch_entry_with_person(entry_id: int, user_id: int) -> dict | None:
 
 def delete_entry(entry_id: int, owner_user_id: int) -> dict:
     """
-    Only the original creator (created_by) may delete an entry.
+    The party with a positive net balance against this person may delete an entry.
+    Net balance is computed across ALL active entries between these two users.
+    If net > 0 (owner is owed more than they owe), they may delete.
     Removes mirror entry + synced Loans/Borrows rows atomically.
     Returns dict with deletion info for notification routing.
     """
@@ -673,32 +724,57 @@ def delete_entry(entry_id: int, owner_user_id: int) -> dict:
     try:
         conn.start_transaction()
 
-        # Verify caller is the creator and fetch details for notification
+        # Fetch full entry details
         cur.execute(
             """
             SELECT le.entry_id, le.created_by, le.amount, le.entry_date,
                    le.direction, le.note, le.status,
-                   p.owner_user_id, p.linked_user_id, p.display_name
+                   p.owner_user_id, p.linked_user_id, p.display_name,
+                   p.person_id
             FROM   Ledger_Entries le
             JOIN   People p ON p.person_id = le.person_id
-            WHERE  le.entry_id = %s
+            WHERE  le.entry_id = %s AND p.owner_user_id = %s
             """,
-            (entry_id,),
+            (entry_id, owner_user_id),
         )
         row = cur.fetchone()
         if not row:
             return {"deleted": False, "linked_user_id": None}
-        cur.execute(
-            """
-            SELECT le.direction FROM Ledger_Entries le
-            JOIN People p ON p.person_id = le.person_id
-            WHERE le.entry_id = %s AND p.owner_user_id = %s
-            """,
-            (entry_id, owner_user_id),
-        )
-        perm_row = cur.fetchone()
-        if not perm_row or perm_row["direction"] != "lent":
-            raise ValueError("Only the lender can delete this entry.")
+
+        linked_user_id = row["linked_user_id"]
+
+        # Compute net balance for this owner against this person
+        # net > 0 means owner is owed money (has positive balance) → may delete
+        # For unlinked persons (no registered counterpart), fall back to per-entry lender rule
+        if linked_user_id:
+            cur.execute(
+                """
+                SELECT COALESCE(SUM(
+                    CASE
+                        WHEN le.direction = 'lent'     THEN  le.remaining_amount
+                        WHEN le.direction = 'borrowed' THEN -le.remaining_amount
+                        ELSE 0
+                    END
+                ), 0) AS net_balance
+                FROM Ledger_Entries le
+                JOIN People p ON p.person_id = le.person_id
+                WHERE p.owner_user_id = %s
+                  AND p.linked_user_id = %s
+                  AND le.status IN ('active', 'repaid')
+                """,
+                (owner_user_id, linked_user_id),
+            )
+            net_row = cur.fetchone()
+            net_balance = float(net_row["net_balance"]) if net_row else 0.0
+            if net_balance <= 0:
+                raise ValueError(
+                    "Only the party who is owed money can delete this entry. "
+                    "Your net balance with this person is not positive."
+                )
+        else:
+            # Unlinked person — use per-entry lender rule (no counterpart to protect)
+            if row["direction"] != "lent":
+                raise ValueError("Only the lender can delete this entry.")
 
         linked_user_id = row["linked_user_id"]
         amt            = float(row["amount"])

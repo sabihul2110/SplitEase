@@ -19,6 +19,11 @@ def get_pending_requests(current_user: dict = Depends(get_current_user)):
     return people_repository.fetch_pending_entries_for_user(current_user["user_id"])
 
 
+@router.get("/people/sent-requests")
+def get_sent_requests(current_user: dict = Depends(get_current_user)):
+    return people_repository.fetch_sent_pending_entries(current_user["user_id"])
+
+
 # ── People CRUD ───────────────────────────────────────────────────────────────
 
 @router.get("/people/")

@@ -1976,18 +1976,21 @@ export default function GroupsScreen() {
         member_count: (membersBulk[g.group_id] || []).length,
       }));
 
-      const bulkRes = await settlementsApi.getSettlementsBulk(groupIds);
-      const bulkData = bulkRes.data || {};
-
-      const balanceMap = {};
-      Object.entries(bulkData).forEach(([gid, rows]) => {
-        const mine = Array.isArray(rows)
-          ? rows.find((row) => row.user_id === user?.user_id)
-          : null;
-        balanceMap[parseInt(gid)] = mine
-          ? parseFloat(mine.net_balance ?? mine.balance ?? 0)
-          : 0;
-      });
+      let balanceMap = {};
+      try {
+        const bulkRes = await settlementsApi.getSettlementsBulk(groupIds);
+        const bulkData = bulkRes.data || {};
+        Object.entries(bulkData).forEach(([gid, rows]) => {
+          const mine = Array.isArray(rows)
+            ? rows.find((row) => row.user_id === user?.user_id)
+            : null;
+          balanceMap[parseInt(gid)] = mine
+            ? parseFloat(mine.net_balance ?? mine.balance ?? 0)
+            : 0;
+        });
+      } catch (settlErr) {
+        console.warn("Settlements load failed (non-fatal):", settlErr?.message);
+      }
 
       const withBalances = merged.map((g) => ({
         ...g,
@@ -1997,7 +2000,17 @@ export default function GroupsScreen() {
       setGroups(withBalances);
     } catch (err) {
       console.error("Failed to load groups:", err);
-      setAlert({ title: "Error", message: "Failed to load groups", buttons: [{ text: "OK", onPress: () => setAlert(null) }] });
+      const isOffline = !err?.response;
+      const detail = err?.response?.data?.detail;
+      setAlert({
+        title: isOffline ? "Network Error" : "Error",
+        message: isOffline
+          ? "Check your internet connection and try again."
+          : typeof detail === "string"
+          ? detail
+          : "Failed to load groups. Pull down to retry.",
+        buttons: [{ text: "OK", onPress: () => setAlert(null) }],
+      });
     } finally {
       setLoading(false);
       setRefreshing(false);

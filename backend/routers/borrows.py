@@ -11,27 +11,15 @@ DELETE /borrows/{id}            → delete borrow record (owner only)
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from schemas.borrows import BorrowIn, BorrowRepayIn
 
-from repositories import borrow_repository, ledger_notification_repository, notification_repository, push_repository
+from repositories import borrow_repository, loan_repository, ledger_notification_repository, notification_repository, push_repository
 from services.push_service import send_push
 from core.dependencies import get_current_user
 
 router = APIRouter()
 
-
-# class BorrowIn(BaseModel):
-#     lender_name:  str
-#     amount:       float
-#     note:         str | None = None
-#     borrow_date:  str          # YYYY-MM-DD
-
-
-# class BorrowRepayIn(BaseModel):
-#     repayment_amount: float
-
-
 @router.get("/borrows/")
 def list_borrows(current_user: dict = Depends(get_current_user)):
-    return borrow_repository.fetch_borrows(current_user["user_id"])
+    return loan_repository.fetch_borrows_with_pending(current_user["user_id"])
 
 
 @router.post("/borrows/", status_code=status.HTTP_201_CREATED)

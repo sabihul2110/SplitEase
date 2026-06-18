@@ -824,7 +824,7 @@ export default function LoansScreen({ navigation }) {
     filterTab === "all"
       ? true
       : filterTab === "active"
-        ? i.status === "active"
+        ? i.status === "active" || i.status === "pending"
         : i.status === "repaid",
   );
 
@@ -884,7 +884,7 @@ export default function LoansScreen({ navigation }) {
 
   const filterCounts = {
     all: items.length,
-    active: items.filter((i) => i.status === "active").length,
+    active: items.filter((i) => i.status === "active" || i.status === "pending").length,
     repaid: items.filter((i) => i.status === "repaid").length,
   };
 

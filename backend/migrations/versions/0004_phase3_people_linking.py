@@ -49,7 +49,7 @@ def upgrade():
             entry_id      INT               NULL,
             recipient_id  INT           NOT NULL,
             sender_id     INT           NOT NULL,
-            type          ENUM('entry_request','entry_accepted','entry_rejected','repayment_recorded') NOT NULL,
+            type          ENUM('entry_request','entry_accepted','entry_rejected','repayment_recorded','entry_deleted') NOT NULL,
             message       VARCHAR(500)  NOT NULL,
             is_read       TINYINT(1)    NOT NULL DEFAULT 0,
             created_at    TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
