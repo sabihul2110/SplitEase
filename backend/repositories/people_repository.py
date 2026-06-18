@@ -784,19 +784,22 @@ def delete_entry(entry_id: int, owner_user_id: int) -> dict:
         # Delete the primary entry
         cur.execute("DELETE FROM Ledger_Entries WHERE entry_id = %s", (entry_id,))
 
-        # Delete mirror entry on the other user's People screen
-        cur.execute(
-            """
-            DELETE le FROM Ledger_Entries le
-            JOIN   People p ON p.person_id = le.person_id
-            WHERE  le.created_by = %s
-              AND  le.amount     = %s
-              AND  le.entry_date = %s
-              AND  le.entry_id  != %s
-              AND  p.owner_user_id != %s
-            """,
-            (row["created_by"], amt, entry_date, entry_id, owner_user_id),
-        )
+        # Delete mirror entry on the linked user's People screen.
+        # Match by: linked user owns it, same amount, same date, opposite direction.
+        if linked_user_id:
+            mirror_direction = "borrowed" if direction == "lent" else "lent"
+            cur.execute(
+                """
+                DELETE le FROM Ledger_Entries le
+                JOIN   People p ON p.person_id = le.person_id
+                WHERE  p.owner_user_id  = %s
+                  AND  p.linked_user_id = %s
+                  AND  le.direction     = %s
+                  AND  le.amount        = %s
+                  AND  le.entry_date    = %s
+                """,
+                (linked_user_id, owner_user_id, mirror_direction, amt, entry_date),
+            )
 
         # If this was an accepted (active) linked entry, also clean up
         # the synced Loans/Borrows rows for both users

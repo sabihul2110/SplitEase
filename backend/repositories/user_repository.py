@@ -143,23 +143,10 @@ def get_user_pending_settlements(user_id: int) -> list[dict]:
     """, (user_id, user_id, user_id, user_id, user_id))
     group_rows = cur.fetchall()
 
-    # Active loans (others owe this user — user should collect first)
-    cur.execute("""
-        SELECT loan_id AS id, borrower_name AS counterparty,
-               'loan' AS debt_type, remaining_amount AS net_balance
-        FROM Loans
-        WHERE lender_user_id = %s AND status = 'active'
-    """, (user_id,))
-    loan_rows = cur.fetchall()
-
-    # Active borrows (user owes someone — must repay first)
-    cur.execute("""
-        SELECT borrow_id AS id, lender_name AS counterparty,
-               'borrow' AS debt_type, remaining_amount AS net_balance
-        FROM Borrows
-        WHERE borrower_user_id = %s AND status = 'active'
-    """, (user_id,))
-    borrow_rows = cur.fetchall()
+    # Loans and Borrows tables are legacy — Ledger_Entries is the source of truth.
+    # Do not double-count by querying both tables.
+    loan_rows   = []
+    borrow_rows = []
 
     # Net ledger balance per person — positive = they owe user, negative = user owes them
     cur.execute("""
@@ -184,7 +171,7 @@ def get_user_pending_settlements(user_id: int) -> list[dict]:
 
     cur.close(); conn.close()
 
-    all_rows = group_rows + loan_rows + borrow_rows + ledger_rows
+    all_rows = group_rows + ledger_rows
     for r in all_rows:
         r["net_balance"] = float(r["net_balance"])
     return all_rows
