@@ -121,24 +121,209 @@ function NetBar({ entries, onSettleUp, settling }) {
 }
 
 // ── Entry card ────────────────────────────────────────────────────────────────
-function EntryCard({ item, onRefresh, showToast, setAlert, isSelecting, isSelected, onLongPress, onSelect }) {
-  const [repayAmt, setRepayAmt] = useState('');
-  const [repayErr, setRepayErr] = useState('');
-  const [saving, setSaving] = useState(false);
+// function EntryCard({ item, onRefresh, showToast, setAlert, isSelecting, isSelected, onLongPress, onSelect }) {
+//   const [repayAmt, setRepayAmt] = useState('');
+//   const [repayErr, setRepayErr] = useState('');
+//   const [saving, setSaving] = useState(false);
+//   const [deleting, setDeleting] = useState(false);
+//   const mountedRef = useRef(true);
+
+//   useEffect(() => {
+//     mountedRef.current = true;
+//     return () => { mountedRef.current = false; };
+//   }, []);
+
+//   const isLent = item.direction === 'lent';
+//   const isPending = item.status === 'pending';
+//   const isRejected = item.status === 'rejected';
+//   const accentColor = isPending ? COLORS.text3 : isRejected ? COLORS.danger : isLent ? '#f59e0b' : '#818cf8';
+//   const dirLabel = isLent ? 'Lent' : 'Borrowed';
+//   const dateLabel = isLent ? 'Lent on' : 'Borrowed on';
+
+//   const safeAmt = Number(item.amount) || 0;
+//   const safeRem = Number(item.remaining_amount) || 0;
+//   const pct = safeAmt > 0 ? Math.round(((safeAmt - safeRem) / safeAmt) * 100) : 100;
+
+//   let dateStr = '—';
+//   if (item.entry_date) {
+//     const d = new Date(item.entry_date + 'T00:00:00');
+//     if (!isNaN(d.getTime()))
+//       dateStr = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+//   }
+
+//   async function handleRepay() {
+//     Keyboard.dismiss();
+//     setRepayErr('');
+//     const amountInput = parseFloat(repayAmt);
+//     if (isNaN(amountInput) || amountInput <= 0) { setRepayErr('Enter a valid amount'); return; }
+//     if (amountInput > safeRem) { setRepayErr(`Max ₹${safeRem.toLocaleString('en-IN')}`); return; }
+//     setSaving(true);
+//     setTimeout(async () => {
+//       try {
+//         await peopleApi.repayEntry(item.entry_id, amountInput);
+//         if (!mountedRef.current) return;
+//         setRepayAmt('');
+//         showToast?.('Repayment recorded');
+//         onRefresh?.();
+//       } catch (ex) {
+//         if (!mountedRef.current) return;
+//         const detail = ex?.response?.data?.detail;
+//         setRepayErr(typeof detail === 'string' ? detail : 'Failed');
+//       } finally {
+//         if (mountedRef.current) setSaving(false);
+//       }
+//     }, 250);
+//   }
+
+//   function handleDelete() {
+//     Keyboard.dismiss();
+//     setAlert({
+//       title: 'Delete entry?',
+//       message: 'This cannot be undone.',
+//       buttons: [
+//         { text: 'Cancel', style: 'cancel', onPress: () => setAlert(null) },
+//         {
+//           text: 'Delete', style: 'destructive',
+//           onPress: async () => {
+//             setAlert(null); setDeleting(true);
+//             try {
+//               await peopleApi.deleteEntry(item.entry_id);
+//               showToast?.('Deleted');
+//               onRefresh?.();
+//             } catch (err) {
+//               setDeleting(false);
+//               const detail = err?.response?.data?.detail;
+//               showToast?.(typeof detail === 'string' ? detail : 'Failed to delete', 'error');
+//             }
+//           },
+//         },
+//       ],
+//     });
+//   }
+
+//   return (
+//     <TouchableOpacity
+//       style={[
+//         styles.entryCard,
+//         isSelected && styles.entryCardSelected,
+//         isPending && styles.entryCardPending,
+//         isRejected && styles.entryCardRejected,
+//       ]}
+//       onLongPress={onLongPress}
+//       onPress={isSelecting ? onSelect : undefined}
+//       activeOpacity={isSelecting ? 0.7 : 1}
+//       delayLongPress={350}
+//     >
+//       {/* Selection indicator */}
+//       {isSelecting && (
+//         <View style={styles.selectionIndicator}>
+//           {isSelected
+//             ? <Icons.checkSquare size={20} color={COLORS.primary} />
+//             : <Icons.square size={20} color={COLORS.text3} />
+//           }
+//         </View>
+//       )}
+//       {/* Header row */}
+//       <View style={styles.entryHead}>
+//         <View style={[styles.dirBadge, { backgroundColor: accentColor + '18' }]}>
+//           {isLent
+//             ? <Icons.sendMoney size={14} color={accentColor} />
+//             : <Icons.receiveMoney size={14} color={accentColor} />
+//           }
+//           <Text style={[styles.dirText, { color: accentColor }]}>{dirLabel}</Text>
+//         </View>
+//         <Text style={[styles.entryAmt, { color: accentColor }]}>₹{fmt(item.amount)}</Text>
+//       </View>
+
+//       {item.note ? <Text style={styles.entryNote}>{item.note}</Text> : null}
+
+//       {isPending && (
+//         <View style={styles.statusBanner}>
+//           <Icons.clockPending size={13} color={COLORS.warning} />
+//           <Text style={[styles.statusBannerText, { color: COLORS.warning }]}>
+//             Awaiting acknowledgement from the other person
+//           </Text>
+//         </View>
+//       )}
+//       {isRejected && (
+//         <View style={[styles.statusBanner, { backgroundColor: 'rgba(255,69,58,0.08)', borderColor: 'rgba(255,69,58,0.2)' }]}>
+//           <Icons.close size={13} color={COLORS.danger} />
+//           <Text style={[styles.statusBannerText, { color: COLORS.danger }]}>
+//             Declined — delete and re-request if needed
+//           </Text>
+//         </View>
+//       )}
+
+//       {/* Progress — only for active/repaid */}
+//       {!isPending && !isRejected && (
+//         <View>
+//           <View style={styles.progressHead}>
+//             <Text style={styles.progressLabel}>
+//               {item.status === 'repaid' ? 'Fully settled' : `${pct}% settled`}
+//             </Text>
+//             <Text style={[styles.progressRight, { color: item.status === 'repaid' ? COLORS.success : accentColor }]}>
+//               {item.status === 'repaid' ? 'Done' : `₹${safeRem.toLocaleString('en-IN')} left`}
+//             </Text>
+//           </View>
+//           <ProgressBar pct={pct} color={item.status === 'repaid' ? COLORS.success : accentColor} />
+//         </View>
+//       )}
+
+//       <Text style={styles.entryDate}>{dateLabel} {dateStr}</Text>
+
+//       {/* Repay input (active only) */}
+//       {/* {item.status === 'active' && (
+//         <View style={styles.repaySection}>
+//           <View style={styles.repayRow}>
+//             <TextInput
+//               style={styles.repayInput}
+//               value={repayAmt}
+//               onChangeText={v => { setRepayAmt(v); setRepayErr(''); }}
+//               placeholder={`Max ₹${safeRem.toLocaleString('en-IN')}`}
+//               placeholderTextColor={COLORS.text3}
+//               keyboardType="decimal-pad"
+//             />
+//             <TouchableOpacity
+//               style={[styles.repayBtn, { backgroundColor: accentColor, opacity: saving || !repayAmt ? 0.5 : 1 }]}
+//               onPress={handleRepay}
+//               disabled={saving || !repayAmt}
+//             >
+//               <Text style={styles.repayBtnText}>{saving ? '…' : 'Record'}</Text>
+//             </TouchableOpacity>
+//           </View>
+//           {!!repayErr && <Text style={styles.repayErr}>{repayErr}</Text>}
+//         </View>
+//       )} */}
+//       {/* No per-entry repayment — settle via the "Settle Up" button on the net bar */}
+
+//       {/* Delete — only creator can delete, hidden during multi-select */}
+//       {!isSelecting && item.can_delete !== false && (
+//         <View style={{ alignItems: 'flex-end' }}>
+//           <TouchableOpacity style={styles.delBtn} onPress={handleDelete} disabled={deleting}>
+//             <Text style={styles.delText}>{deleting ? 'Deleting…' : 'Delete'}</Text>
+//           </TouchableOpacity>
+//         </View>
+//       )}
+//     </TouchableOpacity>
+//   );
+// }
+
+// ── Entry card ────────────────────────────────────────────────────────────────
+function EntryCard({ 
+  item, onRefresh, showToast, setAlert, 
+  isSelecting, isSelected, onLongPress, onSelect 
+}) {
   const [deleting, setDeleting] = useState(false);
-  const mountedRef = useRef(true);
 
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => { mountedRef.current = false; };
-  }, []);
+  const isLent       = item.direction === 'lent';
+  const isPending    = item.status === 'pending';
+  const isRejected   = item.status === 'rejected';
+  const isSettlement = item.direction === 'settlement';
 
-  const isLent = item.direction === 'lent';
-  const isPending = item.status === 'pending';
-  const isRejected = item.status === 'rejected';
-  const accentColor = isPending ? COLORS.text3 : isRejected ? COLORS.danger : isLent ? '#f59e0b' : '#818cf8';
-  const dirLabel = isLent ? 'Lent' : 'Borrowed';
-  const dateLabel = isLent ? 'Lent on' : 'Borrowed on';
+  const accentColor = isSettlement ? COLORS.success 
+                    : isPending ? COLORS.text3 
+                    : isRejected ? COLORS.danger 
+                    : isLent ? '#f59e0b' : '#818cf8';
 
   const safeAmt = Number(item.amount) || 0;
   const safeRem = Number(item.remaining_amount) || 0;
@@ -147,36 +332,15 @@ function EntryCard({ item, onRefresh, showToast, setAlert, isSelecting, isSelect
   let dateStr = '—';
   if (item.entry_date) {
     const d = new Date(item.entry_date + 'T00:00:00');
-    if (!isNaN(d.getTime()))
+    if (!isNaN(d.getTime())) {
       dateStr = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
   }
 
-  async function handleRepay() {
-    Keyboard.dismiss();
-    setRepayErr('');
-    const amountInput = parseFloat(repayAmt);
-    if (isNaN(amountInput) || amountInput <= 0) { setRepayErr('Enter a valid amount'); return; }
-    if (amountInput > safeRem) { setRepayErr(`Max ₹${safeRem.toLocaleString('en-IN')}`); return; }
-    setSaving(true);
-    setTimeout(async () => {
-      try {
-        await peopleApi.repayEntry(item.entry_id, amountInput);
-        if (!mountedRef.current) return;
-        setRepayAmt('');
-        showToast?.('Repayment recorded');
-        onRefresh?.();
-      } catch (ex) {
-        if (!mountedRef.current) return;
-        const detail = ex?.response?.data?.detail;
-        setRepayErr(typeof detail === 'string' ? detail : 'Failed');
-      } finally {
-        if (mountedRef.current) setSaving(false);
-      }
-    }, 250);
-  }
+  const dirLabel  = isSettlement ? 'Settlement' : isLent ? 'Lent' : 'Borrowed';
+  const dateLabel = isSettlement ? 'Settled on' : isLent ? 'Lent on' : 'Borrowed on';
 
   function handleDelete() {
-    Keyboard.dismiss();
     setAlert({
       title: 'Delete entry?',
       message: 'This cannot be undone.',
@@ -223,11 +387,12 @@ function EntryCard({ item, onRefresh, showToast, setAlert, isSelecting, isSelect
           }
         </View>
       )}
+
       {/* Header row */}
       <View style={styles.entryHead}>
         <View style={[styles.dirBadge, { backgroundColor: accentColor + '18' }]}>
-          {isLent
-            ? <Icons.sendMoney size={14} color={accentColor} />
+          {isSettlement ? <Icons.checkCircle size={14} color={accentColor} />
+            : isLent ? <Icons.sendMoney size={14} color={accentColor} />
             : <Icons.receiveMoney size={14} color={accentColor} />
           }
           <Text style={[styles.dirText, { color: accentColor }]}>{dirLabel}</Text>
@@ -241,7 +406,7 @@ function EntryCard({ item, onRefresh, showToast, setAlert, isSelecting, isSelect
         <View style={styles.statusBanner}>
           <Icons.clockPending size={13} color={COLORS.warning} />
           <Text style={[styles.statusBannerText, { color: COLORS.warning }]}>
-            Awaiting acknowledgement from the other person
+            Awaiting acknowledgement
           </Text>
         </View>
       )}
@@ -254,8 +419,8 @@ function EntryCard({ item, onRefresh, showToast, setAlert, isSelecting, isSelect
         </View>
       )}
 
-      {/* Progress — only for active/repaid */}
-      {!isPending && !isRejected && (
+      {/* Progress — hide for pending, rejected, and settlements */}
+      {!isPending && !isRejected && !isSettlement && (
         <View>
           <View style={styles.progressHead}>
             <Text style={styles.progressLabel}>
@@ -271,33 +436,8 @@ function EntryCard({ item, onRefresh, showToast, setAlert, isSelecting, isSelect
 
       <Text style={styles.entryDate}>{dateLabel} {dateStr}</Text>
 
-      {/* Repay input (active only) */}
-      {/* {item.status === 'active' && (
-        <View style={styles.repaySection}>
-          <View style={styles.repayRow}>
-            <TextInput
-              style={styles.repayInput}
-              value={repayAmt}
-              onChangeText={v => { setRepayAmt(v); setRepayErr(''); }}
-              placeholder={`Max ₹${safeRem.toLocaleString('en-IN')}`}
-              placeholderTextColor={COLORS.text3}
-              keyboardType="decimal-pad"
-            />
-            <TouchableOpacity
-              style={[styles.repayBtn, { backgroundColor: accentColor, opacity: saving || !repayAmt ? 0.5 : 1 }]}
-              onPress={handleRepay}
-              disabled={saving || !repayAmt}
-            >
-              <Text style={styles.repayBtnText}>{saving ? '…' : 'Record'}</Text>
-            </TouchableOpacity>
-          </View>
-          {!!repayErr && <Text style={styles.repayErr}>{repayErr}</Text>}
-        </View>
-      )} */}
-      {/* No per-entry repayment — settle via the "Settle Up" button on the net bar */}
-
-      {/* Delete — only creator can delete, hidden during multi-select */}
-      {!isSelecting && item.can_delete !== false && (
+      {/* Delete — hidden during multi-select OR if it is a settlement record */}
+      {!isSelecting && item.can_delete !== false && !isSettlement && (
         <View style={{ alignItems: 'flex-end' }}>
           <TouchableOpacity style={styles.delBtn} onPress={handleDelete} disabled={deleting}>
             <Text style={styles.delText}>{deleting ? 'Deleting…' : 'Delete'}</Text>
