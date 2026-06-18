@@ -135,10 +135,16 @@ def reset_my_data(current_user: dict = Depends(get_current_user)):
     user_id = current_user["user_id"]
     pending = user_repository.get_user_pending_settlements(user_id)
     if pending:
+        has_debts = any(float(p["net_balance"]) < -0.005 for p in pending)
         return {
             "status": "pending_settlements",
-            "message": "You have unsettled balances.",
-            "pending": pending
+            "message": (
+                "You owe money to someone. Settle up before resetting."
+                if has_debts else
+                "People owe you money. Resetting will forgive these amounts."
+            ),
+            "pending": pending,
+            "has_debts": has_debts,
         }
     result = user_repository.reset_user_data(user_id)
     return {"status": "ok", "deleted": result}

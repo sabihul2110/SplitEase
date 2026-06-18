@@ -161,13 +161,24 @@ def get_user_pending_settlements(user_id: int) -> list[dict]:
     """, (user_id,))
     borrow_rows = cur.fetchall()
 
-    # Active ledger entries
+    # Net ledger balance per person — positive = they owe user, negative = user owes them
     cur.execute("""
-        SELECT le.entry_id AS id, p.display_name AS counterparty,
-               le.direction AS debt_type, le.remaining_amount AS net_balance
+        SELECT
+            p.person_id AS id,
+            p.display_name AS counterparty,
+            'ledger' AS debt_type,
+            SUM(
+                CASE
+                    WHEN le.direction = 'lent'     THEN  le.remaining_amount
+                    WHEN le.direction = 'borrowed' THEN -le.remaining_amount
+                    ELSE 0
+                END
+            ) AS net_balance
         FROM Ledger_Entries le
         JOIN People p ON p.person_id = le.person_id
         WHERE p.owner_user_id = %s AND le.status = 'active'
+        GROUP BY p.person_id, p.display_name
+        HAVING ABS(net_balance) > 0.005
     """, (user_id,))
     ledger_rows = cur.fetchall()
 

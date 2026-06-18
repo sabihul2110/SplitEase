@@ -598,6 +598,7 @@ function DangerZone({ onAlert }) {
   const { logout } = useAuth();
   const [step, setStep] = useState("idle");
   const [pending, setPending] = useState([]);
+  const [hasDebts, setHasDebts] = useState(false);
   const [loading, setLoading] = useState(false);
 
   async function handleReset() {
@@ -606,6 +607,7 @@ function DangerZone({ onAlert }) {
       const r = await client.post(ENDPOINTS.resetData);
       if (r.data.status === "pending_settlements") {
         setPending(r.data.pending || []);
+        setHasDebts(r.data.has_debts === true);
         setStep("pending");
       } else {
         setStep("done");
@@ -680,11 +682,15 @@ function DangerZone({ onAlert }) {
           </Text>
         </View>
         <Text style={[styles.rowSub, { marginBottom: SPACING.sm }]}>
-          Resetting will remove your data from these groups:
+          {hasDebts
+            ? "You owe money to the following. Settle up before resetting:"
+            : "The following people owe you money. Resetting will forgive these amounts:"}
         </Text>
-        {pending.map((g) => (
-          <View key={g.group_id} style={styles.pendingRow}>
-            <Text style={styles.rowSub}>{g.group_name}</Text>
+        {pending.map((g, idx) => (
+          <View key={g.group_id ?? g.id ?? idx} style={styles.pendingRow}>
+            <Text style={styles.rowSub}>
+              {g.group_name || g.counterparty || g.debt_type || "Unknown"}
+            </Text>
             <Text
               style={{
                 color: g.net_balance > 0 ? COLORS.success : COLORS.danger,
@@ -703,12 +709,14 @@ function DangerZone({ onAlert }) {
           >
             <Text style={styles.ghostBtnText}>Cancel</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.dangerBtn}
-            onPress={() => setStep("force_confirm")}
-          >
-            <Text style={styles.dangerBtnText}>Reset anyway</Text>
-          </TouchableOpacity>
+          {!hasDebts && (
+            <TouchableOpacity
+              style={styles.dangerBtn}
+              onPress={() => setStep("force_confirm")}
+            >
+              <Text style={styles.dangerBtnText}>Reset anyway</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     );
