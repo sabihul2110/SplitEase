@@ -5,7 +5,7 @@ import { getLoans, deleteLoan, repayLoan, getBorrows, deleteBorrow, repayBorrow 
 import * as peopleApi from "../api/people";
 import AppShell from "../components/AppShell";
 import AddEntryModal from "../components/AddEntryModal";
-import { Icons } from "../utils/Icons";
+import { Icons } from "../components/icons";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const fmt = (n) => Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 });
@@ -111,9 +111,9 @@ function PeopleLedger() {
           padding: "12px 20px", borderRadius: 10, fontWeight: 600, fontSize: 14,
           color: "var(--text)", boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
         }}>
-          <span style={{ color: toast.isErr ? "var(--danger)" : "var(--success)", marginRight: 8 }}>
-            {toast.isErr ? "✕" : "✓"}
-          </span>
+          {toast.isErr
+            ? <Icons.close size={14} color="var(--danger)" />
+            : <Icons.check size={14} color="var(--success)" />}
           {toast.msg}
         </div>
       )}
@@ -154,11 +154,12 @@ function PeopleLedger() {
 
           {/* Pending requests banner */}
           {pendingCount > 0 && (
-            <div style={{ padding: "10px 14px", background: "rgba(245,158,11,0.08)",
+            <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "10px 14px", background: "rgba(245,158,11,0.08)",
               borderBottom: "1px solid rgba(245,158,11,0.2)", fontSize: 13,
               color: "var(--warning)", fontWeight: 600, cursor: "pointer" }}
               onClick={() => window.open("/people/pending", "_self")}>
-              ⏳ {pendingCount} pending request{pendingCount > 1 ? "s" : ""} awaiting your review →
+              <Icons.clockPending size={14} />
+              {pendingCount} pending request{pendingCount > 1 ? "s" : ""} awaiting your review →
             </div>
           )}
 
@@ -228,11 +229,11 @@ function PeopleLedger() {
                       letterSpacing: "-0.02em", color: "var(--text)" }}>
                       {selectedPerson.display_name}
                     </h2>
-                    <div style={{ fontSize: 15, fontWeight: 600,
+                    <div style={{ fontSize: 15, fontWeight: 600, display: "flex", alignItems: "center", gap: 6,
                       color: net > 0 ? "#f59e0b" : net < 0 ? "#818cf8" : "var(--success)" }}>
                       {net > 0 ? `Owes you ₹${fmt(Math.abs(net))}`
                         : net < 0 ? `You owe ₹${fmt(Math.abs(net))}`
-                        : "All settled up ✓"}
+                        : <>All settled up <Icons.check size={13} /></>}
                     </div>
                   </div>
                 </div>
@@ -319,7 +320,9 @@ function PeopleLedger() {
                 <div className="loading"><div className="spinner" />Loading entries…</div>
               ) : visibleEntries.length === 0 ? (
                 <div className="empty-state">
-                  <div className="empty-icon">📄</div>
+                  <div className="empty-icon" style={{ display: "flex", justifyContent: "center", opacity: 0.35 }}>
+                    <Icons.document size={36} />
+                  </div>
                   <div style={{ fontSize: 16, fontWeight: 600, color: "var(--text2)" }}>
                     No {filterStatus !== "all" ? filterStatus : ""} entries yet
                   </div>
@@ -359,7 +362,7 @@ function PeopleLedger() {
                         <div style={{ width: 36, height: 36, borderRadius: 9,
                           background: color + "18", display: "flex", alignItems: "center",
                           justifyContent: "center", flexShrink: 0, color }}>
-                          {isSettlement ? "✓" : isLent ? "↑" : "↓"}
+                          {isSettlement ? <Icons.check size={15} /> : isLent ? <Icons.arrowUp size={15} /> : <Icons.arrowDown size={15} />}
                         </div>
 
                         {/* Info */}
@@ -400,8 +403,8 @@ function PeopleLedger() {
                             ₹{fmt(e.amount)}
                           </div>
                           {e.status === "repaid" && (
-                            <div style={{ fontSize: 11, color: "var(--success)", fontWeight: 600, marginTop: 2 }}>
-                              Settled ✓
+                            <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "var(--success)", fontWeight: 600, marginTop: 2 }}>
+                              Settled <Icons.check size={10} />
                             </div>
                           )}
                         </div>
@@ -425,8 +428,8 @@ function PeopleLedger() {
             flexDirection: "column", gap: 12, color: "var(--text3)", background: "var(--bg)" }}>
             <div style={{ width: 64, height: 64, borderRadius: 16,
               background: "var(--surface2)", border: "1px solid var(--border)",
-              display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28 }}>
-              👤
+              display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Icons.profile size={26} />
             </div>
             <div style={{ fontSize: 15, fontWeight: 500 }}>Select a person to view their ledger</div>
             <button className="btn btn-primary btn-sm" onClick={() => setShowAddPerson(true)}>
@@ -482,7 +485,7 @@ function AddPersonModal({ onClose, onSuccess }) {
       <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
         <div className="modal-head">
           <div className="modal-title">Add Person</div>
-          <button className="btn btn-ghost btn-xs" onClick={onClose}>✕</button>
+          <button className="btn btn-ghost btn-xs" onClick={onClose}><Icons.close size={13} /></button>
         </div>
         <div className="modal-body" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           {error && <div className="alert alert-error">{error}</div>}
@@ -520,9 +523,9 @@ function AddPersonModal({ onClose, onSuccess }) {
             </div>
           )}
           {selected && (
-            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--success)",
+            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, color: "var(--success)",
               background: "rgba(16,185,129,0.08)", padding: "10px 14px", borderRadius: 8 }}>
-              ✓ Linked to registered user — entries will need acceptance
+              <Icons.check size={12} /> Linked to registered user — entries will need acceptance
             </div>
           )}
           <div style={{ display: "flex", gap: 10 }}>
@@ -567,15 +570,19 @@ function AddEntryModal2({ personName, onClose, onSuccess }) {
       <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth: 400 }}>
         <div className="modal-head">
           <div className="modal-title">Add Entry — {personName}</div>
-          <button className="btn btn-ghost btn-xs" onClick={onClose}>✕</button>
+          <button className="btn btn-ghost btn-xs" onClick={onClose}><Icons.close size={13} /></button>
         </div>
         <div className="modal-body" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           {error && <div className="alert alert-error">{error}</div>}
           <div className="split-toggle">
             <button className={`split-opt ${direction === "lent" ? "on" : ""}`}
-              onClick={() => setDirection("lent")} type="button">↑ You Lent</button>
+              onClick={() => setDirection("lent")} type="button" style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+              <Icons.arrowUp size={13} /> You Lent
+            </button>
             <button className={`split-opt ${direction === "borrowed" ? "on" : ""}`}
-              onClick={() => setDirection("borrowed")} type="button">↓ You Borrowed</button>
+              onClick={() => setDirection("borrowed")} type="button" style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+              <Icons.arrowDown size={13} /> You Borrowed
+            </button>
           </div>
           <div className="form-group" style={{ marginBottom: 0 }}>
             <label className="form-label">AMOUNT</label>
@@ -877,7 +884,9 @@ export default function Loans() {
             <div className="loading"><div className="spinner" />Loading…</div>
           ) : visible.length === 0 ? (
             <div className="empty-state">
-              <div className="empty-icon">📊</div>
+                  <div className="empty-icon" style={{ display: "flex", justifyContent: "center", opacity: 0.35 }}>
+                    <Icons.history size={36} />
+                  </div>
               <div style={{ fontSize: 16, fontWeight: 600, color: "var(--text2)" }}>
                 {filterTab === "all"
                   ? `No ${pageTab === "lent" ? "loans" : "borrows"} yet`

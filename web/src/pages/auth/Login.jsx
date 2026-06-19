@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { login as loginRequest } from "../api/auth";
-import PasswordInput from "../components/ui/PasswordInput";
-import { useAuth } from "../context/AuthContext";
+import { login as loginRequest } from "../../api/auth";
+import PasswordInput from "../../components/ui/PasswordInput";
+import { useAuth } from "../../context/AuthContext";
+import { Icons } from "../../components/icons";
 
 export default function Login() {
   const { login } = useAuth();
@@ -32,7 +33,7 @@ export default function Login() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--bg)', padding: '24px' }}>
+    <div className="auth-wrap">
       <div style={{ width: "100%", maxWidth: 380 }} className="fade-up">
         <div style={{ textAlign: "center", marginBottom: 28 }}>
           <img 
@@ -46,14 +47,19 @@ export default function Login() {
           <div style={{ fontSize: 14, color: "var(--text2)", marginTop: 4 }}>Split fair. Settle fast.</div>
         </div>
 
-        <div style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: 32, width: '100%' }}>
+        <div className="auth-card">
           <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 20, letterSpacing: "-0.01em" }}>Sign in</div>
           {next !== "/dashboard" && (
             <div className="alert alert-success" style={{ marginBottom: 16 }}>
               Sign in to continue joining the group.
             </div>
           )}
-          {error && <div className="alert alert-error">⚠ {error}</div>}
+          {error && (
+            <div className="alert alert-error">
+              <Icons.alertTriangle size={15} />
+              {error}
+            </div>
+          )}
           <form onSubmit={onSubmit}>
             <div className="form-group">
               <label className="form-label">Email address</label>

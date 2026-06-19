@@ -2,21 +2,13 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { getMembers, getMyGroups, generateInvite, sendReminder, removeMember, deleteGroup } from "../api/groups";
-import { getExpenses, deleteExpense } from "../api/expenses";
-import { getPayments, deletePayment } from "../api/payments";
-import { getSettlements, getSimplified } from "../api/settlements";
-import { useAuth } from "../context/AuthContext";
-import AppShell from "../components/AppShell";
-
-const UserPlusIcon = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
-    <circle cx="9" cy="7" r="4"></circle>
-    <line x1="19" y1="8" x2="19" y2="14"></line>
-    <line x1="22" y1="11" x2="16" y2="11"></line>
-  </svg>
-);
+import { getMembers, getMyGroups, generateInvite, sendReminder, removeMember, deleteGroup } from "../../api/groups";
+import { getExpenses, deleteExpense } from "../../api/expenses";
+import { getPayments, deletePayment } from "../../api/payments";
+import { getSettlements, getSimplified } from "../../api/settlements";
+import { useAuth } from "../../context/AuthContext";
+import AppShell from "../../components/AppShell";
+import { Icons } from "../../components/icons";
 
 export default function GroupDetail() {
   const { id }   = useParams();
@@ -153,7 +145,7 @@ export default function GroupDetail() {
         debtor_user_id: s.from_user_id,
         amount: s.amount,
       });
-      showToast(`✓ Reminder sent to ${s.from} — they'll see it in their notifications.`);
+      showToast(`Reminder sent to ${s.from} — they'll see it in their notifications.`);
     } catch (err) {
       showToast(err.response?.data?.detail || "Failed to send reminder.");
     } finally {
@@ -194,11 +186,12 @@ export default function GroupDetail() {
             disabled={isSending}
             onClick={() => handleSendReminder(s)}
             style={{
+              display: "flex", alignItems: "center", gap: 5,
               color: "var(--warning)", borderColor: "rgba(245,158,11,0.35)",
               background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.3)",
             }}
           >
-            {isSending ? "Sending…" : "🔔 Remind"}
+            {isSending ? "Sending…" : <><Icons.bell size={12} /> Remind</>}
           </button>
         </div>
       );
@@ -229,10 +222,14 @@ export default function GroupDetail() {
           padding: "4px 12px",
         }}
       >
-        <UserPlusIcon /> Invite
+        <Icons.userPlus size={15} /> Invite
       </button>
-      <Link to={`/groups/${id}/add-payment`} className="btn btn-ghost btn-sm">+ Payment</Link>
-      <Link to={`/groups/${id}/add-expense`} className="btn btn-primary btn-sm">+ Expense</Link>
+      <Link to={`/groups/${id}/add-payment`} className="btn btn-ghost btn-sm">
+        <Icons.plus size={13} /> Payment
+      </Link>
+      <Link to={`/groups/${id}/add-expense`} className="btn btn-primary btn-sm">
+        <Icons.plus size={13} /> Expense
+      </Link>
     </>
   );
 
@@ -304,7 +301,9 @@ export default function GroupDetail() {
             <div className="card">
               {expenses.length === 0 && payments.length === 0 ? (
                 <div className="empty-state">
-                  <div className="empty-icon">🧾</div>
+                  <div className="empty-icon" style={{ display: "flex", justifyContent: "center", opacity: 0.35 }}>
+                    <Icons.receipt size={36} />
+                  </div>
                   <div style={{ fontSize: 16, fontWeight: 600 }}>No transactions yet</div>
                   <div style={{ fontSize: 14, color: "var(--text2)" }}>Add an expense to get started</div>
                   <Link to={`/groups/${id}/add-expense`} className="btn btn-primary btn-sm mt-4">+ Add Expense</Link>
@@ -345,7 +344,9 @@ export default function GroupDetail() {
                               </span>
                             </td>
                             <td>
-                              <button className="btn btn-danger btn-xs" onClick={() => delExpense(item.expense_id)}>✕</button>
+                              <button className="btn btn-danger btn-xs" onClick={() => delExpense(item.expense_id)}>
+                                <Icons.trash size={11} />
+                              </button>
                             </td>
                           </tr>
                         ) : (
@@ -363,7 +364,9 @@ export default function GroupDetail() {
                             </td>
                             <td>—</td>
                             <td>
-                              <button className="btn btn-danger btn-xs" onClick={() => delPayment(item.payment_id)}>✕</button>
+                              <button className="btn btn-danger btn-xs" onClick={() => delPayment(item.payment_id)}>
+                                <Icons.trash size={11} />
+                              </button>
                             </td>
                           </tr>
                         ))}
@@ -412,7 +415,7 @@ export default function GroupDetail() {
                       background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text2)",
                     }}
                   >
-                    <UserPlusIcon /> Invite Member
+                    <Icons.userPlus size={15} /> Invite Member
                   </button>
                   <div style={{ borderTop: "1px solid var(--border)", marginTop: 4, paddingTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
                     <button
@@ -449,8 +452,9 @@ export default function GroupDetail() {
                   if (!me) return null;
                   const net = Number(me.net_balance);
                   if (net === 0) return (
-                    <div style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.18)", borderRadius: 8, padding: "12px 16px", marginBottom: 16 }}>
-                      <span style={{ fontSize: 14, color: "var(--success)", fontWeight: 500 }}>✓ You're all settled up.</span>
+                    <div style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.18)", borderRadius: 8, padding: "12px 16px", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+                      <Icons.checkSquare size={15} color="var(--success)" />
+                      <span style={{ fontSize: 14, color: "var(--success)", fontWeight: 500 }}>You're all settled up.</span>
                     </div>
                   );
                   if (net > 0) return (
@@ -475,7 +479,9 @@ export default function GroupDetail() {
                 {simplified.length === 0 ? (
                   <div className="card">
                     <div className="empty-state" style={{ padding: "32px 20px" }}>
-                      <div style={{ fontSize: 28 }}>🎉</div>
+                      <div style={{ display: "flex", justifyContent: "center", color: "var(--success)" }}>
+                        <Icons.celebrate size={28} />
+                      </div>
                       <div style={{ fontSize: 16, fontWeight: 600 }}>All settled up!</div>
                       <div style={{ fontSize: 14, color: "var(--text2)" }}>No outstanding balances</div>
                     </div>
@@ -617,7 +623,9 @@ export default function GroupDetail() {
           <div className="modal-box fade-up">
             <div className="modal-head">
               <span className="modal-title">Invite to {groupName}</span>
-              <button className="btn btn-ghost btn-xs btn-icon" onClick={() => setInviteModal(false)}>✕</button>
+              <button className="btn btn-ghost btn-xs btn-icon" onClick={() => setInviteModal(false)}>
+                <Icons.close size={14} />
+              </button>
             </div>
             <div className="modal-body">
               <p style={{ fontSize: 14, color: "var(--text2)", marginBottom: 16 }}>
@@ -633,8 +641,8 @@ export default function GroupDetail() {
                     <span style={{ flex: 1, fontSize: 12, color: "var(--text2)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: "monospace" }}>
                       {inviteLink}
                     </span>
-                    <button className={`btn btn-sm ${copied ? "btn-success" : "btn-primary"}`} style={{ flexShrink: 0 }} onClick={copyLink}>
-                      {copied ? "✓ Copied!" : "Copy"}
+                    <button className={`btn btn-sm ${copied ? "btn-success" : "btn-primary"}`} style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 5 }} onClick={copyLink}>
+                      {copied ? <><Icons.check size={13} /> Copied!</> : <><Icons.copy size={13} /> Copy</>}
                     </button>
                   </div>
                   <div style={{ fontSize: 12, color: "var(--text3)" }}>

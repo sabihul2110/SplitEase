@@ -2,6 +2,7 @@
 
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { Icons } from "./icons";
 
 const UI = {
   groups: (sz = 18) => <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>,
@@ -40,10 +41,10 @@ const UI = {
 }
 
 const ADMIN_NAV = [
-  { to: "/admin",              label: "Overview",     icon: "⊞", end: true },
-  { to: "/admin/users",        label: "Users",        icon: UI.users(16), },
-  { to: "/admin/groups",       label: "Groups",       icon: UI.groups(16), },
-  { to: "/admin/transactions", label: "Transactions", icon: "⇄" },
+  { to: "/admin",              label: "Overview",     icon: <Icons.grid size={16} strokeWidth={2} />, end: true },
+  { to: "/admin/users",        label: "Users",        icon: UI.users(16) },
+  { to: "/admin/groups",       label: "Groups",       icon: UI.groups(16) },
+  { to: "/admin/transactions", label: "Transactions", icon: <Icons.settlement size={16} /> },
 ];
 
 export default function AdminLayout() {
@@ -85,7 +86,7 @@ export default function AdminLayout() {
               className="sb-item"
               onClick={() => navigate("/dashboard")}
             >
-              <span className="sb-icon">←</span>
+              <span className="sb-icon"><Icons.chevronLeft size={16} /></span>
               Back to App
             </button>
           </div>
@@ -100,7 +101,7 @@ export default function AdminLayout() {
             </div>
           </div>
           <button className="sb-signout" onClick={() => { logout(); navigate("/login"); }}>
-            <span>↪</span> Sign out
+            <span style={{ display: "flex" }}><Icons.logout size={14} /></span> Sign out
           </button>
         </div>
       </aside>

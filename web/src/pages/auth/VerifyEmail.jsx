@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { verifyEmail, resendVerification } from "../api/auth";
-import { useAuth } from "../context/AuthContext";
+import { verifyEmail, resendVerification } from "../../api/auth";
+import { useAuth } from "../../context/AuthContext";
+import { Icons } from "../../components/icons";
 
 export default function VerifyEmail() {
   const navigate = useNavigate();
@@ -101,11 +102,7 @@ export default function VerifyEmail() {
               display: "flex", alignItems: "center", justifyContent: "center",
               animation: "ve-drop 0.45s cubic-bezier(0.34,1.56,0.64,1) both, ve-pulse 2.4s ease-in-out 0.6s infinite",
             }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
-                stroke="var(--text2)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                <polyline points="22,6 12,13 2,6"/>
-              </svg>
+              <Icons.mail size={22} color="var(--text2)" strokeWidth={1.8} />
             </div>
           </div>
 
@@ -130,7 +127,11 @@ export default function VerifyEmail() {
               fontSize: 13, color: "var(--danger)", marginBottom: 16,
               padding: "9px 12px", borderRadius: 8,
               background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.18)",
-            }}>⚠ {error}</div>
+              display: "flex", alignItems: "center", gap: 7,
+            }}>
+              <Icons.alertTriangle size={14} />
+              {error}
+            </div>
           )}
 
           <form onSubmit={onVerify}>

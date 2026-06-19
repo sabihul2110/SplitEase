@@ -6,11 +6,12 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { getMyGroups } from "../api/groups";
-import { getSettlementsBulk } from "../api/settlements";
-import { useAuth } from "../context/AuthContext";
-import AppShell from "../components/AppShell";
-import { getGroupIcon } from "../utils/GroupIcons";
+import { getMyGroups } from "../../api/groups";
+import { getSettlementsBulk } from "../../api/settlements";
+import { useAuth } from "../../context/AuthContext";
+import AppShell from "../../components/AppShell";
+import { getGroupIcon } from "../../constants/groupIcons";
+import { Icons } from "../../components/icons";
 
 const STYLES = `
   @keyframes dbFadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -126,8 +127,9 @@ export default function Dashboard() {
             padding: "10px 20px", fontSize: 13, display: "flex",
             alignItems: "center", justifyContent: "space-between", gap: 12,
           }}>
-            <span>
-              📧 Your email isn't verified yet.{" "}
+            <span style={{ display: "flex", alignItems: "center", gap: 7 }}>
+              <Icons.mail size={15} />
+              Your email isn't verified yet.{" "}
               <button onClick={() => navigate("/verify-email")}
                 style={{ background: "none", border: "none", color: "var(--warning)",
                         fontWeight: 700, cursor: "pointer", textDecoration: "underline", padding: 0 }}>
@@ -135,8 +137,8 @@ export default function Dashboard() {
               </button>
             </span>
             <button onClick={() => { setVerifyBannerDismissed(true); localStorage.setItem("verifyBannerDismissed", "true"); }}
-              style={{ background: "none", border: "none", color: "var(--warning)", cursor: "pointer", fontSize: 16 }}>
-              ✕
+              style={{ background: "none", border: "none", color: "var(--warning)", cursor: "pointer", display: "flex" }}>
+              <Icons.close size={15} />
             </button>
           </div>
         )}

@@ -3,12 +3,13 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { getMyGroups, createGroup as apiCreateGroup, deleteGroup, getMembersBulk, getHasExpenses } from "../api/groups";
-import { getSettlementsBulk } from "../api/settlements";
-import { getUsers } from "../api/users";
-import { useAuth } from "../context/AuthContext";
-import AppShell from "../components/AppShell";
-import { getGroupIcon } from "../utils/GroupIcons";
+import { getMyGroups, createGroup as apiCreateGroup, deleteGroup, getMembersBulk, getHasExpenses } from "../../api/groups";
+import { getSettlementsBulk } from "../../api/settlements";
+import { getUsers } from "../../api/users";
+import { useAuth } from "../../context/AuthContext";
+import AppShell from "../../components/AppShell";
+import { getGroupIcon } from "../../constants/groupIcons";
+import { Icons } from "../../components/icons";
 
 const GLOBAL_STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap');
@@ -636,7 +637,9 @@ export default function Groups() {
           <div className="modal-box fade-up">
             <div className="modal-head">
               <span className="modal-title">Create New Group</span>
-              <button className="btn btn-ghost btn-xs btn-icon" onClick={()=>setModal(false)}>✕</button>
+              <button className="btn btn-ghost btn-xs btn-icon" onClick={()=>setModal(false)}>
+                <Icons.close size={14} />
+              </button>
             </div>
             <div className="modal-body">
               {err&&<div className="alert alert-error">{err}</div>}
@@ -651,8 +654,8 @@ export default function Groups() {
                   {others.length===0?<div style={{fontSize:14,color:"var(--text3)",padding:"12px 0"}}>No other users found.</div>:(
                     <div style={{display:"flex",flexWrap:"wrap",gap:7}}>
                       {others.map(u=>(
-                        <div key={u.user_id} className={`chip ${picked.includes(u.user_id)?"on":""}`} onClick={()=>toggle(u.user_id)}>
-                          {picked.includes(u.user_id)?"✓ ":""}{u.name}
+                        <div key={u.user_id} className={`chip ${picked.includes(u.user_id)?"on":""}`} onClick={()=>toggle(u.user_id)} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                          {picked.includes(u.user_id) && <Icons.check size={11} />}{u.name}
                         </div>
                       ))}
                     </div>

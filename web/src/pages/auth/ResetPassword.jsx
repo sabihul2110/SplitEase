@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { useSearchParams, Link, useNavigate } from "react-router-dom";
-import { resetPassword } from "../api/auth";
-import PasswordInput from "../components/ui/PasswordInput";
+import { resetPassword } from "../../api/auth";
+import PasswordInput from "../../components/ui/PasswordInput";
+import { Icons } from "../../components/icons";
 
 
 export default function ResetPassword() {
@@ -44,7 +45,10 @@ export default function ResetPassword() {
         <div className="auth-card">
           {done ? (
             <div style={{ textAlign: "center", display: "flex", flexDirection: "column", gap: 12 }}>
-              <div style={{ fontSize: 17, fontWeight: 700 }}>Password Reset ✓</div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, fontSize: 17, fontWeight: 700 }}>
+                <Icons.checkCircle size={18} color="var(--success)" />
+                Password Reset
+              </div>
               <p style={{ fontSize: 14, color: "var(--text2)" }}>Your password has been updated. Redirecting to login…</p>
               <Link to="/login" className="btn btn-primary btn-sm" style={{ marginTop: 8 }}>Sign In Now</Link>
             </div>
@@ -60,7 +64,12 @@ export default function ResetPassword() {
                 </Link>
                 <div style={{ fontSize: 17, fontWeight: 700 }}>Set new password</div>
               </div>
-              {error && <div className="alert alert-error" style={{ marginBottom: 16 }}>⚠ {error}</div>}
+              {error && (
+                <div className="alert alert-error" style={{ marginBottom: 16 }}>
+                  <Icons.alertTriangle size={15} />
+                  {error}
+                </div>
+              )}
               <form onSubmit={onSubmit}>
                 <div className="form-group">
                   <label className="form-label">6-Digit Code</label>

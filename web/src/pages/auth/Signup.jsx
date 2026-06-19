@@ -3,9 +3,10 @@
 
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { resendVerification, signup, verifyEmail } from "../api/auth";
-import PasswordInput from "../components/ui/PasswordInput";
-import { useAuth } from "../context/AuthContext";
+import { resendVerification, signup, verifyEmail } from "../../api/auth";
+import PasswordInput from "../../components/ui/PasswordInput";
+import { useAuth } from "../../context/AuthContext";
+import { Icons } from "../../components/icons";
 
 export default function Signup() {
   const { login } = useAuth();
@@ -95,7 +96,12 @@ export default function Signup() {
               We sent a 6-digit code to <strong style={{ color: "var(--text)" }}>{form.email}</strong>.
               Enter it below to activate your account.
             </p>
-            {error && <div className="alert alert-error" style={{ marginBottom: 16 }}>⚠ {error}</div>}
+            {error && (
+              <div className="alert alert-error" style={{ marginBottom: 16 }}>
+                <Icons.alertTriangle size={15} />
+                {error}
+              </div>
+            )}
             <form onSubmit={onVerify}>
               <div className="form-group" style={{ marginBottom: 20 }}>
                 <label className="form-label">Verification code</label>
@@ -155,7 +161,12 @@ export default function Signup() {
               Create an account to join the group.
             </div>
           )}
-          {error && <div className="alert alert-error">⚠ {error}</div>}
+          {error && (
+            <div className="alert alert-error">
+              <Icons.alertTriangle size={15} />
+              {error}
+            </div>
+          )}
 
           <form onSubmit={onSubmit}>
             <div className="form-group">

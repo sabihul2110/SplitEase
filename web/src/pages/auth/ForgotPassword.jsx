@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { forgotPassword } from "../api/auth";
+import { forgotPassword } from "../../api/auth";
+import { Icons } from "../../components/icons";
 
 export default function ForgotPassword() {
   const [email,   setEmail]   = useState("");
@@ -54,7 +55,9 @@ export default function ForgotPassword() {
               background: "var(--error-bg, #2d1a1a)", color: "var(--error, #f87171)",
               borderRadius: 8, padding: "10px 14px", fontSize: 13,
               marginBottom: 16, lineHeight: 1.5,
+              display: "flex", alignItems: "flex-start", gap: 8,
             }}>
+              <Icons.alertTriangle size={15} style={{ flexShrink: 0, marginTop: 1 }} />
               {error}
             </div>
           )}

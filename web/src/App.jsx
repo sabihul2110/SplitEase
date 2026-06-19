@@ -4,11 +4,14 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 
 // User pages
-import Login        from "./pages/Login";
-import Signup       from "./pages/Signup";
-import Dashboard    from "./pages/Dashboard";
-import Groups       from "./pages/Groups";
-import GroupDetail  from "./pages/GroupDetail";
+import Login        from "./pages/auth/Login";
+import Signup from "./pages/auth/Signup";
+import ForgotPassword from "./pages/auth/ForgotPassword";
+import ResetPassword from "./pages/auth/ResetPassword";
+import VerifyEmail from "./pages/auth/VerifyEmail";
+import Dashboard    from "./pages/dashboard/Dashboard";
+import Groups       from "./pages/groups/Groups";
+import GroupDetail  from "./pages/groups/GroupDetail";
 import AddExpense   from "./pages/AddExpense";
 import AddPayment   from "./pages/AddPayment";
 import Settlements  from "./pages/Settlements";
@@ -18,10 +21,9 @@ import Profile  from "./pages/Profile";
 import Settings from "./pages/Settings";
 import Expenses from "./pages/Expenses";
 import Loans from "./pages/Loans";
-import People   from "./pages/People";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
-import VerifyEmail from "./pages/VerifyEmail";
+import People from "./pages/People";
+
+import Maintenance from "./pages/system/Maintenance";
 
 // Admin
 import AdminLayout       from "./components/AdminLayout";
@@ -56,6 +58,9 @@ export default function App() {
       <Route path="/verify-email" element={<VerifyEmail />} />
 
       <Route path="/join/:token" element={<JoinGroup />} />
+
+      <Route path="/down" element={<Maintenance reason="down" />} />
+      <Route path="/maintenance" element={<Maintenance reason="maintenance" />} />
 
       {/* User app — every page is a flat, independent route */}
       <Route path="/dashboard"              element={<UserRoute><Dashboard /></UserRoute>} />

@@ -9,7 +9,7 @@ import { deleteLoan, repayLoan } from "../api/loans";
 import { deleteBorrow } from "../api/loans";
 import AppShell from "../components/AppShell";
 import AddEntryModal from "../components/AddEntryModal";
-import { Icons } from "../utils/Icons";
+import { Icons } from "../components/icons";
 
 // ─────────────────────────────────────────────
 //  Styles
@@ -248,14 +248,14 @@ const STYLES = `
 //  SVG icons — replaces all emojis
 // ─────────────────────────────────────────────
 const TYPE_ICONS = {
-  personal_expense:    { icon: Icons.personalExpense, bg: "rgba(239,68,68,0.12)",   color: "var(--danger)"  },
-  group_expense:       { icon: Icons.groupExpense,    bg: "rgba(37,99,235,0.12)",   color: "var(--danger)"  },
-  group_expense_owed:  { icon: Icons.groupExpense,    bg: "rgba(37,99,235,0.12)",   color: "var(--danger)"  },
-  settlement_sent:     { icon: Icons.settlement,      bg: "rgba(239,68,68,0.10)",   color: "var(--danger)"  },
-  income:              { icon: Icons.income,          bg: "rgba(16,185,129,0.12)",  color: "var(--success)" },
-  settlement_received: { icon: Icons.settlement,      bg: "rgba(99,102,241,0.12)",  color: "var(--success)" },
-  loan_given:          { icon: Icons.lendMoney,       bg: "rgba(245,158,11,0.12)",  color: "#f59e0b"        },
-  loan_taken:          { icon: Icons.borrowMoney,     bg: "rgba(99,102,241,0.12)",  color: "#818cf8"        },
+  personal_expense:    { Icon: Icons.personalExpense, bg: "rgba(239,68,68,0.12)",   color: "var(--danger)"  },
+  group_expense:       { Icon: Icons.groupExpense,    bg: "rgba(37,99,235,0.12)",   color: "var(--danger)"  },
+  group_expense_owed:  { Icon: Icons.groupExpense,    bg: "rgba(37,99,235,0.12)",   color: "var(--danger)"  },
+  settlement_sent:     { Icon: Icons.settlement,      bg: "rgba(239,68,68,0.10)",   color: "var(--danger)"  },
+  income:              { Icon: Icons.income,          bg: "rgba(16,185,129,0.12)",  color: "var(--success)" },
+  settlement_received: { Icon: Icons.settlement,      bg: "rgba(99,102,241,0.12)",  color: "var(--success)" },
+  loan_given:          { Icon: Icons.lendMoney,       bg: "rgba(245,158,11,0.12)",  color: "#f59e0b"        },
+  loan_taken:          { Icon: Icons.borrowMoney,     bg: "rgba(99,102,241,0.12)",  color: "#818cf8"        },
 };
 
 const TYPE_CFG = {
@@ -557,7 +557,7 @@ function EntryRow({ entry, idx, deleting, onDelete, navigate }) {
       style={{ animationDelay: `${idx * 0.025}s` }}
     >
       <div className="me-entry-icon" style={{ background: iconCfg.bg, color: iconCfg.color }}>
-        {iconCfg.icon}
+        <iconCfg.Icon size={18} />
       </div>
 
       <div className="me-entry-body">
@@ -802,10 +802,12 @@ export default function Expenses() {
               </div>
             ))}
           </div>
-
+          
         ) : visible.length === 0 ? (
           <div className="me-empty">
-            <div className="me-empty-icon">📭</div>
+            <div className="me-empty-icon" style={{ display: "flex", justifyContent: "center" }}>
+              <Icons.inboxZero size={40} />
+            </div>
             <div style={{ fontSize: 16, fontWeight: 600, color: "var(--text2)", marginBottom: 5 }}>
               {search
                 ? `No results for "${search}"`

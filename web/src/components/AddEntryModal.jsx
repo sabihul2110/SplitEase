@@ -11,7 +11,7 @@ import { createLoan } from "../api/loans";
 import { createBorrow } from "../api/loans";
 import ReceiptScanner from "./ReceiptScanner";
 import DateInput from "../components/ui/DateInput";
-import { Icons } from "../utils/Icons";
+import { Icons } from "./icons";
 
 // ─────────────────────────────────────────────
 //  Styles
@@ -191,12 +191,12 @@ const STYLES = `
 //  Entry types
 // ─────────────────────────────────────────────
 const TYPES = [
-  { id: "personal", label: "Personal\nExpense", icon: Icons.personalExpense, iconBg: "rgba(239,68,68,0.15)" },
-  { id: "income", label: "Income", icon: Icons.income, iconBg: "rgba(16,185,129,0.15)" },
-  { id: "lend", label: "Lend\nMoney", icon: Icons.lendMoney, iconBg: "rgba(245,158,11,0.15)" },
-  { id: "borrow", label: "Borrow\nMoney", icon: Icons.borrowMoney, iconBg: "rgba(99,102,241,0.15)" },
-  { id: "group_exp", label: "Group\nExpense", icon: Icons.groupExpense, iconBg: "rgba(37,99,235,0.15)" },
-  { id: "settlement", label: "Settlement", icon: Icons.settlement, iconBg: "rgba(16,185,129,0.15)" },
+  { id: "personal", label: "Personal\nExpense", Icon: Icons.personalExpense, iconBg: "rgba(239,68,68,0.15)" },
+  { id: "income", label: "Income", Icon: Icons.income, iconBg: "rgba(16,185,129,0.15)" },
+  { id: "lend", label: "Lend\nMoney", Icon: Icons.lendMoney, iconBg: "rgba(245,158,11,0.15)" },
+  { id: "borrow", label: "Borrow\nMoney", Icon: Icons.borrowMoney, iconBg: "rgba(99,102,241,0.15)" },
+  { id: "group_exp", label: "Group\nExpense", Icon: Icons.groupExpense, iconBg: "rgba(37,99,235,0.15)" },
+  { id: "settlement", label: "Settlement", Icon: Icons.settlement, iconBg: "rgba(16,185,129,0.15)" },
 ];
 
 const SOURCE_LABELS = {
@@ -408,7 +408,7 @@ export default function AddEntryModal({ onSuccess, defaultTab = "personal" }) {
             
             <div className="aem-head">
               <span className="aem-head-title">Add Entry</span>
-              <button className="aem-close" onClick={handleClose}>✕</button>
+              <button className="aem-close" onClick={handleClose}><Icons.close size={14} /></button>
             </div>
 
             <div className="aem-type-grid">
@@ -418,7 +418,7 @@ export default function AddEntryModal({ onSuccess, defaultTab = "personal" }) {
                   className={`aem-type-pill ${type === t.id ? "active" : ""}`}
                   onClick={() => { setType(t.id); setErr(""); }}
                 >
-                  <div className="aem-type-icon" style={{ background: t.iconBg }}>{t.icon}</div>
+                  <div className="aem-type-icon" style={{ background: t.iconBg }}><t.Icon size={16} /></div>
                   <span className="aem-type-label">{t.label}</span>
                 </button>
               ))}
@@ -494,8 +494,8 @@ export default function AddEntryModal({ onSuccess, defaultTab = "personal" }) {
                 {type === "personal" && (merchantName || subcategoryId) && (
                   <div style={{ display: "flex", gap: 8, marginBottom: 13, flexWrap: "wrap" }}>
                     {merchantName && (
-                      <span style={{ fontSize: 11.5, padding: "3px 10px", borderRadius: 20, background: "rgba(99,102,241,0.1)", color: "#818cf8", border: "1px solid rgba(99,102,241,0.2)", fontWeight: 600 }}>
-                        🏪 {merchantName}
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11.5, padding: "3px 10px", borderRadius: 20, background: "rgba(99,102,241,0.1)", color: "#818cf8", border: "1px solid rgba(99,102,241,0.2)", fontWeight: 600 }}>
+                        <Icons.receipt size={11} /> {merchantName}
                       </span>
                     )}
                     {subcategoryId && (
@@ -578,12 +578,14 @@ export default function AddEntryModal({ onSuccess, defaultTab = "personal" }) {
 
                     {selectedUser && (
                       <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 7, padding: "7px 10px", background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: 8 }}>
-                        <span style={{ color: "var(--success)", fontSize: 13 }}>✓</span>
+                        <Icons.check size={13} color="var(--success)" />
                         <span style={{ fontSize: 12, color: "var(--success)" }}>
                           Linked to registered user — entry will need their acknowledgement
                         </span>
                         <button onClick={() => { setSelectedUser(null); setPersonName(""); }}
-                          style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", color: "var(--text3)", fontSize: 14 }}>✕</button>
+                          style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", color: "var(--text3)", display: "flex" }}>
+                          <Icons.close size={13} />
+                        </button>
                       </div>
                     )}
                   </div>

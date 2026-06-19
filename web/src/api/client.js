@@ -27,6 +27,17 @@ api.interceptors.request.use(config => {
 api.interceptors.response.use(
   response => response,
   error => {
+    // Network-level failure (no response at all) — backend unreachable,
+    // Render cold-start timeout, DNS failure, or offline.
+    if (!error.response && error.code !== "ERR_CANCELED") {
+      const isAuthPage = window.location.pathname === "/login" ||
+                         window.location.pathname === "/signup";
+      if (!isAuthPage && window.location.pathname !== "/down") {
+        window.location.href = "/down";
+      }
+      return Promise.reject(error);
+    }
+
     if (error.response?.status === 401) {
       const isAuthPage = window.location.pathname === "/login" ||
                          window.location.pathname === "/signup" ||
