@@ -1,14 +1,5 @@
 // web/src/constants/theme.js
-//
-// JS-side mirror of the CSS variables defined in src/index.css (:root).
-// Use this whenever a component needs a color value in JS (inline style
-// objects, chart colors, dynamic badges) instead of hardcoding hex values
-// or duplicating the CSS var list. Keep this file's values in sync with
-// index.css :root — they must always match exactly.
-//
-// This mirrors mobile/src/constants/theme.js so both apps share one
-// mental model, even though the implementations differ (CSS vars on web,
-// StyleSheet objects on mobile).
+
 
 export const COLORS = {
   bg:       '#0d0e14',

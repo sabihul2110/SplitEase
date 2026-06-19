@@ -1,8 +1,5 @@
 // web/src/components/common/Avatar.jsx
-//
-// Replaces the initials-circle block duplicated across GroupDetail.jsx,
-// Loans.jsx, People.jsx, AddEntryModal.jsx, ProfileDropdown (AppShell.jsx).
-// Same visual output everywhere, one source of truth for the color hash.
+
 
 import { AVATAR_PALETTE } from "../../constants/theme";
 

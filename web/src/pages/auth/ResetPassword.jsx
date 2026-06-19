@@ -1,9 +1,9 @@
-// SplitEase/web/src/pages/ResetPassword.jsx
+// SplitEase/web/src/pages/auth/ResetPassword.jsx
 
 import { useState } from "react";
 import { useSearchParams, Link, useNavigate } from "react-router-dom";
 import { resetPassword } from "../../api/auth";
-import PasswordInput from "../../components/ui/PasswordInput";
+import PasswordInput from "../../components/common/PasswordInput";
 import { Icons } from "../../components/icons";
 
 

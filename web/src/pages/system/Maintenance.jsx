@@ -1,7 +1,5 @@
 // web/src/pages/system/Maintenance.jsx
-//
-// Shown when the backend is unreachable (Render cold-start timeout, planned
-// maintenance, or a hard outage).
+
 
 import { Icons } from "../../components/icons";
 

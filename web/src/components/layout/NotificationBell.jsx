@@ -1,16 +1,9 @@
-// --- web/src/components/NotificationBell.jsx ---
+// --- web/src/components/layout/NotificationBell.jsx ---
 
-/**
- * NotificationBell.jsx
- * Uses a proper SVG bell icon (no emoji).
- * Polls unread count every 30s.
- * Click opens dropdown with notification list.
- * Paginated: fetches 20 at a time, "Load more" appends next batch.
- */
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { getNotificationCount, getNotifications, markRead, markAllRead, deleteNotification, deleteReadNotifications } from "../api/notifications";
+import { getNotificationCount, getNotifications, markRead, markAllRead, deleteNotification, deleteReadNotifications } from "../../api/notifications";
 
 const LIMIT = 20;
 

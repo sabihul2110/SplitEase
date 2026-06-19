@@ -1,3 +1,6 @@
+// --- web/src/pages/auth/VerifyEmail.jsx ---
+
+
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { verifyEmail, resendVerification } from "../../api/auth";

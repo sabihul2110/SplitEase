@@ -1,4 +1,4 @@
-// --- web/src/pages/GroupDetail.jsx ---
+// --- web/src/pages/groups/GroupDetail.jsx ---
 
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
@@ -7,7 +7,7 @@ import { getExpenses, deleteExpense } from "../../api/expenses";
 import { getPayments, deletePayment } from "../../api/payments";
 import { getSettlements, getSimplified } from "../../api/settlements";
 import { useAuth } from "../../context/AuthContext";
-import AppShell from "../../components/AppShell";
+import AppShell from "../../components/layout/AppShell";
 import { Icons } from "../../components/icons";
 
 export default function GroupDetail() {
@@ -479,10 +479,14 @@ export default function GroupDetail() {
                 {simplified.length === 0 ? (
                   <div className="card">
                     <div className="empty-state" style={{ padding: "32px 20px" }}>
-                      <div style={{ display: "flex", justifyContent: "center", color: "var(--success)" }}>
-                        <Icons.celebrate size={28} />
+                      <div style={{
+                        width: 48, height: 48, borderRadius: "50%", margin: "0 auto 4px",
+                        background: "rgba(16,185,129,0.1)", color: "var(--success)",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                      }}>
+                        <Icons.check size={22} />
                       </div>
-                      <div style={{ fontSize: 16, fontWeight: 600 }}>All settled up!</div>
+                      <div style={{ fontSize: 16, fontWeight: 600 }}>All settled up</div>
                       <div style={{ fontSize: 14, color: "var(--text2)" }}>No outstanding balances</div>
                     </div>
                   </div>

@@ -1,13 +1,13 @@
-// --- web/src/pages/AddExpense.jsx ---
+// --- web/src/pages/expenses/AddExpense.jsx ---
 
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getMembers } from "../../api/groups";
 import { createExpense, getCategories, getSubcategories } from "../../api/expenses";
 import { useAuth } from "../../context/AuthContext";
-import AppShell from "../../components/AppShell";
-import ReceiptScanner from "../../components/ReceiptScanner";
-import DateInput from "../../components/ui/DateInput";
+import AppShell from "../../components/layout/AppShell";
+import ReceiptScanner from "../../components/feature/ReceiptScanner";
+import DateInput from "../../components/common/DateInput";
 import { Icons } from "../../components/icons";
 
 export default function AddExpense() {

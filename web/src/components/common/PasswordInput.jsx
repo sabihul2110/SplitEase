@@ -1,14 +1,5 @@
-// web/src/components/ui/PasswordInput.jsx
-// Reusable password input with show/hide eye toggle.
-// Matches the app's existing <input> styling exactly — drop-in replacement.
-// Usage:
-//   <PasswordInput
-//     value={form.password}
-//     onChange={e => setForm(f => ({...f, password: e.target.value}))}
-//     placeholder="Min. 8 characters"
-//     required
-//     autoFocus
-//   />
+// web/src/components/common/PasswordInput.jsx
+
 
 import { useState } from "react";
 

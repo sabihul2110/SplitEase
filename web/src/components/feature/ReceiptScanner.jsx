@@ -1,17 +1,8 @@
-// web/src/components/ReceiptScanner.jsx
-/**
- * ReceiptScanner — reusable AI receipt scan button + modal.
- *
- * Props:
- *   onResult(data) — called with the agent's structured JSON on success.
- *                    data shape: { amount, description, category_name,
- *                                  subcategory_name, category_id,
- *                                  subcategory_id, expense_date,
- *                                  merchant_name, confidence }
- *   compact        — if true, renders a smaller icon-only button (for modals)
- */
+// web/src/components/feature/ReceiptScanner.jsx
+
+
 import { useState, useRef } from "react";
-import { scanReceipt } from "../api/ai";
+import { scanReceipt } from "../../api/ai";
 
 const STYLES = `
   .rs-btn {

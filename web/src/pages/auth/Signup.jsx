@@ -1,10 +1,10 @@
-// --- web/src/pages/Signup.jsx ---
+// --- web/src/pages/auth/Signup.jsx ---
 
 
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { resendVerification, signup, verifyEmail } from "../../api/auth";
-import PasswordInput from "../../components/ui/PasswordInput";
+import PasswordInput from "../../components/common/PasswordInput";
 import { useAuth } from "../../context/AuthContext";
 import { Icons } from "../../components/icons";
 

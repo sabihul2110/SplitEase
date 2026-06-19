@@ -1,8 +1,5 @@
 // web/src/components/common/EmptyState.jsx
-//
-// Replaces every hand-rolled "empty state" block across the app
-// (Expenses.jsx 📭, GroupDetail.jsx 🧾/🎉, Loans.jsx 📊/📄, People.jsx 👋/📄).
-// Pass any icon from components/icons.
+
 
 export default function EmptyState({ icon: Icon, title, subtitle, action, size = 40 }) {
   return (

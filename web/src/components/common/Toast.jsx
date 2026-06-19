@@ -1,14 +1,5 @@
 // web/src/components/common/Toast.jsx
-//
-// Extracted from the near-identical toast implementations hand-rolled in
-// Loans.jsx (PeopleLedger) and People.jsx. Pairs with the useToast hook
-// in hooks/useToast.js (next batch) — call site becomes:
-//
-//   const { toast, notify } = useToast();
-//   ...
-//   <Toast toast={toast} />
-//   notify("Entry added");
-//   notify("Failed to delete", true);
+
 
 import { Icons } from "../icons";
 

@@ -1,4 +1,4 @@
-// --- web/src/pages/Expenses.jsx ---
+// --- web/src/pages/expenses/Expenses.jsx ---
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
@@ -7,8 +7,8 @@ import { deletePersonalExpense } from "../../api/personalExpenses";
 import { deleteIncome } from "../../api/income";
 import { deleteLoan, repayLoan } from "../../api/loans";
 import { deleteBorrow } from "../../api/loans";
-import AppShell from "../../components/AppShell";
-import AddEntryModal from "../../components/AddEntryModal";
+import AppShell from "../../components/layout/AppShell";
+import AddEntryModal from "../../components/feature/AddEntryModal";
 import { Icons } from "../../components/icons";
 
 // ─────────────────────────────────────────────

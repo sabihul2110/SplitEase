@@ -1,4 +1,4 @@
-// SplitEase/web/src/pages/ForgotPassword.jsx
+// SplitEase/web/src/pages/auth/ForgotPassword.jsx
 
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";

@@ -1,9 +1,5 @@
 // web/src/components/common/ConfirmDialog.jsx
-//
-// Replaces native window.confirm() calls scattered across GroupDetail.jsx,
-// Groups.jsx, AdminGroups.jsx, AdminUsers.jsx, Loans.jsx, People.jsx.
-// Native confirms can't be styled and look out of place in a polished app.
-// Pairs with the useConfirm hook below.
+
 
 import { Icons } from "../icons";
 

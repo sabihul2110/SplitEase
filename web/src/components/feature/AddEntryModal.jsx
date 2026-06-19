@@ -1,17 +1,17 @@
-// web/src/components/AddEntryModal.jsx
+// web/src/components/feature/AddEntryModal.jsx
 
 
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { getMyGroups } from "../api/groups";
-import api from "../api/client";
-import { createPersonalExpense } from "../api/personalExpenses";
-import { createIncome } from "../api/income";
-import { createLoan } from "../api/loans";
-import { createBorrow } from "../api/loans";
+import { getMyGroups } from "../../api/groups";
+import api from "../../api/client";
+import { createPersonalExpense } from "../../api/personalExpenses";
+import { createIncome } from "../../api/income";
+import { createLoan } from "../../api/loans";
+import { createBorrow } from "../../api/loans";
 import ReceiptScanner from "./ReceiptScanner";
-import DateInput from "../components/ui/DateInput";
-import { Icons } from "./icons";
+import DateInput from "../common/DateInput";
+import { Icons } from "../icons";
 
 // ─────────────────────────────────────────────
 //  Styles

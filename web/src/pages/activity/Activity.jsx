@@ -1,10 +1,10 @@
-// --- web/src/pages/Activity.jsx ---
+// --- web/src/pages/activity/Activity.jsx ---
 
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { getTimeline } from "../../api/timeline";
-import AppShell from "../../components/AppShell";
+import AppShell from "../../components/layout/AppShell";
 
 const STYLES = `
   @keyframes actFadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }

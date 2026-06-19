@@ -1,9 +1,9 @@
-// --- web/src/pages/Login.jsx ---
+// --- web/src/pages/auth/Login.jsx ---
 
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { login as loginRequest } from "../../api/auth";
-import PasswordInput from "../../components/ui/PasswordInput";
+import PasswordInput from "../../components/common/PasswordInput";
 import { useAuth } from "../../context/AuthContext";
 import { Icons } from "../../components/icons";
 

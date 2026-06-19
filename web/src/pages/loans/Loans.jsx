@@ -1,10 +1,10 @@
-// web/src/pages/Loans.jsx
+// web/src/pages/loans/Loans.jsx
 // Three tabs: People Ledger | Money Lent | Money Borrowed
 import { useState, useEffect, useCallback, useRef } from "react";
 import { getLoans, deleteLoan, repayLoan, getBorrows, deleteBorrow, repayBorrow } from "../../api/loans";
 import * as peopleApi from "../../api/people";
-import AppShell from "../../components/AppShell";
-import AddEntryModal from "../../components/AddEntryModal";
+import AppShell from "../../components/layout/AppShell";
+import AddEntryModal from "../../components/feature/AddEntryModal";
 import { Icons } from "../../components/icons";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

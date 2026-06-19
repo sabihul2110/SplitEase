@@ -1,35 +1,37 @@
-// --- web/src/App.jsx ---
+// SplitEase/web/src/app/App.jsx
+
 
 import { Routes, Route, Navigate } from "react-router-dom";
-import { useAuth } from "./context/AuthContext";
+import { useAuth } from "../context/AuthContext";
 
 // User pages
-import Login        from "./pages/auth/Login";
-import Signup from "./pages/auth/Signup";
-import ForgotPassword from "./pages/auth/ForgotPassword";
-import ResetPassword from "./pages/auth/ResetPassword";
-import VerifyEmail from "./pages/auth/VerifyEmail";
-import Dashboard    from "./pages/dashboard/Dashboard";
-import Groups       from "./pages/groups/Groups";
-import GroupDetail  from "./pages/groups/GroupDetail";
-import AddExpense   from "./pages/expenses/AddExpense";
-import AddPayment   from "./pages/payments/AddPayment";
-import Settlements  from "./pages/settlements/Settlements";
-import Activity     from "./pages/activity/Activity";
-import JoinGroup from "./pages/invites/JoinGroup";
-import Profile  from "./pages/settings/Profile";
-import Settings from "./pages/settings/Settings";
-import Expenses from "./pages/expenses/Expenses";
-import Loans from "./pages/loans/Loans";
+import Login          from "../pages/auth/Login";
+import Signup         from "../pages/auth/Signup";
+import ForgotPassword from "../pages/auth/ForgotPassword";
+import ResetPassword  from "../pages/auth/ResetPassword";
+import VerifyEmail    from "../pages/auth/VerifyEmail";
+import Dashboard      from "../pages/dashboard/Dashboard";
+import Groups         from "../pages/groups/Groups";
+import GroupDetail    from "../pages/groups/GroupDetail";
+import JoinGroup      from "../pages/groups/JoinGroup";
+import AddExpense     from "../pages/expenses/AddExpense";
+import AddPayment     from "../pages/payments/AddPayment";
+import Settlements    from "../pages/settlements/Settlements";
+import Activity       from "../pages/activity/Activity";
 
-import Maintenance from "./pages/system/Maintenance";
+import Profile        from "../pages/settings/Profile";
+import Settings       from "../pages/settings/Settings";
+import Expenses       from "../pages/expenses/Expenses";
+import Loans          from "../pages/loans/Loans";
+
+import Maintenance    from "../pages/system/Maintenance";
 
 // Admin
-import AdminLayout       from "./components/AdminLayout";
-import AdminOverview     from "./pages/admin/AdminOverview";
-import AdminUsers        from "./pages/admin/AdminUsers";
-import AdminGroups       from "./pages/admin/AdminGroups";
-import AdminTransactions from "./pages/admin/AdminTransactions";
+import AdminLayout       from "../components/layout/AdminLayout";
+import AdminOverview     from "../pages/admin/AdminOverview";
+import AdminUsers        from "../pages/admin/AdminUsers";
+import AdminGroups       from "../pages/admin/AdminGroups";
+import AdminTransactions from "../pages/admin/AdminTransactions";
 
 function UserRoute({ children }) {
   const { user } = useAuth();

@@ -1,10 +1,10 @@
-// --- web/src/pages/Settings.jsx ---
+// --- web/src/pages/settings/Settings.jsx ---
 
 
 import { useState, useEffect } from "react";
 import { useNavigate, Link }   from "react-router-dom";
 import { useAuth }             from "../../context/AuthContext";
-import AppShell                from "../../components/AppShell";
+import AppShell                from "../../components/layout/AppShell";
 import { resetMyData, forceResetData } from "../../api/users";
 import { Icons } from "../../components/icons";
 

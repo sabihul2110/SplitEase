@@ -1,10 +1,10 @@
-// --- web/src/components/AppShell.jsx ---
+// --- web/src/components/layout/AppShell.jsx ---
 
 import { useState, useRef, useEffect } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../../context/AuthContext";
 import NotificationBell from "./NotificationBell";
-import { Icons as SharedIcons } from "./icons";
+import { Icons as SharedIcons } from "../icons";
 
 // ─────────────────────────────────────────────
 //  SVG Icons — every item DISTINCT

@@ -1,4 +1,4 @@
-// --- web/src/pages/Profile.jsx ---
+// --- web/src/pages/settings/Profile.jsx ---
 
 
 import { useState, useEffect } from "react";
@@ -8,7 +8,7 @@ import { getSettlementsBulk } from "../../api/settlements";
 import { updateProfile } from "../../api/users";
 import { changePassword } from "../../api/auth";
 import { useAuth }  from "../../context/AuthContext";
-import AppShell     from "../../components/AppShell";
+import AppShell     from "../../components/layout/AppShell";
 
 // ─────────────────────────────────────────────
 //  Inline icons

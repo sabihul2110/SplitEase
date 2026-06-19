@@ -1,4 +1,4 @@
-// web/src/pages/Settlements.jsx
+// web/src/pages/settlements/Settlements.jsx
 
 
 import { useState, useEffect } from "react";
@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { getMyGroups } from "../../api/groups";
 import { getSettlements, getSimplified } from "../../api/settlements";
 import * as peopleApi from "../../api/people";
-import AppShell from "../../components/AppShell";
+import AppShell from "../../components/layout/AppShell";
 import { useAuth } from "../../context/AuthContext";
 import { Icons } from "../../components/icons";
 
@@ -139,11 +139,15 @@ export default function Settlements() {
                   </div>
                   {simple.length === 0 ? (
                     <div className="card card-p" style={{ textAlign: "center", padding: "32px 20px" }}>
-                      <div style={{ display: "flex", justifyContent: "center", marginBottom: 10, color: "var(--success)" }}>
-                        <Icons.celebrate size={28} />
+                      <div style={{
+                        width: 48, height: 48, borderRadius: "50%", margin: "0 auto 10px",
+                        background: "rgba(16,185,129,0.1)", color: "var(--success)",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                      }}>
+                        <Icons.check size={22} />
                       </div>
                       <div style={{ fontSize: 16, fontWeight: 600, color: "var(--text)" }}>
-                        All settled up!
+                        All settled up
                       </div>
                       <div style={{ fontSize: 14, color: "var(--text2)", marginTop: 4 }}>
                         No outstanding balances in this group.
@@ -257,11 +261,15 @@ export default function Settlements() {
             <div className="loading"><div className="spinner" />Loading…</div>
           ) : peopleWithBalance.length === 0 ? (
             <div className="card card-p" style={{ textAlign: "center", padding: "48px 24px" }}>
-              <div style={{ display: "flex", justifyContent: "center", marginBottom: 12, color: "var(--success)" }}>
-                <Icons.celebrate size={32} />
+              <div style={{
+                width: 56, height: 56, borderRadius: "50%", margin: "0 auto 14px",
+                background: "rgba(16,185,129,0.1)", color: "var(--success)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <Icons.check size={26} />
               </div>
               <div style={{ fontSize: 16, fontWeight: 600, color: "var(--text)", marginBottom: 6 }}>
-                All personal balances are settled!
+                All personal balances are settled
               </div>
               <div style={{ fontSize: 14, color: "var(--text2)" }}>
                 No outstanding balances with any person.

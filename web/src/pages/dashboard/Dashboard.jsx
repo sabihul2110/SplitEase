@@ -1,4 +1,4 @@
-// --- web/src/pages/Dashboard.jsx ---
+// --- web/src/pages/dashboard/Dashboard.jsx ---
 // FIX #15: Replaced N individual GET /settlements/{id} calls with a single
 //           POST /settlements/bulk call. For a user in 10 groups this reduces
 //           page-load API calls from 11 to 2 (GET /groups + POST /settlements/bulk).
@@ -9,7 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { getMyGroups } from "../../api/groups";
 import { getSettlementsBulk } from "../../api/settlements";
 import { useAuth } from "../../context/AuthContext";
-import AppShell from "../../components/AppShell";
+import AppShell from "../../components/layout/AppShell";
 import { getGroupIcon } from "../../constants/groupIcons";
 import { Icons } from "../../components/icons";
 

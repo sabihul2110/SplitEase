@@ -1,4 +1,4 @@
-// --- web/src/pages/Groups.jsx ---
+// --- web/src/pages/groups/Groups.jsx ---
 // v7: Fix isEmpty (wrong sRows check), fix members-bulk 404, fix memberCount=0
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -7,7 +7,7 @@ import { getMyGroups, createGroup as apiCreateGroup, deleteGroup, getMembersBulk
 import { getSettlementsBulk } from "../../api/settlements";
 import { getUsers } from "../../api/users";
 import { useAuth } from "../../context/AuthContext";
-import AppShell from "../../components/AppShell";
+import AppShell from "../../components/layout/AppShell";
 import { getGroupIcon } from "../../constants/groupIcons";
 import { Icons } from "../../components/icons";
 

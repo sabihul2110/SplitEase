@@ -1,12 +1,12 @@
-// --- web/src/pages/AddPayment.jsx ---
+// --- web/src/pages/payments/AddPayment.jsx ---
 
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getMembers } from "../../api/groups";
 import { createPayment } from "../../api/payments";
 import { useAuth } from "../../context/AuthContext";
-import AppShell from "../../components/AppShell";
-import DateInput from "../../components/ui/DateInput";
+import AppShell from "../../components/layout/AppShell";
+import DateInput from "../../components/common/DateInput";
 import { Icons } from "../../components/icons";
 
 export default function AddPayment() {

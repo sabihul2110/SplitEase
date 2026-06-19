@@ -1,4 +1,4 @@
-// web/src/components/ui/DateInput.jsx
+// web/src/components/common/DateInput.jsx
 
 
 import { useState, useEffect, useRef } from "react";
