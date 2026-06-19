@@ -12,16 +12,15 @@ import VerifyEmail from "./pages/auth/VerifyEmail";
 import Dashboard    from "./pages/dashboard/Dashboard";
 import Groups       from "./pages/groups/Groups";
 import GroupDetail  from "./pages/groups/GroupDetail";
-import AddExpense   from "./pages/AddExpense";
-import AddPayment   from "./pages/AddPayment";
-import Settlements  from "./pages/Settlements";
-import Activity     from "./pages/Activity";
-import JoinGroup from "./pages/JoinGroup";
-import Profile  from "./pages/Profile";
-import Settings from "./pages/Settings";
-import Expenses from "./pages/Expenses";
-import Loans from "./pages/Loans";
-import People from "./pages/People";
+import AddExpense   from "./pages/expenses/AddExpense";
+import AddPayment   from "./pages/payments/AddPayment";
+import Settlements  from "./pages/settlements/Settlements";
+import Activity     from "./pages/activity/Activity";
+import JoinGroup from "./pages/invites/JoinGroup";
+import Profile  from "./pages/settings/Profile";
+import Settings from "./pages/settings/Settings";
+import Expenses from "./pages/expenses/Expenses";
+import Loans from "./pages/loans/Loans";
 
 import Maintenance from "./pages/system/Maintenance";
 

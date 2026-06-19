@@ -3,12 +3,12 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { getMyGroups } from "../api/groups";
-import { getSettlementsBulk } from "../api/settlements";
-import { updateProfile } from "../api/users";
-import { changePassword } from "../api/auth";
-import { useAuth }  from "../context/AuthContext";
-import AppShell     from "../components/AppShell";
+import { getMyGroups } from "../../api/groups";
+import { getSettlementsBulk } from "../../api/settlements";
+import { updateProfile } from "../../api/users";
+import { changePassword } from "../../api/auth";
+import { useAuth }  from "../../context/AuthContext";
+import AppShell     from "../../components/AppShell";
 
 // ─────────────────────────────────────────────
 //  Inline icons

@@ -1,28 +1,12 @@
 // --- web/src/pages/Settings.jsx ---
-/**
- * Settings page — /settings
- *
- * Sections:
- *  1. Appearance — dark/light/system theme (stored in localStorage)
- *  2. Notifications — placeholder for future
- *  3. Account — quick links to Profile actions
- *  4. About — version info
- *
- * Theme implementation:
- *  - Stores "theme" key in localStorage: "dark" | "light" | "system"
- *  - Applies data-theme="dark"|"light" to <html>
- *  - Your index.css already uses CSS vars that work in dark mode.
- *    For light mode add: [data-theme="light"] { --bg: #f8f9fc; --surface: #fff; ... }
- *  - "system" reads prefers-color-scheme and follows OS.
- *
- * No new backend endpoints needed.
- */
+
 
 import { useState, useEffect } from "react";
 import { useNavigate, Link }   from "react-router-dom";
-import { useAuth }             from "../context/AuthContext";
-import AppShell                from "../components/AppShell";
-import { resetMyData, forceResetData } from "../api/users";
+import { useAuth }             from "../../context/AuthContext";
+import AppShell                from "../../components/AppShell";
+import { resetMyData, forceResetData } from "../../api/users";
+import { Icons } from "../../components/icons";
 
 // ─────────────────────────────────────────────
 //  Theme utilities
@@ -209,7 +193,9 @@ function DangerZone() {
 
   if (step === "done") return (
     <div className="card card-p" style={{ borderColor: "rgba(16,185,129,0.3)" }}>
-      <div style={{ fontSize: 14, fontWeight: 600, color: "var(--success)", marginBottom: 6 }}>✓ Data reset complete</div>
+      <div style={{ fontSize: 14, fontWeight: 600, color: "var(--success)", marginBottom: 6, display: "flex", alignItems: "center", gap: 6 }}>
+        <Icons.check size={14} /> Data reset complete
+      </div>
       <div style={{ fontSize: 13, color: "var(--text3)", marginBottom: 14 }}>
         Deleted: {result?.personal_expenses} personal expenses, {result?.income} income entries,
         {result?.loans} loans, {result?.borrows} borrows, {result?.group_expenses} group expenses.
@@ -222,8 +208,8 @@ function DangerZone() {
 
   if (step === "pending") return (
     <div className="card card-p" style={{ borderColor: "rgba(245,158,11,0.3)" }}>
-      <div style={{ fontSize: 14, fontWeight: 600, color: "var(--warning)", marginBottom: 6 }}>
-        ⚠ You have unsettled balances
+      <div style={{ fontSize: 14, fontWeight: 600, color: "var(--warning)", marginBottom: 6, display: "flex", alignItems: "center", gap: 6 }}>
+        <Icons.alertTriangle size={14} /> You have unsettled balances
       </div>
       <div style={{ fontSize: 13, color: "var(--text3)", marginBottom: 12 }}>
         Resetting will remove your data from these groups:

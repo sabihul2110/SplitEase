@@ -1,11 +1,11 @@
 // web/src/pages/Loans.jsx
 // Three tabs: People Ledger | Money Lent | Money Borrowed
 import { useState, useEffect, useCallback, useRef } from "react";
-import { getLoans, deleteLoan, repayLoan, getBorrows, deleteBorrow, repayBorrow } from "../api/loans";
-import * as peopleApi from "../api/people";
-import AppShell from "../components/AppShell";
-import AddEntryModal from "../components/AddEntryModal";
-import { Icons } from "../components/icons";
+import { getLoans, deleteLoan, repayLoan, getBorrows, deleteBorrow, repayBorrow } from "../../api/loans";
+import * as peopleApi from "../../api/people";
+import AppShell from "../../components/AppShell";
+import AddEntryModal from "../../components/AddEntryModal";
+import { Icons } from "../../components/icons";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const fmt = (n) => Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 });

@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { getMembers } from "../api/groups";
-import { createExpense, getCategories, getSubcategories } from "../api/expenses";
-import { useAuth } from "../context/AuthContext";
-import AppShell from "../components/AppShell";
-import ReceiptScanner from "../components/ReceiptScanner";
-import DateInput from "../components/ui/DateInput";
+import { getMembers } from "../../api/groups";
+import { createExpense, getCategories, getSubcategories } from "../../api/expenses";
+import { useAuth } from "../../context/AuthContext";
+import AppShell from "../../components/AppShell";
+import ReceiptScanner from "../../components/ReceiptScanner";
+import DateInput from "../../components/ui/DateInput";
+import { Icons } from "../../components/icons";
 
 export default function AddExpense() {
   const { id }  = useParams();
@@ -91,10 +92,10 @@ export default function AddExpense() {
   return (
     <AppShell title="Add Expense">
       <button className="back-btn mb-4" onClick={() => navigate(`/groups/${id}`)}>
-        ← Back to Group
+        <Icons.chevronLeft size={13} /> Back to Group
       </button>
 
-      {error && <div className="alert alert-error mb-4">⚠ {error}</div>}
+      {error && <div className="alert alert-error mb-4"><Icons.alertTriangle size={14} /> {error}</div>}
 
       {/* Split screen layout */}
       <div className="form-split">
@@ -186,7 +187,7 @@ export default function AddExpense() {
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "var(--text3)" }}>
                   <span>Sum: <strong className="td-num">₹{customSum.toFixed(2)}</strong></span>
                   <span>Target: <strong className="td-num">₹{total.toFixed(2)}</strong></span>
-                  {balanced && total > 0 && <span style={{ color: "var(--success)" }}>✓ Matches</span>}
+                  {balanced && total > 0 && <span style={{ color: "var(--success)", display: "inline-flex", alignItems: "center", gap: 4 }}><Icons.check size={12} /> Matches</span>}
                 </div>
               </div>
             )}
@@ -243,7 +244,7 @@ export default function AddExpense() {
               </div>
               {balanced && total > 0 && (
                 <div style={{ fontSize: 12, color: "var(--success)", marginBottom: 12, display: "flex", alignItems: "center", gap: 5 }}>
-                  <span>●</span> Matches total
+                  <Icons.check size={12} /> Matches total
                 </div>
               )}
               <button

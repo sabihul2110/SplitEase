@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { getMembers } from "../api/groups";
-import { createPayment } from "../api/payments";
-import { useAuth } from "../context/AuthContext";
-import AppShell from "../components/AppShell";
-import DateInput from "../components/ui/DateInput";
+import { getMembers } from "../../api/groups";
+import { createPayment } from "../../api/payments";
+import { useAuth } from "../../context/AuthContext";
+import AppShell from "../../components/AppShell";
+import DateInput from "../../components/ui/DateInput";
+import { Icons } from "../../components/icons";
 
 export default function AddPayment() {
   const { id }  = useParams();
@@ -40,7 +41,7 @@ export default function AddPayment() {
 
   return (
     <AppShell title="Record Payment">
-      <button className="back-btn mb-4" onClick={() => navigate(`/groups/${id}`)}>← Back to Group</button>
+      <button className="back-btn mb-4" onClick={() => navigate(`/groups/${id}`)}><Icons.chevronLeft size={13} /> Back to Group</button>
 
       <div style={{ maxWidth: 520 }}>
         {/* Preview */}
@@ -54,7 +55,7 @@ export default function AddPayment() {
           </div>
         )}
 
-        {error && <div className="alert alert-error">⚠ {error}</div>}
+        {error && <div className="alert alert-error"><Icons.alertTriangle size={14} /> {error}</div>}
 
         <form onSubmit={onSubmit}>
           <div className="card card-p">

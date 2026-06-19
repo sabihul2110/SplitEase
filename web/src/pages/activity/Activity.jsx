@@ -1,25 +1,10 @@
 // --- web/src/pages/Activity.jsx ---
-// FIX #11: Replaced the hand-rolled N+1 fan-out (GET /groups + N×GET /expenses
-//          + N×GET /payments = 2N+1 calls) with a single GET /timeline/ call.
-//          The backend already does this aggregation efficiently in Python
-//          across 8 event types. The web (frontend) was re-doing a subset of that
-//          work with far more round-trips.
-//
-// BEHAVIOUR CHANGES vs original:
-//   • Feed now includes personal expenses, income, loans, borrows, and
-//     settlement payments in addition to group expenses — richer timeline.
-//   • Each item has a `type` field (group_expense, personal_expense, income,
-//     loan_given, loan_taken, settlement_received, settlement_sent,
-//     group_expense_owed) instead of just "expense" / "payment".
-//   • Filter tabs updated: All / Group Expenses / Settlements / Personal.
-//   • Clicking a row still navigates to the group when group_id is present.
-//     Personal/income/loan rows are non-navigable (no group_id).
-//   • Summary chips now show personal spend + group spend separately.
+
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { getTimeline } from "../api/timeline";
-import AppShell from "../components/AppShell";
+import { getTimeline } from "../../api/timeline";
+import AppShell from "../../components/AppShell";
 
 const STYLES = `
   @keyframes actFadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }

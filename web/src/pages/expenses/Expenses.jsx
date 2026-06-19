@@ -2,14 +2,14 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { getTimeline } from "../api/timeline";
-import { deletePersonalExpense } from "../api/personalExpenses";
-import { deleteIncome } from "../api/income";
-import { deleteLoan, repayLoan } from "../api/loans";
-import { deleteBorrow } from "../api/loans";
-import AppShell from "../components/AppShell";
-import AddEntryModal from "../components/AddEntryModal";
-import { Icons } from "../components/icons";
+import { getTimeline } from "../../api/timeline";
+import { deletePersonalExpense } from "../../api/personalExpenses";
+import { deleteIncome } from "../../api/income";
+import { deleteLoan, repayLoan } from "../../api/loans";
+import { deleteBorrow } from "../../api/loans";
+import AppShell from "../../components/AppShell";
+import AddEntryModal from "../../components/AddEntryModal";
+import { Icons } from "../../components/icons";
 
 // ─────────────────────────────────────────────
 //  Styles

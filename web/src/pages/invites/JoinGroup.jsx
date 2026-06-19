@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { getInvite, joinInvite } from "../api/invites";
-import { useAuth } from "../context/AuthContext";
+import { getInvite, joinInvite } from "../../api/invites";
+import { useAuth } from "../../context/AuthContext";
+import { Icons } from "../../components/icons";
 
 export default function JoinGroup() {
   const { token } = useParams();
@@ -116,7 +117,9 @@ export default function JoinGroup() {
           {/* SUCCESS */}
           {status === "success" && (
             <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 36, marginBottom: 12 }}>🎉</div>
+              <div style={{ display: "flex", justifyContent: "center", marginBottom: 12, color: "var(--success)" }}>
+                <Icons.celebrate size={36} />
+              </div>
               <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 6 }}>You're in!</div>
               <div style={{ fontSize: 14, color: "var(--text2)" }}>{message}</div>
               <div style={{ fontSize: 13, color: "var(--text3)", marginTop: 8 }}>Redirecting…</div>
@@ -126,11 +129,13 @@ export default function JoinGroup() {
           {/* ERROR */}
           {status === "error" && (
             <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 36, marginBottom: 12 }}>⚠️</div>
+              <div style={{ display: "flex", justifyContent: "center", marginBottom: 12, color: "var(--danger)" }}>
+                <Icons.alertTriangle size={36} />
+              </div>
               <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 8 }}>Invalid Invite</div>
               <div style={{ fontSize: 14, color: "var(--text2)", marginBottom: 20 }}>{message}</div>
-              <Link to={user ? "/dashboard" : "/login"} className="btn btn-ghost btn-sm" style={{ justifyContent: "center" }}>
-                ← {user ? "Go to Dashboard" : "Sign in"}
+              <Link to={user ? "/dashboard" : "/login"} className="btn btn-ghost btn-sm" style={{ justifyContent: "center", gap: 6 }}>
+                <Icons.chevronLeft size={13} /> {user ? "Go to Dashboard" : "Sign in"}
               </Link>
             </div>
           )}
