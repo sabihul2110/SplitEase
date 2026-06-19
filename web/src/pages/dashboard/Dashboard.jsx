@@ -1,15 +1,11 @@
 // --- web/src/pages/dashboard/Dashboard.jsx ---
-// FIX #15: Replaced N individual GET /settlements/{id} calls with a single
-//           POST /settlements/bulk call. For a user in 10 groups this reduces
-//           page-load API calls from 11 to 2 (GET /groups + POST /settlements/bulk).
-// FIX #9 retained: balance lookup uses user_id not user_name.
+
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { getMyGroups } from "../../api/groups";
 import { getSettlementsBulk } from "../../api/settlements";
 import { useAuth } from "../../context/AuthContext";
-import AppShell from "../../components/layout/AppShell";
 import { getGroupIcon } from "../../constants/groupIcons";
 import { Icons } from "../../components/icons";
 
@@ -70,6 +66,12 @@ function MiniCard({ label, value, color, sub, icon, iconBg, delay = 0 }) {
   );
 }
 
+
+  export function DashboardActions() {
+  const navigate = useNavigate();
+  return <button className="btn btn-primary btn-sm" onClick={() => navigate("/groups")}>+ New Group</button>;
+}
+
 export default function Dashboard() {
   const { user } = useAuth();
   const [verifyBannerDismissed, setVerifyBannerDismissed] = useState(
@@ -108,13 +110,11 @@ export default function Dashboard() {
 
   const netBalance = balances.owedToYou - balances.youOwe;
   const isPositive = netBalance >= 0;
-  const actions = <button className="btn btn-primary btn-sm" onClick={() => navigate("/groups")}>+ New Group</button>;
 
   return (
     <>
       <style>{STYLES}</style>
-      <AppShell title="Dashboard" actions={actions}>
-        <div className="db-insights">
+      <div className="db-insights">
           <div className="db-chip"><span className="db-chip-dot" style={{ background: "#3b82f6" }} />{groups.length} active group{groups.length !== 1 ? "s" : ""}</div>
           <div className="db-chip"><span className="db-chip-dot" style={{ background: "#10b981" }} />{user?.role === "admin" ? "Admin account" : "Member account"}</div>
           <div className="db-chip"><span className="db-chip-dot" style={{ background: isPositive ? "#10b981" : "#ef4444" }} />Net balance: {isPositive ? "+" : "−"}₹{fmt(Math.abs(netBalance))}</div>
@@ -209,7 +209,6 @@ export default function Dashboard() {
             )}
           </div>
         </div>
-      </AppShell>
     </>
   );
 }

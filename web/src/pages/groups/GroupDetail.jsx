@@ -7,7 +7,6 @@ import { getExpenses, deleteExpense } from "../../api/expenses";
 import { getPayments, deletePayment } from "../../api/payments";
 import { getSettlements, getSimplified } from "../../api/settlements";
 import { useAuth } from "../../context/AuthContext";
-import AppShell from "../../components/layout/AppShell";
 import { Icons } from "../../components/icons";
 
 export default function GroupDetail() {
@@ -234,15 +233,13 @@ export default function GroupDetail() {
   );
 
   if (loading) return (
-    <AppShell title={groupName} actions={actions}>
-      <div className="loading"><div className="spinner" />Loading…</div>
-    </AppShell>
+    <div className="loading"><div className="spinner" />Loading…</div>
   );
 
   return (
     <>
-      <AppShell title={groupName} actions={actions}>
-        <button className="back-btn mb-4" onClick={() => navigate("/groups")}>← Back to Groups</button>
+        <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginBottom:8}}>{actions}</div>
+        <button className="back-btn mb-4" onClick={() => navigate("/groups")}><Icons.chevronLeft size={13}/> Back to Groups</button>
 
         {/* Toast */}
         {toast && (
@@ -619,7 +616,6 @@ export default function GroupDetail() {
             </div>
           </div>
         )}
-      </AppShell>
 
       {/* Invite modal */}
       {inviteModal && (

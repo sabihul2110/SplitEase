@@ -7,9 +7,9 @@ import { getMyGroups, createGroup as apiCreateGroup, deleteGroup, getMembersBulk
 import { getSettlementsBulk } from "../../api/settlements";
 import { getUsers } from "../../api/users";
 import { useAuth } from "../../context/AuthContext";
-import AppShell from "../../components/layout/AppShell";
 import { getGroupIcon } from "../../constants/groupIcons";
 import { Icons } from "../../components/icons";
+import api from "../../api/client";
 
 const GLOBAL_STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap');
@@ -299,7 +299,7 @@ function GroupCard({ group, enriched, idx, memberDetails, onDelete }) {
               }}
               onMouseEnter={e=>{e.currentTarget.style.opacity="1";e.currentTarget.style.color="var(--danger)";e.currentTarget.style.borderColor="rgba(239,68,68,0.4)";}}
               onMouseLeave={e=>{e.currentTarget.style.opacity="0.5";e.currentTarget.style.color="var(--text3)";e.currentTarget.style.borderColor="var(--border)";}}
-            >✕</button>
+            ><Icons.close size={11} /></button>
           </div>
         </div>
 
@@ -366,6 +366,15 @@ function ZeroState({ onCreateGroup }) {
       <button className="btn btn-primary btn-sm" style={{marginTop:8,display:"flex",alignItems:"center",gap:7}} onClick={onCreateGroup}>
         {Icon.users(13)} Create your first group
       </button>
+    </div>
+  );
+}
+
+export function GroupsActions({ onRefresh, onCreate }) {
+  return (
+    <div style={{display:"flex",alignItems:"center",gap:10}}>
+      <button className="btn btn-ghost btn-sm" style={{display:"flex",alignItems:"center",gap:5}} onClick={onRefresh} title="Refresh">{Icon.refresh(13)}</button>
+      <button className="btn btn-primary btn-sm" style={{display:"flex",alignItems:"center",gap:6}} onClick={onCreate}>{Icon.users(13)} Create Group</button>
     </div>
   );
 }
@@ -536,17 +545,9 @@ export default function Groups() {
     empty: groups.filter(g=>enrichedMap[g.group_id]?.isEmpty).length,
   };
 
-  const pageHeader = (
-    <div style={{display:"flex",alignItems:"center",gap:10}}>
-      <button className="btn btn-ghost btn-sm" style={{display:"flex",alignItems:"center",gap:5}} onClick={loadData} title="Refresh">{Icon.refresh(13)}</button>
-      <button className="btn btn-primary btn-sm" style={{display:"flex",alignItems:"center",gap:6}} onClick={openModal}>{Icon.users(13)} Create Group</button>
-    </div>
-  );
-
   return (
     <>
       <style>{GLOBAL_STYLES}</style>
-      <AppShell title="Groups" actions={pageHeader}>
         <div className="gs-root">
           <div className="gs-page-header">
             <div>
@@ -555,6 +556,7 @@ export default function Groups() {
                 {loading?"Loading your groups…":groups.length>0?`Managing expenses across ${groups.length} group${groups.length!==1?"s":""}` :"Create a group to start splitting expenses"}
               </p>
             </div>
+            <GroupsActions onRefresh={loadData} onCreate={openModal} />
           </div>
 
           {loadError && (
@@ -630,7 +632,6 @@ export default function Groups() {
             </div>
           )}
         </div>
-      </AppShell>
 
       {modal&&(
         <div className="modal-overlay" onClick={e=>{if(e.target===e.currentTarget)setModal(false);}}>

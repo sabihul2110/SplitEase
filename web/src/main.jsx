@@ -2,22 +2,18 @@
 
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import App from "./app/App";
 import ErrorBoundary from "./components/ErrorBoundary";
 import "./styles/index.css";
 
+
 createRoot(document.getElementById("root")).render(
   <StrictMode>
-    {/* BrowserRouter enables URL-based navigation (like /dashboard, /login) */}
-    <BrowserRouter>
-      {/* AuthProvider makes login state available everywhere in the app */}
-      <ErrorBoundary>
-        <AuthProvider>
-          <App />
-        </AuthProvider>
-      </ErrorBoundary>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <AuthProvider>
+        <App />
+      </AuthProvider>
+    </ErrorBoundary>
   </StrictMode>
 );

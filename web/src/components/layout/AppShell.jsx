@@ -1,7 +1,8 @@
 // --- web/src/components/layout/AppShell.jsx ---
 
 import { useState, useRef, useEffect } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate, Outlet, useMatches } from "react-router-dom";
+import { useState as useShellState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import NotificationBell from "./NotificationBell";
 import { Icons as SharedIcons } from "../icons";
@@ -223,10 +224,14 @@ function ProfileDropdown({ user, onLogout }) {
   );
 }
 
-export default function AppShell({ children, title, actions }) {
+export default function AppShell() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const matches = useMatches();
+  const current = matches[matches.length - 1];
+  const title = current?.handle?.title || "";
+  const actions = current?.handle?.actions || null;
 
   return (
     <div className="shell">
@@ -303,7 +308,7 @@ export default function AppShell({ children, title, actions }) {
         </header>
 
         <main className="page-area">
-          <div className="page-inner fade-up">{children}</div>
+          <div className="page-inner fade-up"><Outlet /></div>
         </main>
       </div>
     </div>
