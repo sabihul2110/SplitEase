@@ -2,7 +2,7 @@
 
 
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useOutletContext } from "react-router-dom";
 import { getMyGroups } from "../../api/groups";
 import { getSettlementsBulk } from "../../api/settlements";
 import { useAuth } from "../../context/AuthContext";
@@ -67,12 +67,7 @@ function MiniCard({ label, value, color, sub, icon, iconBg, delay = 0 }) {
 }
 
 
-  export function DashboardActions() {
-  const navigate = useNavigate();
-  return <button className="btn btn-primary btn-sm" onClick={() => navigate("/groups")}>+ New Group</button>;
-}
-
-export default function Dashboard() {
+  export default function Dashboard() {
   const { user } = useAuth();
   const [verifyBannerDismissed, setVerifyBannerDismissed] = useState(
     () => localStorage.getItem("verifyBannerDismissed") === "true"
@@ -107,6 +102,12 @@ export default function Dashboard() {
     }
     load();
   }, [user]);
+
+  const { setPageActions } = useOutletContext();
+  useEffect(() => {
+    setPageActions(<button className="btn btn-primary btn-sm" onClick={() => navigate("/groups")}>+ New Group</button>);
+    return () => setPageActions(null);
+  }, []);
 
   const netBalance = balances.owedToYou - balances.youOwe;
   const isPositive = netBalance >= 0;

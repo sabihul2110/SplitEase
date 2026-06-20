@@ -1,7 +1,7 @@
 // --- web/src/pages/groups/GroupDetail.jsx ---
 
 import { useState, useEffect, useCallback } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, Link, useOutletContext } from "react-router-dom";
 import { getMembers, getMyGroups, generateInvite, sendReminder, removeMember, deleteGroup } from "../../api/groups";
 import { getExpenses, deleteExpense } from "../../api/expenses";
 import { getPayments, deletePayment } from "../../api/payments";
@@ -207,6 +207,7 @@ export default function GroupDetail() {
   const myBalance  = settlements.find(s => s.user_name === user?.name);
   const myNet      = myBalance ? Number(myBalance.net_balance) : null;
 
+  const { setPageActions } = useOutletContext();
   const actions = (
     <>
       <button
@@ -226,11 +227,14 @@ export default function GroupDetail() {
       <Link to={`/groups/${id}/add-payment`} className="btn btn-ghost btn-sm">
         <Icons.plus size={13} /> Payment
       </Link>
-      <Link to={`/groups/${id}/add-expense`} className="btn btn-primary btn-sm">
-        <Icons.plus size={13} /> Expense
-      </Link>
+      <Link to={`/groups/${id}/add-expense`} className="btn btn-primary btn-sm">+ Expense</Link>
     </>
   );
+
+  useEffect(() => {
+    setPageActions(actions);
+    return () => setPageActions(null);
+  }, [groupName, id]);
 
   if (loading) return (
     <div className="loading"><div className="spinner" />Loading…</div>
@@ -238,7 +242,6 @@ export default function GroupDetail() {
 
   return (
     <>
-        <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginBottom:8}}>{actions}</div>
         <button className="back-btn mb-4" onClick={() => navigate("/groups")}><Icons.chevronLeft size={13}/> Back to Groups</button>
 
         {/* Toast */}

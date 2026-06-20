@@ -5,7 +5,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import { getMembers } from "../../api/groups";
 import { createPayment } from "../../api/payments";
 import { useAuth } from "../../context/AuthContext";
-import AppShell from "../../components/layout/AppShell";
 import DateInput from "../../components/common/DateInput";
 import { Icons } from "../../components/icons";
 
@@ -40,7 +39,7 @@ export default function AddPayment() {
   }
 
   return (
-    <AppShell title="Record Payment">
+    <>
       <button className="back-btn mb-4" onClick={() => navigate(`/groups/${id}`)}><Icons.chevronLeft size={13} /> Back to Group</button>
 
       <div style={{ maxWidth: 520 }}>
@@ -95,6 +94,6 @@ export default function AddPayment() {
           </button>
         </form>
       </div>
-    </AppShell>
+    </>
   );
 }

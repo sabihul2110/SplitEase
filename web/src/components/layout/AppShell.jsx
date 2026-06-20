@@ -228,10 +228,11 @@ export default function AppShell() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [pageActions, setPageActions] = useState(null);
   const matches = useMatches();
   const current = matches[matches.length - 1];
   const title = current?.handle?.title || "";
-  const actions = current?.handle?.actions || null;
+  const actions = pageActions;
 
   return (
     <div className="shell">
@@ -308,7 +309,9 @@ export default function AppShell() {
         </header>
 
         <main className="page-area">
-          <div className="page-inner fade-up"><Outlet /></div>
+          <div className="page-inner fade-up">
+            <Outlet context={{ setPageActions }} />
+          </div>
         </main>
       </div>
     </div>

@@ -8,7 +8,6 @@ import { getSettlementsBulk } from "../../api/settlements";
 import { updateProfile } from "../../api/users";
 import { changePassword } from "../../api/auth";
 import { useAuth }  from "../../context/AuthContext";
-import AppShell     from "../../components/layout/AppShell";
 
 // ─────────────────────────────────────────────
 //  Inline icons
@@ -334,7 +333,7 @@ export default function Profile() {
 
   return (
     <>
-      <AppShell title="Profile">
+      <>
         <button className="back-btn mb-4" onClick={() => navigate(-1)}>
           {Icon.back(14)} Back
         </button>
@@ -479,7 +478,7 @@ export default function Profile() {
             </button>
           </div>
         </div>
-      </AppShell>
+      </>
 
       {showEdit && (
         <EditProfileModal

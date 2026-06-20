@@ -4,7 +4,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { getTimeline } from "../../api/timeline";
-import AppShell from "../../components/layout/AppShell";
 
 const STYLES = `
   @keyframes actFadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
@@ -152,7 +151,7 @@ export default function Activity() {
   return (
     <>
       <style>{STYLES}</style>
-      <AppShell title="Activity">
+      <>
         <div style={{ marginBottom: 24 }}>
           <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-0.025em", color: "var(--text)", marginBottom: 4 }}>Activity</h1>
           <p style={{ fontSize: 14, color: "var(--text3)" }}>Your complete financial timeline</p>
@@ -249,7 +248,7 @@ export default function Activity() {
             ))}
           </div>
         )}
-      </AppShell>
+      </>
     </>
   );
 }

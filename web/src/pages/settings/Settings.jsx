@@ -4,7 +4,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link }   from "react-router-dom";
 import { useAuth }             from "../../context/AuthContext";
-import AppShell                from "../../components/layout/AppShell";
 import { resetMyData, forceResetData } from "../../api/users";
 import { Icons } from "../../components/icons";
 
@@ -303,7 +302,7 @@ export default function Settings() {
     .split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
 
   return (
-    <AppShell title="Settings">
+    <>
       <button className="back-btn mb-4" onClick={() => navigate(-1)}>
         {Icon.back(14)} Back
       </button>
@@ -484,6 +483,6 @@ export default function Settings() {
           ))}
         </div>
       </div>
-    </AppShell>
+    </>
   );
 }

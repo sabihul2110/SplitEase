@@ -2,7 +2,7 @@
 // v7: Fix isEmpty (wrong sRows check), fix members-bulk 404, fix memberCount=0
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useOutletContext } from "react-router-dom";
 import { getMyGroups, createGroup as apiCreateGroup, deleteGroup, getMembersBulk, getHasExpenses } from "../../api/groups";
 import { getSettlementsBulk } from "../../api/settlements";
 import { getUsers } from "../../api/users";
@@ -382,6 +382,7 @@ export function GroupsActions({ onRefresh, onCreate }) {
 export default function Groups() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { setPageActions } = useOutletContext();
 
   const [groups,         setGroups]         = useState([]);
   const [enrichedMap,    setEnrichedMap]    = useState({});
@@ -471,7 +472,12 @@ export default function Groups() {
     }
   }, [user]);
 
-  useEffect(() => { loadData(); }, [loadData]);
+useEffect(() => { loadData(); }, [loadData]);
+
+  useEffect(() => {
+    setPageActions(<GroupsActions onRefresh={loadData} onCreate={openModal} />);
+    return () => setPageActions(null);
+  }, [loadData]);
 
   async function handleDeleteGroup(group, force = false) {
     try {
@@ -556,7 +562,6 @@ export default function Groups() {
                 {loading?"Loading your groups…":groups.length>0?`Managing expenses across ${groups.length} group${groups.length!==1?"s":""}` :"Create a group to start splitting expenses"}
               </p>
             </div>
-            <GroupsActions onRefresh={loadData} onCreate={openModal} />
           </div>
 
           {loadError && (

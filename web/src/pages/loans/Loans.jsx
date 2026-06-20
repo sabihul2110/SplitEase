@@ -1,9 +1,10 @@
 // web/src/pages/loans/Loans.jsx
-// Three tabs: People Ledger | Money Lent | Money Borrowed
+
+
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useOutletContext } from "react-router-dom";
 import { getLoans, deleteLoan, repayLoan, getBorrows, deleteBorrow, repayBorrow } from "../../api/loans";
 import * as peopleApi from "../../api/people";
-import AppShell from "../../components/layout/AppShell";
 import AddEntryModal from "../../components/feature/AddEntryModal";
 import { Icons } from "../../components/icons";
 
@@ -120,7 +121,7 @@ function PeopleLedger() {
 
       <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 0,
         border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden",
-        height: "calc(100vh - 180px)", background: "var(--surface)" }}>
+        minHeight: 560, height: "calc(100vh - 260px)", background: "var(--surface)" }}>
 
         {/* Left: contact list */}
         <div style={{ borderRight: "1px solid var(--border)", display: "flex", flexDirection: "column" }}>
@@ -799,10 +800,16 @@ export default function Loans() {
       color: "var(--success)", sub: `${borrows.filter(b => b.status === "repaid").length} fully repaid` },
   ];
 
-  const addModal = <AddEntryModal onSuccess={load} defaultTab={pageTab === "lent" ? "lend" : "borrow"} />;
+  const { setPageActions } = useOutletContext();
+  useEffect(() => {
+    setPageActions(pageTab !== "people"
+      ? <AddEntryModal onSuccess={load} defaultTab={pageTab === "lent" ? "lend" : "borrow"} />
+      : null);
+    return () => setPageActions(null);
+  }, [pageTab]);
 
   return (
-    <AppShell title="Loans & Ledger" actions={pageTab !== "people" ? addModal : null}>
+    <>
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 24, fontWeight: 800, letterSpacing: "-0.025em",
           color: "var(--text)", margin: 0 }}>Loans & Ledger</h1>
@@ -908,6 +915,6 @@ export default function Loans() {
           )}
         </>
       )}
-    </AppShell>
+    </>
   );
 }

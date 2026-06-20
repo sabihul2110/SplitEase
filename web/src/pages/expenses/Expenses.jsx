@@ -1,13 +1,12 @@
 // --- web/src/pages/expenses/Expenses.jsx ---
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useOutletContext } from "react-router-dom";
 import { getTimeline } from "../../api/timeline";
 import { deletePersonalExpense } from "../../api/personalExpenses";
 import { deleteIncome } from "../../api/income";
 import { deleteLoan, repayLoan } from "../../api/loans";
 import { deleteBorrow } from "../../api/loans";
-import AppShell from "../../components/layout/AppShell";
 import AddEntryModal from "../../components/feature/AddEntryModal";
 import { Icons } from "../../components/icons";
 
@@ -712,7 +711,11 @@ export default function Expenses() {
   ];
 
   const modalDefaultTab = TAB_TO_MODAL[filter] || "personal";
-  const actions = <AddEntryModal onSuccess={load} defaultTab={modalDefaultTab} />;
+  const { setPageActions } = useOutletContext();
+  useEffect(() => {
+    setPageActions(<AddEntryModal onSuccess={load} defaultTab={modalDefaultTab} />);
+    return () => setPageActions(null);
+  }, [modalDefaultTab]);
 
   // Month label for the subtitle
   const monthDisplayLabel = fmtMonthLabel(selMonth);
@@ -721,7 +724,7 @@ export default function Expenses() {
     <>
       <style>{STYLES}</style>
 
-      <AppShell title="Expenses" actions={actions}>
+      <>
 
         {/* Page header */}
         <div style={{ marginBottom: 24 }}>
@@ -871,8 +874,7 @@ export default function Expenses() {
             })}
           </div>
         )}
-
-      </AppShell>
+      </>
     </>
   );
 }

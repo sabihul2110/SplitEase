@@ -17,7 +17,7 @@ import ForgotPassword from "../pages/auth/ForgotPassword";
 import ResetPassword from "../pages/auth/ResetPassword";
 import VerifyEmail from "../pages/auth/VerifyEmail";
 
-import Dashboard, { DashboardActions } from "../pages/dashboard/Dashboard";
+import Dashboard from "../pages/dashboard/Dashboard";
 import Groups from "../pages/groups/Groups";
 import GroupDetail from "../pages/groups/GroupDetail";
 import JoinGroup from "../pages/groups/JoinGroup";
@@ -53,17 +53,27 @@ export const routes = [
   {
     element: <UserRoute><AppShell /></UserRoute>,
     children: [
-      { path: "/dashboard", element: <Dashboard />, handle: { title: "Dashboard", actions: <DashboardActions /> } },
-      { path: "/groups", element: <Groups />, handle: { title: "Groups" } },
+      { path: "/dashboard", element: <Dashboard />, handle: { title: "Dashboard" } },
+      // { path: "/groups", element: <Groups />, handle: { title: "Groups" } },
+      // { path: "/groups/:id", element: <GroupDetail /> },
+      // { path: "/groups/:id/add-expense", element: <AddExpense />, handle: { title: "Add Expense" } },
+      // { path: "/groups/:id/add-payment", element: <AddPayment />, handle: { title: "Record Payment" } },
+      // { path: "/settlements", element: <Settlements />, handle: { title: "Settlements" } },
+      // { path: "/activity", element: <Activity />, handle: { title: "Activity" } },
+      // { path: "/profile", element: <Profile />, handle: { title: "Profile" } },
+      // { path: "/settings", element: <Settings />, handle: { title: "Settings" } },
+      // { path: "/expenses", element: <Expenses />, handle: { title: "Expenses" } },
+      // { path: "/loans", element: <Loans />, handle: { title: "Loans & Ledger" } },
+      { path: "/groups", element: <Groups /> },
       { path: "/groups/:id", element: <GroupDetail /> },
       { path: "/groups/:id/add-expense", element: <AddExpense />, handle: { title: "Add Expense" } },
       { path: "/groups/:id/add-payment", element: <AddPayment />, handle: { title: "Record Payment" } },
-      { path: "/settlements", element: <Settlements />, handle: { title: "Settlements" } },
-      { path: "/activity", element: <Activity />, handle: { title: "Activity" } },
-      { path: "/profile", element: <Profile />, handle: { title: "Profile" } },
-      { path: "/settings", element: <Settings />, handle: { title: "Settings" } },
-      { path: "/expenses", element: <Expenses />, handle: { title: "Expenses" } },
-      { path: "/loans", element: <Loans />, handle: { title: "Loans & Ledger" } },
+      { path: "/settlements", element: <Settlements /> },
+      { path: "/activity", element: <Activity /> },
+      { path: "/profile", element: <Profile /> },
+      { path: "/settings", element: <Settings /> },
+      { path: "/expenses", element: <Expenses /> },
+      { path: "/loans", element: <Loans /> },
     ],
   },
 

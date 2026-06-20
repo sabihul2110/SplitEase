@@ -5,7 +5,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import { getMembers } from "../../api/groups";
 import { createExpense, getCategories, getSubcategories } from "../../api/expenses";
 import { useAuth } from "../../context/AuthContext";
-import AppShell from "../../components/layout/AppShell";
 import ReceiptScanner from "../../components/feature/ReceiptScanner";
 import DateInput from "../../components/common/DateInput";
 import { Icons } from "../../components/icons";
@@ -90,7 +89,7 @@ export default function AddExpense() {
   }
 
   return (
-    <AppShell title="Add Expense">
+    <>
       <button className="back-btn mb-4" onClick={() => navigate(`/groups/${id}`)}>
         <Icons.chevronLeft size={13} /> Back to Group
       </button>
@@ -259,6 +258,6 @@ export default function AddExpense() {
           </div>
         </div>
       </div>
-    </AppShell>
+    </>
   );
 }
