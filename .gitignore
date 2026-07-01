@@ -1,3 +1,5 @@
+# SplitEase/.gitignore
+
 # =========================
 # ENV / SECRETS
 # =========================
@@ -64,6 +66,7 @@ coverage/
 # MISC
 # =========================
 tree.txt
+SplitEase.txt
 structure.txt
 **/tree.txt
 **/structure.txt

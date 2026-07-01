@@ -1,8 +1,5 @@
-// --- web/src/components/layout/AppShell.jsx ---
-
 import { useState, useRef, useEffect } from "react";
 import { NavLink, useNavigate, Outlet, useMatches } from "react-router-dom";
-import { useState as useShellState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import NotificationBell from "./NotificationBell";
 import { Icons as SharedIcons } from "../icons";
@@ -17,8 +14,6 @@ const Icons = {
       <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
     </svg>
   ),
-
-  // People — contact book / users
   people: (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
@@ -27,8 +22,6 @@ const Icons = {
       <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
     </svg>
   ),
-
-  // Expenses — receipt / document with lines
   expenses: (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -37,16 +30,6 @@ const Icons = {
       <line x1="9" y1="17" x2="13" y2="17"/>
     </svg>
   ),
-  // Loans — two people with arrow between (money flow between 2)
-  // loans: (
-  //   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-  //     <circle cx="5" cy="8" r="3"/>
-  //     <circle cx="19" cy="8" r="3"/>
-  //     <path d="M9 20H5a2 2 0 0 1-2-2v-1a4 4 0 0 1 4-4h1"/>
-  //     <path d="M15 20h4a2 2 0 0 0 2-2v-1a4 4 0 0 0-4-4h-1"/>
-  //     <path d="M12 12v6m-2-2 2 2 2-2"/>
-  //   </svg>
-  // ),
   loans: (
     <svg width="16" height="16" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="22" cy="14" r="8" />
@@ -54,56 +37,43 @@ const Icons = {
       <circle cx="78" cy="62" r="8" />
       <path d="M64 83c0-7.7 6.3-14 14-14 7.7 0 14 6.3 14 14v2H64v-2z" />
       <circle cx="50" cy="50" r="16" />
-      {/* Rupee symbol */}
       <path d="M44 44h12" />
       <path d="M44 49h10" />
       <path d="M46 44c6 0 6 5 0 5" />
       <path d="M46 49l8 9" />
-      {/* Down-right arrow */}
       <path d="M68 18 Q82 18 82 32" />
       <polyline points="78,28 82,32 86,28" />
-      {/* Up-left arrow */}
       <path d="M32 82 Q18 82 18 68" />
       <polyline points="22,72 18,68 14,72" />
     </svg>
   ),
-  // Groups — three people (distinct from Loans which is 2)
   groups: (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      {/* Left person (behind) */}
       <circle cx="5" cy="8" r="2" />
       <path d="M1 19v-1a4 4 0 0 1 4-4h1" />
-
-      {/* Right person (behind) */}
       <circle cx="19" cy="8" r="2" />
       <path d="M23 19v-1a4 4 0 0 0-4-4h-1" />
-
-      {/* Center person (front, larger) */}
       <circle cx="12" cy="7" r="3" />
       <path d="M6 21v-1a6 6 0 0 1 12 0v1" />
     </svg>
   ),
-  // Settlements — two arrows opposite directions
   settlements: (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M7 16V4m0 0L3 8m4-4 4 4"/>
       <path d="M17 8v12m0 0 4-4m-4 4-4-4"/>
     </svg>
   ),
-  // Activity — pulse waveform
   activity: (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
     </svg>
   ),
-  // Settings — gear
   settings: (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="3"/>
       <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
     </svg>
   ),
-  // Admin — shield with checkmark
   admin: (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
@@ -119,12 +89,12 @@ const Icons = {
 
 const NAV_ITEMS = [
   { to: "/dashboard",   label: "Dashboard",   icon: "dashboard"   },
-  { to: "/groups",      label: "Groups",       icon: "groups"      },
-  { to: "/expenses",    label: "Expenses",     icon: "expenses"    },
-  { to: "/loans",       label: "Loans",        icon: "loans"       },
-  { to: "/settlements", label: "Settlements",  icon: "settlements" },
-  { to: "/activity",    label: "Activity",     icon: "activity"    },
-  { to: "/settings",    label: "Settings",     icon: "settings"    },
+  { to: "/groups",      label: "Groups",      icon: "groups"      },
+  { to: "/expenses",    label: "Expenses",    icon: "expenses"    },
+  { to: "/loans",       label: "Loans",       icon: "loans"       },
+  { to: "/settlements", label: "Settlements", icon: "settlements" },
+  { to: "/activity",    label: "Activity",    icon: "activity"    },
+  { to: "/settings",    label: "Settings",    icon: "settings"    },
 ];
 
 // ─────────────────────────────────────────────
@@ -141,12 +111,11 @@ function ProfileDropdown({ user, onLogout }) {
     return () => document.removeEventListener("mousedown", close);
   }, []);
 
-  const initials = (user?.name || "?")
-    .split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
+  const initials = (user?.name || "?").split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
 
   const MENU = [
     { icon: "user", label: "View Profile",   route: "/profile" },
-    { icon: "edit", label: "Edit Details",    route: "/profile" },
+    { icon: "edit", label: "Edit Details",   route: "/profile" },
     { icon: "lock", label: "Change Password", route: "/profile?action=password" },
   ];
 
@@ -224,11 +193,137 @@ function ProfileDropdown({ user, onLogout }) {
   );
 }
 
+// ─────────────────────────────────────────────
+//  Gemini Styled Tooltip
+// ─────────────────────────────────────────────
+function SidebarTooltip({ label, btnRef, side = "right" }) {
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+  
+  useEffect(() => {
+    if (btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect();
+      if (side === "right") {
+        setPos({ top: r.top + r.height / 2, left: r.right + 8 });
+      } else if (side === "left") {
+        setPos({ top: r.top + r.height / 2, left: r.left - 8 });
+      } else if (side === "bottom") {
+        setPos({ top: r.bottom + 8, left: r.left + r.width / 2 });
+      }
+    }
+  }, [btnRef, side]);
+
+  let transform = "translateY(-50%)";
+  if (side === "left") transform = "translate(-100%, -50%)";
+  if (side === "bottom") transform = "translateX(-50%)";
+
+  return (
+        <div style={{
+          position: "fixed", top: pos.top, left: pos.left,
+          transform, zIndex: 9999, pointerEvents: "none",
+          display: "flex", flexDirection: side === "bottom" ? "column" : "row",
+          alignItems: "center", gap: 0,
+          filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.2))"
+        }}>
+          {side === "bottom" && (
+            <div style={{ width: 0, height: 0,
+              borderLeft: "5px solid transparent", borderRight: "5px solid transparent",
+              borderBottom: "5px solid #e8eaed", flexShrink: 0, marginBottom: -1 }} />
+          )}
+          {side === "right" && (
+            <div style={{ width: 0, height: 0,
+              borderTop: "5px solid transparent", borderBottom: "5px solid transparent",
+              borderRight: "5px solid #e8eaed", flexShrink: 0, marginRight: -1 }} />
+          )}
+          <div style={{
+            background: "#e8eaed", color: "#202124",
+            fontSize: 12, fontWeight: 500, lineHeight: 1,
+            padding: "6px 12px", borderRadius: 8,
+            whiteSpace: "nowrap"
+          }}>
+            {label}
+          </div>
+          {side === "left" && (
+            <div style={{ width: 0, height: 0,
+              borderTop: "5px solid transparent", borderBottom: "5px solid transparent",
+              borderLeft: "5px solid #e8eaed", flexShrink: 0, marginLeft: -1 }} />
+          )}
+        </div>
+      );
+}
+
+// ─────────────────────────────────────────────
+//  Gemini Sidebar Icons
+// ─────────────────────────────────────────────
+
+// Replicates the Gemini sidebar panel icon with dynamic states (open/close/idle)
+const IconSidebarPanel = ({ type }) => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="3" width="18" height="18" rx="4" />
+    <line x1="9" y1="3" x2="9" y2="21" />
+    {/* Open Sidebar (Right Arrow) */}
+    {type === "open" && <polyline points="14 9 16 12 14 15" />}
+    {/* Close Sidebar (Left Arrow) */}
+    {type === "close" && <polyline points="16 9 13 12 16 15" />}
+  </svg>
+);
+
+// ─────────────────────────────────────────────
+//  Gemini Sidebar Toggle Button
+// ─────────────────────────────────────────────
+function SidebarToggleButton({ collapsed, onClick }) {
+  const [hover, setHover] = useState(false);
+  const btnRef = useRef(null);
+
+  return (
+    <div style={{ display: "flex", justifyContent: "center" }}>
+      <button
+        ref={btnRef}
+        onClick={onClick}
+        onMouseEnter={() => setHover(true)}
+        onMouseLeave={() => setHover(false)}
+        style={{
+          width: 40, height: 40, borderRadius: 20, // Perfectly circular hover state like Google apps
+          border: "none",
+          background: hover ? "var(--surface2)" : "transparent",
+          color: hover ? "var(--text)" : "var(--text2)",
+          cursor: "pointer", display: "flex", alignItems: "center",
+          justifyContent: "center", transition: "all 0.15s", flexShrink: 0
+        }}
+      >
+        {collapsed && !hover ? (
+          <img src="/logo.svg" alt="SplitEase Logo" style={{ width: 26, height: 26, display: "block" }} />
+        ) : (
+          <IconSidebarPanel type={hover ? (collapsed ? "open" : "close") : "idle"} />
+        )}
+      </button>
+      {hover && (
+        <SidebarTooltip 
+          label={collapsed ? "Expand menu" : "Collapse menu"} 
+          btnRef={btnRef} 
+          side={collapsed ? "right" : "bottom"} 
+        />
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+//  Main AppShell
+// ─────────────────────────────────────────────
 export default function AppShell() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem("sb_collapsed") === "1");
   const [pageActions, setPageActions] = useState(null);
+
+  function toggleCollapsed() {
+    setCollapsed(v => {
+      const next = !v;
+      localStorage.setItem("sb_collapsed", next ? "1" : "0");
+      return next;
+    });
+  }
   const matches = useMatches();
   const current = matches[matches.length - 1];
   const title = current?.handle?.title || "";
@@ -244,14 +339,27 @@ export default function AppShell() {
         />
       )}
 
-      <aside className={`sidebar ${sidebarOpen ? "open" : ""}`}>
-        <div className="sb-logo" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <img 
+      <aside className={`sidebar ${sidebarOpen ? "open" : ""}`}
+        style={{ width: collapsed ? 68 : undefined, transition: "width 0.16s ease", overflowX: "hidden" }}>
+        
+        {/* Gemini-Styled Sidebar Header */}
+        <div className="sb-header" style={{
+          display: "flex", alignItems: "center",
+          justifyContent: collapsed ? "center" : "space-between",
+          padding: collapsed ? "12px 0" : "12px 16px 12px 20px",
+          height: 64, boxSizing: "border-box", borderBottom: "none"
+        }}>
+          {!collapsed && (
+            <div style={{ display: "flex", alignItems: "center", gap: 12, overflow: "hidden" }}>
+              <img 
             src="/logo.svg" 
             alt="SplitEase Logo" 
             style={{ width: 32, height: 32, display: "block" }} 
           />
-          <span className="sb-logo-text">Split<em>Ease</em></span>
+              <span className="sb-logo-text">Split<em>Ease</em></span>
+            </div>
+          )}
+          <SidebarToggleButton collapsed={collapsed} onClick={toggleCollapsed} />
         </div>
 
         <nav className="sb-nav">
@@ -261,34 +369,40 @@ export default function AppShell() {
               to={item.to}
               className={({ isActive }) => `sb-item ${isActive ? "active" : ""}`}
               onClick={() => setSidebarOpen(false)}
+              title={collapsed ? item.label : undefined}
+              style={collapsed ? { justifyContent: "center", paddingLeft: 0, paddingRight: 0 } : undefined}
             >
               <span className="sb-icon" style={{ display: "flex" }}>{Icons[item.icon]}</span>
-              {item.label}
+              {!collapsed && item.label}
             </NavLink>
           ))}
 
           {user?.role === "admin" && (
             <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid var(--border)" }}>
-              <span className="sb-label">System</span>
+              {!collapsed && <span className="sb-label">System</span>}
               <NavLink to="/admin" className={({ isActive }) => `sb-item ${isActive ? "active" : ""}`}
-                onClick={() => setSidebarOpen(false)}>
+                onClick={() => setSidebarOpen(false)}
+                title={collapsed ? "Admin Panel" : undefined}
+                style={collapsed ? { justifyContent: "center", paddingLeft: 0, paddingRight: 0 } : undefined}>
                 <span className="sb-icon" style={{ display: "flex" }}>{Icons.admin}</span>
-                Admin Panel
+                {!collapsed && "Admin Panel"}
               </NavLink>
             </div>
           )}
         </nav>
 
         <div className="sb-footer">
-          <button className="sb-signout" onClick={() => { logout(); navigate("/login"); }}>
+          <button className="sb-signout" onClick={() => { logout(); navigate("/login"); }}
+            title={collapsed ? "Sign out" : undefined}
+            style={collapsed ? { justifyContent: "center", paddingLeft: 0, paddingRight: 0 } : undefined}>
             <span style={{ display: "flex" }}>{Icons.signout}</span>
-            Sign out
+            {!collapsed && "Sign out"}
           </button>
         </div>
       </aside>
 
       <div className="shell-main">
-        <header className="topbar">
+        <header className="topbar" style={{ borderBottom: "none" }}>
           <button className="hamburger" onClick={() => setSidebarOpen(v => !v)}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <line x1="3" y1="6" x2="21" y2="6"/>
