@@ -194,7 +194,7 @@ function ProfileDropdown({ user, onLogout }) {
 }
 
 // ─────────────────────────────────────────────
-//  Gemini Styled Tooltip
+//  Tooltip
 // ─────────────────────────────────────────────
 function SidebarTooltip({ label, btnRef, side = "right" }) {
   const [pos, setPos] = useState({ top: 0, left: 0 });
@@ -252,10 +252,10 @@ function SidebarTooltip({ label, btnRef, side = "right" }) {
 }
 
 // ─────────────────────────────────────────────
-//  Gemini Sidebar Icons
+//  Sidebar Icons
 // ─────────────────────────────────────────────
 
-// Replicates the Gemini sidebar panel icon with dynamic states (open/close/idle)
+// Sidebar panel icon with dynamic states (open/close/idle)
 const IconSidebarPanel = ({ type }) => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
     <rect x="3" y="3" width="18" height="18" rx="4" />
@@ -268,7 +268,7 @@ const IconSidebarPanel = ({ type }) => (
 );
 
 // ─────────────────────────────────────────────
-//  Gemini Sidebar Toggle Button
+// Sidebar Toggle Button
 // ─────────────────────────────────────────────
 function SidebarToggleButton({ collapsed, onClick }) {
   const [hover, setHover] = useState(false);
