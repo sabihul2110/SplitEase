@@ -35,21 +35,32 @@ def get_timeline(
 
 
 @router.get("/timeline/statement")
-def download_statement(current_user: dict = Depends(get_current_user)):
+def download_statement(
+    start_date: str | None = Query(default=None, description="YYYY-MM-DD"),
+    end_date:   str | None = Query(default=None, description="YYYY-MM-DD"),
+    current_user: dict = Depends(get_current_user),
+):
     """
-    Generates a PDF statement of the user's full financial timeline
-    (up to 1000 most recent events) and streams it back as a download.
+    Generates a PDF statement. If start_date/end_date are provided, the
+    statement covers exactly that inclusive range. Otherwise falls back
+    to the 1000 most recent events across all time.
     """
-    events = timeline_repository.fetch_unified_timeline(
-        current_user["user_id"],
-        limit=1000,
-        offset=0,
-    )
+    if start_date and end_date:
+        events = timeline_repository.fetch_timeline_for_period(
+            current_user["user_id"], start_date, end_date,
+        )
+        period_label = f"{start_date} to {end_date}"
+    else:
+        events = timeline_repository.fetch_unified_timeline(
+            current_user["user_id"], limit=1000, offset=0,
+        )
+        period_label = "All time"
 
     pdf_bytes = pdf_service.generate_statement_pdf(
         user_name=current_user.get("email", "SplitEase User").split("@")[0],
         user_email=current_user.get("email", ""),
         events=events,
+        period_label=period_label,
     )
 
     filename = "splitease-statement.pdf"

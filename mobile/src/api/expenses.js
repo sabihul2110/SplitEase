@@ -13,8 +13,10 @@ export const getSettlementStatus = (groupId) =>
 export const getExpenseSplits = (id)         => client.get(`/api/v1/expenses/${id}/splits`);
 export const getTimeline    = (limit = 200)  =>
   client.get(`${ENDPOINTS.timeline}?limit=${limit}`);
-export const downloadStatement = () =>
-  client.get(`${ENDPOINTS.timeline}statement`, { responseType: 'arraybuffer' });
+export const downloadStatement = (startDate, endDate) => {
+  const params = startDate && endDate ? `?start_date=${startDate}&end_date=${endDate}` : '';
+  return client.get(`${ENDPOINTS.timeline}statement${params}`, { responseType: 'arraybuffer' });
+};
 export const getPersonalExpenses = ()        => client.get(ENDPOINTS.personalExpenses);
 export const deletePersonalExpense = (id)    =>
   client.delete(ENDPOINTS.delPersonalExpense(id));

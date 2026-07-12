@@ -1,16 +1,7 @@
 // SplitEase/mobile/App.js
 
-/**
- * App.js — SplitEase Mobile Entry Point
- *
- * Minimal entry point. All real setup is in:
- * - AuthProvider  (context/AuthContext.jsx) — auth state + AsyncStorage
- * - RootNavigator (navigation/RootNavigator.jsx) — Auth ↔ Main stack swap
- *
- * react-native-screens must be enabled before NavigationContainer renders.
- */
 
-import 'react-native-gesture-handler'; // Must stay at the very top!
+import 'react-native-gesture-handler';
 
 import { enableScreens } from 'react-native-screens';
 enableScreens();

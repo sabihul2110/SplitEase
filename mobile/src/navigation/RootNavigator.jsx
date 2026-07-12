@@ -1,11 +1,5 @@
 // SplitEase/mobile/src/navigation/RootNavigator.jsx
 
-/**
- * RootNavigator.jsx
- *
- * Top-level navigator. Shows Auth stack or Main tabs based on auth state.
- * Uses the navigation ref so axios interceptor can navigate on 401.
- */
 
 import React, { useRef } from 'react';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';

@@ -56,10 +56,12 @@ def _row_html(event: dict) -> str:
     """
 
 
-def generate_statement_pdf(user_name: str, user_email: str, events: list[dict]) -> bytes:
+def generate_statement_pdf(
+    user_name: str, user_email: str, events: list[dict], period_label: str = "All time",
+) -> bytes:
     """
     Renders a chronological timeline statement as a PDF and returns raw bytes.
-    `events` is the exact list returned by timeline_repository.fetch_unified_timeline.
+    `events` is the exact list returned by a timeline_repository fetch function.
     """
     generated_at = datetime.now().strftime("%d %B %Y, %I:%M %p")
 
@@ -164,6 +166,7 @@ def generate_statement_pdf(user_name: str, user_email: str, events: list[dict]) 
                 <div><strong>{user_name}</strong></div>
                 <div>{user_email}</div>
                 <div>Generated {generated_at}</div>
+                <div>Period: <strong>{period_label}</strong></div>
             </div>
         </div>
 

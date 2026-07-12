@@ -1,11 +1,5 @@
 // SplitEase/mobile/src/navigation/MainNavigator.jsx
-//
-// FIX: SettingsScreen added to both MoreTabStack and DashStack
-// so it's reachable via navigation.navigate("Settings") from anywhere.
-// Industry pattern (Instagram, Linear):
-//   Profile tab = identity (your posts / your data)
-//   Settings = gear/hamburger → separate screen (not a tab)
-// Here: Settings is accessed from MenuScreen (More tab).
+
 
 import React from "react";
 import { Platform, View } from "react-native";

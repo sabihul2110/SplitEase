@@ -1,15 +1,5 @@
 // SplitEase/mobile/src/components/global/OTAUpdateModal.jsx
-//
-// OTA update modal — full state machine UI.
-//
-// IMPORTANT: During "downloading" state the modal is NOT dismissable.
-// The user MUST keep the app open. If they close during download,
-// the download cancels and they have to start over next time.
-// This matches how most apps (including Expo Go) handle OTA updates.
-//
-// FAKE_UPDATE: Set to true in DEV to simulate the full flow.
-// The fake download takes ~2 seconds with animated progress.
-// Set to false before shipping.
+
 
 import React from 'react';
 import {

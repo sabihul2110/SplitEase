@@ -27,7 +27,10 @@ import {
 } from "../../constants/theme";
 import { Icons } from "../../components/icons/icons";
 import ScreenHeader from "../../components/layout/ScreenHeader";
+import DatePickerInput from "../../components/common/DatePickerInput";
+import AppAlert from "../../components/common/AppAlert";
 import { TAB_BAR_HEIGHT } from "../../constants/theme";
+import { Modal } from "react-native";
 
 // Matches web TYPE_META exactly
 const TYPE_META = {
@@ -117,6 +120,20 @@ function fmt(n) {
   return Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 });
 }
 
+function isoToday() {
+  return new Date().toISOString().split("T")[0];
+}
+
+function monthRange(monthsAgo = 0) {
+  const now = new Date();
+  const target = new Date(now.getFullYear(), now.getMonth() - monthsAgo, 1);
+  const start = new Date(target.getFullYear(), target.getMonth(), 1);
+  const end = new Date(target.getFullYear(), target.getMonth() + 1, 0);
+  const toIso = (d) => d.toISOString().split("T")[0];
+  const label = target.toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+  return { start: toIso(start), end: toIso(end), label };
+}
+
 function arrayBufferToBase64(buffer) {
   const bytes = new Uint8Array(buffer);
   const chars = [];
@@ -194,12 +211,17 @@ export default function ActivityScreen() {
   const [tab, setTab] = useState("all");
   const [search, setSearch] = useState("");
   const [downloading, setDownloading] = useState(false);
+  const [alertConfig, setAlertConfig] = useState(null);
+  const [showPeriodPicker, setShowPeriodPicker] = useState(false);
+  const [showCustomRange, setShowCustomRange] = useState(false);
+  const [customStart, setCustomStart] = useState(isoToday());
+  const [customEnd, setCustomEnd] = useState(isoToday());
 
-  const handleDownloadStatement = useCallback(async () => {
+  const runDownload = useCallback(async (startDate, endDate) => {
     if (downloading) return;
     setDownloading(true);
     try {
-      const { data } = await expensesApi.downloadStatement();
+      const { data } = await expensesApi.downloadStatement(startDate, endDate);
       const base64 = arrayBufferToBase64(data);
       const fileUri = `${FileSystem.cacheDirectory}splitease-statement.pdf`;
 
@@ -215,14 +237,38 @@ export default function ActivityScreen() {
           UTI: "com.adobe.pdf",
         });
       } else {
-        Alert.alert("Saved", `Statement saved to ${fileUri}`);
+        setAlertConfig({
+          title: "Saved",
+          message: `Statement saved to ${fileUri}`,
+          buttons: [{ text: "OK", onPress: () => setAlertConfig(null) }],
+        });
       }
     } catch (err) {
-      Alert.alert("Download failed", "Could not generate your statement. Please try again.");
+      setAlertConfig({
+        title: "Download failed",
+        message: `${err?.message || "Unknown error"} | type: ${typeof err}`,
+        buttons: [{ text: "OK", onPress: () => setAlertConfig(null) }],
+      });
     } finally {
       setDownloading(false);
     }
   }, [downloading]);
+
+  const handleSelectAllTime = useCallback(() => {
+    setShowPeriodPicker(false);
+    runDownload();
+  }, [runDownload]);
+
+  const handleSelectMonth = useCallback((monthsAgo) => {
+    setShowPeriodPicker(false);
+    const { start, end } = monthRange(monthsAgo);
+    runDownload(start, end);
+  }, [runDownload]);
+
+  const handleConfirmCustomRange = useCallback(() => {
+    setShowCustomRange(false);
+    runDownload(customStart, customEnd);
+  }, [runDownload, customStart, customEnd]);
 
   const load = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
@@ -307,7 +353,7 @@ export default function ActivityScreen() {
         title="Activity"
         actions={
           <TouchableOpacity
-            onPress={handleDownloadStatement}
+            onPress={() => setShowPeriodPicker(true)}
             disabled={downloading}
             style={styles.downloadBtn}
           >
@@ -460,6 +506,101 @@ export default function ActivityScreen() {
         contentContainerStyle={[styles.list, { paddingBottom: TAB_BAR_HEIGHT }]}
         stickySectionHeadersEnabled={false}
       />
+
+      {/* Period picker */}
+      <Modal
+        visible={showPeriodPicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowPeriodPicker(false)}
+      >
+        <TouchableOpacity
+          style={styles.overlay}
+          activeOpacity={1}
+          onPress={() => setShowPeriodPicker(false)}
+        >
+          <TouchableOpacity activeOpacity={1} style={styles.periodBox}>
+            <Text style={styles.periodTitle}>Download statement</Text>
+
+            <TouchableOpacity style={styles.periodOption} onPress={handleSelectAllTime}>
+              <Icons.calendarDays size={16} color={COLORS.text2} />
+              <Text style={styles.periodOptionText}>All time</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.periodOption} onPress={() => handleSelectMonth(0)}>
+              <Icons.calendarDays size={16} color={COLORS.text2} />
+              <Text style={styles.periodOptionText}>{monthRange(0).label}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.periodOption} onPress={() => handleSelectMonth(1)}>
+              <Icons.calendarDays size={16} color={COLORS.text2} />
+              <Text style={styles.periodOptionText}>{monthRange(1).label}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.periodOption}
+              onPress={() => {
+                setShowPeriodPicker(false);
+                setShowCustomRange(true);
+              }}
+            >
+              <Icons.calendarDays size={16} color={COLORS.primary} />
+              <Text style={[styles.periodOptionText, { color: COLORS.primary }]}>
+                Custom range…
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.periodCancel}
+              onPress={() => setShowPeriodPicker(false)}
+            >
+              <Text style={styles.periodCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Custom range picker */}
+      <Modal
+        visible={showCustomRange}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowCustomRange(false)}
+      >
+        <TouchableOpacity
+          style={styles.overlay}
+          activeOpacity={1}
+          onPress={() => setShowCustomRange(false)}
+        >
+          <TouchableOpacity activeOpacity={1} style={styles.periodBox}>
+            <Text style={styles.periodTitle}>Custom range</Text>
+
+            <Text style={styles.rangeLabel}>From</Text>
+            <DatePickerInput value={customStart} onChange={setCustomStart} />
+
+            <Text style={[styles.rangeLabel, { marginTop: SPACING.md }]}>To</Text>
+            <DatePickerInput value={customEnd} onChange={setCustomEnd} />
+
+            <TouchableOpacity
+              style={[styles.periodCancel, styles.confirmBtn]}
+              onPress={handleConfirmCustomRange}
+            >
+              <Text style={[styles.periodCancelText, { color: COLORS.white }]}>
+                Download
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.periodCancel}
+              onPress={() => setShowCustomRange(false)}
+            >
+              <Text style={styles.periodCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+      <AppAlert config={alertConfig} />
     </SafeAreaView>
   );
 }
@@ -538,6 +679,67 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface2,
     borderWidth: 1,
     borderColor: COLORS.border,
+  },
+
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: SPACING.xl,
+  },
+  periodBox: {
+    backgroundColor: "#171c2c",
+    borderRadius: RADIUS.xl,
+    borderWidth: 1,
+    borderColor: "#242a3d",
+    padding: SPACING.xl,
+    width: "100%",
+    gap: SPACING.sm,
+  },
+  periodTitle: {
+    fontSize: FONT_SIZE.lg,
+    fontWeight: FONT_WEIGHT.bold,
+    color: COLORS.text,
+    marginBottom: SPACING.sm,
+  },
+  periodOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 13,
+    paddingHorizontal: SPACING.md,
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.surface2,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  periodOptionText: {
+    fontSize: FONT_SIZE.md,
+    color: COLORS.text,
+    fontWeight: FONT_WEIGHT.medium,
+  },
+  periodCancel: {
+    marginTop: SPACING.sm,
+    paddingVertical: 12,
+    borderRadius: RADIUS.lg,
+    alignItems: "center",
+  },
+  periodCancelText: {
+    fontSize: FONT_SIZE.base,
+    color: COLORS.text2,
+    fontWeight: FONT_WEIGHT.semibold,
+  },
+  confirmBtn: {
+    backgroundColor: COLORS.primary,
+    marginTop: SPACING.lg,
+  },
+  rangeLabel: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.text3,
+    fontWeight: FONT_WEIGHT.semibold,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
 
   dateHead: {
