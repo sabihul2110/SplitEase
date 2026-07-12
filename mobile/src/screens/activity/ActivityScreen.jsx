@@ -1,15 +1,5 @@
 // SplitEase/mobile/src/screens/activity/ActivityScreen.jsx
 
-/**
- * ActivityScreen.jsx
- *
- * Matches web Activity.jsx exactly:
- * - Single GET /timeline/?limit=200 call (not N+1 fan-out)
- * - All 8 event types with correct colors
- * - Filter tabs: All | Group | Personal | Money
- * - Summary chips at top
- * - Grouped by date
- */
 
 import React, { useState, useCallback } from "react";
 import {
@@ -20,9 +10,12 @@ import {
   TouchableOpacity,
   RefreshControl,
   TextInput,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import * as FileSystem from "expo-file-system";
+import * as Sharing from "expo-sharing";
 import * as expensesApi from "../../api/expenses";
 import { useAuth } from "../../context/AuthContext";
 import {
@@ -124,6 +117,16 @@ function fmt(n) {
   return Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 });
 }
 
+function arrayBufferToBase64(buffer) {
+  const bytes = new Uint8Array(buffer);
+  const chars = [];
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    chars.push(String.fromCharCode.apply(null, bytes.subarray(i, i + chunk)));
+  }
+  return global.btoa(chars.join(""));
+}
+
 // ── Activity row ───────────────────────────────────────────────────────────
 function ActivityRow({ item, onPress }) {
   const meta = TYPE_META[item.type] || TYPE_META.group_expense;
@@ -190,6 +193,36 @@ export default function ActivityScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [tab, setTab] = useState("all");
   const [search, setSearch] = useState("");
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownloadStatement = useCallback(async () => {
+    if (downloading) return;
+    setDownloading(true);
+    try {
+      const { data } = await expensesApi.downloadStatement();
+      const base64 = arrayBufferToBase64(data);
+      const fileUri = `${FileSystem.cacheDirectory}splitease-statement.pdf`;
+
+      await FileSystem.writeAsStringAsync(fileUri, base64, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(fileUri, {
+          mimeType: "application/pdf",
+          dialogTitle: "SplitEase Statement",
+          UTI: "com.adobe.pdf",
+        });
+      } else {
+        Alert.alert("Saved", `Statement saved to ${fileUri}`);
+      }
+    } catch (err) {
+      Alert.alert("Download failed", "Could not generate your statement. Please try again.");
+    } finally {
+      setDownloading(false);
+    }
+  }, [downloading]);
 
   const load = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
@@ -270,7 +303,21 @@ export default function ActivityScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
-      <ScreenHeader title="Activity" />
+      <ScreenHeader
+        title="Activity"
+        actions={
+          <TouchableOpacity
+            onPress={handleDownloadStatement}
+            disabled={downloading}
+            style={styles.downloadBtn}
+          >
+            <Icons.receipt
+              size={18}
+              color={downloading ? COLORS.text3 : COLORS.primary}
+            />
+          </TouchableOpacity>
+        }
+      />
 
       <SectionList
         sections={sections}
@@ -481,6 +528,17 @@ const styles = StyleSheet.create({
   },
   tabTextActive: { color: COLORS.text },
   countText: { fontSize: FONT_SIZE.xs, color: COLORS.text3 },
+
+  downloadBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: RADIUS.md,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: COLORS.surface2,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
 
   dateHead: {
     flexDirection: "row",
