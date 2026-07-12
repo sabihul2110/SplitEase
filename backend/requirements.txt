@@ -1,6 +1,5 @@
 # --- backend/requirements.txt ---
-# FIX #16: Added google-genai (was missing despite being used by ai_agent.py)
-# FIX #18: No change here — VALID_SOURCE_TYPES is a Python constant, not a package
+
 
 annotated-doc==0.0.4
 annotated-types==0.7.0
@@ -40,3 +39,4 @@ uvloop==0.22.1
 watchfiles==1.1.1
 websockets==15.0
 requests
+weasyprint==63.1

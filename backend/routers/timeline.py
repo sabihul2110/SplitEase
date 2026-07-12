@@ -9,9 +9,13 @@ GET /timeline/   → merged, date-sorted feed of all financial events
 Optional query param:  ?limit=100  (default 100, max 200)
 """
 
+import io
+
 from fastapi import APIRouter, Depends, Query
+from fastapi.responses import StreamingResponse
 
 from repositories import timeline_repository
+from services import pdf_service
 from core.dependencies import get_current_user
 
 router = APIRouter()
@@ -27,4 +31,30 @@ def get_timeline(
         current_user["user_id"],
         limit=limit,
         offset=offset,
+    )
+
+
+@router.get("/timeline/statement")
+def download_statement(current_user: dict = Depends(get_current_user)):
+    """
+    Generates a PDF statement of the user's full financial timeline
+    (up to 1000 most recent events) and streams it back as a download.
+    """
+    events = timeline_repository.fetch_unified_timeline(
+        current_user["user_id"],
+        limit=1000,
+        offset=0,
+    )
+
+    pdf_bytes = pdf_service.generate_statement_pdf(
+        user_name=current_user.get("email", "SplitEase User").split("@")[0],
+        user_email=current_user.get("email", ""),
+        events=events,
+    )
+
+    filename = "splitease-statement.pdf"
+    return StreamingResponse(
+        io.BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
