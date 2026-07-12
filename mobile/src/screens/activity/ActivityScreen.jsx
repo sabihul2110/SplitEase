@@ -131,6 +131,16 @@ function daysAgoRange(days) {
   start.setDate(start.getDate() - days);
   return { start: toIso(start), end: toIso(end), label: `Last ${days} days` };
 }
+
+function monthRange(monthsAgo = 0) {
+  const now = new Date();
+  const target = new Date(now.getFullYear(), now.getMonth() - monthsAgo, 1);
+  const start = new Date(target.getFullYear(), target.getMonth(), 1);
+  const end = new Date(target.getFullYear(), target.getMonth() + 1, 0);
+  const label = target.toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+  return { start: toIso(start), end: toIso(end), label };
+}
+
 // Indian financial year: Apr 1 -> Mar 31
 function fyRange(yearsAgo = 0) {
   const now = new Date();
@@ -220,8 +230,9 @@ export default function ActivityScreen() {
   const [search, setSearch] = useState("");
   const [downloading, setDownloading] = useState(false);
   const [showPeriodPicker, setShowPeriodPicker] = useState(false);
-  const [periodTab, setPeriodTab] = useState("range"); // range | fy | custom
+  const [periodTab, setPeriodTab] = useState("range"); // range | month | fy | custom
   const [selectedRange, setSelectedRange] = useState(30);
+  const [selectedMonth, setSelectedMonth] = useState(0);
   const [selectedFy, setSelectedFy] = useState(0);
   const [customStart, setCustomStart] = useState(isoToday());
   const [customEnd, setCustomEnd] = useState(isoToday());
@@ -253,13 +264,16 @@ export default function ActivityScreen() {
     if (periodTab === "range") {
       const { start, end } = daysAgoRange(selectedRange);
       runDownload(start, end);
+    } else if (periodTab === "month") {
+      const { start, end } = monthRange(selectedMonth);
+      runDownload(start, end);
     } else if (periodTab === "fy") {
       const { start, end } = fyRange(selectedFy);
       runDownload(start, end);
     } else {
       runDownload(customStart, customEnd);
     }
-  }, [periodTab, selectedRange, selectedFy, customStart, customEnd, runDownload]);
+  }, [periodTab, selectedRange, selectedMonth, selectedFy, customStart, customEnd, runDownload]);
 
   const handleShareFromSuccess = useCallback(async () => {
     if (!successInfo?.fileUri) return;
@@ -525,7 +539,8 @@ export default function ActivityScreen() {
             <View style={styles.tabRow}>
               {[
                 { id: "range", label: "Range" },
-                { id: "fy", label: "Financial Year" },
+                { id: "month", label: "Month" },
+                { id: "fy", label: "FY" },
                 { id: "custom", label: "Custom" },
               ].map((t) => (
                 <TouchableOpacity
@@ -547,6 +562,19 @@ export default function ActivityScreen() {
                     <Text style={styles.radioLabel}>Last {d} days</Text>
                     <View style={[styles.radioOuter, selectedRange === d && styles.radioOuterActive]}>
                       {selectedRange === d && <View style={styles.radioInner} />}
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
+            {periodTab === "month" && (
+              <View style={styles.radioList}>
+                {[0, 1, 2, 3, 4, 5].map((m) => (
+                  <TouchableOpacity key={m} style={styles.radioRow} onPress={() => setSelectedMonth(m)}>
+                    <Text style={styles.radioLabel}>{monthRange(m).label}</Text>
+                    <View style={[styles.radioOuter, selectedMonth === m && styles.radioOuterActive]}>
+                      {selectedMonth === m && <View style={styles.radioInner} />}
                     </View>
                   </TouchableOpacity>
                 ))}
