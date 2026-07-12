@@ -238,11 +238,11 @@ export default function ActivityScreen() {
   const [customEnd, setCustomEnd] = useState(isoToday());
   const [successInfo, setSuccessInfo] = useState(null); // { fileUri }
 
-  const runDownload = useCallback(async (startDate, endDate) => {
+  const runDownload = useCallback(async (startDate, endDate, label) => {
     if (downloading) return;
     setDownloading(true);
     try {
-      const { data } = await expensesApi.downloadStatement(startDate, endDate);
+      const { data } = await expensesApi.downloadStatement(startDate, endDate, label);
       const base64 = arrayBufferToBase64(data);
       const fileUri = `${FileSystem.cacheDirectory}splitease-statement.pdf`;
 
@@ -262,16 +262,16 @@ export default function ActivityScreen() {
 
   const handleDownloadPress = useCallback(() => {
     if (periodTab === "range") {
-      const { start, end } = daysAgoRange(selectedRange);
-      runDownload(start, end);
+      const { start, end, label } = daysAgoRange(selectedRange);
+      runDownload(start, end, label);
     } else if (periodTab === "month") {
-      const { start, end } = monthRange(selectedMonth);
-      runDownload(start, end);
+      const { start, end, label } = monthRange(selectedMonth);
+      runDownload(start, end, label);
     } else if (periodTab === "fy") {
-      const { start, end } = fyRange(selectedFy);
-      runDownload(start, end);
+      const { start, end, label } = fyRange(selectedFy);
+      runDownload(start, end, label);
     } else {
-      runDownload(customStart, customEnd);
+      runDownload(customStart, customEnd, `${customStart} to ${customEnd}`);
     }
   }, [periodTab, selectedRange, selectedMonth, selectedFy, customStart, customEnd, runDownload]);
 

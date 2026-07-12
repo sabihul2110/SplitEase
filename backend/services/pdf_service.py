@@ -90,11 +90,15 @@ def generate_statement_pdf(user_name: str, user_email: str, events: list[dict], 
     html = f"""
     <html><head><meta charset="utf-8"><style>
         @page {{
-            size: A4; margin: 0 0 36px 0;
-            @bottom-center {{ content: ""; }}
+            size: A4; margin: 0;
         }}
         * {{ box-sizing: border-box; }}
-        body {{ font-family: 'Helvetica Neue', Arial, sans-serif; color: #111827; margin: 0; font-size: 10px; }}
+        html, body {{ height: 297mm; }}
+        body {{
+            font-family: 'Helvetica Neue', Arial, sans-serif; color: #111827; margin: 0; font-size: 10px;
+            display: flex;
+            flex-direction: column;
+        }}
 
         .band {{
             background: #3d1a5c;
@@ -104,8 +108,8 @@ def generate_statement_pdf(user_name: str, user_email: str, events: list[dict], 
             align-items: center;
         }}
         .brand-row {{ display: flex; align-items: center; gap: 10px; }}
-        .logo {{ width: 34px; height: 34px; border-radius: 8px; }}
-        .brand-name {{ font-size: 18px; font-weight: 800; color: #fff; }}
+        .logo {{ width: 34px; height: 34px; border-radius: 8px; flex-shrink: 0; object-fit: cover; display: block; }}
+        .brand-name {{ font-size: 18px; font-weight: 800; color: #fff; white-space: nowrap; }}
         .user-block {{ text-align: right; }}
         .user-name {{ font-size: 13px; font-weight: 700; color: #fff; }}
         .user-sub {{ font-size: 9px; color: rgba(255,255,255,0.8); margin-top: 2px; }}
@@ -135,12 +139,13 @@ def generate_statement_pdf(user_name: str, user_email: str, events: list[dict], 
         .stat-label {{ font-size: 7.5px; text-transform: uppercase; letter-spacing: 0.5px; color: #9ca3af; }}
         .stat-value {{ font-size: 14px; font-weight: 800; margin-top: 4px; }}
 
-        .footer-band {{ margin-top: 20px; padding: 14px 32px; text-align: center; }}
+        .footer-band {{ margin-top: auto; padding: 14px 32px; text-align: center; }}
         .footer-band .label {{ font-size: 8px; color: #9ca3af; }}
         .disclaimer {{ margin-top: 8px; font-size: 7.5px; color: #b0b4bd; line-height: 1.7; text-align: center; }}
         .bottom-strip {{ margin-top: 14px; background: #3d1a5c; height: 8px; }}
     </style></head>
     <body>
+    <div class="content">
         <div class="band">
             <div class="brand-row">{logo_img}<div class="brand-name">SplitEase</div></div>
             <div class="user-block">
@@ -175,6 +180,7 @@ def generate_statement_pdf(user_name: str, user_email: str, events: list[dict], 
             </div>
         </div>
         <div class="bottom-strip"></div>
+        </div>
     </body></html>
     """
     return HTML(string=html).write_pdf()
