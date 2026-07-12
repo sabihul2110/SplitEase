@@ -15,7 +15,7 @@ export default function ScreenHeader({
   onBack,
   actions,
   transparent = false,
-  compact = false,   // ← ADD: true for detail/settings screens
+  compact = false,   
 }) {
   const nav = useNavigation();
 
@@ -27,7 +27,6 @@ export default function ScreenHeader({
   return (
     <View style={[
       styles.container,
-      // 🔥 Removed paddingTop: insets.top entirely!
       transparent && styles.transparent,
     ]}>
       <View style={styles.row}>
@@ -61,9 +60,7 @@ export default function ScreenHeader({
 const styles = StyleSheet.create({
   container: {
     backgroundColor: COLORS.bg,
-    // 🔥 Restored horizontal padding (you can use paddingLeft: 24 here if you still want it nudged right)
     paddingHorizontal: SPACING.base, 
-    // 🔥 Added a tiny normal padding so the text doesn't touch the black status bar
     paddingTop: SPACING.sm,
     paddingBottom: SPACING.sm, 
   },

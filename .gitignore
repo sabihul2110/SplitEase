@@ -72,3 +72,4 @@ structure.txt
 **/structure.txt
 
 docs/
+.DS_Store
