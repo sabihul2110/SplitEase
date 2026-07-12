@@ -26,15 +26,16 @@ def _get_logo_data_uri() -> str:
     return f"data:image/png;base64,{_logo_b64_cache}" if _logo_b64_cache else ""
 
 
+# Simplified meta - we no longer need heavy background colors, just clean text labels.
 TYPE_META = {
-    "personal_expense":    {"color": "#f59e0b", "label": "Personal"},
-    "group_expense":       {"color": "#2563eb", "label": "Group expense"},
-    "group_expense_owed":  {"color": "#ef4444", "label": "You owe"},
-    "income":              {"color": "#10b981", "label": "Income"},
-    "loan_given":          {"color": "#6366f1", "label": "Loan given"},
-    "loan_taken":          {"color": "#ec4899", "label": "Loan taken"},
-    "settlement_received": {"color": "#10b981", "label": "Received"},
-    "settlement_sent":     {"color": "#2563eb", "label": "Sent"},
+    "personal_expense":    {"label": "Personal Expense"},
+    "group_expense":       {"label": "Group Expense"},
+    "group_expense_owed":  {"label": "You Owe"},
+    "income":              {"label": "Income"},
+    "loan_given":          {"label": "Loan Given"},
+    "loan_taken":          {"label": "Loan Taken"},
+    "settlement_received": {"label": "Settlement Received"},
+    "settlement_sent":     {"label": "Settlement Sent"},
 }
 
 INFLOW_TYPES = {"income", "settlement_received", "loan_taken"}
@@ -51,32 +52,31 @@ def _statement_id(user_email: str, events: list[dict], generated_at_iso: str) ->
     return f"STMT-{date_part}-{digest}"
 
 
-def _row_html(event: dict, zebra: bool = False) -> str:
-    meta = TYPE_META.get(event["type"], {"color": "#9ca3af", "label": event["type"]})
+def _row_html(event: dict) -> str:
+    meta = TYPE_META.get(event["type"], {"label": event.get("type", "Transaction").replace("_", " ").title()})
     inflow = event["type"] in INFLOW_TYPES
-    sign = "+" if inflow else "-"
-    amount_color = "#10b981" if inflow else "#111827"
-    row_bg = "background:#fafbfc;" if zebra else "background:#ffffff;"
-
-    sub_line = event.get("sub") or ""
-    group_line = f' &middot; {event["group_name"]}' if event.get("group_name") else ""
-    sub_full = f"{sub_line}{group_line}".strip()
+    
+    # Keeping colors minimal: standard black for outflow, subtle green for inflow
+    amount_color = "#059669" if inflow else "#111827"
+    
+    # Group names map well to Navi's "Account" column
+    account_group = event.get("group_name") or "SplitEase Wallet"
+    
+    # Formatting date slightly to allow stacking (e.g., separating date and time if your data has it)
+    raw_date = event.get('date', '')
+    date_display = raw_date.replace(" ", "<br/>") if " " in raw_date else f"{raw_date}<br/><span style='color:transparent;'>-</span>"
 
     return f"""
-    <tr style="{row_bg}">
-        <td class="col-accent" style="background:{meta['color']};"></td>
-        <td class="col-date">{event.get('date', '')}</td>
+    <tr>
+        <td class="col-date">{date_display}</td>
         <td class="col-desc">
-            <div class="label">{event.get('label', '')}</div>
-            {f'<div class="sub">{sub_full}</div>' if sub_full else ''}
+            <div class="primary-text">{event.get('label', 'Transaction')}</div>
+            <div class="secondary-text">Type: {meta['label']}</div>
+            {f'<div class="secondary-text">Note: {event.get("sub")}</div>' if event.get("sub") else ''}
         </td>
-        <td class="col-tag">
-            <span class="tag" style="background:{meta['color']}18;color:{meta['color']};border:1px solid {meta['color']}40;">
-                {meta['label']}
-            </span>
-        </td>
+        <td class="col-account">{account_group}</td>
         <td class="col-amt" style="color:{amount_color};">
-            {sign}&#8377;{_fmt_amount(event.get('amount'))}
+            &#8377;{_fmt_amount(event.get('amount'))}
         </td>
     </tr>
     """
@@ -86,23 +86,19 @@ def generate_statement_pdf(
     user_name: str, user_email: str, events: list[dict], period_label: str = "All time",
 ) -> bytes:
     now = datetime.now()
-    generated_at = now.strftime("%d %B %Y, %I:%M %p")
+    generated_at = now.strftime("%d %b %Y, %I:%M %p")
     stmt_id = _statement_id(user_email, events, now.isoformat())
     logo_uri = _get_logo_data_uri()
 
     total_in = sum(float(e.get("amount") or 0) for e in events if e["type"] in INFLOW_TYPES)
     total_out = sum(float(e.get("amount") or 0) for e in events if e["type"] not in INFLOW_TYPES)
     net = total_in - total_out
-    net_color = "#10b981" if net >= 0 else "#ef4444"
-    net_sign = "+" if net >= 0 else ""
 
-    rows_html = "".join(
-        _row_html(e, zebra=(i % 2 == 1)) for i, e in enumerate(events)
-    ) or '<tr><td colspan="5" class="empty">No activity in this period.</td></tr>'
+    rows_html = "".join(_row_html(e) for e in events) or '<tr><td colspan="4" class="empty">No transactions in this period.</td></tr>'
 
     logo_img = (
         f'<img src="{logo_uri}" class="logo-img" />' if logo_uri
-        else '<div class="logo-fallback">S</div>'
+        else '<div class="logo-fallback">SE</div>'
     )
 
     html = f"""
@@ -112,9 +108,13 @@ def generate_statement_pdf(
     <style>
         @page {{
             size: A4;
-            margin: 0 0 44px 0;
+            margin: 40px 0;
             @bottom-center {{
-                content: "";
+                content: "Powered by SplitEase";
+                font-family: 'Helvetica Neue', Arial, sans-serif;
+                font-size: 8px;
+                color: #9ca3af;
+                letter-spacing: 0.5px;
             }}
         }}
         * {{ box-sizing: border-box; }}
@@ -123,161 +123,138 @@ def generate_statement_pdf(
             color: #111827;
             font-size: 10px;
             margin: 0;
+            line-height: 1.4;
         }}
-        .page-pad {{ padding: 0 32px; }}
+        .page-pad {{ padding: 0 48px; }}
 
-        .header-band {{
-            background: linear-gradient(120deg, #1d4ed8 0%, #2563eb 55%, #3b82f6 100%);
-            padding: 26px 32px 22px 32px;
+        /* Clean, minimalist header replacing the blue gradient */
+        .header {{
+            padding: 0 48px 24px 48px;
             display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
+            align-items: center;
+            border-bottom: 2px solid #111827;
+            margin-bottom: 24px;
         }}
-        .brand-row {{ display: flex; align-items: center; gap: 12px; }}
-        .logo-img {{ width: 40px; height: 40px; border-radius: 10px; background: #fff; padding: 4px; }}
+        .logo-img {{ width: 32px; height: 32px; margin-right: 12px; }}
         .logo-fallback {{
-            width: 40px; height: 40px; border-radius: 10px;
-            background: rgba(255,255,255,0.2); color: #fff;
-            font-size: 18px; font-weight: 800;
+            width: 32px; height: 32px; border-radius: 4px;
+            background: #111827; color: #fff;
+            font-size: 14px; font-weight: 800;
             display: flex; align-items: center; justify-content: center;
+            margin-right: 12px;
         }}
-        .brand {{ font-size: 19px; font-weight: 800; color: #fff; letter-spacing: -0.3px; }}
-        .brand-sub {{ font-size: 8.5px; color: rgba(255,255,255,0.8); margin-top: 2px; letter-spacing: 0.4px; text-transform: uppercase; }}
-        .stmt-id {{
-            font-size: 8.5px; color: #fff; font-weight: 700; letter-spacing: 0.3px;
-            background: rgba(255,255,255,0.18);
-            padding: 4px 10px; border-radius: 999px;
-        }}
+        .brand {{ font-size: 18px; font-weight: 800; color: #111827; display: inline-block; }}
+        .brand-sub {{ font-size: 9px; color: #6b7280; letter-spacing: 0.5px; margin-left: 8px; display: inline-block; vertical-align: bottom; margin-bottom: 2px; }}
 
-        .account-strip {{
-            background: #f3f4f6;
-            padding: 12px 32px;
-            display: flex;
-            justify-content: space-between;
+        /* User details mimicking Navi's straightforward presentation */
+        .user-details {{
+            padding: 0 48px 32px 48px;
+        }}
+        .user-name {{ font-size: 14px; font-weight: 700; color: #111827; margin-bottom: 4px; }}
+        .user-contact {{ font-size: 11px; color: #4b5563; margin-bottom: 16px; }}
+        .statement-period {{ font-size: 10px; color: #111827; font-weight: 600; margin-bottom: 4px; }}
+        .statement-note {{ font-size: 9px; color: #6b7280; }}
+
+        /* Clean table layout without backgrounds or pill tags */
+        table {{ width: 100%; border-collapse: collapse; margin-top: 10px; }}
+        thead th {{
+            text-align: left; 
+            font-size: 9px; 
+            font-weight: 700;
+            color: #4b5563; 
+            padding: 12px 8px;
+            border-top: 1px solid #e5e7eb;
             border-bottom: 1px solid #e5e7eb;
         }}
-        .acc-block {{ font-size: 9px; color: #6b7280; line-height: 1.6; }}
-        .acc-block strong {{ color: #111827; font-size: 11px; }}
-        .acc-label {{ font-size: 7.5px; text-transform: uppercase; letter-spacing: 0.5px; color: #9ca3af; }}
-
-        .summary {{ display: flex; gap: 10px; padding: 16px 32px 4px 32px; }}
-        .summary-card {{
-            flex: 1; border: 1px solid #e5e7eb; border-radius: 8px;
-            padding: 10px 14px; background: #fafbfc;
+        tbody td {{ 
+            padding: 16px 8px; 
+            border-bottom: 1px solid #f3f4f6; 
+            vertical-align: top; 
         }}
-        .summary-card.in {{ border-top: 3px solid #10b981; }}
-        .summary-card.out {{ border-top: 3px solid #ef4444; }}
-        .summary-card.entries {{ border-top: 3px solid #2563eb; }}
-        .summary-card.net {{ border-top: 3px solid {net_color}; }}
-        .summary-label {{ font-size: 7.5px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; }}
-        .summary-value {{ font-size: 14px; font-weight: 800; margin-top: 3px; }}
+        
+        .col-date {{ width: 15%; color: #4b5563; font-size: 9.5px; line-height: 1.6; }}
+        .col-desc {{ width: 45%; }}
+        .col-account {{ width: 25%; color: #4b5563; font-size: 9.5px; }}
+        .col-amt {{ width: 15%; text-align: right; font-weight: 600; font-size: 11px; }}
+        
+        .primary-text {{ font-weight: 600; font-size: 10.5px; color: #111827; margin-bottom: 4px; }}
+        .secondary-text {{ font-size: 9px; color: #6b7280; margin-bottom: 2px; }}
+        .empty {{ text-align: center; color: #9ca3af; padding: 40px 0; font-style: italic; }}
 
-        table {{ width: 100%; border-collapse: collapse; margin-top: 14px; }}
-        thead th {{
-            text-align: left; font-size: 7.5px; text-transform: uppercase; letter-spacing: 0.5px;
-            color: #fff; background: #111827; padding: 8px 10px;
+        /* Simple footer stats instead of big summary cards */
+        .summary-footer {{
+            margin-top: 32px;
+            border-top: 1px solid #e5e7eb;
+            padding-top: 16px;
+            display: flex;
+            justify-content: flex-end;
+            font-size: 10px;
         }}
-        thead th:first-child {{ width: 4px; padding: 0; }}
-        tbody td {{ padding: 10px; border-bottom: 1px solid #f1f2f4; vertical-align: top; }}
-        .col-accent {{ width: 4px; padding: 0 !important; }}
-        .col-date {{ width: 66px; color: #6b7280; font-size: 8.5px; font-weight: 600; }}
-        .col-desc {{ width: auto; }}
-        .col-tag {{ width: 96px; }}
-        .col-amt {{ width: 86px; text-align: right; font-weight: 800; }}
-        .label {{ font-weight: 700; font-size: 10px; color: #111827; }}
-        .sub {{ font-size: 8.2px; color: #9ca3af; margin-top: 2px; }}
-        .tag {{ display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 7.5px; font-weight: 700; }}
-        .empty {{ text-align: center; color: #9ca3af; padding: 30px 0; }}
-
-        tfoot td {{
-            padding: 12px 10px; font-weight: 800; border-top: 2px solid #111827;
-            background: #f8f9fb; font-size: 10.5px;
-        }}
+        .summary-footer table {{ width: 250px; margin-top: 0; }}
+        .summary-footer td {{ padding: 6px 0; border: none; font-size: 10px; }}
+        .summary-footer .label {{ color: #4b5563; }}
+        .summary-footer .val {{ text-align: right; font-weight: 600; }}
+        .summary-footer .net-row td {{ border-top: 1px solid #e5e7eb; padding-top: 8px; font-weight: 700; font-size: 11px; }}
 
         .disclaimer {{
-            margin: 18px 32px 0 32px; font-size: 7.5px; color: #9ca3af; line-height: 1.7;
-            border-top: 1px solid #e5e7eb; padding-top: 12px;
-        }}
-        .bottom-bar {{
-            margin-top: 20px; background: #111827; color: #fff;
-            text-align: center; padding: 8px; font-size: 8px; letter-spacing: 0.5px;
+            margin-top: 48px; font-size: 8px; color: #9ca3af; line-height: 1.6;
+            border-top: 1px dashed #e5e7eb; padding-top: 16px; text-align: justify;
         }}
     </style>
     </head>
     <body>
-        <div class="header-band">
-            <div class="brand-row">
-                {logo_img}
-                <div>
-                    <div class="brand">SplitEase</div>
-                    <div class="brand-sub">Financial Activity Statement</div>
-                </div>
-            </div>
-            <div class="stmt-id">{stmt_id}</div>
+        <div class="header">
+            {logo_img}
+            <div class="brand">SplitEase</div>
+            <div class="brand-sub">FINANCIAL ACTIVITY STATEMENT</div>
         </div>
 
-        <div class="account-strip">
-            <div class="acc-block">
-                <div class="acc-label">Account Holder</div>
-                <div><strong>{user_name}</strong></div>
-                <div>{user_email}</div>
-            </div>
-            <div class="acc-block" style="text-align:right;">
-                <div class="acc-label">Statement Period</div>
-                <div><strong>{period_label}</strong></div>
-                <div>Generated {generated_at}</div>
-            </div>
+        <div class="user-details">
+            <div class="user-name">{user_name}</div>
+            <div class="user-contact">{user_email}</div>
+            <br/>
+            <div class="statement-period">Transaction statement for {period_label}</div>
+            <div class="statement-note">All SplitEase expenses, group settlements, and manual adjustments are listed in this statement.</div>
         </div>
 
         <div class="page-pad">
-            <div class="summary">
-                <div class="summary-card in">
-                    <div class="summary-label">Total Inflow</div>
-                    <div class="summary-value" style="color:#10b981;">+&#8377;{_fmt_amount(total_in)}</div>
-                </div>
-                <div class="summary-card out">
-                    <div class="summary-label">Total Outflow</div>
-                    <div class="summary-value" style="color:#ef4444;">-&#8377;{_fmt_amount(total_out)}</div>
-                </div>
-                <div class="summary-card entries">
-                    <div class="summary-label">Entries</div>
-                    <div class="summary-value">{len(events)}</div>
-                </div>
-                <div class="summary-card net">
-                    <div class="summary-label">Net</div>
-                    <div class="summary-value" style="color:{net_color};">{net_sign}&#8377;{_fmt_amount(abs(net))}</div>
-                </div>
-            </div>
-
             <table>
                 <thead>
                     <tr>
-                        <th></th>
                         <th>Date</th>
-                        <th>Description</th>
-                        <th>Type</th>
+                        <th>Transaction details</th>
+                        <th>Account / Group</th>
                         <th style="text-align:right;">Amount</th>
                     </tr>
                 </thead>
                 <tbody>
                     {rows_html}
                 </tbody>
-                <tfoot>
-                    <tr>
-                        <td colspan="4">Net for this period</td>
-                        <td class="col-amt" style="color:{net_color};">{net_sign}&#8377;{_fmt_amount(abs(net))}</td>
-                    </tr>
-                </tfoot>
             </table>
+
+            <div class="summary-footer">
+                <table>
+                    <tr>
+                        <td class="label">Total Inflow</td>
+                        <td class="val" style="color:#059669;">&#8377;{_fmt_amount(total_in)}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Total Outflow</td>
+                        <td class="val">&#8377;{_fmt_amount(total_out)}</td>
+                    </tr>
+                    <tr class="net-row">
+                        <td class="label">Net Balance</td>
+                        <td class="val">&#8377;{_fmt_amount(net)}</td>
+                    </tr>
+                </table>
+            </div>
 
             <div class="disclaimer">
                 This is a system-generated statement from SplitEase and does not require a physical signature.<br/>
-                Reference ID {stmt_id} &middot; Generated on {generated_at}<br/>
+                Reference ID: {stmt_id} &middot; Generated on {generated_at}<br/>
                 For queries regarding this statement, please contact support through the SplitEase app.
             </div>
         </div>
-
-        <div class="bottom-bar">SPLITEASE &middot; CONFIDENTIAL STATEMENT &middot; {stmt_id}</div>
     </body>
     </html>
     """
