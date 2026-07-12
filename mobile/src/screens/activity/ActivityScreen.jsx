@@ -28,7 +28,6 @@ import {
 import { Icons } from "../../components/icons/icons";
 import ScreenHeader from "../../components/layout/ScreenHeader";
 import DatePickerInput from "../../components/common/DatePickerInput";
-import AppAlert from "../../components/common/AppAlert";
 import { TAB_BAR_HEIGHT } from "../../constants/theme";
 import { Modal } from "react-native";
 
@@ -123,14 +122,23 @@ function fmt(n) {
 function isoToday() {
   return new Date().toISOString().split("T")[0];
 }
-
-function monthRange(monthsAgo = 0) {
+function toIso(d) {
+  return d.toISOString().split("T")[0];
+}
+function daysAgoRange(days) {
+  const end = new Date();
+  const start = new Date();
+  start.setDate(start.getDate() - days);
+  return { start: toIso(start), end: toIso(end), label: `Last ${days} days` };
+}
+// Indian financial year: Apr 1 -> Mar 31
+function fyRange(yearsAgo = 0) {
   const now = new Date();
-  const target = new Date(now.getFullYear(), now.getMonth() - monthsAgo, 1);
-  const start = new Date(target.getFullYear(), target.getMonth(), 1);
-  const end = new Date(target.getFullYear(), target.getMonth() + 1, 0);
-  const toIso = (d) => d.toISOString().split("T")[0];
-  const label = target.toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+  const currentFyStartYear = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+  const fyStartYear = currentFyStartYear - yearsAgo;
+  const start = new Date(fyStartYear, 3, 1);
+  const end = new Date(fyStartYear + 1, 2, 31);
+  const label = `FY ${fyStartYear}-${String(fyStartYear + 1).slice(-2)}`;
   return { start: toIso(start), end: toIso(end), label };
 }
 
@@ -211,11 +219,13 @@ export default function ActivityScreen() {
   const [tab, setTab] = useState("all");
   const [search, setSearch] = useState("");
   const [downloading, setDownloading] = useState(false);
-  const [alertConfig, setAlertConfig] = useState(null);
   const [showPeriodPicker, setShowPeriodPicker] = useState(false);
-  const [showCustomRange, setShowCustomRange] = useState(false);
+  const [periodTab, setPeriodTab] = useState("range"); // range | fy | custom
+  const [selectedRange, setSelectedRange] = useState(30);
+  const [selectedFy, setSelectedFy] = useState(0);
   const [customStart, setCustomStart] = useState(isoToday());
   const [customEnd, setCustomEnd] = useState(isoToday());
+  const [successInfo, setSuccessInfo] = useState(null); // { fileUri }
 
   const runDownload = useCallback(async (startDate, endDate) => {
     if (downloading) return;
@@ -229,46 +239,39 @@ export default function ActivityScreen() {
         encoding: FileSystem.EncodingType.Base64,
       });
 
-      const canShare = await Sharing.isAvailableAsync();
-      if (canShare) {
-        await Sharing.shareAsync(fileUri, {
-          mimeType: "application/pdf",
-          dialogTitle: "SplitEase Statement",
-          UTI: "com.adobe.pdf",
-        });
-      } else {
-        setAlertConfig({
-          title: "Saved",
-          message: `Statement saved to ${fileUri}`,
-          buttons: [{ text: "OK", onPress: () => setAlertConfig(null) }],
-        });
-      }
+      setShowPeriodPicker(false);
+      setSuccessInfo({ fileUri });
     } catch (err) {
-      setAlertConfig({
-        title: "Download failed",
-        message: `${err?.message || "Unknown error"} | type: ${typeof err}`,
-        buttons: [{ text: "OK", onPress: () => setAlertConfig(null) }],
-      });
+      setShowPeriodPicker(false);
+      setSuccessInfo({ error: true });
     } finally {
       setDownloading(false);
     }
   }, [downloading]);
 
-  const handleSelectAllTime = useCallback(() => {
-    setShowPeriodPicker(false);
-    runDownload();
-  }, [runDownload]);
+  const handleDownloadPress = useCallback(() => {
+    if (periodTab === "range") {
+      const { start, end } = daysAgoRange(selectedRange);
+      runDownload(start, end);
+    } else if (periodTab === "fy") {
+      const { start, end } = fyRange(selectedFy);
+      runDownload(start, end);
+    } else {
+      runDownload(customStart, customEnd);
+    }
+  }, [periodTab, selectedRange, selectedFy, customStart, customEnd, runDownload]);
 
-  const handleSelectMonth = useCallback((monthsAgo) => {
-    setShowPeriodPicker(false);
-    const { start, end } = monthRange(monthsAgo);
-    runDownload(start, end);
-  }, [runDownload]);
-
-  const handleConfirmCustomRange = useCallback(() => {
-    setShowCustomRange(false);
-    runDownload(customStart, customEnd);
-  }, [runDownload, customStart, customEnd]);
+  const handleShareFromSuccess = useCallback(async () => {
+    if (!successInfo?.fileUri) return;
+    const canShare = await Sharing.isAvailableAsync();
+    if (canShare) {
+      await Sharing.shareAsync(successInfo.fileUri, {
+        mimeType: "application/pdf",
+        dialogTitle: "SplitEase Statement",
+        UTI: "com.adobe.pdf",
+      });
+    }
+  }, [successInfo]);
 
   const load = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
@@ -507,100 +510,132 @@ export default function ActivityScreen() {
         stickySectionHeadersEnabled={false}
       />
 
-      {/* Period picker */}
+      {/* Period picker — bottom sheet, tabbed */}
       <Modal
         visible={showPeriodPicker}
         transparent
-        animationType="fade"
+        animationType="slide"
         onRequestClose={() => setShowPeriodPicker(false)}
       >
-        <TouchableOpacity
-          style={styles.overlay}
-          activeOpacity={1}
-          onPress={() => setShowPeriodPicker(false)}
-        >
-          <TouchableOpacity activeOpacity={1} style={styles.periodBox}>
-            <Text style={styles.periodTitle}>Download statement</Text>
+        <TouchableOpacity style={styles.sheetOverlay} activeOpacity={1} onPress={() => setShowPeriodPicker(false)}>
+          <TouchableOpacity activeOpacity={1} style={styles.sheet}>
+            <View style={styles.sheetHandle} />
+            <Text style={styles.sheetTitle}>Statement Period</Text>
 
-            <TouchableOpacity style={styles.periodOption} onPress={handleSelectAllTime}>
-              <Icons.calendarDays size={16} color={COLORS.text2} />
-              <Text style={styles.periodOptionText}>All time</Text>
-            </TouchableOpacity>
+            <View style={styles.tabRow}>
+              {[
+                { id: "range", label: "Range" },
+                { id: "fy", label: "Financial Year" },
+                { id: "custom", label: "Custom" },
+              ].map((t) => (
+                <TouchableOpacity
+                  key={t.id}
+                  style={[styles.tabPill, periodTab === t.id && styles.tabPillActive]}
+                  onPress={() => setPeriodTab(t.id)}
+                >
+                  <Text style={[styles.tabPillText, periodTab === t.id && styles.tabPillTextActive]}>
+                    {t.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
 
-            <TouchableOpacity style={styles.periodOption} onPress={() => handleSelectMonth(0)}>
-              <Icons.calendarDays size={16} color={COLORS.text2} />
-              <Text style={styles.periodOptionText}>{monthRange(0).label}</Text>
-            </TouchableOpacity>
+            {periodTab === "range" && (
+              <View style={styles.radioList}>
+                {[7, 30, 90, 180, 365].map((d) => (
+                  <TouchableOpacity key={d} style={styles.radioRow} onPress={() => setSelectedRange(d)}>
+                    <Text style={styles.radioLabel}>Last {d} days</Text>
+                    <View style={[styles.radioOuter, selectedRange === d && styles.radioOuterActive]}>
+                      {selectedRange === d && <View style={styles.radioInner} />}
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
 
-            <TouchableOpacity style={styles.periodOption} onPress={() => handleSelectMonth(1)}>
-              <Icons.calendarDays size={16} color={COLORS.text2} />
-              <Text style={styles.periodOptionText}>{monthRange(1).label}</Text>
-            </TouchableOpacity>
+            {periodTab === "fy" && (
+              <View style={styles.radioList}>
+                {[0, 1, 2, 3].map((y) => (
+                  <TouchableOpacity key={y} style={styles.radioRow} onPress={() => setSelectedFy(y)}>
+                    <Text style={styles.radioLabel}>
+                      {fyRange(y).label}{y === 0 ? " (Current)" : ""}
+                    </Text>
+                    <View style={[styles.radioOuter, selectedFy === y && styles.radioOuterActive]}>
+                      {selectedFy === y && <View style={styles.radioInner} />}
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
+            {periodTab === "custom" && (
+              <View style={{ gap: SPACING.md, marginTop: SPACING.sm }}>
+                <View>
+                  <Text style={styles.rangeLabel}>From</Text>
+                  <DatePickerInput value={customStart} onChange={setCustomStart} />
+                </View>
+                <View>
+                  <Text style={styles.rangeLabel}>To</Text>
+                  <DatePickerInput value={customEnd} onChange={setCustomEnd} />
+                </View>
+              </View>
+            )}
 
             <TouchableOpacity
-              style={styles.periodOption}
-              onPress={() => {
-                setShowPeriodPicker(false);
-                setShowCustomRange(true);
-              }}
+              style={styles.sheetPrimaryBtn}
+              onPress={handleDownloadPress}
+              disabled={downloading}
             >
-              <Icons.calendarDays size={16} color={COLORS.primary} />
-              <Text style={[styles.periodOptionText, { color: COLORS.primary }]}>
-                Custom range…
+              <Text style={styles.sheetPrimaryBtnText}>
+                {downloading ? "Generating…" : "Download Statement"}
               </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.periodCancel}
-              onPress={() => setShowPeriodPicker(false)}
-            >
-              <Text style={styles.periodCancelText}>Cancel</Text>
             </TouchableOpacity>
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
 
-      {/* Custom range picker */}
+      {/* Success bottom sheet */}
       <Modal
-        visible={showCustomRange}
+        visible={!!successInfo}
         transparent
-        animationType="fade"
-        onRequestClose={() => setShowCustomRange(false)}
+        animationType="slide"
+        onRequestClose={() => setSuccessInfo(null)}
       >
-        <TouchableOpacity
-          style={styles.overlay}
-          activeOpacity={1}
-          onPress={() => setShowCustomRange(false)}
-        >
-          <TouchableOpacity activeOpacity={1} style={styles.periodBox}>
-            <Text style={styles.periodTitle}>Custom range</Text>
+        <TouchableOpacity style={styles.sheetOverlay} activeOpacity={1} onPress={() => setSuccessInfo(null)}>
+          <TouchableOpacity activeOpacity={1} style={styles.sheet}>
+            <View style={styles.sheetHandle} />
+            {successInfo?.error ? (
+              <>
+                <View style={[styles.successIconWrap, { backgroundColor: COLORS.danger + "22" }]}>
+                  <Icons.close size={28} color={COLORS.danger} />
+                </View>
+                <Text style={styles.sheetTitle}>Download failed</Text>
+                <Text style={styles.successSub}>Could not generate your statement. Please try again.</Text>
+              </>
+            ) : (
+              <>
+                <View style={styles.successIconWrap}>
+                  <Icons.checkCircle size={28} color={COLORS.success} />
+                </View>
+                <Text style={styles.sheetTitle}>Statement Ready</Text>
+                <Text style={styles.successSub}>Your PDF statement has been generated successfully.</Text>
 
-            <Text style={styles.rangeLabel}>From</Text>
-            <DatePickerInput value={customStart} onChange={setCustomStart} />
+                <View style={styles.fileChip}>
+                  <Icons.receipt size={18} color={COLORS.primary} />
+                  <Text style={styles.fileChipText} numberOfLines={1}>splitease-statement.pdf</Text>
+                  <TouchableOpacity onPress={handleShareFromSuccess}>
+                    <Text style={styles.fileChipAction}>Share</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
 
-            <Text style={[styles.rangeLabel, { marginTop: SPACING.md }]}>To</Text>
-            <DatePickerInput value={customEnd} onChange={setCustomEnd} />
-
-            <TouchableOpacity
-              style={[styles.periodCancel, styles.confirmBtn]}
-              onPress={handleConfirmCustomRange}
-            >
-              <Text style={[styles.periodCancelText, { color: COLORS.white }]}>
-                Download
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.periodCancel}
-              onPress={() => setShowCustomRange(false)}
-            >
-              <Text style={styles.periodCancelText}>Cancel</Text>
+            <TouchableOpacity style={styles.sheetPrimaryBtn} onPress={() => setSuccessInfo(null)}>
+              <Text style={styles.sheetPrimaryBtnText}>Done</Text>
             </TouchableOpacity>
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
-
-      <AppAlert config={alertConfig} />
     </SafeAreaView>
   );
 }
@@ -681,58 +716,87 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
   },
 
-  overlay: {
+  sheetOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.6)",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: SPACING.xl,
+    justifyContent: "flex-end",
   },
-  periodBox: {
+  sheet: {
     backgroundColor: "#171c2c",
-    borderRadius: RADIUS.xl,
+    borderTopLeftRadius: RADIUS.xl,
+    borderTopRightRadius: RADIUS.xl,
     borderWidth: 1,
     borderColor: "#242a3d",
     padding: SPACING.xl,
-    width: "100%",
+    paddingBottom: SPACING["2xl"],
     gap: SPACING.sm,
   },
-  periodTitle: {
+  sheetHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: COLORS.border2,
+    alignSelf: "center",
+    marginBottom: SPACING.sm,
+  },
+  sheetTitle: {
     fontSize: FONT_SIZE.lg,
     fontWeight: FONT_WEIGHT.bold,
     color: COLORS.text,
-    marginBottom: SPACING.sm,
+    textAlign: "center",
   },
-  periodOption: {
+  tabRow: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingVertical: 13,
-    paddingHorizontal: SPACING.md,
-    borderRadius: RADIUS.md,
+    gap: 6,
     backgroundColor: COLORS.surface2,
+    padding: 4,
+    borderRadius: RADIUS.md,
     borderWidth: 1,
     borderColor: COLORS.border,
+    marginTop: SPACING.sm,
   },
-  periodOptionText: {
+  tabPill: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: RADIUS.sm,
+    alignItems: "center",
+  },
+  tabPillActive: { backgroundColor: COLORS.surface },
+  tabPillText: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.text2,
+    fontWeight: FONT_WEIGHT.semibold,
+  },
+  tabPillTextActive: { color: COLORS.text },
+  radioList: { marginTop: SPACING.md, gap: 2 },
+  radioRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  radioLabel: {
     fontSize: FONT_SIZE.md,
     color: COLORS.text,
     fontWeight: FONT_WEIGHT.medium,
   },
-  periodCancel: {
-    marginTop: SPACING.sm,
-    paddingVertical: 12,
-    borderRadius: RADIUS.lg,
+  radioOuter: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: COLORS.border2,
     alignItems: "center",
+    justifyContent: "center",
   },
-  periodCancelText: {
-    fontSize: FONT_SIZE.base,
-    color: COLORS.text2,
-    fontWeight: FONT_WEIGHT.semibold,
-  },
-  confirmBtn: {
+  radioOuterActive: { borderColor: COLORS.primary },
+  radioInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
     backgroundColor: COLORS.primary,
-    marginTop: SPACING.lg,
   },
   rangeLabel: {
     fontSize: FONT_SIZE.xs,
@@ -740,7 +804,49 @@ const styles = StyleSheet.create({
     fontWeight: FONT_WEIGHT.semibold,
     textTransform: "uppercase",
     letterSpacing: 0.5,
+    marginBottom: 6,
   },
+  sheetPrimaryBtn: {
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.lg,
+    paddingVertical: 15,
+    alignItems: "center",
+    marginTop: SPACING.lg,
+  },
+  sheetPrimaryBtnText: {
+    color: COLORS.white,
+    fontWeight: FONT_WEIGHT.bold,
+    fontSize: FONT_SIZE.base,
+  },
+  successIconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: COLORS.success + "22",
+    alignItems: "center",
+    justifyContent: "center",
+    alignSelf: "center",
+    marginBottom: SPACING.sm,
+  },
+  successSub: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.text2,
+    textAlign: "center",
+    marginTop: 2,
+  },
+  fileChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: COLORS.surface2,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: SPACING.md,
+    marginTop: SPACING.md,
+  },
+  fileChipText: { flex: 1, color: COLORS.text, fontSize: FONT_SIZE.sm },
+  fileChipAction: { color: COLORS.primary, fontWeight: FONT_WEIGHT.bold, fontSize: FONT_SIZE.sm },
 
   dateHead: {
     flexDirection: "row",
