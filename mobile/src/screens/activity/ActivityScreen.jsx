@@ -16,6 +16,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
+import * as IntentLauncher from "expo-intent-launcher";
+import { Platform } from "react-native";
 import * as expensesApi from "../../api/expenses";
 import { useAuth } from "../../context/AuthContext";
 import {
@@ -244,7 +246,7 @@ export default function ActivityScreen() {
     try {
       const { data } = await expensesApi.downloadStatement(startDate, endDate, label);
       const base64 = arrayBufferToBase64(data);
-      const fileUri = `${FileSystem.cacheDirectory}splitease-statement.pdf`;
+      const fileUri = `${FileSystem.documentDirectory}splitease-statement.pdf`;
 
       await FileSystem.writeAsStringAsync(fileUri, base64, {
         encoding: FileSystem.EncodingType.Base64,
@@ -274,6 +276,26 @@ export default function ActivityScreen() {
       runDownload(customStart, customEnd, `${customStart} to ${customEnd}`);
     }
   }, [periodTab, selectedRange, selectedMonth, selectedFy, customStart, customEnd, runDownload]);
+
+  const handleOpenFromSuccess = useCallback(async () => {
+    if (!successInfo?.fileUri) return;
+    if (Platform.OS === "android") {
+      const contentUri = await FileSystem.getContentUriAsync(successInfo.fileUri);
+      await IntentLauncher.startActivityAsync("android.intent.action.VIEW", {
+        data: contentUri,
+        flags: 1,
+        type: "application/pdf",
+      });
+    } else {
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(successInfo.fileUri, {
+          mimeType: "application/pdf",
+          UTI: "com.adobe.pdf",
+        });
+      }
+    }
+  }, [successInfo]);
 
   const handleShareFromSuccess = useCallback(async () => {
     if (!successInfo?.fileUri) return;
@@ -651,7 +673,10 @@ export default function ActivityScreen() {
                 <View style={styles.fileChip}>
                   <Icons.receipt size={18} color={COLORS.primary} />
                   <Text style={styles.fileChipText} numberOfLines={1}>splitease-statement.pdf</Text>
-                  <TouchableOpacity onPress={handleShareFromSuccess}>
+                  <TouchableOpacity onPress={handleOpenFromSuccess}>
+                    <Text style={styles.fileChipAction}>Open</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={handleShareFromSuccess} style={{ marginLeft: 14 }}>
                     <Text style={styles.fileChipAction}>Share</Text>
                   </TouchableOpacity>
                 </View>

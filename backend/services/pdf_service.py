@@ -1,4 +1,3 @@
-# backend/services/pdf_service.py
 import base64
 import hashlib
 import os
@@ -90,15 +89,15 @@ def generate_statement_pdf(user_name: str, user_email: str, events: list[dict], 
     html = f"""
     <html><head><meta charset="utf-8"><style>
         @page {{
-            size: A4; margin: 0;
+            size: A4;
+            margin: 0 0 100px 0;
+            @bottom-center {{
+                content: element(pagefooter);
+                margin: 0;
+            }}
         }}
         * {{ box-sizing: border-box; }}
-        html, body {{ height: 297mm; }}
-        body {{
-            font-family: 'Helvetica Neue', Arial, sans-serif; color: #111827; margin: 0; font-size: 10px;
-            display: flex;
-            flex-direction: column;
-        }}
+        body {{ font-family: 'Helvetica Neue', Arial, sans-serif; color: #111827; margin: 0; font-size: 10px; }}
 
         .band {{
             background: #0d0e14;
@@ -108,7 +107,7 @@ def generate_statement_pdf(user_name: str, user_email: str, events: list[dict], 
             align-items: center;
             border-bottom: 3px solid #2563eb;
         }}
-        .brand-row {{ display: flex; align-items: center; gap: 10px; }}
+        .brand-row {{ display: flex; align-items: center; gap: 14px; }}
         .logo {{ width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0; object-fit: cover; display: block; }}
         .brand-name {{ font-size: 18px; font-weight: 800; color: #fff; white-space: nowrap; }}
         .brand-name .accent {{ color: #3b82f6; }}
@@ -141,13 +140,18 @@ def generate_statement_pdf(user_name: str, user_email: str, events: list[dict], 
         .stat-label {{ font-size: 7.5px; text-transform: uppercase; letter-spacing: 0.5px; color: #9ca3af; }}
         .stat-value {{ font-size: 14px; font-weight: 800; margin-top: 4px; color: #111827; }}
 
-        .footer-band {{ margin-top: auto; padding: 14px 32px; text-align: center; }}
+        .footer-band {{
+            position: running(pagefooter);
+            width: 100%;
+            padding: 14px 32px 0 32px;
+            text-align: center;
+            background: #ffffff;
+        }}
         .footer-band .label {{ font-size: 8px; color: #9ca3af; }}
         .disclaimer {{ margin-top: 8px; font-size: 7.5px; color: #b0b4bd; line-height: 1.7; text-align: center; }}
         .bottom-strip {{ margin-top: 14px; background: #2563eb; height: 6px; }}
     </style></head>
     <body>
-    <div class="content">
         <div class="band">
             <div class="brand-row">{logo_img}<div class="brand-name">Split<span class="accent">Ease</span></div></div>
             <div class="user-block">
@@ -180,8 +184,7 @@ def generate_statement_pdf(user_name: str, user_email: str, events: list[dict], 
                 This is a system-generated statement and does not require a physical signature.<br/>
                 Reference ID {stmt_id} &middot; Generated on {generated_at}
             </div>
-        </div>
-        <div class="bottom-strip"></div>
+            <div class="bottom-strip"></div>
         </div>
     </body></html>
     """
