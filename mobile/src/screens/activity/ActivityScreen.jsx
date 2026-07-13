@@ -127,11 +127,21 @@ function isoToday() {
 function toIso(d) {
   return d.toISOString().split("T")[0];
 }
+function fmtStatementDate(iso) {
+  return new Date(iso + "T00:00:00").toLocaleDateString("en-GB", {
+    day: "numeric", month: "short", year: "numeric",
+  });
+}
+function rangeLabel(start, end) {
+  return `${fmtStatementDate(start)} to ${fmtStatementDate(end)}`;
+}
+
 function daysAgoRange(days) {
   const end = new Date();
   const start = new Date();
   start.setDate(start.getDate() - days);
-  return { start: toIso(start), end: toIso(end), label: `Last ${days} days` };
+  const s = toIso(start), e = toIso(end);
+  return { start: s, end: e, label: `Last ${days} days`, statementLabel: rangeLabel(s, e), periodType: "range" };
 }
 
 function monthRange(monthsAgo = 0) {
@@ -140,7 +150,7 @@ function monthRange(monthsAgo = 0) {
   const start = new Date(target.getFullYear(), target.getMonth(), 1);
   const end = new Date(target.getFullYear(), target.getMonth() + 1, 0);
   const label = target.toLocaleDateString("en-IN", { month: "long", year: "numeric" });
-  return { start: toIso(start), end: toIso(end), label };
+  return { start: toIso(start), end: toIso(end), label, statementLabel: label, periodType: "month" };
 }
 
 // Indian financial year: Apr 1 -> Mar 31
@@ -151,7 +161,8 @@ function fyRange(yearsAgo = 0) {
   const start = new Date(fyStartYear, 3, 1);
   const end = new Date(fyStartYear + 1, 2, 31);
   const label = `FY ${fyStartYear}-${String(fyStartYear + 1).slice(-2)}`;
-  return { start: toIso(start), end: toIso(end), label };
+  const s = toIso(start), e = toIso(end);
+  return { start: s, end: e, label, statementLabel: rangeLabel(s, e), periodType: "range" };
 }
 
 function arrayBufferToBase64(buffer) {
@@ -240,11 +251,11 @@ export default function ActivityScreen() {
   const [customEnd, setCustomEnd] = useState(isoToday());
   const [successInfo, setSuccessInfo] = useState(null); // { fileUri }
 
-  const runDownload = useCallback(async (startDate, endDate, label) => {
+  const runDownload = useCallback(async (startDate, endDate, statementLabel, periodType) => {
     if (downloading) return;
     setDownloading(true);
     try {
-      const { data } = await expensesApi.downloadStatement(startDate, endDate, label);
+      const { data } = await expensesApi.downloadStatement(startDate, endDate, statementLabel, periodType);
       const base64 = arrayBufferToBase64(data);
       const fileUri = `${FileSystem.documentDirectory}splitease-statement.pdf`;
 
@@ -264,16 +275,16 @@ export default function ActivityScreen() {
 
   const handleDownloadPress = useCallback(() => {
     if (periodTab === "range") {
-      const { start, end, label } = daysAgoRange(selectedRange);
-      runDownload(start, end, label);
+      const { start, end, statementLabel, periodType } = daysAgoRange(selectedRange);
+      runDownload(start, end, statementLabel, periodType);
     } else if (periodTab === "month") {
-      const { start, end, label } = monthRange(selectedMonth);
-      runDownload(start, end, label);
+      const { start, end, statementLabel, periodType } = monthRange(selectedMonth);
+      runDownload(start, end, statementLabel, periodType);
     } else if (periodTab === "fy") {
-      const { start, end, label } = fyRange(selectedFy);
-      runDownload(start, end, label);
+      const { start, end, statementLabel, periodType } = fyRange(selectedFy);
+      runDownload(start, end, statementLabel, periodType);
     } else {
-      runDownload(customStart, customEnd, `${customStart} to ${customEnd}`);
+      runDownload(customStart, customEnd, rangeLabel(customStart, customEnd), "range");
     }
   }, [periodTab, selectedRange, selectedMonth, selectedFy, customStart, customEnd, runDownload]);
 

@@ -14,7 +14,7 @@ import io
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
 
-from repositories import timeline_repository
+from repositories import timeline_repository, user_repository
 from services import pdf_service
 from core.dependencies import get_current_user
 
@@ -36,8 +36,10 @@ def get_timeline(
 
 @router.get("/timeline/statement")
 def download_statement(
-    start_date: str | None = Query(default=None, description="YYYY-MM-DD"),
-    end_date:   str | None = Query(default=None, description="YYYY-MM-DD"),
+    start_date:  str | None = Query(default=None, description="YYYY-MM-DD"),
+    end_date:    str | None = Query(default=None, description="YYYY-MM-DD"),
+    label:       str | None = Query(default=None, description="Display label for the period"),
+    period_type: str        = Query(default="range", description="'range' or 'month'"),
     current_user: dict = Depends(get_current_user),
 ):
     """
@@ -49,18 +51,22 @@ def download_statement(
         events = timeline_repository.fetch_timeline_for_period(
             current_user["user_id"], start_date, end_date,
         )
-        period_label = f"{start_date} to {end_date}"
+        period_label = label or f"{start_date} to {end_date}"
     else:
         events = timeline_repository.fetch_unified_timeline(
             current_user["user_id"], limit=1000, offset=0,
         )
-        period_label = "All time"
+        period_label = label or "All time"
+
+    user_row = user_repository.fetch_user_by_id(current_user["user_id"])
+    user_name = user_row["name"] if user_row and user_row.get("name") else "SplitEase User"
 
     pdf_bytes = pdf_service.generate_statement_pdf(
-        user_name=current_user.get("email", "SplitEase User").split("@")[0],
+        user_name=user_name,
         user_email=current_user.get("email", ""),
         events=events,
         period_label=period_label,
+        period_type=period_type,
     )
 
     filename = "splitease-statement.pdf"

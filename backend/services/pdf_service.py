@@ -53,31 +53,41 @@ def _row_html(e: dict, zebra: bool) -> str:
     inflow = e["type"] in INFLOW_TYPES
     sign = "+" if inflow else ""
     amt_color = "#059669" if inflow else "#111827"
-    bg = "background:#f3faf6;" if zebra else "background:#ffffff;"
+    bg = "background:#f9fafb;" if zebra else "background:#ffffff;"
     type_label = TYPE_LABEL.get(e["type"], e.get("type", "").replace("_", " ").title())
     sub = e.get("sub") or ""
-    grp = e.get("group_name") or "SplitEase"
 
     return f"""
     <tr style="{bg}">
         <td class="col-date">{_fmt_date(e.get('date',''))}</td>
         <td class="col-desc">
             <div class="tx-title">{e.get('label','')}</div>
-            <div class="tx-sub">Type: {type_label}</div>
             {f'<div class="tx-sub">Note: {sub}</div>' if sub else ''}
         </td>
-        <td class="col-account">{grp}</td>
+        <td class="col-type">{type_label}</td>
         <td class="col-amt" style="color:{amt_color};">{sign}&#8377;{_fmt(e.get('amount'))}</td>
     </tr>
     """
 
 
-def generate_statement_pdf(user_name: str, user_email: str, events: list[dict], period_label: str = "All time") -> bytes:
+def generate_statement_pdf(
+    user_name: str,
+    user_email: str,
+    events: list[dict],
+    period_label: str = "All time",
+    period_type: str = "range",  # "range" | "month"
+) -> bytes:
     now = datetime.now()
     generated_at = now.strftime("%d %b %Y, %I:%M %p")
     stmt_id = _stmt_id(user_email, events, now.isoformat())
     logo_uri = _get_logo_data_uri()
     logo_img = f'<img src="{logo_uri}" class="logo"/>' if logo_uri else ""
+
+    title_text = (
+        f"Transaction Statement for {period_label}"
+        if period_type == "month"
+        else f"Transaction Statement from {period_label}"
+    )
 
     total_in = sum(float(e.get("amount") or 0) for e in events if e["type"] in INFLOW_TYPES)
     total_out = sum(float(e.get("amount") or 0) for e in events if e["type"] not in INFLOW_TYPES)
@@ -90,32 +100,43 @@ def generate_statement_pdf(user_name: str, user_email: str, events: list[dict], 
     <html><head><meta charset="utf-8"><style>
         @page {{
             size: A4;
-            margin: 0 0 100px 0;
+            margin: 0 0 50px 0;
+            @bottom-left {{
+                content: "Ref: {stmt_id} \\00B7 Generated {generated_at}";
+                font-family: 'Helvetica Neue', Arial, sans-serif;
+                font-size: 7px; color: #9ca3af; padding: 14px 0 0 32px;
+            }}
             @bottom-center {{
-                content: element(pagefooter);
-                margin: 0;
+                content: "Powered by SplitEase";
+                font-family: 'Helvetica Neue', Arial, sans-serif;
+                font-size: 7.5px; color: #9ca3af; padding-top: 14px;
+            }}
+            @bottom-right {{
+                content: "Page " counter(page) " of " counter(pages);
+                font-family: 'Helvetica Neue', Arial, sans-serif;
+                font-size: 7.5px; font-weight: 700; color: #6b7280; padding: 14px 32px 0 0;
             }}
         }}
         * {{ box-sizing: border-box; }}
         body {{ font-family: 'Helvetica Neue', Arial, sans-serif; color: #111827; margin: 0; font-size: 10px; }}
 
         .band {{
-            background: #0d0e14;
-            padding: 24px 32px;
+            background: #ffffff;
+            padding: 22px 32px 18px 32px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 3px solid #2563eb;
+            border-bottom: 2px solid #2563eb;
         }}
         .brand-row {{ display: flex; align-items: center; gap: 14px; }}
-        .logo {{ width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0; object-fit: cover; display: block; }}
-        .brand-name {{ font-size: 18px; font-weight: 800; color: #fff; white-space: nowrap; }}
-        .brand-name .accent {{ color: #3b82f6; }}
+        .logo {{ width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0; object-fit: cover; display: block; }}
+        .brand-name {{ font-size: 17px; font-weight: 800; color: #111827; white-space: nowrap; }}
+        .brand-name .accent {{ color: #2563eb; }}
         .user-block {{ text-align: right; }}
-        .user-name {{ font-size: 13px; font-weight: 700; color: #fff; }}
-        .user-sub {{ font-size: 9px; color: rgba(255,255,255,0.8); margin-top: 2px; }}
+        .user-name {{ font-size: 13px; font-weight: 700; color: #111827; }}
+        .user-sub {{ font-size: 9px; color: #6b7280; margin-top: 2px; }}
 
-        .title-block {{ text-align: center; padding: 22px 32px 18px 32px; }}
+        .title-block {{ text-align: center; padding: 20px 32px 16px 32px; }}
         .title {{ font-size: 15px; font-weight: 800; color: #111827; }}
         .subtitle {{ font-size: 9px; color: #6b7280; margin-top: 5px; }}
 
@@ -126,11 +147,11 @@ def generate_statement_pdf(user_name: str, user_email: str, events: list[dict], 
             text-align: left; font-size: 8.5px; font-weight: 700; color: #374151;
             padding: 12px 10px; background: #f3f4f6; border-bottom: 2px solid #e5e7eb;
         }}
-        tbody td {{ padding: 14px 10px; border-bottom: 1px solid #f1f2f4; vertical-align: top; }}
-        .col-date {{ width: 15%; color: #6b7280; font-size: 9px; font-weight: 600; }}
+        tbody td {{ padding: 13px 10px; border-bottom: 1px solid #f1f2f4; vertical-align: top; }}
+        .col-date {{ width: 15%; color: #111827; font-size: 9.5px; font-weight: 700; }}
         .col-desc {{ width: 45%; }}
-        .col-account {{ width: 25%; color: #6b7280; font-size: 9px; }}
-        .col-amt {{ width: 15%; text-align: right; font-weight: 800; font-size: 10.5px; color: #2563eb; }}
+        .col-type {{ width: 25%; color: #6b7280; font-size: 9px; font-weight: 600; }}
+        .col-amt {{ width: 15%; text-align: right; font-weight: 800; font-size: 10.5px; }}
         .tx-title {{ font-weight: 700; font-size: 10.5px; color: #111827; }}
         .tx-sub {{ font-size: 8.3px; color: #9ca3af; margin-top: 2px; }}
         .empty {{ text-align: center; color: #9ca3af; padding: 40px 0; }}
@@ -139,17 +160,6 @@ def generate_statement_pdf(user_name: str, user_email: str, events: list[dict], 
         .stat {{ flex: 1; padding: 12px 14px; background: #f8f9fb; border-radius: 8px; border: 1px solid #eceef1; }}
         .stat-label {{ font-size: 7.5px; text-transform: uppercase; letter-spacing: 0.5px; color: #9ca3af; }}
         .stat-value {{ font-size: 14px; font-weight: 800; margin-top: 4px; color: #111827; }}
-
-        .footer-band {{
-            position: running(pagefooter);
-            width: 100%;
-            padding: 14px 32px 0 32px;
-            text-align: center;
-            background: #ffffff;
-        }}
-        .footer-band .label {{ font-size: 8px; color: #9ca3af; }}
-        .disclaimer {{ margin-top: 8px; font-size: 7.5px; color: #b0b4bd; line-height: 1.7; text-align: center; }}
-        .bottom-strip {{ margin-top: 14px; background: #2563eb; height: 6px; }}
     </style></head>
     <body>
         <div class="band">
@@ -161,7 +171,7 @@ def generate_statement_pdf(user_name: str, user_email: str, events: list[dict], 
         </div>
 
         <div class="title-block">
-            <div class="title">Transaction Statement &middot; {period_label}</div>
+            <div class="title">{title_text}</div>
             <div class="subtitle">All expenses, group settlements, and adjustments on SplitEase are listed in this statement</div>
         </div>
 
@@ -173,18 +183,9 @@ def generate_statement_pdf(user_name: str, user_email: str, events: list[dict], 
             </div>
 
             <table>
-                <thead><tr><th>Date</th><th>Transaction Details</th><th>Account / Group</th><th style="text-align:right;">Amount</th></tr></thead>
+                <thead><tr><th>Date</th><th>Transaction Details</th><th>Type</th><th style="text-align:right;">Amount</th></tr></thead>
                 <tbody>{rows}</tbody>
             </table>
-        </div>
-
-        <div class="footer-band">
-            <div class="label">Powered by SplitEase</div>
-            <div class="disclaimer">
-                This is a system-generated statement and does not require a physical signature.<br/>
-                Reference ID {stmt_id} &middot; Generated on {generated_at}
-            </div>
-            <div class="bottom-strip"></div>
         </div>
     </body></html>
     """
