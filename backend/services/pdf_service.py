@@ -127,7 +127,7 @@ def generate_statement_pdf(
             display: flex; justify-content: space-between; align-items: flex-start;
             margin-bottom: 32px;
         }}
-        .brand-row {{ display: flex; align-items: center; gap: 12px; }}
+        .brand-row {{ display: flex; align-items: center; gap: 20px; }}
         .logo {{ width: 24px; height: 24px; border-radius: 6px; flex-shrink: 0; object-fit: cover; display: block; }}
         .brand-name {{ font-size: 18px; font-weight: 700; letter-spacing: -0.5px; color: #000; }}
         .brand-name .accent {{ color: #2563eb; }}
@@ -187,7 +187,7 @@ def generate_statement_pdf(
         }}
         .footer-logo {{
             width: 10px; height: 10px; border-radius: 2px; object-fit: cover;
-            vertical-align: middle; margin: 0 5px; display: inline-block;
+            vertical-align: middle; margin: 0 3px; display: inline-block;
         }}
         .footer-brand-text {{
             font-size: 8px; color: #9ca3af; font-family: 'Helvetica Neue', Arial, sans-serif;
