@@ -132,10 +132,16 @@ def generate_statement_pdf(
         .brand-row {{ display: flex; align-items: center; }}
         
         /* ADJUST THIS VALUE to control top logo gap precisely */
-        .logo {{ width: 24px; height: 24px; border-radius: 6px; flex-shrink: 0; object-fit: cover; display: block; margin-right: 18px; }}
+        .logo {{ width: 24px; height: 24px; border-radius: 6px; flex-shrink: 0; object-fit: cover; display: block; margin-right: 8px; }}
         
-        .brand-name {{ font-size: 18px; font-weight: 700; letter-spacing: -0.5px; color: #000; }}
-        .brand-name .accent {{ color: #2563eb; }}
+        .brand-name {{ 
+            font-family: 'Helvetica Neue', Arial, sans-serif; 
+            font-size: 18px; 
+            font-weight: 700; 
+            letter-spacing: -0.5px; 
+            color: #000; 
+        }}
+        .brand-name .accent {{ color: #2563eb; font-weight: 700; }}
         .doc-label {{
             font-size: 10px; font-weight: 500; letter-spacing: 0.15em;
             color: #9ca3af; text-transform: uppercase; padding-top: 4px;
