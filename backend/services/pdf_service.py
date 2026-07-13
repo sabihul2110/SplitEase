@@ -107,9 +107,8 @@ def generate_statement_pdf(
                 font-size: 8px; color: #bdbfc2; padding: 16px 0 0 0.75in;
             }}
             @bottom-center {{
-                content: "Powered by SplitEase";
-                font-family: 'Helvetica Neue', Arial, sans-serif;
-                font-size: 8px; color: #bdbfc2; padding-top: 16px;
+                content: element(footerbrand);
+                padding-top: 12px;
             }}
             @bottom-right {{
                 content: "Page " counter(page) " of " counter(pages);
@@ -159,12 +158,12 @@ def generate_statement_pdf(
             display: grid; grid-template-columns: 1.2fr 2fr 1.2fr 0.8fr; gap: 16px;
             padding: 14px 12px; border-bottom: 1px solid #f3f4f6; border-radius: 6px;
         }}
-        .col-date {{ font-size: 11px; font-weight: 600; color: #000; }}
+        .col-date {{ font-size: 11px; font-weight: 700; color: #000; }}
         .col-desc {{ }}
-        .tx-title {{ font-size: 11px; font-weight: 500; margin-bottom: 3px; color: #000; }}
+        .tx-title {{ font-size: 11px; font-weight: 700; margin-bottom: 3px; color: #000; }}
         .tx-sub {{ font-size: 10px; color: #9ca3af; }}
-        .col-type {{ font-size: 10.5px; color: #4b5563; }}
-        .col-amt {{ text-align: right; font-size: 11px; font-weight: 500; }}
+        .col-type {{ font-size: 10.5px; font-weight: 600; color: #4b5563; }}
+        .col-amt {{ text-align: right; font-size: 11.5px; font-weight: 800; }}
         .empty {{ text-align: center; color: #9ca3af; padding: 30px 0; grid-column: 1 / -1; }}
 
         .summary-wrap {{
@@ -181,8 +180,23 @@ def generate_statement_pdf(
         .summary-net {{
             display: flex; justify-content: space-between; font-size: 12.5px; font-weight: 600;
         }}
+
+        .footer-brand {{
+            position: running(footerbrand);
+            display: flex; align-items: center; gap: 6px;
+        }}
+        .footer-logo {{ width: 12px; height: 12px; border-radius: 3px; object-fit: cover; }}
+        .footer-brand-text {{ font-size: 8px; color: #9ca3af; font-family: 'Helvetica Neue', Arial, sans-serif; }}
+        .footer-brand-text .accent {{ color: #2563eb; font-weight: 700; }}
+        .footer-brand-text .base {{ font-weight: 700; color: #6b7280; }}
     </style></head>
     <body>
+
+        <div class="footer-brand">
+            {logo_img.replace('class="logo"', 'class="footer-logo"')}
+            <span class="footer-brand-text">Powered by <span class="base">Split</span><span class="accent">Ease</span></span>
+        </div>
+
         <div class="page">
             <div class="header">
                 <div class="brand-row">{logo_img}<div class="brand-name">Split<span class="accent">Ease</span></div></div>
