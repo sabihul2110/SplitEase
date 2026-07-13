@@ -49,24 +49,24 @@ def _fmt_date(d: str) -> str:
         return d
 
 
-def _row_html(e: dict, zebra: bool) -> str:
+def _row_html(e: dict, is_last: bool) -> str:
     inflow = e["type"] in INFLOW_TYPES
-    sign = "+" if inflow else ""
-    amt_color = "#059669" if inflow else "#111827"
-    bg = "background:#f9fafb;" if zebra else "background:#ffffff;"
+    sign = "+" if inflow else "\u2212"
+    amt_color = "#047857" if inflow else "#111827"
     type_label = TYPE_LABEL.get(e["type"], e.get("type", "").replace("_", " ").title())
     sub = e.get("sub") or ""
+    border = "border-bottom: none;" if is_last else ""
 
     return f"""
-    <tr style="{bg}">
-        <td class="col-date">{_fmt_date(e.get('date',''))}</td>
-        <td class="col-desc">
+    <div class="row" style="{border}">
+        <div class="col-date">{_fmt_date(e.get('date',''))}</div>
+        <div class="col-desc">
             <div class="tx-title">{e.get('label','')}</div>
-            {f'<div class="tx-sub">Note: {sub}</div>' if sub else ''}
-        </td>
-        <td class="col-type">{type_label}</td>
-        <td class="col-amt" style="color:{amt_color};">{sign}&#8377;{_fmt(e.get('amount'))}</td>
-    </tr>
+            {f'<div class="tx-sub">{sub}</div>' if sub else ''}
+        </div>
+        <div class="col-type">{type_label}</div>
+        <div class="col-amt" style="color:{amt_color};">{sign} &#8377;{_fmt(e.get('amount'))}</div>
+    </div>
     """
 
 
@@ -83,18 +83,17 @@ def generate_statement_pdf(
     logo_uri = _get_logo_data_uri()
     logo_img = f'<img src="{logo_uri}" class="logo"/>' if logo_uri else ""
 
-    title_text = (
-        f"Transaction Statement for {period_label}"
-        if period_type == "month"
-        else f"Transaction Statement from {period_label}"
+    period_text = (
+        f"{period_label}" if period_type == "month" else f"{period_label}"
     )
 
     total_in = sum(float(e.get("amount") or 0) for e in events if e["type"] in INFLOW_TYPES)
     total_out = sum(float(e.get("amount") or 0) for e in events if e["type"] not in INFLOW_TYPES)
     net = total_in - total_out
 
-    rows = "".join(_row_html(e, i % 2 == 1) for i, e in enumerate(events)) or \
-        '<tr><td colspan="4" class="empty">No transactions in this period.</td></tr>'
+    n = len(events)
+    rows = "".join(_row_html(e, i == n - 1) for i, e in enumerate(events)) or \
+        '<div class="row" style="border-bottom:none;"><div class="empty">No transactions in this period.</div></div>'
 
     html = f"""
     <html><head><meta charset="utf-8"><style>
@@ -104,88 +103,114 @@ def generate_statement_pdf(
             @bottom-left {{
                 content: "Generated {generated_at}";
                 font-family: 'Helvetica Neue', Arial, sans-serif;
-                font-size: 7.5px; color: #9ca3af; padding: 16px 0 0 32px;
+                font-size: 8px; color: #bdbfc2; padding: 16px 0 0 0.75in;
             }}
             @bottom-center {{
                 content: "Powered by SplitEase";
                 font-family: 'Helvetica Neue', Arial, sans-serif;
-                font-size: 7.5px; color: #9ca3af; padding-top: 16px;
+                font-size: 8px; color: #bdbfc2; padding-top: 16px;
             }}
             @bottom-right {{
                 content: "Page " counter(page) " of " counter(pages);
                 font-family: 'Helvetica Neue', Arial, sans-serif;
-                font-size: 7.5px; font-weight: 700; color: #6b7280; padding: 16px 32px 0 0;
+                font-size: 8px; color: #bdbfc2; padding: 16px 0.75in 0 0;
             }}
         }}
         * {{ box-sizing: border-box; }}
-        body {{ font-family: 'Helvetica Neue', Arial, sans-serif; color: #111827; margin: 0; font-size: 10px; }}
-
-        .band {{
-            background: #ffffff;
-            padding: 22px 32px 18px 32px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 2px solid #2563eb;
+        body {{
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            color: #000; margin: 0; font-size: 11px; line-height: 1.4;
         }}
-        .brand-row {{ display: flex; align-items: center; gap: 14px; }}
-        .logo {{ width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0; object-fit: cover; display: block; }}
-        .brand-name {{ font-size: 17px; font-weight: 800; color: #111827; white-space: nowrap; }}
+        .page {{ padding: 0.75in; }}
+
+        .header {{
+            display: flex; justify-content: space-between; align-items: flex-start;
+            margin-bottom: 32px;
+        }}
+        .brand-row {{ display: flex; align-items: center; gap: 10px; }}
+        .logo {{ width: 24px; height: 24px; border-radius: 6px; flex-shrink: 0; object-fit: cover; display: block; }}
+        .brand-name {{ font-size: 18px; font-weight: 600; letter-spacing: -0.5px; color: #000; }}
         .brand-name .accent {{ color: #2563eb; }}
-        .user-block {{ text-align: right; }}
-        .user-name {{ font-size: 13px; font-weight: 700; color: #111827; }}
-        .user-sub {{ font-size: 9px; color: #6b7280; margin-top: 2px; }}
-
-        .title-block {{ text-align: center; padding: 20px 32px 16px 32px; }}
-        .title {{ font-size: 15px; font-weight: 800; color: #111827; }}
-        .subtitle {{ font-size: 9px; color: #6b7280; margin-top: 5px; }}
-
-        .page-pad {{ padding: 0 32px; }}
-
-        table {{ width: 100%; border-collapse: collapse; }}
-        thead th {{
-            text-align: left; font-size: 8.5px; font-weight: 700; color: #374151;
-            padding: 12px 10px; background: #f3f4f6; border-bottom: 2px solid #e5e7eb;
+        .doc-label {{
+            font-size: 10px; font-weight: 500; letter-spacing: 0.15em;
+            color: #9ca3af; text-transform: uppercase; padding-top: 4px;
         }}
-        tbody td {{ padding: 13px 10px; border-bottom: 1px solid #f1f2f4; vertical-align: top; }}
-        .col-date {{ width: 15%; color: #111827; font-size: 9.5px; font-weight: 700; }}
-        .col-desc {{ width: 45%; }}
-        .col-type {{ width: 25%; color: #6b7280; font-size: 9px; font-weight: 600; }}
-        .col-amt {{ width: 15%; text-align: right; font-weight: 800; font-size: 10.5px; }}
-        .tx-title {{ font-weight: 700; font-size: 10.5px; color: #111827; }}
-        .tx-sub {{ font-size: 8.3px; color: #9ca3af; margin-top: 2px; }}
-        .empty {{ text-align: center; color: #9ca3af; padding: 40px 0; }}
 
-        .stats {{ display: flex; gap: 10px; padding: 20px 0; }}
-        .stat {{ flex: 1; padding: 12px 14px; background: #f8f9fb; border-radius: 8px; border: 1px solid #eceef1; }}
-        .stat-label {{ font-size: 7.5px; text-transform: uppercase; letter-spacing: 0.5px; color: #9ca3af; }}
-        .stat-value {{ font-size: 14px; font-weight: 800; margin-top: 4px; color: #111827; }}
+        .user-block {{ margin-bottom: 32px; }}
+        .user-name {{ font-size: 12px; font-weight: 500; margin-bottom: 4px; color: #000; }}
+        .user-email {{ font-size: 11px; color: #6b7280; line-height: 1.6; }}
+
+        .period {{
+            font-size: 11px; color: #6b7280; margin-bottom: 24px;
+            padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;
+        }}
+        .period .label {{ font-weight: 500; color: #000; }}
+
+        .table {{ margin-bottom: 32px; }}
+        .thead {{
+            display: grid; grid-template-columns: 1.2fr 2fr 1.2fr 0.8fr; gap: 16px;
+            padding-bottom: 12px; border-bottom: 1px solid #d1d5db; margin-bottom: 4px;
+            font-size: 9.5px; font-weight: 600; letter-spacing: 0.05em;
+            color: #6b7280; text-transform: uppercase;
+        }}
+        .row {{
+            display: grid; grid-template-columns: 1.2fr 2fr 1.2fr 0.8fr; gap: 16px;
+            padding-top: 14px; padding-bottom: 14px; border-bottom: 1px solid #f3f4f6;
+        }}
+        .col-date {{ font-size: 11px; font-weight: 600; color: #000; }}
+        .col-desc {{ }}
+        .tx-title {{ font-size: 11px; font-weight: 500; margin-bottom: 3px; color: #000; }}
+        .tx-sub {{ font-size: 10px; color: #9ca3af; }}
+        .col-type {{ font-size: 10.5px; color: #4b5563; }}
+        .col-amt {{ text-align: right; font-size: 11px; font-weight: 500; }}
+        .empty {{ text-align: center; color: #9ca3af; padding: 30px 0; grid-column: 1 / -1; }}
+
+        .summary-wrap {{
+            display: flex; justify-content: flex-end; margin-bottom: 8px;
+            padding-top: 16px; border-top: 2px solid #e5e7eb;
+        }}
+        .summary {{ width: 260px; }}
+        .summary-line {{
+            display: flex; justify-content: space-between; font-size: 11px;
+            margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb;
+        }}
+        .summary-line .k {{ color: #6b7280; }}
+        .summary-line .v {{ font-weight: 500; }}
+        .summary-net {{
+            display: flex; justify-content: space-between; font-size: 12.5px; font-weight: 600;
+        }}
     </style></head>
     <body>
-        <div class="band">
-            <div class="brand-row">{logo_img}<div class="brand-name">Split<span class="accent">Ease</span></div></div>
+        <div class="page">
+            <div class="header">
+                <div class="brand-row">{logo_img}<div class="brand-name">Split<span class="accent">Ease</span></div></div>
+                <div class="doc-label">Financial Activity Statement</div>
+            </div>
+
             <div class="user-block">
                 <div class="user-name">{user_name}</div>
-                <div class="user-sub">{user_email}</div>
-            </div>
-        </div>
-
-        <div class="title-block">
-            <div class="title">{title_text}</div>
-            <div class="subtitle">All expenses, group settlements, and adjustments on SplitEase are listed in this statement</div>
-        </div>
-
-        <div class="page-pad">
-            <div class="stats">
-                <div class="stat"><div class="stat-label">Total Inflow</div><div class="stat-value" style="color:#059669;">+&#8377;{_fmt(total_in)}</div></div>
-                <div class="stat"><div class="stat-label">Total Outflow</div><div class="stat-value" style="color:#dc2626;">-&#8377;{_fmt(total_out)}</div></div>
-                <div class="stat"><div class="stat-label">Net</div><div class="stat-value">{'+' if net>=0 else '-'}&#8377;{_fmt(abs(net))}</div></div>
+                <div class="user-email">{user_email}</div>
             </div>
 
-            <table>
-                <thead><tr><th>Date</th><th>Transaction Details</th><th>Type</th><th style="text-align:right;">Amount</th></tr></thead>
-                <tbody>{rows}</tbody>
-            </table>
+            <div class="period"><span class="label">Statement Period:</span> {period_text}</div>
+
+            <div class="table">
+                <div class="thead">
+                    <div>Date</div>
+                    <div>Transaction Details</div>
+                    <div>Type</div>
+                    <div style="text-align:right;">Amount</div>
+                </div>
+                {rows}
+            </div>
+
+            <div class="summary-wrap">
+                <div class="summary">
+                    <div class="summary-line"><span class="k">Total Inflow</span><span class="v" style="color:#047857;">+&#8377;{_fmt(total_in)}</span></div>
+                    <div class="summary-line"><span class="k">Total Outflow</span><span class="v">&minus;&#8377;{_fmt(total_out)}</span></div>
+                    <div class="summary-net"><span>Net Balance</span><span style="color:{'#047857' if net >= 0 else '#dc2626'};">{'+' if net>=0 else '\u2212'}&#8377;{_fmt(abs(net))}</span></div>
+                </div>
+            </div>
         </div>
     </body></html>
     """
