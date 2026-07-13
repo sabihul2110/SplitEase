@@ -1,3 +1,5 @@
+# SplitEase/backend/services/pdf_service.py
+
 import base64
 import hashlib
 import os
@@ -127,8 +129,11 @@ def generate_statement_pdf(
             display: flex; justify-content: space-between; align-items: flex-start;
             margin-bottom: 32px;
         }}
-        .brand-row {{ display: flex; align-items: center; gap: 20px; }}
-        .logo {{ width: 24px; height: 24px; border-radius: 6px; flex-shrink: 0; object-fit: cover; display: block; }}
+        .brand-row {{ display: flex; align-items: center; }}
+        
+        /* ADJUST THIS VALUE to control top logo gap precisely */
+        .logo {{ width: 24px; height: 24px; border-radius: 6px; flex-shrink: 0; object-fit: cover; display: block; margin-right: 18px; }}
+        
         .brand-name {{ font-size: 18px; font-weight: 700; letter-spacing: -0.5px; color: #000; }}
         .brand-name .accent {{ color: #2563eb; }}
         .doc-label {{
@@ -185,10 +190,13 @@ def generate_statement_pdf(
             position: running(footerbrand);
             white-space: nowrap;
         }}
+        
+        /* ADJUST THIS MARGIN value to change space around the footer logo precisely */
         .footer-logo {{
             width: 10px; height: 10px; border-radius: 2px; object-fit: cover;
-            vertical-align: middle; margin: 0 3px; display: inline-block;
+            vertical-align: middle; margin: 0 2px; display: inline-block;
         }}
+        
         .footer-brand-text {{
             font-size: 8px; color: #9ca3af; font-family: 'Helvetica Neue', Arial, sans-serif;
             vertical-align: middle; white-space: nowrap;
@@ -198,11 +206,7 @@ def generate_statement_pdf(
     </style></head>
     <body>
 
-        <div class="footer-brand">
-            <span class="footer-brand-text">Powered by</span>
-            {logo_img.replace('class="logo"', 'class="footer-logo"')}
-            <span class="footer-brand-text"><span class="base">Split</span><span class="accent">Ease</span></span>
-        </div>
+        <div class="footer-brand"><span class="footer-brand-text">Powered by</span>{logo_img.replace('class="logo"', 'class="footer-logo"')}<span class="footer-brand-text"><span class="base">Split</span><span class="accent">Ease</span></span></div>
 
         <div class="page">
             <div class="header">
