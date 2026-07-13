@@ -132,7 +132,7 @@ def generate_statement_pdf(
         .brand-row {{ display: flex; align-items: center; }}
         
         /* ADJUST THIS VALUE to control top logo gap precisely */
-        .logo {{ width: 24px; height: 24px; border-radius: 6px; flex-shrink: 0; object-fit: cover; display: block; margin-right: 8px; }}
+        .logo {{ width: 24px; height: 24px; border-radius: 6px; flex-shrink: 0; object-fit: cover; display: block; margin-right: 6px; }}
         
         .brand-name {{ 
             font-family: 'Helvetica Neue', Arial, sans-serif; 
