@@ -101,15 +101,17 @@ def generate_statement_pdf(user_name: str, user_email: str, events: list[dict], 
         }}
 
         .band {{
-            background: #3d1a5c;
+            background: #0d0e14;
             padding: 24px 32px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            border-bottom: 3px solid #2563eb;
         }}
         .brand-row {{ display: flex; align-items: center; gap: 10px; }}
-        .logo {{ width: 34px; height: 34px; border-radius: 8px; flex-shrink: 0; object-fit: cover; display: block; }}
+        .logo {{ width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0; object-fit: cover; display: block; }}
         .brand-name {{ font-size: 18px; font-weight: 800; color: #fff; white-space: nowrap; }}
+        .brand-name .accent {{ color: #3b82f6; }}
         .user-block {{ text-align: right; }}
         .user-name {{ font-size: 13px; font-weight: 700; color: #fff; }}
         .user-sub {{ font-size: 9px; color: rgba(255,255,255,0.8); margin-top: 2px; }}
@@ -129,7 +131,7 @@ def generate_statement_pdf(user_name: str, user_email: str, events: list[dict], 
         .col-date {{ width: 15%; color: #6b7280; font-size: 9px; font-weight: 600; }}
         .col-desc {{ width: 45%; }}
         .col-account {{ width: 25%; color: #6b7280; font-size: 9px; }}
-        .col-amt {{ width: 15%; text-align: right; font-weight: 800; font-size: 10.5px; }}
+        .col-amt {{ width: 15%; text-align: right; font-weight: 800; font-size: 10.5px; color: #2563eb; }}
         .tx-title {{ font-weight: 700; font-size: 10.5px; color: #111827; }}
         .tx-sub {{ font-size: 8.3px; color: #9ca3af; margin-top: 2px; }}
         .empty {{ text-align: center; color: #9ca3af; padding: 40px 0; }}
@@ -137,17 +139,17 @@ def generate_statement_pdf(user_name: str, user_email: str, events: list[dict], 
         .stats {{ display: flex; gap: 10px; padding: 20px 0; }}
         .stat {{ flex: 1; padding: 12px 14px; background: #f8f9fb; border-radius: 8px; border: 1px solid #eceef1; }}
         .stat-label {{ font-size: 7.5px; text-transform: uppercase; letter-spacing: 0.5px; color: #9ca3af; }}
-        .stat-value {{ font-size: 14px; font-weight: 800; margin-top: 4px; }}
+        .stat-value {{ font-size: 14px; font-weight: 800; margin-top: 4px; color: #111827; }}
 
         .footer-band {{ margin-top: auto; padding: 14px 32px; text-align: center; }}
         .footer-band .label {{ font-size: 8px; color: #9ca3af; }}
         .disclaimer {{ margin-top: 8px; font-size: 7.5px; color: #b0b4bd; line-height: 1.7; text-align: center; }}
-        .bottom-strip {{ margin-top: 14px; background: #3d1a5c; height: 8px; }}
+        .bottom-strip {{ margin-top: 14px; background: #2563eb; height: 6px; }}
     </style></head>
     <body>
     <div class="content">
         <div class="band">
-            <div class="brand-row">{logo_img}<div class="brand-name">SplitEase</div></div>
+            <div class="brand-row">{logo_img}<div class="brand-name">Split<span class="accent">Ease</span></div></div>
             <div class="user-block">
                 <div class="user-name">{user_name}</div>
                 <div class="user-sub">{user_email}</div>
