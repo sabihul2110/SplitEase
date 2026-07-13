@@ -266,6 +266,7 @@ export default function ActivityScreen() {
       setShowPeriodPicker(false);
       setSuccessInfo({ fileUri });
     } catch (err) {
+      console.log("Statement download failed:", err?.response?.status, err?.response?.data, err?.message);
       setShowPeriodPicker(false);
       setSuccessInfo({ error: true });
     } finally {

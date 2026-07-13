@@ -100,21 +100,21 @@ def generate_statement_pdf(
     <html><head><meta charset="utf-8"><style>
         @page {{
             size: A4;
-            margin: 0 0 50px 0;
+            margin: 0 0 46px 0;
             @bottom-left {{
-                content: "Ref: {stmt_id} \\00B7 Generated {generated_at}";
+                content: "Generated {generated_at}";
                 font-family: 'Helvetica Neue', Arial, sans-serif;
-                font-size: 7px; color: #9ca3af; padding: 14px 0 0 32px;
+                font-size: 7.5px; color: #9ca3af; padding: 16px 0 0 32px;
             }}
             @bottom-center {{
                 content: "Powered by SplitEase";
                 font-family: 'Helvetica Neue', Arial, sans-serif;
-                font-size: 7.5px; color: #9ca3af; padding-top: 14px;
+                font-size: 7.5px; color: #9ca3af; padding-top: 16px;
             }}
             @bottom-right {{
                 content: "Page " counter(page) " of " counter(pages);
                 font-family: 'Helvetica Neue', Arial, sans-serif;
-                font-size: 7.5px; font-weight: 700; color: #6b7280; padding: 14px 32px 0 0;
+                font-size: 7.5px; font-weight: 700; color: #6b7280; padding: 16px 32px 0 0;
             }}
         }}
         * {{ box-sizing: border-box; }}
