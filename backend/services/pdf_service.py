@@ -49,16 +49,17 @@ def _fmt_date(d: str) -> str:
         return d
 
 
-def _row_html(e: dict, is_last: bool) -> str:
+def _row_html(e: dict, is_last: bool, zebra: bool) -> str:
     inflow = e["type"] in INFLOW_TYPES
     sign = "+" if inflow else "\u2212"
     amt_color = "#047857" if inflow else "#111827"
     type_label = TYPE_LABEL.get(e["type"], e.get("type", "").replace("_", " ").title())
     sub = e.get("sub") or ""
     border = "border-bottom: none;" if is_last else ""
+    bg = "background: #f8f9fb;" if zebra else "background: #ffffff;"
 
     return f"""
-    <div class="row" style="{border}">
+    <div class="row" style="{border}{bg}">
         <div class="col-date">{_fmt_date(e.get('date',''))}</div>
         <div class="col-desc">
             <div class="tx-title">{e.get('label','')}</div>
@@ -92,7 +93,7 @@ def generate_statement_pdf(
     net = total_in - total_out
 
     n = len(events)
-    rows = "".join(_row_html(e, i == n - 1) for i, e in enumerate(events)) or \
+    rows = "".join(_row_html(e, i == n - 1, i % 2 == 1) for i, e in enumerate(events)) or \
         '<div class="row" style="border-bottom:none;"><div class="empty">No transactions in this period.</div></div>'
 
     html = f"""
@@ -118,7 +119,7 @@ def generate_statement_pdf(
         }}
         * {{ box-sizing: border-box; }}
         body {{
-            font-family: 'Helvetica Neue', Arial, sans-serif;
+            font-family: -apple-system, 'SF Pro Text', 'Segoe UI', Roboto, Arial, sans-serif;
             color: #000; margin: 0; font-size: 11px; line-height: 1.4;
         }}
         .page {{ padding: 0.75in; }}
@@ -142,7 +143,8 @@ def generate_statement_pdf(
 
         .period {{
             font-size: 11px; color: #6b7280; margin-bottom: 24px;
-            padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;
+            padding: 14px 16px; background: #f8f9fb; border-radius: 8px;
+            border: 1px solid #eceef1;
         }}
         .period .label {{ font-weight: 500; color: #000; }}
 
@@ -155,7 +157,7 @@ def generate_statement_pdf(
         }}
         .row {{
             display: grid; grid-template-columns: 1.2fr 2fr 1.2fr 0.8fr; gap: 16px;
-            padding-top: 14px; padding-bottom: 14px; border-bottom: 1px solid #f3f4f6;
+            padding: 14px 12px; border-bottom: 1px solid #f3f4f6; border-radius: 6px;
         }}
         .col-date {{ font-size: 11px; font-weight: 600; color: #000; }}
         .col-desc {{ }}
