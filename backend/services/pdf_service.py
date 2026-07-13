@@ -127,9 +127,9 @@ def generate_statement_pdf(
             display: flex; justify-content: space-between; align-items: flex-start;
             margin-bottom: 32px;
         }}
-        .brand-row {{ display: flex; align-items: center; gap: 18px; }}
+        .brand-row {{ display: flex; align-items: center; gap: 12px; }}
         .logo {{ width: 24px; height: 24px; border-radius: 6px; flex-shrink: 0; object-fit: cover; display: block; }}
-        .brand-name {{ font-size: 18px; font-weight: 600; letter-spacing: -0.5px; color: #000; }}
+        .brand-name {{ font-size: 18px; font-weight: 700; letter-spacing: -0.5px; color: #000; }}
         .brand-name .accent {{ color: #2563eb; }}
         .doc-label {{
             font-size: 10px; font-weight: 500; letter-spacing: 0.15em;
@@ -164,7 +164,7 @@ def generate_statement_pdf(
         .tx-sub {{ font-size: 10px; color: #9ca3af; }}
         .col-type {{ font-size: 10.5px; font-weight: 600; color: #4b5563; }}
         .col-amt {{ text-align: right; font-size: 11.5px; font-weight: 800; }}
-        .empty {{ text-align: center; color: #9ca3af; padding: 30px 0; grid-column: 1 / -1; }}
+        .empty {{ text-align: center; color: #9ca3af; padding: 30px 0; grid-column: 1 / -1; white-space: nowrap; }}
 
         .summary-wrap {{
             display: flex; justify-content: flex-end; margin-bottom: 8px;
@@ -187,7 +187,7 @@ def generate_statement_pdf(
         }}
         .footer-logo {{
             width: 10px; height: 10px; border-radius: 2px; object-fit: cover;
-            vertical-align: middle; margin-right: 5px; display: inline-block;
+            vertical-align: middle; margin: 0 5px; display: inline-block;
         }}
         .footer-brand-text {{
             font-size: 8px; color: #9ca3af; font-family: 'Helvetica Neue', Arial, sans-serif;
@@ -199,8 +199,9 @@ def generate_statement_pdf(
     <body>
 
         <div class="footer-brand">
+            <span class="footer-brand-text">Powered by</span>
             {logo_img.replace('class="logo"', 'class="footer-logo"')}
-            <span class="footer-brand-text">Powered by <span class="base">Split</span><span class="accent">Ease</span></span>
+            <span class="footer-brand-text"><span class="base">Split</span><span class="accent">Ease</span></span>
         </div>
 
         <div class="page">
