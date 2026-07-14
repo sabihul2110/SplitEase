@@ -125,6 +125,11 @@ def generate_statement_pdf(
         }}
         .page {{ padding: 0.75in; }}
 
+        .top-bar {{
+            position: fixed; top: 0; left: 0; right: 0;
+            height: 5px; background: #2563eb;
+        }}
+
         .header {{
             display: flex; justify-content: space-between; align-items: flex-start;
             margin-bottom: 32px;
@@ -142,21 +147,29 @@ def generate_statement_pdf(
             color: #000; 
         }}
         .brand-name .accent {{ color: #2563eb; font-weight: 700; }}
+        .doc-right {{ text-align: right; padding-top: 4px; }}
         .doc-label {{
             font-size: 10px; font-weight: 500; letter-spacing: 0.15em;
-            color: #9ca3af; text-transform: uppercase; padding-top: 4px;
+            color: #9ca3af; text-transform: uppercase;
+        }}
+        .stmt-id {{
+            font-size: 8px; color: #c7c9cc; margin-top: 6px;
+            font-family: 'Courier New', monospace; letter-spacing: 0.03em;
         }}
 
-        .user-block {{ margin-bottom: 32px; }}
-        .user-name {{ font-size: 12px; font-weight: 500; margin-bottom: 4px; color: #000; }}
+        .info-box {{
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 32px; padding: 20px 24px; background: #f8f9fb;
+            border-radius: 10px; border: 1px solid #eceef1;
+        }}
+        .user-name {{ font-size: 13px; font-weight: 700; margin-bottom: 4px; color: #000; }}
         .user-email {{ font-size: 11px; color: #6b7280; line-height: 1.6; }}
-
-        .period {{
-            font-size: 11px; color: #6b7280; margin-bottom: 24px;
-            padding: 14px 16px; background: #f8f9fb; border-radius: 8px;
-            border: 1px solid #eceef1;
+        .info-right {{ text-align: right; }}
+        .period-label {{
+            font-size: 9.5px; font-weight: 600; letter-spacing: 0.1em;
+            color: #9ca3af; text-transform: uppercase; margin-bottom: 6px;
         }}
-        .period .label {{ font-weight: 500; color: #000; }}
+        .period-value {{ font-size: 13px; font-weight: 700; color: #000; }}
 
         .table {{ margin-bottom: 32px; }}
         .thead {{
@@ -212,20 +225,29 @@ def generate_statement_pdf(
     </style></head>
     <body>
 
+        <div class="top-bar"></div>
+
         <div class="footer-brand"><span class="footer-brand-text">Powered by</span>{logo_img.replace('class="logo"', 'class="footer-logo"')}<span class="footer-brand-text"><span class="base">Split</span><span class="accent">Ease</span></span></div>
 
         <div class="page">
             <div class="header">
                 <div class="brand-row">{logo_img}<div class="brand-name">Split<span class="accent">Ease</span></div></div>
-                <div class="doc-label">Financial Activity Statement</div>
+                <div class="doc-right">
+                    <div class="doc-label">Financial Activity Statement</div>
+                    <div class="stmt-id">{stmt_id}</div>
+                </div>
             </div>
 
-            <div class="user-block">
-                <div class="user-name">{user_name}</div>
-                <div class="user-email">{user_email}</div>
+            <div class="info-box">
+                <div class="info-left">
+                    <div class="user-name">{user_name}</div>
+                    <div class="user-email">{user_email}</div>
+                </div>
+                <div class="info-right">
+                    <div class="period-label">Statement Period</div>
+                    <div class="period-value">{period_text}</div>
+                </div>
             </div>
-
-            <div class="period"><span class="label">Statement Period:</span> {period_text}</div>
 
             <div class="table">
                 <div class="thead">
