@@ -5,10 +5,11 @@ import { useNavigate, useOutletContext } from "react-router-dom";
 import { getTimeline } from "../../api/timeline";
 import { deletePersonalExpense } from "../../api/personalExpenses";
 import { deleteIncome } from "../../api/income";
-import { deleteLoan, repayLoan } from "../../api/loans";
-import { deleteBorrow } from "../../api/loans";
+import { deleteLoan, deleteBorrow, repayLoan } from "../../api/loans";
 import AddEntryModal from "../../components/feature/AddEntryModal";
 import { Icons } from "../../components/icons";
+import DateInput from "../../components/common/DateInput";
+import Toast from "../../components/common/Toast";
 
 // ─────────────────────────────────────────────
 //  Styles
@@ -182,6 +183,7 @@ const STYLES = `
     display: flex; align-items: center; gap: 7px;
     margin-top: 8px;
   }
+  .me-repay-date-wrap { max-width: 210px; margin-top: 8px; margin-bottom: 6px; }
   .me-repay-input {
     flex: 1; max-width: 160px;
     padding: 6px 10px; border-radius: 7px;
@@ -247,25 +249,35 @@ const STYLES = `
 //  SVG icons — replaces all emojis
 // ─────────────────────────────────────────────
 const TYPE_ICONS = {
-  personal_expense:    { Icon: Icons.personalExpense, bg: "rgba(239,68,68,0.12)",   color: "var(--danger)"  },
-  group_expense:       { Icon: Icons.groupExpense,    bg: "rgba(37,99,235,0.12)",   color: "var(--danger)"  },
-  group_expense_owed:  { Icon: Icons.groupExpense,    bg: "rgba(37,99,235,0.12)",   color: "var(--danger)"  },
-  settlement_sent:     { Icon: Icons.settlement,      bg: "rgba(239,68,68,0.10)",   color: "var(--danger)"  },
-  income:              { Icon: Icons.income,          bg: "rgba(16,185,129,0.12)",  color: "var(--success)" },
-  settlement_received: { Icon: Icons.settlement,      bg: "rgba(99,102,241,0.12)",  color: "var(--success)" },
-  loan_given:          { Icon: Icons.lendMoney,       bg: "rgba(245,158,11,0.12)",  color: "#f59e0b"        },
-  loan_taken:          { Icon: Icons.borrowMoney,     bg: "rgba(99,102,241,0.12)",  color: "#818cf8"        },
+  personal_expense:        { Icon: Icons.personalExpense, bg: "rgba(239,68,68,0.12)",   color: "var(--danger)"  },
+  group_expense:           { Icon: Icons.groupExpense,    bg: "rgba(37,99,235,0.12)",   color: "var(--danger)"  },
+  group_expense_owed:      { Icon: Icons.groupExpense,    bg: "rgba(37,99,235,0.12)",   color: "var(--danger)"  },
+  settlement_sent:         { Icon: Icons.settlement,      bg: "rgba(239,68,68,0.10)",   color: "var(--danger)"  },
+  income:                  { Icon: Icons.income,          bg: "rgba(16,185,129,0.12)",  color: "var(--success)" },
+  settlement_received:     { Icon: Icons.settlement,      bg: "rgba(99,102,241,0.12)",  color: "var(--success)" },
+  loan_given:               { Icon: Icons.lendMoney,       bg: "rgba(245,158,11,0.12)",  color: "#f59e0b"        },
+  loan_taken:               { Icon: Icons.borrowMoney,     bg: "rgba(99,102,241,0.12)",  color: "#818cf8"        },
+  // FIX: previously missing — these two entry types silently vanished from
+  // the Expenses feed because EntryRow bails out when TYPE_ICONS[type] is undefined.
+  loan_repayment_received: { Icon: Icons.settlement,      bg: "rgba(16,185,129,0.12)",  color: "var(--success)" },
+  loan_repayment_paid:     { Icon: Icons.settlement,      bg: "rgba(239,68,68,0.10)",   color: "var(--danger)"  },
 };
 
 const TYPE_CFG = {
-  personal_expense:    { sign: "-", bucket: "spent"    },
-  group_expense:       { sign: "-", bucket: "spent"    },
-  group_expense_owed:  { sign: "-", bucket: "spent"    },
-  settlement_sent:     { sign: "-", bucket: "spent"    },
-  income:              { sign: "+", bucket: "received" },
-  settlement_received: { sign: "+", bucket: "received" },
-  loan_given:          { sign: "-", bucket: "loans"    },
-  loan_taken:          { sign: "+", bucket: "loans"    },
+  personal_expense:        { sign: "-", bucket: "spent"    },
+  group_expense:           { sign: "-", bucket: "spent"    },
+  group_expense_owed:      { sign: "-", bucket: "spent"    },
+  settlement_sent:         { sign: "-", bucket: "spent"    },
+  income:                  { sign: "+", bucket: "received" },
+  settlement_received:     { sign: "+", bucket: "received" },
+  loan_given:               { sign: "-", bucket: "loans"    },
+  loan_taken:               { sign: "+", bucket: "loans"    },
+  // Repayment cash flow is distinct from the loan's own "loans" bucket — the
+  // loan_given/loan_taken receivable already reflects the reduced balance,
+  // so repayments count as actual Spent/Received cash movement instead,
+  // to avoid double-counting the outstanding-balance figures. (Matches mobile.)
+  loan_repayment_received: { sign: "+", bucket: "received" },
+  loan_repayment_paid:     { sign: "-", bucket: "spent"    },
 };
 
 const TABS = [
@@ -471,8 +483,9 @@ function MonthNavigator({ value, onChange, availableMonths }) {
 // ─────────────────────────────────────────────
 //  Inline repayment widget
 // ─────────────────────────────────────────────
-function InlineRepay({ entry, onSuccess }) {
+function InlineRepay({ entry, onSuccess, onToast }) {
   const [amt,    setAmt]    = useState("");
+  const [date,   setDate]   = useState(todayStr());
   const [saving, setSaving] = useState(false);
   const [err,    setErr]    = useState("");
 
@@ -495,9 +508,12 @@ function InlineRepay({ entry, onSuccess }) {
     if (parsed > remaining) { setErr(`Max ₹${remaining.toLocaleString("en-IN")}`); return; }
     setSaving(true);
     try {
-      await api.post(`/loans/${entry.ref_id}/repay`, { repayment_amount: parsed });
+      // FIX: previously called a bare `api.post(...)` with no `api` import
+      // (would throw ReferenceError) and never sent repayment_date.
+      await repayLoan(entry.ref_id, { repayment_amount: parsed, repayment_date: date });
       setAmt("");
-      onSuccess();
+      onToast?.("Repayment recorded");
+      onSuccess?.();
     } catch (ex) {
       setErr(ex?.response?.data?.detail || "Failed.");
     } finally {
@@ -507,12 +523,17 @@ function InlineRepay({ entry, onSuccess }) {
 
   return (
     <div style={{ marginTop: 8 }}>
-      <div style={{ fontSize: 11.5, color: "var(--text3)", marginBottom: 5 }}>
+      <div style={{ fontSize: 11.5, color: "var(--text3)", marginBottom: 6 }}>
         Remaining: <span style={{ color: "#f59e0b", fontWeight: 700 }}>
           ₹{remaining.toLocaleString("en-IN")}
         </span>
         {" "}· Record repayment:
       </div>
+
+      <div className="me-repay-date-wrap">
+        <DateInput value={date} onChange={setDate} accentColor="#10b981" maxDate={new Date()} />
+      </div>
+
       <div className="me-repay-row">
         <input
           className="me-repay-input"
@@ -538,7 +559,7 @@ function InlineRepay({ entry, onSuccess }) {
 // ─────────────────────────────────────────────
 //  Single entry row
 // ─────────────────────────────────────────────
-function EntryRow({ entry, idx, deleting, onDelete, navigate }) {
+function EntryRow({ entry, idx, deleting, onDelete, navigate, onToast, onRepaySuccess }) {
   const cfg     = TYPE_CFG[entry.type];
   const iconCfg = TYPE_ICONS[entry.type];
   if (!cfg || !iconCfg) return null;
@@ -586,7 +607,7 @@ function EntryRow({ entry, idx, deleting, onDelete, navigate }) {
           </div>
         )}
 
-        {isLoanGiven && <InlineRepay entry={entry} onSuccess={() => {}} />}
+        {isLoanGiven && <InlineRepay entry={entry} onSuccess={onRepaySuccess} onToast={onToast} />}
 
         {isLoanTaken && (() => {
           const rem = entry.receivable ?? 0;
@@ -644,9 +665,15 @@ export default function Expenses() {
   const [filter,   setFilter]   = useState("all");
   const [search,   setSearch]   = useState("");
   const [deleting, setDeleting] = useState(null);
+  const [toast,    setToast]    = useState(null);
 
   // Default to current month instead of "all"
   const [selMonth, setSelMonth] = useState(currentMonth);
+
+  function showToast(msg, isErr = false) {
+    setToast({ msg, isErr });
+    setTimeout(() => setToast(null), 3000);
+  }
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -698,8 +725,11 @@ export default function Expenses() {
       else if (entry.type === "income")      await deleteIncome(entry.ref_id);
       else if (entry.type === "loan_given")  await deleteLoan(entry.ref_id);
       else if (entry.type === "loan_taken")  await deleteBorrow(entry.ref_id);
+      showToast("Deleted");
       await load();
-    } catch { /* silent */ }
+    } catch {
+      showToast("Delete failed", true);
+    }
     finally { setDeleting(null); }
   }
 
@@ -865,6 +895,8 @@ export default function Expenses() {
                           deleting={deleting}
                           onDelete={handleDelete}
                           navigate={navigate}
+                          onToast={showToast}
+                          onRepaySuccess={load}
                         />
                       ))}
                     </div>
@@ -875,6 +907,8 @@ export default function Expenses() {
           </div>
         )}
       </>
+
+      <Toast toast={toast} />
     </>
   );
 }

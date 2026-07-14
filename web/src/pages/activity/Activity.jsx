@@ -4,6 +4,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { getTimeline, downloadStatement } from "../../api/timeline";
+import DateInput from "../../components/common/DateInput";
 
 const STYLES = `
   @keyframes actFadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
@@ -65,8 +66,8 @@ const STYLES = `
   .act-radio-inner { width: 9px; height: 9px; border-radius: 50%; background: var(--primary); }
 
   .act-custom-row { margin-top: 14px; display: flex; flex-direction: column; gap: 12px; }
-  .act-custom-label { font-size: 11px; color: var(--text3); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; display: block; }
-  .act-date-input { width: 100%; padding: 9px 12px; border-radius: 9px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 13.5px; font-family: inherit; outline: none; box-sizing: border-box; }
+
+  font-size: 13.5px; font-family: inherit; outline: none; box-sizing: border-box; }
 
   .act-modal-primary-btn { width: 100%; background: var(--primary); color: #fff; border: none; border-radius: 11px; padding: 13px; font-size: 14.5px; font-weight: 700; font-family: inherit; cursor: pointer; margin-top: 20px; transition: opacity 0.13s; }
   .act-modal-primary-btn:disabled { opacity: 0.6; cursor: default; }
@@ -78,14 +79,16 @@ const STYLES = `
 
 // Type metadata: icon background + foreground colour + label
 const TYPE_META = {
-  group_expense:       { bg: "rgba(59,130,246,0.12)",  color: "#60a5fa",  label: "Group expense"   },
-  group_expense_owed:  { bg: "rgba(239,68,68,0.10)",   color: "#f87171",  label: "You owe"         },
-  personal_expense:    { bg: "rgba(245,158,11,0.12)",  color: "#fbbf24",  label: "Personal"        },
-  income:              { bg: "rgba(16,185,129,0.12)",  color: "#34d399",  label: "Income"          },
-  loan_given:          { bg: "rgba(99,102,241,0.12)",  color: "#818cf8",  label: "Loan given"      },
-  loan_taken:          { bg: "rgba(236,72,153,0.12)",  color: "#f472b6",  label: "Loan taken"      },
-  settlement_received: { bg: "rgba(16,185,129,0.12)",  color: "#34d399",  label: "Received"        },
-  settlement_sent:     { bg: "rgba(59,130,246,0.12)",  color: "#60a5fa",  label: "Sent"            },
+  group_expense:            { bg: "rgba(59,130,246,0.12)",  color: "#60a5fa",  label: "Group expense"    },
+  group_expense_owed:       { bg: "rgba(239,68,68,0.10)",   color: "#f87171",  label: "You owe"          },
+  personal_expense:         { bg: "rgba(245,158,11,0.12)",  color: "#fbbf24",  label: "Personal"         },
+  income:                   { bg: "rgba(16,185,129,0.12)",  color: "#34d399",  label: "Income"           },
+  loan_given:                { bg: "rgba(99,102,241,0.12)",  color: "#818cf8",  label: "Loan given"       },
+  loan_taken:                { bg: "rgba(236,72,153,0.12)",  color: "#f472b6",  label: "Loan taken"       },
+  settlement_received:      { bg: "rgba(16,185,129,0.12)",  color: "#34d399",  label: "Received"         },
+  settlement_sent:          { bg: "rgba(59,130,246,0.12)",  color: "#60a5fa",  label: "Sent"             },
+  loan_repayment_received:  { bg: "rgba(16,185,129,0.12)",  color: "#34d399",  label: "Repayment received" },
+  loan_repayment_paid:      { bg: "rgba(239,68,68,0.10)",   color: "#f87171",  label: "Repayment paid"     },
 };
 
 const ICON_SVG = {
@@ -102,6 +105,7 @@ const ICON_SVG = {
 function iconForType(type) {
   if (type.includes("expense"))    return ICON_SVG.expense;
   if (type.includes("settlement")) return ICON_SVG.settlement;
+  if (type.includes("repayment"))  return ICON_SVG.settlement;
   if (type === "income")           return ICON_SVG.income;
   return ICON_SVG.loan;
 }
@@ -118,7 +122,8 @@ function tabMatches(tab, type) {
   if (tab === "all")      return true;
   if (tab === "group")    return type === "group_expense" || type === "group_expense_owed" || type.startsWith("settlement");
   if (tab === "personal") return type === "personal_expense" || type === "income";
-  if (tab === "money")    return type === "loan_given" || type === "loan_taken";
+  if (tab === "money")    return type === "loan_given" || type === "loan_taken" ||
+                                  type === "loan_repayment_received" || type === "loan_repayment_paid";
   return true;
 }
 
@@ -364,7 +369,8 @@ export default function Activity() {
                   const meta      = TYPE_META[item.type] || TYPE_META.group_expense;
                   const canNav    = !!item.group_id;
                   const amount    = Number(item.amount || 0);
-                  const isInflow  = item.type === "income" || item.type === "settlement_received" || item.type === "loan_taken";
+                  const isInflow = item.type === "income" || item.type === "settlement_received" ||
+                 item.type === "loan_taken" || item.type === "loan_repayment_received";
 
                   return (
                     <div key={`${item.type}-${item.ref_id}-${idx}`}
@@ -454,27 +460,18 @@ export default function Activity() {
 
               {periodTab === "custom" && (
                 <div className="act-custom-row">
-                  <div>
-                    <span className="act-custom-label">From</span>
-                    <input
-                      type="date"
-                      className="act-date-input"
-                      value={customStart}
-                      max={customEnd}
-                      onChange={e => setCustomStart(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <span className="act-custom-label">To</span>
-                    <input
-                      type="date"
-                      className="act-date-input"
-                      value={customEnd}
-                      min={customStart}
-                      max={isoToday()}
-                      onChange={e => setCustomEnd(e.target.value)}
-                    />
-                  </div>
+                  <DateInput
+                    label="From"
+                    value={customStart}
+                    onChange={setCustomStart}
+                    maxDate={new Date(customEnd)}
+                  />
+                  <DateInput
+                    label="To"
+                    value={customEnd}
+                    onChange={setCustomEnd}
+                    maxDate={new Date()}
+                  />
                 </div>
               )}
 
