@@ -700,6 +700,22 @@ def propose_or_apply_repayment(
                         float(row["amount"]), str(row["entry_date"]), new_remaining, new_status,
                     )
 
+            # Log this applied repayment so it shows up on the timeline/statement.
+            # entry_id covers the requester's own side; if linked, mirror_id
+            # covers the counterpart's side, so both users see the event.
+            today = __import__('datetime').date.today().isoformat()
+            cur.execute(
+                "INSERT INTO Ledger_Repayments (entry_id, proposed_by, amount, status, repayment_date, resolved_at) "
+                "VALUES (%s, %s, %s, 'accepted', %s, NOW())",
+                (entry_id, requester_user_id, repay, today),
+            )
+            if mirror_id:
+                cur.execute(
+                    "INSERT INTO Ledger_Repayments (entry_id, proposed_by, amount, status, repayment_date, resolved_at) "
+                    "VALUES (%s, %s, %s, 'accepted', %s, NOW())",
+                    (mirror_id, requester_user_id, repay, today),
+                )
+
             conn.commit()
             return {
                 "entry_id": entry_id,
@@ -839,10 +855,17 @@ def accept_repayment(repayment_id: int, recipient_user_id: int) -> dict:
                 (new_remaining, new_status, mirror_id),
             )
 
+        today = __import__('datetime').date.today().isoformat()
         cur.execute(
-            "UPDATE Ledger_Repayments SET status = 'accepted', resolved_at = NOW() WHERE repayment_id = %s",
-            (repayment_id,),
+            "UPDATE Ledger_Repayments SET status = 'accepted', resolved_at = NOW(), repayment_date = %s WHERE repayment_id = %s",
+            (today, repayment_id),
         )
+        if mirror_id:
+            cur.execute(
+                "INSERT INTO Ledger_Repayments (entry_id, proposed_by, amount, status, repayment_date, resolved_at) "
+                "VALUES (%s, %s, %s, 'accepted', %s, NOW())",
+                (mirror_id, row["proposed_by"], repay, today),
+            )
 
         cur.execute("SELECT name FROM Users WHERE user_id = %s", (debtor_id,))
         debtor_name_row = cur.fetchone()

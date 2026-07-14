@@ -30,8 +30,10 @@ TYPE_LABEL = {
     "loan_taken": "Loan Taken",
     "settlement_received": "Settlement Received",
     "settlement_sent": "Settlement Sent",
+    "loan_repayment_received": "Repayment Received",
+    "loan_repayment_paid": "Repayment Paid",
 }
-INFLOW_TYPES = {"income", "settlement_received", "loan_taken"}
+INFLOW_TYPES = {"income", "settlement_received", "loan_taken", "loan_repayment_received"}
 
 
 def _fmt(n) -> str:

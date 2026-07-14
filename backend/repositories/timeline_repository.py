@@ -167,6 +167,30 @@ def fetch_timeline_for_period(user_id: int, start_date: str, end_date: str) -> l
             JOIN `Groups` g ON g.group_id = p.group_id
             WHERE p.payer_id = %s AND p.payment_date BETWEEN %s AND %s
 
+            UNION ALL
+
+            SELECT
+                CASE WHEN le.direction = 'lent' THEN 'loan_repayment_received' ELSE 'loan_repayment_paid' END AS type,
+                lr.repayment_date                      AS date,
+                lr.amount,
+                NULL                                   AS my_share,
+                NULL                                   AS receivable,
+                CONCAT(
+                    CASE WHEN le.direction = 'lent' THEN 'Repayment from ' ELSE 'Repayment to ' END,
+                    p.display_name
+                )                                       AS label,
+                le.note                                AS sub,
+                lr.repayment_id                         AS ref_id,
+                NULL                                    AS group_id,
+                NULL                                    AS group_name,
+                lr.resolved_at                          AS created_at
+            FROM Ledger_Repayments lr
+            JOIN Ledger_Entries le ON le.entry_id = lr.entry_id
+            JOIN People p          ON p.person_id = le.person_id
+            WHERE p.owner_user_id = %s
+              AND lr.status = 'accepted'
+              AND lr.repayment_date BETWEEN %s AND %s
+
         ) AS feed
         ORDER BY date DESC, created_at DESC
         """,
@@ -179,6 +203,7 @@ def fetch_timeline_for_period(user_id: int, start_date: str, end_date: str) -> l
             user_id, start_date, end_date,                    # borrows
             user_id, start_date, end_date,                    # settlement received
             user_id, start_date, end_date,                    # settlement sent
+            user_id, start_date, end_date,                    # loan repayments
         ),
     )
 
@@ -366,6 +391,29 @@ def fetch_unified_timeline(user_id: int, limit: int = 100, offset: int = 0) -> l
             JOIN `Groups` g ON g.group_id = p.group_id
             WHERE p.payer_id = %s
 
+            UNION ALL
+
+            SELECT
+                CASE WHEN le.direction = 'lent' THEN 'loan_repayment_received' ELSE 'loan_repayment_paid' END AS type,
+                lr.repayment_date                      AS date,
+                lr.amount,
+                NULL                                   AS my_share,
+                NULL                                   AS receivable,
+                CONCAT(
+                    CASE WHEN le.direction = 'lent' THEN 'Repayment from ' ELSE 'Repayment to ' END,
+                    p.display_name
+                )                                       AS label,
+                le.note                                AS sub,
+                lr.repayment_id                         AS ref_id,
+                NULL                                    AS group_id,
+                NULL                                    AS group_name,
+                lr.resolved_at                          AS created_at
+            FROM Ledger_Repayments lr
+            JOIN Ledger_Entries le ON le.entry_id = lr.entry_id
+            JOIN People p          ON p.person_id = le.person_id
+            WHERE p.owner_user_id = %s
+              AND lr.status = 'accepted'
+
         ) AS feed
         ORDER BY date DESC, created_at DESC
         LIMIT %s OFFSET %s
@@ -382,6 +430,7 @@ def fetch_unified_timeline(user_id: int, limit: int = 100, offset: int = 0) -> l
             user_id,           # borrows
             user_id,           # settlement received
             user_id,           # settlement sent
+            user_id,           # loan repayments
             limit,
             offset,
         ),
