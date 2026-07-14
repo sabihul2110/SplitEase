@@ -611,6 +611,8 @@ export default function PersonLedgerScreen({ navigation, route }) {
   const [toast, setToast]           = useState({ msg: '', type: 'success' });
   const [alert, setAlert]           = useState(null);
   const [selected, setSelected]     = useState(new Set());
+  const [showSettleModal, setShowSettleModal] = useState(false);
+  const [settleDate, setSettleDate] = useState(new Date().toISOString().split('T')[0]);
   const isSelecting                 = selected.size > 0;
 
   function showToast(msg, type = 'success') {
@@ -633,35 +635,32 @@ export default function PersonLedgerScreen({ navigation, route }) {
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
 
-  async function handleSettleUp() {
-    setAlert({
-      title: 'Settle Up?',
-      message: `This will mark all active entries between you and ${personName} as settled. The net amount changes to ₹0. This cannot be undone.`,
-      buttons: [
-        { text: 'Cancel', style: 'cancel', onPress: () => setAlert(null) },
-        {
-          text: 'Settle Up', style: 'default',
-          onPress: async () => {
-            setAlert(null);
-            setSettling(true);
-            try {
-              const res = await peopleApi.settleUp(personId);
-              if (res?.data?.pending_settlement) {
-                showToast('Settle request sent — awaiting their confirmation', 'warning');
-              } else {
-                showToast('Settled up successfully');
-              }
-              load(true);
-            } catch (err) {
-              const detail = err?.response?.data?.detail;
-              showToast(typeof detail === 'string' ? detail : 'Failed to settle', 'error');
-            } finally {
-              setSettling(false);
-            }
-          },
-        },
-      ],
-    });
+  function handleSettleUp() {
+    setSettleDate(new Date().toISOString().split('T')[0]);
+    setShowSettleModal(true);
+  }
+
+  async function confirmSettleUp() {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(settleDate)) {
+      showToast('Use YYYY-MM-DD format for the date', 'error');
+      return;
+    }
+    setShowSettleModal(false);
+    setSettling(true);
+    try {
+      const res = await peopleApi.settleUp(personId, settleDate);
+      if (res?.data?.pending_settlement) {
+        showToast('Settle request sent — awaiting their confirmation', 'warning');
+      } else {
+        showToast('Settled up successfully');
+      }
+      load(true);
+    } catch (err) {
+      const detail = err?.response?.data?.detail;
+      showToast(typeof detail === 'string' ? detail : 'Failed to settle', 'error');
+    } finally {
+      setSettling(false);
+    }
   }
 
 
@@ -834,6 +833,27 @@ export default function PersonLedgerScreen({ navigation, route }) {
           await handleAddEntry(payload);
         }}
       />
+      <Modal visible={showSettleModal} animationType="fade" transparent onRequestClose={() => setShowSettleModal(false)}>
+        <KeyboardAvoidingView style={settleModalStyles.overlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <TouchableOpacity style={StyleSheet.absoluteFill} onPress={() => setShowSettleModal(false)} activeOpacity={1} />
+          <View style={settleModalStyles.box}>
+            <Text style={settleModalStyles.title}>Settle Up with {personName}</Text>
+            <Text style={settleModalStyles.subtitle}>
+              This marks all active entries as settled. The net amount changes to ₹0. This cannot be undone.
+            </Text>
+            <Text style={settleModalStyles.label}>SETTLEMENT DATE</Text>
+            <DatePickerInput value={settleDate} onChange={setSettleDate} accentColor={COLORS.primary} />
+            <View style={settleModalStyles.actions}>
+              <TouchableOpacity style={settleModalStyles.cancelBtn} onPress={() => setShowSettleModal(false)}>
+                <Text style={settleModalStyles.cancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={settleModalStyles.confirmBtn} onPress={confirmSettleUp} disabled={settling}>
+                <Text style={settleModalStyles.confirmText}>{settling ? 'Settling…' : 'Settle Up'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
       <Toast config={toast} />
       <AppAlert config={alert} />
     </SafeAreaView>
@@ -1025,6 +1045,33 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.full, paddingHorizontal: SPACING.xl, paddingVertical: 13, marginTop: SPACING.sm,
   },
   emptyBtnText: { fontSize: FONT_SIZE.md, fontWeight: FONT_WEIGHT.bold, color: '#fff' },
+});
+
+const settleModalStyles = StyleSheet.create({
+  overlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.6)', padding: SPACING.base },
+  box: {
+    width: '100%', maxWidth: 360,
+    backgroundColor: COLORS.surface, borderRadius: RADIUS.xl,
+    borderWidth: 1, borderColor: COLORS.border,
+    padding: SPACING.base, gap: SPACING.sm,
+  },
+  title: { fontSize: FONT_SIZE.lg, fontWeight: FONT_WEIGHT.bold, color: COLORS.text },
+  subtitle: { fontSize: FONT_SIZE.sm, color: COLORS.text3, lineHeight: 18, marginBottom: 4 },
+  label: {
+    fontSize: FONT_SIZE.xs, fontWeight: FONT_WEIGHT.bold,
+    color: COLORS.text3, letterSpacing: 0.9, textTransform: 'uppercase', marginTop: 4,
+  },
+  actions: { flexDirection: 'row', gap: SPACING.sm, marginTop: SPACING.sm },
+  cancelBtn: {
+    flex: 1, paddingVertical: 13, borderRadius: RADIUS.lg,
+    borderWidth: 1, borderColor: COLORS.border2, alignItems: 'center',
+  },
+  cancelText: { fontSize: FONT_SIZE.md, fontWeight: FONT_WEIGHT.semibold, color: COLORS.text2 },
+  confirmBtn: {
+    flex: 2, paddingVertical: 13, borderRadius: RADIUS.lg,
+    backgroundColor: COLORS.primary, alignItems: 'center',
+  },
+  confirmText: { fontSize: FONT_SIZE.md, fontWeight: FONT_WEIGHT.bold, color: '#fff' },
 });
 
 const entryModal = StyleSheet.create({

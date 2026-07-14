@@ -80,6 +80,7 @@ function ProgressBar({ pct, color }) {
 
 function LoanCard({ item, isLent, onRefresh, idx, showToast, setAlert }) {
   const [repayAmt, setRepayAmt] = useState("");
+  const [repayDate, setRepayDate] = useState(new Date().toISOString().split("T")[0]);
   const [repayErr, setRepayErr] = useState("");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -124,16 +125,21 @@ function LoanCard({ item, isLent, onRefresh, idx, showToast, setAlert }) {
       setRepayErr(`Max ₹${safeRem.toLocaleString("en-IN")}`);
       return;
     }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(repayDate)) {
+      setRepayErr("Use YYYY-MM-DD format for the date");
+      return;
+    }
     setSaving(true);
     
 
     setTimeout(async () => {
       try {
         const res = await (isLent
-          ? loansApi.repayLoan(idField, amountInput)
-          : loansApi.repayBorrow(idField, amountInput));
+          ? loansApi.repayLoan(idField, amountInput, repayDate)
+          : loansApi.repayBorrow(idField, amountInput, repayDate));
         if (!mountedRef.current) return;
         setRepayAmt("");
+        setRepayDate(new Date().toISOString().split("T")[0]);
         if (res?.data?.pending_repayment) {
           showToast?.("Repayment sent — awaiting their confirmation", "warning");
         } else {
@@ -230,6 +236,13 @@ function LoanCard({ item, isLent, onRefresh, idx, showToast, setAlert }) {
 
       {item.status === "active" && (
         <View style={styles.repaySection}>
+          <View style={{ marginBottom: 6 }}>
+            <DatePickerInput
+              value={repayDate}
+              onChange={(v) => { setRepayDate(v); setRepayErr(""); }}
+              accentColor={accentColor}
+            />
+          </View>
           <View style={styles.repayRow}>
             <TextInput
               style={styles.repayInput}

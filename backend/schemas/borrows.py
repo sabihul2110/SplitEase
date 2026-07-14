@@ -12,3 +12,4 @@ class BorrowIn(BaseModel):
 
 class BorrowRepayIn(BaseModel):
     repayment_amount: float
+    repayment_date:   str | None = None  # YYYY-MM-DD; defaults to today if omitted

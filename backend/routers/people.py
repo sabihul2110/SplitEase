@@ -4,7 +4,7 @@ Route order matters — static paths before dynamic {person_id} paths.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query
-from schemas.people import PersonCreate, EntryCreate, EntryRepay
+from schemas.people import PersonCreate, EntryCreate, EntryRepay, SettleUpIn
 from repositories import people_repository, push_repository, ledger_notification_repository, notification_repository
 from services.push_service import send_push
 from core.dependencies import get_current_user
@@ -21,11 +21,14 @@ def get_pending_requests(current_user: dict = Depends(get_current_user)):
 @router.post("/people/{person_id}/settle")
 def settle_up(
     person_id:        int,
+    body:              SettleUpIn,
     background_tasks: BackgroundTasks,
     current_user:     dict = Depends(get_current_user),
 ):
     try:
-        result = people_repository.propose_or_apply_settlement(person_id, current_user["user_id"])
+        result = people_repository.propose_or_apply_settlement(
+            person_id, current_user["user_id"], settlement_date=body.settlement_date,
+        )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
@@ -86,11 +89,14 @@ def get_sent_settlements(current_user: dict = Depends(get_current_user)):
 @router.post("/people/settlements/{request_id}/accept")
 def accept_settlement_route(
     request_id:        int,
+    body:               SettleUpIn,
     background_tasks:  BackgroundTasks,
     current_user:      dict = Depends(get_current_user),
 ):
     try:
-        result = people_repository.accept_settlement(request_id, current_user["user_id"])
+        result = people_repository.accept_settlement(
+            request_id, current_user["user_id"], settlement_date=body.settlement_date,
+        )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
@@ -336,6 +342,7 @@ def repay_entry(
             entry_id          = entry_id,
             requester_user_id = current_user["user_id"],
             repayment_amount  = body.repayment_amount,
+            repayment_date    = body.repayment_date,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))

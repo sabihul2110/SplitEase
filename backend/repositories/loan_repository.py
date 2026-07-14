@@ -215,7 +215,7 @@ def insert_loan(
         cur.close(); conn.close()
 
 
-def record_loan_repayment(loan_id: int, user_id: int, repayment_amount: float) -> dict:
+def record_loan_repayment(loan_id: int, user_id: int, repayment_amount: float, repayment_date: str | None = None) -> dict:
     """
     `loan_id` here is actually Ledger_Entries.entry_id (fetch_loans_with_pending
     aliases entry_id AS loan_id). Delegates to the canonical repayment flow in
@@ -229,6 +229,7 @@ def record_loan_repayment(loan_id: int, user_id: int, repayment_amount: float) -
         repayment_amount   = repayment_amount,
         expected_direction = "lent",
         not_found_message  = "Loan not found or not owned by user.",
+        repayment_date      = repayment_date,
     )
     result["loan_id"] = result.pop("entry_id")
     return result

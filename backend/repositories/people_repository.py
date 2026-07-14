@@ -623,6 +623,7 @@ def propose_or_apply_repayment(
     repayment_amount: float,
     expected_direction: str | None = None,
     not_found_message: str = "Entry not found or access denied.",
+    repayment_date: str | None = None,
 ) -> dict:
     """
     Canonical repayment entry point — used by the Loans/Borrows screens AND the
@@ -665,6 +666,15 @@ def propose_or_apply_repayment(
         if repay > remaining:
             raise ValueError(f"Repayment ₹{repay} exceeds remaining ₹{remaining}.")
 
+        today = __import__('datetime').date.today().isoformat()
+        entry_date_str = str(row["entry_date"])
+        if repayment_date:
+            if repayment_date < entry_date_str:
+                raise ValueError(f"Repayment date can't be before the entry date ({entry_date_str}).")
+            if repayment_date > today:
+                raise ValueError("Repayment date can't be in the future.")
+        resolved_date = repayment_date or today
+
         is_linked   = row["linked_user_id"] is not None
         is_creditor = row["direction"] == "lent"
 
@@ -703,17 +713,16 @@ def propose_or_apply_repayment(
             # Log this applied repayment so it shows up on the timeline/statement.
             # entry_id covers the requester's own side; if linked, mirror_id
             # covers the counterpart's side, so both users see the event.
-            today = __import__('datetime').date.today().isoformat()
             cur.execute(
                 "INSERT INTO Ledger_Repayments (entry_id, proposed_by, amount, status, repayment_date, resolved_at) "
                 "VALUES (%s, %s, %s, 'accepted', %s, NOW())",
-                (entry_id, requester_user_id, repay, today),
+                (entry_id, requester_user_id, repay, resolved_date),
             )
             if mirror_id:
                 cur.execute(
                     "INSERT INTO Ledger_Repayments (entry_id, proposed_by, amount, status, repayment_date, resolved_at) "
                     "VALUES (%s, %s, %s, 'accepted', %s, NOW())",
-                    (mirror_id, requester_user_id, repay, today),
+                    (mirror_id, requester_user_id, repay, resolved_date),
                 )
 
             conn.commit()
@@ -727,9 +736,12 @@ def propose_or_apply_repayment(
             }
 
         # Linked + requester is the debtor → propose, don't apply yet.
+        # Store the proposer's chosen date now so accept_repayment can honor
+        # it later instead of stamping the confirmation date.
         cur.execute(
-            "INSERT INTO Ledger_Repayments (entry_id, proposed_by, amount, status) VALUES (%s, %s, %s, 'pending')",
-            (entry_id, requester_user_id, repay),
+            "INSERT INTO Ledger_Repayments (entry_id, proposed_by, amount, status, repayment_date) "
+            "VALUES (%s, %s, %s, 'pending', %s)",
+            (entry_id, requester_user_id, repay, resolved_date),
         )
         repayment_id = cur.lastrowid
         conn.commit()
@@ -813,7 +825,8 @@ def accept_repayment(repayment_id: int, recipient_user_id: int) -> dict:
         cur.execute(
             """
             SELECT lr.repayment_id, lr.entry_id, lr.amount AS repay_amount, lr.status AS repay_status,
-                   lr.proposed_by, le.remaining_amount, le.direction, le.entry_date,
+                   lr.proposed_by, lr.repayment_date AS proposed_repayment_date,
+                   le.remaining_amount, le.direction, le.entry_date,
                    le.amount AS entry_amount, p.owner_user_id, p.linked_user_id
             FROM   Ledger_Repayments lr
             JOIN   Ledger_Entries le ON le.entry_id = lr.entry_id
@@ -855,16 +868,19 @@ def accept_repayment(repayment_id: int, recipient_user_id: int) -> dict:
                 (new_remaining, new_status, mirror_id),
             )
 
-        today = __import__('datetime').date.today().isoformat()
+        # Honor the date the proposer originally picked rather than stamping
+        # today's date at confirmation time — legacy rows with no stored date
+        # fall back to today.
+        resolved_date = str(row["proposed_repayment_date"]) if row.get("proposed_repayment_date") else __import__('datetime').date.today().isoformat()
         cur.execute(
-            "UPDATE Ledger_Repayments SET status = 'accepted', resolved_at = NOW(), repayment_date = %s WHERE repayment_id = %s",
-            (today, repayment_id),
+            "UPDATE Ledger_Repayments SET status = 'accepted', resolved_at = NOW() WHERE repayment_id = %s",
+            (repayment_id,),
         )
         if mirror_id:
             cur.execute(
                 "INSERT INTO Ledger_Repayments (entry_id, proposed_by, amount, status, repayment_date, resolved_at) "
                 "VALUES (%s, %s, %s, 'accepted', %s, NOW())",
-                (mirror_id, row["proposed_by"], repay, today),
+                (mirror_id, row["proposed_by"], repay, resolved_date),
             )
 
         cur.execute("SELECT name FROM Users WHERE user_id = %s", (debtor_id,))
@@ -968,7 +984,7 @@ def cancel_repayment(repayment_id: int, proposer_user_id: int) -> dict:
         cur.close(); conn.close()
 
 
-def _apply_settlement(person_id: int, owner_user_id: int) -> dict:
+def _apply_settlement(person_id: int, owner_user_id: int, settlement_date: str | None = None) -> dict:
     """
     Actually performs the settlement — marks all active entries as repaid and
     inserts a 'settlement' audit entry, mirrored to the linked user's side.
@@ -1012,6 +1028,9 @@ def _apply_settlement(person_id: int, owner_user_id: int) -> dict:
 
         settlement_amount = round(abs(net), 2)
         today = __import__('datetime').date.today().isoformat()
+        if settlement_date and settlement_date > today:
+            raise ValueError("Settlement date can't be in the future.")
+        resolved_settlement_date = settlement_date or today
 
         cur.execute(
             """
@@ -1033,7 +1052,7 @@ def _apply_settlement(person_id: int, owner_user_id: int) -> dict:
                 person_id, owner_user_id,
                 settlement_amount,
                 f"Net settlement — {'paid' if net < 0 else 'received'} ₹{settlement_amount:,.0f}",
-                today,
+                resolved_settlement_date,
             ),
         )
         entry_id = cur.lastrowid
@@ -1069,7 +1088,7 @@ def _apply_settlement(person_id: int, owner_user_id: int) -> dict:
                         mirror_person_id, owner_user_id,
                         settlement_amount,
                         f"Net settlement — {'received' if net < 0 else 'paid'} ₹{settlement_amount:,.0f}",
-                        today,
+                        resolved_settlement_date,
                     ),
                 )
 
@@ -1090,7 +1109,7 @@ def _apply_settlement(person_id: int, owner_user_id: int) -> dict:
         cur.close(); conn.close()
 
 
-def propose_or_apply_settlement(person_id: int, requester_user_id: int) -> dict:
+def propose_or_apply_settlement(person_id: int, requester_user_id: int, settlement_date: str | None = None) -> dict:
     """
     Canonical Settle Up entry point.
     - Unlinked person, or requester is the net CREDITOR (owed money): applies
@@ -1132,7 +1151,7 @@ def propose_or_apply_settlement(person_id: int, requester_user_id: int) -> dict:
 
         if not is_linked or net > 0:
             cur.close(); conn.close()
-            result = _apply_settlement(person_id, requester_user_id)
+            result = _apply_settlement(person_id, requester_user_id, settlement_date=settlement_date)
             result["pending_settlement"] = False
             return result
 
@@ -1211,7 +1230,7 @@ def fetch_sent_settlements(proposer_user_id: int) -> list[dict]:
     return rows
 
 
-def accept_settlement(request_id: int, recipient_user_id: int) -> dict:
+def accept_settlement(request_id: int, recipient_user_id: int, settlement_date: str | None = None) -> dict:
     """
     Creditor confirms a debtor-proposed settle-up. Applies via the creditor's own
     People row (so both mirrored sides settle correctly) — net is recomputed fresh
@@ -1255,7 +1274,7 @@ def accept_settlement(request_id: int, recipient_user_id: int) -> dict:
         conn.commit()
         cur.close(); conn.close()
 
-        settle_result = _apply_settlement(recip_person["person_id"], recipient_user_id)
+        settle_result = _apply_settlement(recip_person["person_id"], recipient_user_id, settlement_date=settlement_date)
         settle_result["debtor_id"] = proposer_id
         settle_result["creditor_id"] = recipient_user_id
         return settle_result

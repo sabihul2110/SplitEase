@@ -9,12 +9,14 @@ export const createPerson      = (payload)         => client.post(ENDPOINTS.peop
 export const deletePerson      = (id)              => client.delete(ENDPOINTS.deletePerson(id));
 export const getEntries        = (personId)        => client.get(ENDPOINTS.personEntries(personId));
 export const addEntry          = (personId, payload) => client.post(ENDPOINTS.addEntry(personId), payload);
-export const repayEntry        = (entryId, amt)    => client.post(ENDPOINTS.repayEntry(entryId), { repayment_amount: amt });
+export const repayEntry        = (entryId, amt, repaymentDate) =>
+  client.post(ENDPOINTS.repayEntry(entryId), { repayment_amount: amt, repayment_date: repaymentDate || null });
 export const deleteEntry       = (entryId)         => client.delete(ENDPOINTS.deleteEntry(entryId));
 export const acceptEntry       = (entryId)         => client.post(ENDPOINTS.acceptEntry(entryId));
 export const rejectEntry       = (entryId)         => client.post(ENDPOINTS.rejectEntry(entryId));
 export const getPendingRequests = () => client.get(ENDPOINTS.pendingRequests);
-export const settleUp           = (personId)       => client.post(ENDPOINTS.settleUp(personId));
+export const settleUp           = (personId, settlementDate) =>
+  client.post(ENDPOINTS.settleUp(personId), { settlement_date: settlementDate || null });
 export const getSentRequests    = ()               => client.get(ENDPOINTS.sentRequests);
 export const searchUsers       = (q)               => client.get(ENDPOINTS.userSearch(q));
 
@@ -26,6 +28,7 @@ export const cancelRepayment      = (repaymentId) => client.delete(ENDPOINTS.can
 
 export const getPendingSettlements = () => client.get(ENDPOINTS.pendingSettlements);
 export const getSentSettlements    = () => client.get(ENDPOINTS.sentSettlements);
-export const acceptSettlement      = (requestId) => client.post(ENDPOINTS.acceptSettlement(requestId));
+export const acceptSettlement      = (requestId, settlementDate) =>
+  client.post(ENDPOINTS.acceptSettlement(requestId), { settlement_date: settlementDate || null });
 export const rejectSettlement      = (requestId) => client.post(ENDPOINTS.rejectSettlement(requestId));
 export const cancelSettlement      = (requestId) => client.delete(ENDPOINTS.cancelSettlement(requestId));

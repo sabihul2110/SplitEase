@@ -80,6 +80,7 @@ def repay_borrow(
             borrow_id        = borrow_id,
             user_id          = current_user["user_id"],
             repayment_amount = body.repayment_amount,
+            repayment_date   = body.repayment_date,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))

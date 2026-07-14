@@ -19,3 +19,8 @@ class EntryCreate(BaseModel):
 
 class EntryRepay(BaseModel):
     repayment_amount: float
+    repayment_date:   Optional[str] = None  # YYYY-MM-DD; defaults to today if omitted
+
+
+class SettleUpIn(BaseModel):
+    settlement_date: Optional[str] = None  # YYYY-MM-DD; defaults to today if omitted

@@ -79,7 +79,7 @@ def insert_borrow(
         cur.close(); conn.close()
 
 
-def record_borrow_repayment(borrow_id: int, user_id: int, repayment_amount: float) -> dict:
+def record_borrow_repayment(borrow_id: int, user_id: int, repayment_amount: float, repayment_date: str | None = None) -> dict:
     """
     `borrow_id` here is actually Ledger_Entries.entry_id. Delegates to the
     canonical repayment flow in people_repository — a borrower (debtor)
@@ -93,6 +93,7 @@ def record_borrow_repayment(borrow_id: int, user_id: int, repayment_amount: floa
         repayment_amount   = repayment_amount,
         expected_direction = "borrowed",
         not_found_message  = "Borrow not found or not owned by user.",
+        repayment_date      = repayment_date,
     )
     result["borrow_id"] = result.pop("entry_id")
     return result
