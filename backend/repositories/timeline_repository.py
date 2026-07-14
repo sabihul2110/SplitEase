@@ -1,5 +1,4 @@
 # backend/repositories/timeline_repository.py
-# from core.database import get_connection
 
 from core.database import get_db
 
@@ -18,16 +17,16 @@ def fetch_timeline_for_period(user_id: int, start_date: str, end_date: str) -> l
         FROM (
 
             SELECT
-                'personal_expense'            AS type,
-                expense_date                  AS date,
+                CONVERT('personal_expense' USING utf8mb4)            AS type,
+                expense_date                                         AS date,
                 amount,
-                NULL                          AS my_share,
-                NULL                          AS receivable,
-                CONCAT('Spent on ', category) AS label,
-                IFNULL(note, category)        AS sub,
-                expense_id                    AS ref_id,
-                NULL                          AS group_id,
-                NULL                          AS group_name,
+                NULL                                                 AS my_share,
+                NULL                                                 AS receivable,
+                CONVERT(CONCAT('Spent on ', category) USING utf8mb4) AS label,
+                CONVERT(IFNULL(note, category) USING utf8mb4)        AS sub,
+                expense_id                                           AS ref_id,
+                NULL                                                 AS group_id,
+                CONVERT(NULL USING utf8mb4)                          AS group_name,
                 created_at
             FROM Personal_Expenses
             WHERE user_id = %s AND expense_date BETWEEN %s AND %s
@@ -35,16 +34,16 @@ def fetch_timeline_for_period(user_id: int, start_date: str, end_date: str) -> l
             UNION ALL
 
             SELECT
-                'group_expense'                                AS type,
-                e.expense_date                                 AS date,
-                e.total_amount                                 AS amount,
-                IFNULL(es.amount_owed, 0)                      AS my_share,
-                (e.total_amount - IFNULL(es.amount_owed, 0))   AS receivable,
-                CONCAT('Paid in ', g.group_name)               AS label,
-                e.description                                  AS sub,
-                e.expense_id                                   AS ref_id,
-                e.group_id                                     AS group_id,
-                g.group_name                                   AS group_name,
+                CONVERT('group_expense' USING utf8mb4)                         AS type,
+                e.expense_date                                                 AS date,
+                e.total_amount                                                 AS amount,
+                IFNULL(es.amount_owed, 0)                                      AS my_share,
+                (e.total_amount - IFNULL(es.amount_owed, 0))                   AS receivable,
+                CONVERT(CONCAT('Paid in ', g.group_name) USING utf8mb4)        AS label,
+                CONVERT(e.description USING utf8mb4)                           AS sub,
+                e.expense_id                                                   AS ref_id,
+                e.group_id                                                     AS group_id,
+                CONVERT(g.group_name USING utf8mb4)                            AS group_name,
                 e.created_at
             FROM Expenses e
             JOIN `Groups` g ON g.group_id = e.group_id
@@ -59,16 +58,16 @@ def fetch_timeline_for_period(user_id: int, start_date: str, end_date: str) -> l
             UNION ALL
 
             SELECT
-                'group_expense_owed'              AS type,
-                e.expense_date                    AS date,
-                es.amount_owed                    AS amount,
-                es.amount_owed                    AS my_share,
-                0                                 AS receivable,
-                CONCAT('Share in ', g.group_name) AS label,
-                e.description                     AS sub,
-                e.expense_id                      AS ref_id,
-                e.group_id                        AS group_id,
-                g.group_name                      AS group_name,
+                CONVERT('group_expense_owed' USING utf8mb4)               AS type,
+                e.expense_date                                            AS date,
+                es.amount_owed                                            AS amount,
+                es.amount_owed                                            AS my_share,
+                0                                                         AS receivable,
+                CONVERT(CONCAT('Share in ', g.group_name) USING utf8mb4)  AS label,
+                CONVERT(e.description USING utf8mb4)                      AS sub,
+                e.expense_id                                              AS ref_id,
+                e.group_id                                                AS group_id,
+                CONVERT(g.group_name USING utf8mb4)                       AS group_name,
                 e.created_at
             FROM Expense_Splits es
             JOIN Expenses e ON e.expense_id = es.expense_id
@@ -80,17 +79,16 @@ def fetch_timeline_for_period(user_id: int, start_date: str, end_date: str) -> l
             UNION ALL
 
             SELECT
-                'income'                                           AS type,
-                income_date                                        AS date,
+                CONVERT('income' USING utf8mb4)                                    AS type,
+                income_date                                                        AS date,
                 amount,
-                NULL                                               AS my_share,
-                NULL                                               AS receivable,
-                CONCAT('Received — ',
-                       REPLACE(source_type, '_', ' '))             AS label,
-                IFNULL(note, source_type)                          AS sub,
-                income_id                                          AS ref_id,
-                NULL                                               AS group_id,
-                NULL                                               AS group_name,
+                NULL                                                               AS my_share,
+                NULL                                                               AS receivable,
+                CONVERT(CONCAT('Received — ', REPLACE(source_type, '_', ' ')) USING utf8mb4) AS label,
+                CONVERT(IFNULL(note, source_type) USING utf8mb4)                   AS sub,
+                income_id                                                          AS ref_id,
+                NULL                                                               AS group_id,
+                CONVERT(NULL USING utf8mb4)                                        AS group_name,
                 created_at
             FROM Income
             WHERE user_id = %s AND income_date BETWEEN %s AND %s
@@ -98,16 +96,16 @@ def fetch_timeline_for_period(user_id: int, start_date: str, end_date: str) -> l
             UNION ALL
 
             SELECT
-                'loan_given'                                        AS type,
-                loan_date                                           AS date,
+                CONVERT('loan_given' USING utf8mb4)                       AS type,
+                loan_date                                                 AS date,
                 amount,
-                NULL                                                AS my_share,
-                remaining_amount                                    AS receivable,
-                CONCAT('Lent to ', borrower_name)                   AS label,
-                note AS sub,
-                loan_id                                             AS ref_id,
-                NULL                                                AS group_id,
-                NULL                                                AS group_name,
+                NULL                                                      AS my_share,
+                remaining_amount                                          AS receivable,
+                CONVERT(CONCAT('Lent to ', borrower_name) USING utf8mb4)  AS label,
+                CONVERT(note USING utf8mb4)                               AS sub,
+                loan_id                                                   AS ref_id,
+                NULL                                                      AS group_id,
+                CONVERT(NULL USING utf8mb4)                               AS group_name,
                 created_at
             FROM Loans
             WHERE lender_user_id = %s AND loan_date BETWEEN %s AND %s
@@ -115,16 +113,16 @@ def fetch_timeline_for_period(user_id: int, start_date: str, end_date: str) -> l
             UNION ALL
 
             SELECT
-                'loan_taken'                                            AS type,
-                borrow_date                                             AS date,
+                CONVERT('loan_taken' USING utf8mb4)                            AS type,
+                borrow_date                                                    AS date,
                 amount,
-                NULL                                                    AS my_share,
-                remaining_amount                                        AS receivable,
-                CONCAT('Borrowed from ', lender_name)                   AS label,
-                note AS sub,
-                borrow_id                                               AS ref_id,
-                NULL                                                    AS group_id,
-                NULL                                                    AS group_name,
+                NULL                                                           AS my_share,
+                remaining_amount                                               AS receivable,
+                CONVERT(CONCAT('Borrowed from ', lender_name) USING utf8mb4)   AS label,
+                CONVERT(note USING utf8mb4)                                    AS sub,
+                borrow_id                                                      AS ref_id,
+                NULL                                                           AS group_id,
+                CONVERT(NULL USING utf8mb4)                                    AS group_name,
                 created_at
             FROM Borrows
             WHERE borrower_user_id = %s AND borrow_date BETWEEN %s AND %s
@@ -132,16 +130,16 @@ def fetch_timeline_for_period(user_id: int, start_date: str, end_date: str) -> l
             UNION ALL
 
             SELECT
-                'settlement_received'                  AS type,
-                p.payment_date                         AS date,
+                CONVERT('settlement_received' USING utf8mb4)                   AS type,
+                p.payment_date                                                 AS date,
                 p.amount,
-                NULL                                   AS my_share,
-                NULL                                   AS receivable,
-                CONCAT('Received from ', u.name)       AS label,
-                CONCAT('Settlement — ', g.group_name)  AS sub,
-                p.payment_id                           AS ref_id,
-                p.group_id                             AS group_id,
-                g.group_name                           AS group_name,
+                NULL                                                           AS my_share,
+                NULL                                                           AS receivable,
+                CONVERT(CONCAT('Received from ', u.name) USING utf8mb4)        AS label,
+                CONVERT(CONCAT('Settlement — ', g.group_name) USING utf8mb4)   AS sub,
+                p.payment_id                                                   AS ref_id,
+                p.group_id                                                     AS group_id,
+                CONVERT(g.group_name USING utf8mb4)                            AS group_name,
                 p.created_at
             FROM Payments p
             JOIN Users u    ON u.user_id  = p.payer_id
@@ -151,16 +149,16 @@ def fetch_timeline_for_period(user_id: int, start_date: str, end_date: str) -> l
             UNION ALL
 
             SELECT
-                'settlement_sent'                      AS type,
-                p.payment_date                         AS date,
+                CONVERT('settlement_sent' USING utf8mb4)                       AS type,
+                p.payment_date                                                 AS date,
                 p.amount,
-                NULL                                   AS my_share,
-                NULL                                   AS receivable,
-                CONCAT('Paid to ', u.name)             AS label,
-                CONCAT('Settlement — ', g.group_name)  AS sub,
-                p.payment_id                           AS ref_id,
-                p.group_id                             AS group_id,
-                g.group_name                           AS group_name,
+                NULL                                                           AS my_share,
+                NULL                                                           AS receivable,
+                CONVERT(CONCAT('Paid to ', u.name) USING utf8mb4)              AS label,
+                CONVERT(CONCAT('Settlement — ', g.group_name) USING utf8mb4)   AS sub,
+                p.payment_id                                                   AS ref_id,
+                p.group_id                                                     AS group_id,
+                CONVERT(g.group_name USING utf8mb4)                            AS group_name,
                 p.created_at
             FROM Payments p
             JOIN Users u    ON u.user_id  = p.payee_id
@@ -170,20 +168,17 @@ def fetch_timeline_for_period(user_id: int, start_date: str, end_date: str) -> l
             UNION ALL
 
             SELECT
-                CASE WHEN le.direction = 'lent' THEN 'loan_repayment_received' ELSE 'loan_repayment_paid' END AS type,
-                lr.repayment_date                      AS date,
+                CONVERT(CASE WHEN le.direction = 'lent' THEN 'loan_repayment_received' ELSE 'loan_repayment_paid' END USING utf8mb4) AS type,
+                lr.repayment_date                                              AS date,
                 lr.amount,
-                NULL                                   AS my_share,
-                NULL                                   AS receivable,
-                CONCAT(
-                    CASE WHEN le.direction = 'lent' THEN 'Repayment from ' ELSE 'Repayment to ' END,
-                    p.display_name
-                )                                       AS label,
-                le.note                                AS sub,
-                lr.repayment_id                         AS ref_id,
-                NULL                                    AS group_id,
-                NULL                                    AS group_name,
-                lr.resolved_at                          AS created_at
+                NULL                                                           AS my_share,
+                NULL                                                           AS receivable,
+                CONVERT(CONCAT(CASE WHEN le.direction = 'lent' THEN 'Repayment from ' ELSE 'Repayment to ' END, p.display_name) USING utf8mb4) AS label,
+                CONVERT(CONCAT('Against ₹', FORMAT(le.amount, 0), ' ', CASE WHEN le.direction = 'lent' THEN 'lent' ELSE 'borrowed' END, ' on ', DATE_FORMAT(le.entry_date, '%d %b %Y'), IF(le.note IS NOT NULL AND le.note <> '', CONCAT(' — ', le.note), '')) USING utf8mb4) AS sub,
+                lr.repayment_id                                                AS ref_id,
+                NULL                                                           AS group_id,
+                CONVERT(NULL USING utf8mb4)                                    AS group_name,
+                lr.resolved_at                                                 AS created_at
             FROM Ledger_Repayments lr
             JOIN Ledger_Entries le ON le.entry_id = lr.entry_id
             JOIN People p          ON p.person_id = le.person_id
@@ -197,7 +192,7 @@ def fetch_timeline_for_period(user_id: int, start_date: str, end_date: str) -> l
         (
             user_id, start_date, end_date,                    # personal expenses
             user_id, user_id, start_date, end_date, user_id,  # group expense (payer)
-            user_id, user_id, start_date, end_date,            # group_expense_owed
+            user_id, user_id, start_date, end_date,           # group_expense_owed
             user_id, start_date, end_date,                    # income
             user_id, start_date, end_date,                    # loans given
             user_id, start_date, end_date,                    # borrows
@@ -237,16 +232,16 @@ def fetch_unified_timeline(user_id: int, limit: int = 100, offset: int = 0) -> l
 
             -- 1. Personal expenses
             SELECT
-                'personal_expense'            AS type,
-                expense_date                  AS date,
+                CONVERT('personal_expense' USING utf8mb4)            AS type,
+                expense_date                                         AS date,
                 amount,
-                NULL                          AS my_share,
-                NULL                          AS receivable,
-                CONCAT('Spent on ', category) AS label,
-                IFNULL(note, category)        AS sub,
-                expense_id                    AS ref_id,
-                NULL                          AS group_id,
-                NULL                          AS group_name,
+                NULL                                                 AS my_share,
+                NULL                                                 AS receivable,
+                CONVERT(CONCAT('Spent on ', category) USING utf8mb4) AS label,
+                CONVERT(IFNULL(note, category) USING utf8mb4)        AS sub,
+                expense_id                                           AS ref_id,
+                NULL                                                 AS group_id,
+                CONVERT(NULL USING utf8mb4)                          AS group_name,
                 created_at
             FROM Personal_Expenses
             WHERE user_id = %s
@@ -255,16 +250,16 @@ def fetch_unified_timeline(user_id: int, limit: int = 100, offset: int = 0) -> l
 
             -- 2. Group expenses where this user is the PAYER
             SELECT
-                'group_expense'                                AS type,
-                e.expense_date                                 AS date,
-                e.total_amount                                 AS amount,
-                IFNULL(es.amount_owed, 0)                      AS my_share,
-                (e.total_amount - IFNULL(es.amount_owed, 0))   AS receivable,
-                CONCAT('Paid in ', g.group_name)               AS label,
-                e.description                                  AS sub,
-                e.expense_id                                   AS ref_id,
-                e.group_id                                     AS group_id,
-                g.group_name                                   AS group_name,
+                CONVERT('group_expense' USING utf8mb4)                         AS type,
+                e.expense_date                                                 AS date,
+                e.total_amount                                                 AS amount,
+                IFNULL(es.amount_owed, 0)                                      AS my_share,
+                (e.total_amount - IFNULL(es.amount_owed, 0))                   AS receivable,
+                CONVERT(CONCAT('Paid in ', g.group_name) USING utf8mb4)        AS label,
+                CONVERT(e.description USING utf8mb4)                           AS sub,
+                e.expense_id                                                   AS ref_id,
+                e.group_id                                                     AS group_id,
+                CONVERT(g.group_name USING utf8mb4)                            AS group_name,
                 e.created_at
             FROM Expenses e
             JOIN `Groups` g ON g.group_id = e.group_id
@@ -279,16 +274,16 @@ def fetch_unified_timeline(user_id: int, limit: int = 100, offset: int = 0) -> l
 
             -- 3. Group expenses where user is a PARTICIPANT but NOT the payer
             SELECT
-                'group_expense_owed'              AS type,
-                e.expense_date                    AS date,
-                es.amount_owed                    AS amount,
-                es.amount_owed                    AS my_share,
-                0                                 AS receivable,
-                CONCAT('Share in ', g.group_name) AS label,
-                e.description                     AS sub,
-                e.expense_id                      AS ref_id,
-                e.group_id                        AS group_id,
-                g.group_name                      AS group_name,
+                CONVERT('group_expense_owed' USING utf8mb4)               AS type,
+                e.expense_date                                            AS date,
+                es.amount_owed                                            AS amount,
+                es.amount_owed                                            AS my_share,
+                0                                                         AS receivable,
+                CONVERT(CONCAT('Share in ', g.group_name) USING utf8mb4)  AS label,
+                CONVERT(e.description USING utf8mb4)                      AS sub,
+                e.expense_id                                              AS ref_id,
+                e.group_id                                                AS group_id,
+                CONVERT(g.group_name USING utf8mb4)                       AS group_name,
                 e.created_at
             FROM Expense_Splits es
             JOIN Expenses e ON e.expense_id = es.expense_id
@@ -300,17 +295,16 @@ def fetch_unified_timeline(user_id: int, limit: int = 100, offset: int = 0) -> l
 
             -- 4. Income
             SELECT
-                'income'                                           AS type,
-                income_date                                        AS date,
+                CONVERT('income' USING utf8mb4)                                    AS type,
+                income_date                                                        AS date,
                 amount,
-                NULL                                               AS my_share,
-                NULL                                               AS receivable,
-                CONCAT('Received — ',
-                       REPLACE(source_type, '_', ' '))             AS label,
-                IFNULL(note, source_type)                          AS sub,
-                income_id                                          AS ref_id,
-                NULL                                               AS group_id,
-                NULL                                               AS group_name,
+                NULL                                                               AS my_share,
+                NULL                                                               AS receivable,
+                CONVERT(CONCAT('Received — ', REPLACE(source_type, '_', ' ')) USING utf8mb4) AS label,
+                CONVERT(IFNULL(note, source_type) USING utf8mb4)                   AS sub,
+                income_id                                                          AS ref_id,
+                NULL                                                               AS group_id,
+                CONVERT(NULL USING utf8mb4)                                        AS group_name,
                 created_at
             FROM Income
             WHERE user_id = %s
@@ -319,16 +313,16 @@ def fetch_unified_timeline(user_id: int, limit: int = 100, offset: int = 0) -> l
 
             -- 5. Loans given
             SELECT
-                'loan_given'                                        AS type,
-                loan_date                                           AS date,
+                CONVERT('loan_given' USING utf8mb4)                       AS type,
+                loan_date                                                 AS date,
                 amount,
-                NULL                                                AS my_share,
-                remaining_amount                                    AS receivable,
-                CONCAT('Lent to ', borrower_name)                   AS label,
-                note AS sub,
-                loan_id                                             AS ref_id,
-                NULL                                                AS group_id,
-                NULL                                                AS group_name,
+                NULL                                                      AS my_share,
+                remaining_amount                                          AS receivable,
+                CONVERT(CONCAT('Lent to ', borrower_name) USING utf8mb4)  AS label,
+                CONVERT(note USING utf8mb4)                               AS sub,
+                loan_id                                                   AS ref_id,
+                NULL                                                      AS group_id,
+                CONVERT(NULL USING utf8mb4)                               AS group_name,
                 created_at
             FROM Loans
             WHERE lender_user_id = %s
@@ -337,16 +331,16 @@ def fetch_unified_timeline(user_id: int, limit: int = 100, offset: int = 0) -> l
 
             -- 6. Money borrowed
             SELECT
-                'loan_taken'                                            AS type,
-                borrow_date                                             AS date,
+                CONVERT('loan_taken' USING utf8mb4)                            AS type,
+                borrow_date                                                    AS date,
                 amount,
-                NULL                                                    AS my_share,
-                remaining_amount                                        AS receivable,
-                CONCAT('Borrowed from ', lender_name)                   AS label,
-                note AS sub,
-                borrow_id                                               AS ref_id,
-                NULL                                                    AS group_id,
-                NULL                                                    AS group_name,
+                NULL                                                           AS my_share,
+                remaining_amount                                               AS receivable,
+                CONVERT(CONCAT('Borrowed from ', lender_name) USING utf8mb4)   AS label,
+                CONVERT(note USING utf8mb4)                                    AS sub,
+                borrow_id                                                      AS ref_id,
+                NULL                                                           AS group_id,
+                CONVERT(NULL USING utf8mb4)                                    AS group_name,
                 created_at
             FROM Borrows
             WHERE borrower_user_id = %s
@@ -355,16 +349,16 @@ def fetch_unified_timeline(user_id: int, limit: int = 100, offset: int = 0) -> l
 
             -- 7. Settlement payments received
             SELECT
-                'settlement_received'                  AS type,
-                p.payment_date                         AS date,
+                CONVERT('settlement_received' USING utf8mb4)                   AS type,
+                p.payment_date                                                 AS date,
                 p.amount,
-                NULL                                   AS my_share,
-                NULL                                   AS receivable,
-                CONCAT('Received from ', u.name)       AS label,
-                CONCAT('Settlement — ', g.group_name)  AS sub,
-                p.payment_id                           AS ref_id,
-                p.group_id                             AS group_id,
-                g.group_name                           AS group_name,
+                NULL                                                           AS my_share,
+                NULL                                                           AS receivable,
+                CONVERT(CONCAT('Received from ', u.name) USING utf8mb4)        AS label,
+                CONVERT(CONCAT('Settlement — ', g.group_name) USING utf8mb4)   AS sub,
+                p.payment_id                                                   AS ref_id,
+                p.group_id                                                     AS group_id,
+                CONVERT(g.group_name USING utf8mb4)                            AS group_name,
                 p.created_at
             FROM Payments p
             JOIN Users u    ON u.user_id  = p.payer_id
@@ -375,16 +369,16 @@ def fetch_unified_timeline(user_id: int, limit: int = 100, offset: int = 0) -> l
 
             -- 8. Settlement payments sent
             SELECT
-                'settlement_sent'                      AS type,
-                p.payment_date                         AS date,
+                CONVERT('settlement_sent' USING utf8mb4)                       AS type,
+                p.payment_date                                                 AS date,
                 p.amount,
-                NULL                                   AS my_share,
-                NULL                                   AS receivable,
-                CONCAT('Paid to ', u.name)             AS label,
-                CONCAT('Settlement — ', g.group_name)  AS sub,
-                p.payment_id                           AS ref_id,
-                p.group_id                             AS group_id,
-                g.group_name                           AS group_name,
+                NULL                                                           AS my_share,
+                NULL                                                           AS receivable,
+                CONVERT(CONCAT('Paid to ', u.name) USING utf8mb4)              AS label,
+                CONVERT(CONCAT('Settlement — ', g.group_name) USING utf8mb4)   AS sub,
+                p.payment_id                                                   AS ref_id,
+                p.group_id                                                     AS group_id,
+                CONVERT(g.group_name USING utf8mb4)                            AS group_name,
                 p.created_at
             FROM Payments p
             JOIN Users u    ON u.user_id  = p.payee_id
@@ -393,21 +387,19 @@ def fetch_unified_timeline(user_id: int, limit: int = 100, offset: int = 0) -> l
 
             UNION ALL
 
+            -- 9. Loan Repayments
             SELECT
-                CASE WHEN le.direction = 'lent' THEN 'loan_repayment_received' ELSE 'loan_repayment_paid' END AS type,
-                lr.repayment_date                      AS date,
+                CONVERT(CASE WHEN le.direction = 'lent' THEN 'loan_repayment_received' ELSE 'loan_repayment_paid' END USING utf8mb4) AS type,
+                lr.repayment_date                                              AS date,
                 lr.amount,
-                NULL                                   AS my_share,
-                NULL                                   AS receivable,
-                CONCAT(
-                    CASE WHEN le.direction = 'lent' THEN 'Repayment from ' ELSE 'Repayment to ' END,
-                    p.display_name
-                )                                       AS label,
-                le.note                                AS sub,
-                lr.repayment_id                         AS ref_id,
-                NULL                                    AS group_id,
-                NULL                                    AS group_name,
-                lr.resolved_at                          AS created_at
+                NULL                                                           AS my_share,
+                NULL                                                           AS receivable,
+                CONVERT(CONCAT(CASE WHEN le.direction = 'lent' THEN 'Repayment from ' ELSE 'Repayment to ' END, p.display_name) USING utf8mb4) AS label,
+                CONVERT(CONCAT('Against ₹', FORMAT(le.amount, 0), ' ', CASE WHEN le.direction = 'lent' THEN 'lent' ELSE 'borrowed' END, ' on ', DATE_FORMAT(le.entry_date, '%d %b %Y'), IF(le.note IS NOT NULL AND le.note <> '', CONCAT(' — ', le.note), '')) USING utf8mb4) AS sub,
+                lr.repayment_id                                                AS ref_id,
+                NULL                                                           AS group_id,
+                CONVERT(NULL USING utf8mb4)                                    AS group_name,
+                lr.resolved_at                                                 AS created_at
             FROM Ledger_Repayments lr
             JOIN Ledger_Entries le ON le.entry_id = lr.entry_id
             JOIN People p          ON p.person_id = le.person_id

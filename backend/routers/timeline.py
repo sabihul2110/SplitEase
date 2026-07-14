@@ -58,6 +58,11 @@ def download_statement(
         )
         period_label = label or "All time"
 
+    # Statement reads chronologically (oldest → newest), unlike the activity
+    # feed which is newest-first. The shared timeline queries return DESC,
+    # so reverse just for PDF generation.
+    events = sorted(events, key=lambda e: e.get("date") or "")
+
     user_row = user_repository.fetch_user_by_id(current_user["user_id"])
     user_name = user_row["name"] if user_row and user_row.get("name") else "SplitEase User"
 
