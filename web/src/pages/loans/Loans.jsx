@@ -2,7 +2,7 @@
 
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useOutletContext } from "react-router-dom";
+import { useOutletContext, useNavigate } from "react-router-dom";
 import { getLoans, deleteLoan, repayLoan, getBorrows, deleteBorrow, repayBorrow } from "../../api/loans";
 import * as peopleApi from "../../api/people";
 import AddEntryModal from "../../components/feature/AddEntryModal";
@@ -36,6 +36,9 @@ function PeopleLedger() {
   const [filterStatus, setFilterStatus] = useState("all");
   const [toast, setToast]           = useState(null);
   const [pendingCount, setPendingCount] = useState(0);
+  const [showSettleModal, setShowSettleModal] = useState(false);
+  const [settleDate, setSettleDate] = useState(todayStr());
+  const navigate = useNavigate();
 
   const notify = (msg, isErr = false) => {
     setToast({ msg, isErr });
@@ -92,11 +95,20 @@ function PeopleLedger() {
     notify("Entry added"); loadEntries(selected); loadPeople();
   }
 
-  async function handleSettleUp() {
-    if (!window.confirm("Record a net settlement to bring this balance to ₹0?")) return;
+  function handleSettleUp() {
+    setSettleDate(todayStr());
+    setShowSettleModal(true);
+  }
+
+  async function confirmSettleUp() {
+    setShowSettleModal(false);
     setSettling(true);
-    try { await peopleApi.settleUp(selected); notify("Balance settled"); loadEntries(selected); loadPeople(); }
-    catch (err) { notify(err.response?.data?.detail || "Failed to settle", true); }
+    try {
+      const res = await peopleApi.settleUp(selected, settleDate);
+      if (res?.data?.pending_settlement) notify("Settle request sent — awaiting their confirmation");
+      else notify("Balance settled");
+      loadEntries(selected); loadPeople();
+    } catch (err) { notify(err.response?.data?.detail || "Failed to settle", true); }
     finally { setSettling(false); }
   }
 
@@ -158,7 +170,7 @@ function PeopleLedger() {
             <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "10px 14px", background: "rgba(245,158,11,0.08)",
               borderBottom: "1px solid rgba(245,158,11,0.2)", fontSize: 13,
               color: "var(--warning)", fontWeight: 600, cursor: "pointer" }}
-              onClick={() => window.open("/people/pending", "_self")}>
+              onClick={() => navigate("/people/pending")}>
               <Icons.clockPending size={14} />
               {pendingCount} pending request{pendingCount > 1 ? "s" : ""} awaiting your review →
             </div>
@@ -440,6 +452,32 @@ function PeopleLedger() {
         )}
       </div>
 
+      {showSettleModal && (
+        <div className="modal-overlay" onClick={() => setShowSettleModal(false)}>
+          <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth: 380 }}>
+            <div className="modal-head">
+              <div className="modal-title">Settle Up with {selectedPerson?.display_name}</div>
+              <button className="btn btn-ghost btn-xs" onClick={() => setShowSettleModal(false)}><Icons.close size={13} /></button>
+            </div>
+            <div className="modal-body" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <p style={{ fontSize: 13, color: "var(--text3)", lineHeight: 1.5, margin: 0 }}>
+                This marks all active entries as settled. The net amount changes to ₹0. This cannot be undone.
+              </p>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">SETTLEMENT DATE</label>
+                <input type="date" value={settleDate} max={todayStr()} onChange={e => setSettleDate(e.target.value)} />
+              </div>
+              <div style={{ display: "flex", gap: 10 }}>
+                <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setShowSettleModal(false)}>Cancel</button>
+                <button className="btn btn-primary" style={{ flex: 2 }} onClick={confirmSettleUp} disabled={settling}>
+                  {settling ? "Settling…" : "Settle Up"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showAddPerson && <AddPersonModal onClose={() => setShowAddPerson(false)} onSuccess={loadPeople} />}
       {showAddEntry && selected && (
         <AddEntryModal2
@@ -622,6 +660,7 @@ function AddEntryModal2({ personName, onClose, onSuccess }) {
 // ── LoanCard (Normal Loans tab) ───────────────────────────────────────────────
 function LoanCard({ item, onRefresh, idx, accentColor, btnColor, btnHover, isLent }) {
   const [repayAmt, setRepayAmt] = useState("");
+  const [repayDate, setRepayDate] = useState(todayStr());
   const [repayErr, setRepayErr] = useState("");
   const [saving, setSaving]     = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -640,8 +679,10 @@ function LoanCard({ item, onRefresh, idx, accentColor, btnColor, btnHover, isLen
     if (amt > item.remaining_amount) { setRepayErr(`Max ₹${fmt(item.remaining_amount)}`); return; }
     setSaving(true);
     try {
-      await (isLent ? repayLoan(idField, { repayment_amount: amt }) : repayBorrow(idField, { repayment_amount: amt }));
-      setRepayAmt(""); onRefresh();
+      await (isLent
+        ? repayLoan(idField, { repayment_amount: amt, repayment_date: repayDate })
+        : repayBorrow(idField, { repayment_amount: amt, repayment_date: repayDate }));
+      setRepayAmt(""); setRepayDate(todayStr()); onRefresh();
     } catch (ex) { setRepayErr(ex?.response?.data?.detail || "Failed."); }
     finally { setSaving(false); }
   }
@@ -717,6 +758,11 @@ function LoanCard({ item, onRefresh, idx, accentColor, btnColor, btnHover, isLen
 
       {item.status === "active" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <input type="date" value={repayDate} max={todayStr()}
+            onChange={e => setRepayDate(e.target.value)}
+            style={{ padding: "7px 10px", borderRadius: 7,
+              border: "1px solid var(--border)", background: "var(--surface2)",
+              color: "var(--text)", fontSize: 13, outline: "none" }} />
           <div style={{ display: "flex", gap: 8 }}>
             <input type="number" min="0" step="0.01"
               placeholder={`Amount (max ₹${fmt(item.remaining_amount)})`}

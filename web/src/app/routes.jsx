@@ -29,6 +29,7 @@ import Profile from "../pages/settings/Profile";
 import Settings from "../pages/settings/Settings";
 import Expenses from "../pages/expenses/Expenses";
 import Loans from "../pages/loans/Loans";
+import PendingRequests from "../pages/loans/PendingRequests";
 import Maintenance from "../pages/system/Maintenance";
 
 import AdminOverview from "../pages/admin/AdminOverview";
@@ -74,6 +75,7 @@ export const routes = [
       { path: "/settings", element: <Settings /> },
       { path: "/expenses", element: <Expenses /> },
       { path: "/loans", element: <Loans /> },
+      { path: "/people/pending", element: <PendingRequests />, handle: { title: "Pending Requests" } },
     ],
   },
 

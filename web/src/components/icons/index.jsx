@@ -19,7 +19,7 @@ import {
   ArrowUpRight, ArrowDownLeft, ArrowUp, ArrowDown, Clock, Zap, List,
   LayoutGrid, Archive, History, Info, AlertTriangle, Moon, Sun, Settings,
   LayoutDashboard, Receipt, ArrowUpDown, UserPlus, Sparkles, Inbox,
-  PartyPopper, FileText, Edit3, MoreVertical,
+  PartyPopper, FileText, Edit3, MoreVertical, CheckCircle,
 } from "lucide-react";
 
 // ─── Re-exported generic icons (lucide) ──────────────────────────────────
@@ -75,6 +75,7 @@ export const Icons = {
   document: FileText,
   edit: Edit3,
   more: MoreVertical,
+  checkCircle: CheckCircle,
 
   // ─── Domain-specific icons (hand-drawn, no lucide equivalent) ──────────
   personalExpense: ({ size = 22, color = "currentColor", ...rest }) => (
