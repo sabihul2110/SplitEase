@@ -22,6 +22,9 @@ let _navigationRef = null;
 export function setNavigationRef(ref) {
   _navigationRef = ref;
 }
+export function getNavigationRef() {
+  return _navigationRef;
+}
 
 const client = axios.create({
   baseURL: BASE_URL,

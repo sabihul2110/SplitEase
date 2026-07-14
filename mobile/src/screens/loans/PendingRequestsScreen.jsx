@@ -230,8 +230,8 @@ function ConfirmationCard({ item, direction, onAccept, onReject, onCancel }) {
 }
 
 export default function PendingRequestsScreen({ navigation, route }) {
-  const [tab, setTab]         = useState('received');    // 'received' | 'sent'
-  const [subTab, setSubTab]   = useState('entries');      // 'entries' | 'confirmations'
+  const [tab, setTab]         = useState(route.params?.initialTab || 'received');    // 'received' | 'sent'
+  const [subTab, setSubTab]   = useState(route.params?.initialSubTab || 'entries');   // 'entries' | 'confirmations'
 
   const [received, setReceived]                 = useState([]);
   const [sent, setSent]                         = useState([]);
@@ -286,8 +286,18 @@ export default function PendingRequestsScreen({ navigation, route }) {
 
   useFocusEffect(useCallback(() => {
     load();
-    ledgerNotifsApi.markAllLedgerRead().catch(() => {});
   }, [load]));
+
+  // Mark read ONLY for the category the person is actually looking at.
+  // If they close the app before switching to the other sub-tab, that
+  // category's dot is still unread and will reappear on next launch.
+  React.useEffect(() => {
+    if (loading || tab !== 'received') return;
+    const category = subTab === 'entries' ? 'entries' : 'confirmations';
+    ledgerNotifsApi.markCategoryRead(category)
+      .then(() => global.__refreshLedgerBadge?.())
+      .catch(() => {});
+  }, [subTab, tab, loading]);
 
   async function handleAccept(entryId) {
     try {

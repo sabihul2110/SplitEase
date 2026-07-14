@@ -382,7 +382,8 @@ export default function PeopleScreen({ navigation }) {
 
   useFocusEffect(useCallback(() => {
     load();
-    ledgerNotifsApi.markAllLedgerRead().catch(() => {});
+    // People is a pass-through layer — it shows the dot, it doesn't clear it.
+    // Only the actual sub-tab that holds a notification marks it read.
     global.__refreshLedgerBadge?.();
   }, [load]));
 

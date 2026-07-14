@@ -188,4 +188,6 @@ export const TYPE_ICONS = {
   settlement_received: { Icon: Icons.paymentSettled,   bg: "rgba(99,102,241,0.12)",color: "#10b981" },
   loan_given:          { Icon: Icons.lendMoney,        bg: "rgba(245,158,11,0.12)",color: "#f59e0b" },
   loan_taken:          { Icon: Icons.borrowMoney,      bg: "rgba(99,102,241,0.12)",color: "#818cf8" },
+  loan_repayment_received: { Icon: Icons.paymentSettled, bg: "rgba(16,185,129,0.12)", color: "#10b981" },
+  loan_repayment_paid:     { Icon: Icons.paymentSettled, bg: "rgba(239,68,68,0.10)",  color: "#f87171" },
 };

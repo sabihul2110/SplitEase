@@ -6,7 +6,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import * as peopleApi from "../../api/people";
+import * as ledgerNotifsApi from "../../api/ledgerNotifications";
 import { Icons } from "../../components/icons";
+import Toast from "../../components/common/Toast";
 
 const fmt = (n) => Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 });
 
@@ -212,6 +214,18 @@ export default function PendingRequests() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Mark read ONLY for the category currently being viewed — matches
+  // mobile's PendingRequestsScreen. If the person closes the tab before
+  // switching to the other sub-tab, that category stays unread and the
+  // dot reappears next visit.
+  useEffect(() => {
+    if (loading || tab !== "received") return;
+    const category = subTab === "entries" ? "entries" : "confirmations";
+    ledgerNotifsApi.markCategoryRead(category)
+      .then(() => window.__refreshLedgerBadge?.())
+      .catch(() => {});
+  }, [subTab, tab, loading]);
+
   async function handleAccept(entryId) {
     try {
       await peopleApi.acceptEntry(entryId);
@@ -286,20 +300,7 @@ export default function PendingRequests() {
 
   return (
     <>
-      {toast && (
-        <div style={{
-          position: "fixed", bottom: 24, right: 24, zIndex: 9999,
-          background: "var(--surface)", border: `1px solid ${toast.isErr ? "var(--danger)" : "var(--success)"}`,
-          padding: "12px 20px", borderRadius: 10, fontWeight: 600, fontSize: 14,
-          color: "var(--text)", boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
-          display: "flex", alignItems: "center", gap: 8,
-        }}>
-          {toast.isErr
-            ? <Icons.close size={14} color="var(--danger)" />
-            : <Icons.check size={14} color="var(--success)" />}
-          {toast.msg}
-        </div>
-      )}
+      <Toast toast={toast} />
 
       <div style={{ marginBottom: 24 }}>
         <button className="btn btn-ghost btn-sm" onClick={() => navigate("/loans")} style={{ marginBottom: 12 }}>

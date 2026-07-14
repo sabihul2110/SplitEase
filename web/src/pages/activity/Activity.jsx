@@ -94,6 +94,7 @@ const TYPE_META = {
 const ICON_SVG = {
   expense:    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>,
   settlement: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
+  paymentSettled: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.76 4 4 0 0 1-4.78 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.78 4 4 0 0 1 0-6.76Z"/><circle cx="12" cy="12" r="5.5"/><polyline points="10 12 11.5 13.5 14.5 10.5"/></svg>,
   income:     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="7"/><polyline points="7 12 12 7 17 12"/><path d="M4 20 Q12 23 20 20"/></svg>,
   loan:       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20 Q4 14 12 14 Q20 14 20 20"/></svg>,
   search:     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
@@ -104,8 +105,8 @@ const ICON_SVG = {
 
 function iconForType(type) {
   if (type.includes("expense"))    return ICON_SVG.expense;
-  if (type.includes("settlement")) return ICON_SVG.settlement;
-  if (type.includes("repayment"))  return ICON_SVG.settlement;
+  if (type.includes("settlement")) return ICON_SVG.paymentSettled;
+  if (type.includes("repayment"))  return ICON_SVG.paymentSettled;
   if (type === "income")           return ICON_SVG.income;
   return ICON_SVG.loan;
 }

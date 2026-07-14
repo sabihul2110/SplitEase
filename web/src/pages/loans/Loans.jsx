@@ -7,6 +7,7 @@ import { getLoans, deleteLoan, repayLoan, getBorrows, deleteBorrow, repayBorrow 
 import * as peopleApi from "../../api/people";
 import AddEntryModal from "../../components/feature/AddEntryModal";
 import { Icons } from "../../components/icons";
+import Toast from "../../components/common/Toast";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const fmt = (n) => Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 });
@@ -117,19 +118,7 @@ function PeopleLedger() {
 
   return (
     <>
-      {toast && (
-        <div style={{
-          position: "fixed", bottom: 24, right: 24, zIndex: 9999,
-          background: "var(--surface)", border: `1px solid ${toast.isErr ? "var(--danger)" : "var(--success)"}`,
-          padding: "12px 20px", borderRadius: 10, fontWeight: 600, fontSize: 14,
-          color: "var(--text)", boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
-        }}>
-          {toast.isErr
-            ? <Icons.close size={14} color="var(--danger)" />
-            : <Icons.check size={14} color="var(--success)" />}
-          {toast.msg}
-        </div>
-      )}
+      <Toast toast={toast} />
 
       <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 0,
         border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden",

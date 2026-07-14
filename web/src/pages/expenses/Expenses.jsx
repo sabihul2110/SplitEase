@@ -252,15 +252,15 @@ const TYPE_ICONS = {
   personal_expense:        { Icon: Icons.personalExpense, bg: "rgba(239,68,68,0.12)",   color: "var(--danger)"  },
   group_expense:           { Icon: Icons.groupExpense,    bg: "rgba(37,99,235,0.12)",   color: "var(--danger)"  },
   group_expense_owed:      { Icon: Icons.groupExpense,    bg: "rgba(37,99,235,0.12)",   color: "var(--danger)"  },
-  settlement_sent:         { Icon: Icons.settlement,      bg: "rgba(239,68,68,0.10)",   color: "var(--danger)"  },
+  settlement_sent:         { Icon: Icons.paymentSettled,  bg: "rgba(239,68,68,0.10)",   color: "var(--danger)"  },
   income:                  { Icon: Icons.income,          bg: "rgba(16,185,129,0.12)",  color: "var(--success)" },
-  settlement_received:     { Icon: Icons.settlement,      bg: "rgba(99,102,241,0.12)",  color: "var(--success)" },
+  settlement_received:     { Icon: Icons.paymentSettled,  bg: "rgba(99,102,241,0.12)",  color: "var(--success)" },
   loan_given:               { Icon: Icons.lendMoney,       bg: "rgba(245,158,11,0.12)",  color: "#f59e0b"        },
   loan_taken:               { Icon: Icons.borrowMoney,     bg: "rgba(99,102,241,0.12)",  color: "#818cf8"        },
-  // FIX: previously missing — these two entry types silently vanished from
-  // the Expenses feed because EntryRow bails out when TYPE_ICONS[type] is undefined.
-  loan_repayment_received: { Icon: Icons.settlement,      bg: "rgba(16,185,129,0.12)",  color: "var(--success)" },
-  loan_repayment_paid:     { Icon: Icons.settlement,      bg: "rgba(239,68,68,0.10)",   color: "var(--danger)"  },
+  // Matches mobile: repayments use the scalloped "paymentSettled" badge,
+  // not the plain settlement arrows icon.
+  loan_repayment_received: { Icon: Icons.paymentSettled,  bg: "rgba(16,185,129,0.12)",  color: "var(--success)" },
+  loan_repayment_paid:     { Icon: Icons.paymentSettled,  bg: "rgba(239,68,68,0.10)",   color: "var(--danger)"  },
 };
 
 const TYPE_CFG = {

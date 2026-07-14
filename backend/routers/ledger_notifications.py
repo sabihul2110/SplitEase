@@ -19,8 +19,16 @@ router = APIRouter()
 
 @router.get("/ledger-notifications/unread-count")
 def ledger_unread_count(current_user: dict = Depends(get_current_user)):
-    count = ledger_notification_repository.get_unread_count(current_user["user_id"])
-    return {"count": count}
+    return ledger_notification_repository.get_unread_counts_by_category(current_user["user_id"])
+
+
+@router.post("/ledger-notifications/read-category/{category}")
+def mark_ledger_category_read(
+    category: str,
+    current_user: dict = Depends(get_current_user),
+):
+    ledger_notification_repository.mark_category_read(current_user["user_id"], category)
+    return {"message": "Marked as read."}
 
 
 @router.get("/ledger-notifications/")

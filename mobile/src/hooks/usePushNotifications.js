@@ -5,7 +5,7 @@ import { useEffect } from 'react';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
-import client from '../api/client';
+import client, { getNavigationRef } from '../api/client';
 import { ENDPOINTS } from '../config/api';
 
 Notifications.setNotificationHandler({
@@ -19,7 +19,31 @@ Notifications.setNotificationHandler({
 export function usePushNotifications() {
   useEffect(() => {
     registerForPush();
+    const sub = Notifications.addNotificationResponseReceivedListener(handleNotificationTap);
+    return () => sub.remove();
   }, []);
+}
+
+// Payload shapes emitted by the backend (see routers/people.py, loans.py,
+// borrows.py): entry_request/settlement_request/repayment_request all
+// carry {"screen": "PendingRequests", ...id}. We route to the matching
+// sub-tab instead of just opening the screen and making the person hunt.
+function handleNotificationTap(response) {
+  const data = response?.notification?.request?.content?.data || {};
+  const nav = getNavigationRef();
+  if (!nav?.isReady() || data.screen !== 'PendingRequests') return;
+
+  const isConfirmation = !!(data.repayment_id || data.request_id);
+  nav.navigate('Main', {
+    screen: 'Loans',
+    params: {
+      screen: 'PendingRequests',
+      params: {
+        initialTab: 'received',
+        initialSubTab: isConfirmation ? 'confirmations' : 'entries',
+      },
+    },
+  });
 }
 
 async function registerForPush() {

@@ -71,6 +71,65 @@ def get_unread_count(user_id: int) -> int:
     return count
 
 
+# Categorizes unread notifications the same way PendingRequestsScreen's
+# Entries / Confirmations sub-tabs do, so each level of the badge cascade
+# (Loans tab -> People button -> Requests button -> sub-tab) can show a dot
+# for exactly what's unread beneath it, not just "something happened".
+_CATEGORY_TYPES = {
+    "entries":       ["entry_request"],
+    "confirmations": ["repayment_request", "settlement_request"],
+}
+
+
+def get_unread_counts_by_category(user_id: int) -> dict:
+    conn = get_connection()
+    cur  = conn.cursor()
+    cur.execute(
+        """
+        SELECT
+            SUM(CASE WHEN type = 'entry_request' THEN 1 ELSE 0 END) AS entries,
+            SUM(CASE WHEN type IN ('repayment_request','settlement_request') THEN 1 ELSE 0 END) AS confirmations
+        FROM Ledger_Notifications
+        WHERE recipient_id = %s AND is_read = 0
+        """,
+        (user_id,),
+    )
+    row = cur.fetchone()
+    cur.close(); conn.close()
+    entries       = int(row[0] or 0)
+    confirmations = int(row[1] or 0)
+    # `count` kept for backward compatibility with existing badge callers
+    # that only read res.data.count.
+    return {"entries": entries, "confirmations": confirmations, "count": entries + confirmations}
+
+
+def mark_category_read(user_id: int, category: str) -> None:
+    """
+    Marks only one category's notifications as read — e.g. opening the
+    Entries sub-tab shouldn't silently clear an unread Confirmation the
+    person hasn't actually looked at yet.
+    """
+    types = _CATEGORY_TYPES.get(category)
+    if not types:
+        return
+    conn = get_connection()
+    cur  = conn.cursor()
+    try:
+        conn.start_transaction()
+        placeholders = ",".join(["%s"] * len(types))
+        cur.execute(
+            f"UPDATE Ledger_Notifications SET is_read = 1 "
+            f"WHERE recipient_id = %s AND is_read = 0 AND type IN ({placeholders})",
+            (user_id, *types),
+        )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close(); conn.close()
+
+
 def mark_read(notif_id: int, user_id: int) -> None:
     conn = get_connection()
     cur  = conn.cursor()
