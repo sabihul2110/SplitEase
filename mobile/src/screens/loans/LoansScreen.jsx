@@ -129,12 +129,16 @@ function LoanCard({ item, isLent, onRefresh, idx, showToast, setAlert }) {
 
     setTimeout(async () => {
       try {
-        await (isLent
+        const res = await (isLent
           ? loansApi.repayLoan(idField, amountInput)
           : loansApi.repayBorrow(idField, amountInput));
         if (!mountedRef.current) return;
         setRepayAmt("");
-        showToast?.("Repayment recorded");
+        if (res?.data?.pending_repayment) {
+          showToast?.("Repayment sent — awaiting their confirmation", "warning");
+        } else {
+          showToast?.("Repayment recorded");
+        }
         if (onRefresh) onRefresh();
       } catch (ex) {
         if (!mountedRef.current) return;

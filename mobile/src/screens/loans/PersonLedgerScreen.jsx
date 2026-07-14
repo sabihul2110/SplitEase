@@ -645,8 +645,12 @@ export default function PersonLedgerScreen({ navigation, route }) {
             setAlert(null);
             setSettling(true);
             try {
-              await peopleApi.settleUp(personId);
-              showToast('Settled up successfully');
+              const res = await peopleApi.settleUp(personId);
+              if (res?.data?.pending_settlement) {
+                showToast('Settle request sent — awaiting their confirmation', 'warning');
+              } else {
+                showToast('Settled up successfully');
+              }
               load(true);
             } catch (err) {
               const detail = err?.response?.data?.detail;
