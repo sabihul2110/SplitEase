@@ -68,9 +68,10 @@ def add_borrow(
 
 @router.post("/borrows/{borrow_id}/repay", status_code=status.HTTP_200_OK)
 def repay_borrow(
-    borrow_id: int,
-    body: BorrowRepayIn,
-    current_user: dict = Depends(get_current_user),
+    borrow_id:         int,
+    body:              BorrowRepayIn,
+    background_tasks:  BackgroundTasks,
+    current_user:      dict = Depends(get_current_user),
 ):
     if body.repayment_amount <= 0:
         raise HTTPException(status_code=422, detail="Repayment must be positive.")
@@ -82,6 +83,35 @@ def repay_borrow(
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
+
+    linked_user_id = result.get("linked_user_id")
+    if linked_user_id:
+        sender_name = notification_repository.get_user_name(current_user["user_id"])
+        if result.get("pending_repayment"):
+            msg = f"{sender_name} recorded a repayment of ₹{body.repayment_amount:,.0f} — please confirm."
+            ledger_notification_repository.create_ledger_notif(
+                recipient_id = linked_user_id,
+                sender_id    = current_user["user_id"],
+                notif_type   = "repayment_request",
+                message      = msg,
+                entry_id     = borrow_id,
+            )
+            token = push_repository.get_push_token(linked_user_id)
+            background_tasks.add_task(
+                send_push, token, "Repayment Awaiting Confirmation", msg,
+                {"repayment_id": result.get("repayment_id"), "screen": "PendingRequests"},
+            )
+        else:
+            msg = f"₹{body.repayment_amount:,.0f} repayment recorded on your shared ledger entry."
+            ledger_notification_repository.create_ledger_notif(
+                recipient_id = linked_user_id,
+                sender_id    = current_user["user_id"],
+                notif_type   = "repayment_recorded",
+                message      = msg,
+                entry_id     = borrow_id,
+            )
+            token = push_repository.get_push_token(linked_user_id)
+            background_tasks.add_task(send_push, token, "Repayment Recorded", msg, {"entry_id": borrow_id})
     return result
 
 

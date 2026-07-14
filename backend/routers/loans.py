@@ -80,9 +80,10 @@ def add_loan(
 
 @router.post("/loans/{loan_id}/repay", status_code=status.HTTP_200_OK)
 def repay_loan(
-    loan_id: int,
-    body: RepaymentIn,
-    current_user: dict = Depends(get_current_user),
+    loan_id:           int,
+    body:              RepaymentIn,
+    background_tasks:  BackgroundTasks,
+    current_user:      dict = Depends(get_current_user),
 ):
     if body.repayment_amount <= 0:
         raise HTTPException(status_code=422, detail="Repayment must be positive.")
@@ -94,6 +95,20 @@ def repay_loan(
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
+
+    linked_user_id = result.get("linked_user_id")
+    if linked_user_id:
+        sender_name = notification_repository.get_user_name(current_user["user_id"])
+        msg = f"₹{body.repayment_amount:,.0f} repayment recorded on your shared ledger entry."
+        ledger_notification_repository.create_ledger_notif(
+            recipient_id = linked_user_id,
+            sender_id    = current_user["user_id"],
+            notif_type   = "repayment_recorded",
+            message      = msg,
+            entry_id     = loan_id,
+        )
+        token = push_repository.get_push_token(linked_user_id)
+        background_tasks.add_task(send_push, token, "Repayment Recorded", msg, {"entry_id": loan_id})
     return result
 
 

@@ -25,34 +25,200 @@ def settle_up(
     current_user:     dict = Depends(get_current_user),
 ):
     try:
-        result = people_repository.settle_up(person_id, current_user["user_id"])
+        result = people_repository.propose_or_apply_settlement(person_id, current_user["user_id"])
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
-    # Notify linked user
     linked_user_id = result.get("linked_user_id")
-    if linked_user_id:
-        amt         = result["settled_amount"]
-        net_was     = result["net_was"]
-        sender_name = notification_repository.get_user_name(current_user["user_id"])
-        msg         = (
-            f"{sender_name} marked your ledger as settled. "
-            f"Net ₹{amt:,.0f} {'paid to them' if net_was > 0 else 'received from them'}."
-        )
-        notification_repository.create_ledger_outcome_notification(
-            recipient_id=linked_user_id,
-            sender_id=current_user["user_id"],
-            message=msg,
+    if not linked_user_id:
+        return {"message": "Settled up.", "settled_amount": result.get("settled_amount")}
+
+    sender_name = notification_repository.get_user_name(current_user["user_id"])
+
+    if result.get("pending_settlement"):
+        msg = f"{sender_name} wants to settle up — net ₹{result['net_amount']:,.0f}. Please confirm."
+        ledger_notification_repository.create_ledger_notif(
+            recipient_id = linked_user_id,
+            sender_id    = current_user["user_id"],
+            notif_type   = "settlement_request",
+            message      = msg,
+            entry_id     = None,
         )
         token = push_repository.get_push_token(linked_user_id)
-        background_tasks.add_task(send_push, token, "Ledger Settled", msg, {})
+        background_tasks.add_task(
+            send_push, token, "Settle Up — Confirmation Needed", msg,
+            {"request_id": result.get("request_id"), "screen": "PendingRequests"},
+        )
+        return {
+            "message": "Settlement request sent — awaiting their confirmation.",
+            "pending_settlement": True,
+            "request_id": result.get("request_id"),
+        }
 
-    return {"message": "Settled up.", "settled_amount": result["settled_amount"]}
+    amt     = result["settled_amount"]
+    net_was = result["net_was"]
+    msg = (
+        f"{sender_name} marked your ledger as settled. "
+        f"Net ₹{amt:,.0f} {'paid to them' if net_was > 0 else 'received from them'}."
+    )
+    ledger_notification_repository.create_ledger_notif(
+        recipient_id = linked_user_id,
+        sender_id    = current_user["user_id"],
+        notif_type   = "settlement_confirmed",
+        message      = msg,
+        entry_id     = None,
+    )
+    token = push_repository.get_push_token(linked_user_id)
+    background_tasks.add_task(send_push, token, "Ledger Settled", msg, {})
+    return {"message": "Settled up.", "settled_amount": amt}
+
+
+@router.get("/people/pending-settlements")
+def get_pending_settlements(current_user: dict = Depends(get_current_user)):
+    return people_repository.fetch_pending_settlements_for_user(current_user["user_id"])
+
+
+@router.get("/people/sent-settlements")
+def get_sent_settlements(current_user: dict = Depends(get_current_user)):
+    return people_repository.fetch_sent_settlements(current_user["user_id"])
+
+
+@router.post("/people/settlements/{request_id}/accept")
+def accept_settlement_route(
+    request_id:        int,
+    background_tasks:  BackgroundTasks,
+    current_user:      dict = Depends(get_current_user),
+):
+    try:
+        result = people_repository.accept_settlement(request_id, current_user["user_id"])
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    acceptor_name = notification_repository.get_user_name(current_user["user_id"])
+    msg = f"{acceptor_name} confirmed your settle-up — net ₹{result['settled_amount']:,.0f}."
+    ledger_notification_repository.create_ledger_notif(
+        recipient_id = result["debtor_id"],
+        sender_id    = current_user["user_id"],
+        notif_type   = "settlement_confirmed",
+        message      = msg,
+        entry_id     = None,
+    )
+    token = push_repository.get_push_token(result["debtor_id"])
+    background_tasks.add_task(send_push, token, "Settlement Confirmed", msg, {})
+    return {"message": "Settlement confirmed.", "settled_amount": result["settled_amount"]}
+
+
+@router.post("/people/settlements/{request_id}/reject")
+def reject_settlement_route(
+    request_id:        int,
+    background_tasks:  BackgroundTasks,
+    current_user:      dict = Depends(get_current_user),
+):
+    try:
+        row = people_repository.reject_settlement(request_id, current_user["user_id"])
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    decliner_name = notification_repository.get_user_name(current_user["user_id"])
+    msg = f"{decliner_name} declined your settle-up request of ₹{float(row['net_amount']):,.0f}."
+    ledger_notification_repository.create_ledger_notif(
+        recipient_id = row["proposed_by"],
+        sender_id    = current_user["user_id"],
+        notif_type   = "settlement_declined",
+        message      = msg,
+        entry_id     = None,
+    )
+    token = push_repository.get_push_token(row["proposed_by"])
+    background_tasks.add_task(send_push, token, "Settlement Declined", msg, {})
+    return {"message": "Settlement declined."}
+
+
+@router.delete("/people/settlements/{request_id}")
+def cancel_settlement_route(
+    request_id:   int,
+    current_user: dict = Depends(get_current_user),
+):
+    try:
+        people_repository.cancel_settlement(request_id, current_user["user_id"])
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return {"message": "Settlement request cancelled."}
 
 
 @router.get("/people/sent-requests")
 def get_sent_requests(current_user: dict = Depends(get_current_user)):
     return people_repository.fetch_sent_pending_entries(current_user["user_id"])
+
+@router.get("/people/pending-repayments")
+def get_pending_repayments(current_user: dict = Depends(get_current_user)):
+    return people_repository.fetch_pending_repayments_for_user(current_user["user_id"])
+
+
+@router.get("/people/sent-repayments")
+def get_sent_repayments(current_user: dict = Depends(get_current_user)):
+    return people_repository.fetch_sent_pending_repayments(current_user["user_id"])
+
+
+@router.post("/people/repayments/{repayment_id}/accept")
+def accept_repayment_route(
+    repayment_id:     int,
+    background_tasks: BackgroundTasks,
+    current_user:     dict = Depends(get_current_user),
+):
+    try:
+        result = people_repository.accept_repayment(repayment_id, current_user["user_id"])
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    acceptor_name = notification_repository.get_user_name(current_user["user_id"])
+    msg = f"{acceptor_name} confirmed your repayment of ₹{result['amount']:,.0f}."
+    ledger_notification_repository.create_ledger_notif(
+        recipient_id = result["debtor_id"],
+        sender_id    = current_user["user_id"],
+        notif_type   = "repayment_confirmed",
+        message      = msg,
+        entry_id     = result["entry_id"],
+    )
+    token = push_repository.get_push_token(result["debtor_id"])
+    background_tasks.add_task(send_push, token, "Repayment Confirmed", msg, {"entry_id": result["entry_id"]})
+    return {"message": "Repayment confirmed.", "remaining_amount": result["remaining_amount"], "status": result["status"]}
+
+
+@router.post("/people/repayments/{repayment_id}/reject")
+def reject_repayment_route(
+    repayment_id:     int,
+    background_tasks: BackgroundTasks,
+    current_user:     dict = Depends(get_current_user),
+):
+    try:
+        row = people_repository.reject_repayment(repayment_id, current_user["user_id"])
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    decliner_name = notification_repository.get_user_name(current_user["user_id"])
+    msg = f"{decliner_name} declined your repayment of ₹{float(row['repay_amount']):,.0f}."
+    ledger_notification_repository.create_ledger_notif(
+        recipient_id = row["proposed_by"],
+        sender_id    = current_user["user_id"],
+        notif_type   = "repayment_declined",
+        message      = msg,
+        entry_id     = row["entry_id"],
+    )
+    token = push_repository.get_push_token(row["proposed_by"])
+    background_tasks.add_task(send_push, token, "Repayment Declined", msg, {"entry_id": row["entry_id"]})
+    return {"message": "Repayment declined."}
+
+
+@router.delete("/people/repayments/{repayment_id}")
+def cancel_repayment_route(
+    repayment_id: int,
+    current_user: dict = Depends(get_current_user),
+):
+    try:
+        people_repository.cancel_repayment(repayment_id, current_user["user_id"])
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return {"message": "Repayment request cancelled."}
 
 
 # ── People CRUD ───────────────────────────────────────────────────────────────
@@ -166,29 +332,42 @@ def repay_entry(
     if body.repayment_amount <= 0:
         raise HTTPException(status_code=422, detail="Repayment must be positive.")
     try:
-        result = people_repository.record_entry_repayment(
-            entry_id         = entry_id,
-            owner_user_id    = current_user["user_id"],
-            repayment_amount = body.repayment_amount,
+        result = people_repository.propose_or_apply_repayment(
+            entry_id          = entry_id,
+            requester_user_id = current_user["user_id"],
+            repayment_amount  = body.repayment_amount,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
-    entry_details = people_repository.fetch_entry_with_person(entry_id, current_user["user_id"])
-    if entry_details and entry_details.get("linked_user_id"):
-        other_user_id = entry_details["linked_user_id"]
-        msg = f"₹{body.repayment_amount:,.0f} repayment recorded on your shared ledger entry."
-        ledger_notification_repository.create_ledger_notif(
-            recipient_id = other_user_id,
-            sender_id    = current_user["user_id"],
-            notif_type   = "repayment_recorded",
-            message      = msg,
-            entry_id     = entry_id,
-        )
-        other_token = push_repository.get_push_token(other_user_id)
-        background_tasks.add_task(
-            send_push, other_token, "Repayment Recorded", msg, {"entry_id": entry_id}
-        )
+    linked_user_id = result.get("linked_user_id")
+    if linked_user_id:
+        sender_name = notification_repository.get_user_name(current_user["user_id"])
+        if result.get("pending_repayment"):
+            msg = f"{sender_name} recorded a repayment of ₹{body.repayment_amount:,.0f} — please confirm."
+            ledger_notification_repository.create_ledger_notif(
+                recipient_id = linked_user_id,
+                sender_id    = current_user["user_id"],
+                notif_type   = "repayment_request",
+                message      = msg,
+                entry_id     = entry_id,
+            )
+            token = push_repository.get_push_token(linked_user_id)
+            background_tasks.add_task(
+                send_push, token, "Repayment Awaiting Confirmation", msg,
+                {"repayment_id": result.get("repayment_id"), "screen": "PendingRequests"},
+            )
+        else:
+            msg = f"₹{body.repayment_amount:,.0f} repayment recorded on your shared ledger entry."
+            ledger_notification_repository.create_ledger_notif(
+                recipient_id = linked_user_id,
+                sender_id    = current_user["user_id"],
+                notif_type   = "repayment_recorded",
+                message      = msg,
+                entry_id     = entry_id,
+            )
+            token = push_repository.get_push_token(linked_user_id)
+            background_tasks.add_task(send_push, token, "Repayment Recorded", msg, {"entry_id": entry_id})
     return result
 
 

@@ -216,38 +216,22 @@ def insert_loan(
 
 
 def record_loan_repayment(loan_id: int, user_id: int, repayment_amount: float) -> dict:
-    conn = get_connection()
-    cur  = conn.cursor(dictionary=True)
-    try:
-        conn.start_transaction()
-        cur.execute(
-            "SELECT loan_id, remaining_amount, status FROM Loans WHERE loan_id = %s AND lender_user_id = %s FOR UPDATE",
-            (loan_id, user_id),
-        )
-        row = cur.fetchone()
-        if row is None:
-            raise ValueError("Loan not found or not owned by user.")
-        if row["status"] == "repaid":
-            raise ValueError("Loan is already fully repaid.")
-        remaining = float(row["remaining_amount"])
-        repay     = round(float(repayment_amount), 2)
-        if repay <= 0:
-            raise ValueError("Repayment amount must be positive.")
-        if repay > remaining:
-            raise ValueError(f"Repayment ₹{repay} exceeds remaining ₹{remaining}.")
-        new_remaining = round(remaining - repay, 2)
-        new_status    = "repaid" if new_remaining == 0 else "active"
-        cur.execute(
-            "UPDATE Loans SET remaining_amount = %s, status = %s WHERE loan_id = %s",
-            (new_remaining, new_status, loan_id),
-        )
-        conn.commit()
-        return {"loan_id": loan_id, "remaining_amount": new_remaining, "status": new_status}
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        cur.close(); conn.close()
+    """
+    `loan_id` here is actually Ledger_Entries.entry_id (fetch_loans_with_pending
+    aliases entry_id AS loan_id). Delegates to the canonical repayment flow in
+    people_repository — a lender (creditor) recording a repayment always applies
+    instantly, whether the person is linked or unlinked.
+    """
+    from repositories.people_repository import propose_or_apply_repayment
+    result = propose_or_apply_repayment(
+        entry_id           = loan_id,
+        requester_user_id  = user_id,
+        repayment_amount   = repayment_amount,
+        expected_direction = "lent",
+        not_found_message  = "Loan not found or not owned by user.",
+    )
+    result["loan_id"] = result.pop("entry_id")
+    return result
 
 
 def delete_loan(loan_id: int, user_id: int) -> dict:

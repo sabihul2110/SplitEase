@@ -80,43 +80,22 @@ def insert_borrow(
 
 
 def record_borrow_repayment(borrow_id: int, user_id: int, repayment_amount: float) -> dict:
-    conn = get_connection()
-    cur  = conn.cursor(dictionary=True)
-    try:
-        conn.start_transaction()
-        cur.execute(
-            """
-            SELECT borrow_id, remaining_amount, status
-            FROM   Borrows
-            WHERE  borrow_id = %s AND borrower_user_id = %s
-            FOR UPDATE
-            """,
-            (borrow_id, user_id),
-        )
-        row = cur.fetchone()
-        if not row:
-            raise ValueError("Borrow not found or not owned by user.")
-        if row["status"] == "repaid":
-            raise ValueError("Borrow is already fully repaid.")
-        remaining = float(row["remaining_amount"])
-        repay     = round(float(repayment_amount), 2)
-        if repay <= 0:
-            raise ValueError("Repayment must be positive.")
-        if repay > remaining:
-            raise ValueError(f"Repayment ₹{repay} exceeds remaining ₹{remaining}.")
-        new_remaining = round(remaining - repay, 2)
-        new_status    = "repaid" if new_remaining == 0 else "active"
-        cur.execute(
-            "UPDATE Borrows SET remaining_amount = %s, status = %s WHERE borrow_id = %s",
-            (new_remaining, new_status, borrow_id),
-        )
-        conn.commit()
-        return {"borrow_id": borrow_id, "remaining_amount": new_remaining, "status": new_status}
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        cur.close(); conn.close()
+    """
+    `borrow_id` here is actually Ledger_Entries.entry_id. Delegates to the
+    canonical repayment flow in people_repository — a borrower (debtor)
+    recording a repayment must wait for the lender's confirmation when the
+    person is linked/registered; unlinked persons apply instantly.
+    """
+    from repositories.people_repository import propose_or_apply_repayment
+    result = propose_or_apply_repayment(
+        entry_id           = borrow_id,
+        requester_user_id  = user_id,
+        repayment_amount   = repayment_amount,
+        expected_direction = "borrowed",
+        not_found_message  = "Borrow not found or not owned by user.",
+    )
+    result["borrow_id"] = result.pop("entry_id")
+    return result
 
 
 def delete_borrow(borrow_id: int, user_id: int) -> dict:

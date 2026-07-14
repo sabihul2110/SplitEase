@@ -576,40 +576,155 @@ def fetch_sent_pending_entries(creator_user_id: int) -> list[dict]:
     return rows
 
 
-def record_entry_repayment(entry_id: int, owner_user_id: int, repayment_amount: float) -> dict:
+def _find_mirror_entry_id(cur, owner_user_id, linked_user_id, direction, amount, entry_date):
+    """
+    Finds the reciprocal Ledger_Entries row on the linked user's side — same
+    matching convention used elsewhere (accept_entry / delete_entry): scoped to
+    the People pair, opposite direction, same amount + date.
+    """
+    if not linked_user_id:
+        return None
+    mirror_direction = "borrowed" if direction == "lent" else "lent"
+    cur.execute(
+        """
+        SELECT le.entry_id
+        FROM   Ledger_Entries le
+        JOIN   People p ON p.person_id = le.person_id
+        WHERE  p.owner_user_id = %s AND p.linked_user_id = %s
+          AND  le.direction = %s AND le.amount = %s AND le.entry_date = %s
+        LIMIT 1
+        """,
+        (linked_user_id, owner_user_id, mirror_direction, amount, entry_date),
+    )
+    row = cur.fetchone()
+    return row["entry_id"] if row else None
+
+
+def _sync_legacy_repayment(cur, owner_user_id, display_name, direction, amount, entry_date, new_remaining, new_status):
+    """Best-effort sync of the legacy Loans/Borrows mirror row, matched the same
+    way delete_loan/delete_borrow do (by name + amount + date)."""
+    if direction == "lent":
+        cur.execute(
+            "UPDATE Loans SET remaining_amount = %s, status = %s "
+            "WHERE lender_user_id = %s AND borrower_name = %s AND amount = %s AND loan_date = %s",
+            (new_remaining, new_status, owner_user_id, display_name, amount, entry_date),
+        )
+    elif direction == "borrowed":
+        cur.execute(
+            "UPDATE Borrows SET remaining_amount = %s, status = %s "
+            "WHERE borrower_user_id = %s AND lender_name = %s AND amount = %s AND borrow_date = %s",
+            (new_remaining, new_status, owner_user_id, display_name, amount, entry_date),
+        )
+
+
+def propose_or_apply_repayment(
+    entry_id: int,
+    requester_user_id: int,
+    repayment_amount: float,
+    expected_direction: str | None = None,
+    not_found_message: str = "Entry not found or access denied.",
+) -> dict:
+    """
+    Canonical repayment entry point — used by the Loans/Borrows screens AND the
+    People ledger screen, since entry_id is the same Ledger_Entries row either way.
+
+    - Unlinked person: applies instantly (no counterparty to fake toward).
+    - Linked person, requester is the CREDITOR on this row (direction='lent'):
+      applies instantly — a creditor gains nothing by falsely reducing what's
+      owed to them.
+    - Linked person, requester is the DEBTOR on this row (direction='borrowed'):
+      creates a pending Ledger_Repayments row instead of touching
+      remaining_amount, awaiting the creditor's confirmation.
+    """
     conn = get_connection()
     cur  = conn.cursor(dictionary=True)
     try:
         conn.start_transaction()
         cur.execute(
             """
-            SELECT le.entry_id, le.remaining_amount, le.status
+            SELECT le.entry_id, le.remaining_amount, le.status, le.direction,
+                   le.amount, le.entry_date,
+                   p.owner_user_id, p.linked_user_id, p.display_name
             FROM   Ledger_Entries le
             JOIN   People p ON p.person_id = le.person_id
             WHERE  le.entry_id = %s AND p.owner_user_id = %s
             FOR UPDATE
             """,
-            (entry_id, owner_user_id),
+            (entry_id, requester_user_id),
         )
         row = cur.fetchone()
-        if not row:
-            raise ValueError("Entry not found or access denied.")
-        if row["status"] == "repaid":
-            raise ValueError("Entry is already fully settled.")
+        if not row or (expected_direction and row["direction"] != expected_direction):
+            raise ValueError(not_found_message)
+        if row["status"] != "active":
+            raise ValueError("Entry is not active.")
+
         remaining = float(row["remaining_amount"])
         repay     = round(float(repayment_amount), 2)
         if repay <= 0:
             raise ValueError("Repayment must be positive.")
         if repay > remaining:
             raise ValueError(f"Repayment ₹{repay} exceeds remaining ₹{remaining}.")
-        new_remaining = round(remaining - repay, 2)
-        new_status    = "repaid" if new_remaining == 0 else "active"
+
+        is_linked   = row["linked_user_id"] is not None
+        is_creditor = row["direction"] == "lent"
+
+        if not is_linked or is_creditor:
+            new_remaining = round(remaining - repay, 2)
+            new_status    = "repaid" if new_remaining == 0 else "active"
+            cur.execute(
+                "UPDATE Ledger_Entries SET remaining_amount = %s, status = %s WHERE entry_id = %s",
+                (new_remaining, new_status, entry_id),
+            )
+            _sync_legacy_repayment(
+                cur, row["owner_user_id"], row["display_name"], row["direction"],
+                float(row["amount"]), str(row["entry_date"]), new_remaining, new_status,
+            )
+
+            mirror_id = None
+            if is_linked:
+                mirror_id = _find_mirror_entry_id(
+                    cur, row["owner_user_id"], row["linked_user_id"],
+                    row["direction"], float(row["amount"]), str(row["entry_date"]),
+                )
+                if mirror_id:
+                    cur.execute(
+                        "UPDATE Ledger_Entries SET remaining_amount = %s, status = %s WHERE entry_id = %s",
+                        (new_remaining, new_status, mirror_id),
+                    )
+                    cur.execute("SELECT name FROM Users WHERE user_id = %s", (row["owner_user_id"],))
+                    owner_name_row = cur.fetchone()
+                    owner_name = owner_name_row["name"] if owner_name_row else row["display_name"]
+                    mirror_direction = "borrowed" if row["direction"] == "lent" else "lent"
+                    _sync_legacy_repayment(
+                        cur, row["linked_user_id"], owner_name, mirror_direction,
+                        float(row["amount"]), str(row["entry_date"]), new_remaining, new_status,
+                    )
+
+            conn.commit()
+            return {
+                "entry_id": entry_id,
+                "remaining_amount": new_remaining,
+                "status": new_status,
+                "pending_repayment": False,
+                "linked_user_id": row["linked_user_id"],
+                "mirror_entry_id": mirror_id,
+            }
+
+        # Linked + requester is the debtor → propose, don't apply yet.
         cur.execute(
-            "UPDATE Ledger_Entries SET remaining_amount = %s, status = %s WHERE entry_id = %s",
-            (new_remaining, new_status, entry_id),
+            "INSERT INTO Ledger_Repayments (entry_id, proposed_by, amount, status) VALUES (%s, %s, %s, 'pending')",
+            (entry_id, requester_user_id, repay),
         )
+        repayment_id = cur.lastrowid
         conn.commit()
-        return {"entry_id": entry_id, "remaining_amount": new_remaining, "status": new_status}
+        return {
+            "entry_id": entry_id,
+            "repayment_id": repayment_id,
+            "remaining_amount": remaining,
+            "status": row["status"],
+            "pending_repayment": True,
+            "linked_user_id": row["linked_user_id"],
+        }
     except Exception:
         conn.rollback()
         raise
@@ -617,11 +732,225 @@ def record_entry_repayment(entry_id: int, owner_user_id: int, repayment_amount: 
         cur.close(); conn.close()
 
 
-def settle_up(person_id: int, owner_user_id: int) -> dict:
+def fetch_pending_repayments_for_user(recipient_user_id: int) -> list[dict]:
+    """Repayments proposed by a debtor, awaiting this user's (the creditor's) confirmation."""
+    conn = get_connection()
+    cur  = conn.cursor(dictionary=True)
+    cur.execute(
+        """
+        SELECT lr.repayment_id, lr.amount, lr.note, lr.created_at,
+               le.entry_id, le.direction, le.entry_date,
+               p.display_name AS person_name, p.person_id,
+               u.name AS requested_by
+        FROM   Ledger_Repayments lr
+        JOIN   Ledger_Entries le ON le.entry_id = lr.entry_id
+        JOIN   People p ON p.person_id = le.person_id
+        JOIN   Users  u ON u.user_id   = lr.proposed_by
+        WHERE  p.linked_user_id = %s AND lr.status = 'pending'
+        ORDER  BY lr.created_at DESC
+        """,
+        (recipient_user_id,),
+    )
+    rows = cur.fetchall()
+    cur.close(); conn.close()
+    for r in rows:
+        r["amount"]     = float(r["amount"])
+        r["entry_date"] = str(r["entry_date"])
+        r["created_at"] = str(r["created_at"])
+    return rows
+
+
+def fetch_sent_pending_repayments(proposer_user_id: int) -> list[dict]:
+    """Repayments this user proposed, still awaiting the creditor's confirmation."""
+    conn = get_connection()
+    cur  = conn.cursor(dictionary=True)
+    cur.execute(
+        """
+        SELECT lr.repayment_id, lr.amount, lr.note, lr.created_at,
+               le.entry_id, le.direction, le.entry_date,
+               p.display_name AS person_name, p.person_id, p.linked_user_id,
+               u.name AS sent_to
+        FROM   Ledger_Repayments lr
+        JOIN   Ledger_Entries le ON le.entry_id = lr.entry_id
+        JOIN   People p ON p.person_id = le.person_id
+        LEFT JOIN Users u ON u.user_id = p.linked_user_id
+        WHERE  lr.proposed_by = %s AND lr.status = 'pending'
+        ORDER  BY lr.created_at DESC
+        """,
+        (proposer_user_id,),
+    )
+    rows = cur.fetchall()
+    cur.close(); conn.close()
+    for r in rows:
+        r["amount"]     = float(r["amount"])
+        r["entry_date"] = str(r["entry_date"])
+        r["created_at"] = str(r["created_at"])
+    return rows
+
+
+def accept_repayment(repayment_id: int, recipient_user_id: int) -> dict:
+    """Creditor confirms a debtor-proposed repayment — applies it to both mirrored rows."""
+    conn = get_connection()
+    cur  = conn.cursor(dictionary=True)
+    try:
+        conn.start_transaction()
+        cur.execute(
+            """
+            SELECT lr.repayment_id, lr.entry_id, lr.amount AS repay_amount, lr.status AS repay_status,
+                   lr.proposed_by, le.remaining_amount, le.direction, le.entry_date,
+                   le.amount AS entry_amount, p.owner_user_id, p.linked_user_id
+            FROM   Ledger_Repayments lr
+            JOIN   Ledger_Entries le ON le.entry_id = lr.entry_id
+            JOIN   People p ON p.person_id = le.person_id
+            WHERE  lr.repayment_id = %s
+            FOR UPDATE
+            """,
+            (repayment_id,),
+        )
+        row = cur.fetchone()
+        if not row:
+            raise ValueError("Repayment request not found.")
+        if row["repay_status"] != "pending":
+            raise ValueError("This repayment has already been resolved.")
+        if row["linked_user_id"] != recipient_user_id:
+            raise ValueError("Not authorised to confirm this repayment.")
+
+        remaining = float(row["remaining_amount"])
+        repay     = float(row["repay_amount"])
+        if repay > remaining:
+            raise ValueError(f"Repayment ₹{repay} exceeds current remaining ₹{remaining} — entry may have changed.")
+        new_remaining = round(remaining - repay, 2)
+        new_status    = "repaid" if new_remaining == 0 else "active"
+
+        debtor_id   = row["owner_user_id"]
+        creditor_id = row["linked_user_id"]
+
+        cur.execute(
+            "UPDATE Ledger_Entries SET remaining_amount = %s, status = %s WHERE entry_id = %s",
+            (new_remaining, new_status, row["entry_id"]),
+        )
+        mirror_id = _find_mirror_entry_id(
+            cur, debtor_id, creditor_id, row["direction"],
+            float(row["entry_amount"]), str(row["entry_date"]),
+        )
+        if mirror_id:
+            cur.execute(
+                "UPDATE Ledger_Entries SET remaining_amount = %s, status = %s WHERE entry_id = %s",
+                (new_remaining, new_status, mirror_id),
+            )
+
+        cur.execute(
+            "UPDATE Ledger_Repayments SET status = 'accepted', resolved_at = NOW() WHERE repayment_id = %s",
+            (repayment_id,),
+        )
+
+        cur.execute("SELECT name FROM Users WHERE user_id = %s", (debtor_id,))
+        debtor_name_row = cur.fetchone()
+        debtor_name = debtor_name_row["name"] if debtor_name_row else "Unknown"
+        cur.execute("SELECT name FROM Users WHERE user_id = %s", (creditor_id,))
+        creditor_name_row = cur.fetchone()
+        creditor_name = creditor_name_row["name"] if creditor_name_row else "Unknown"
+
+        amt        = float(row["entry_amount"])
+        entry_date = str(row["entry_date"])
+        cur.execute(
+            "UPDATE Borrows SET remaining_amount = %s, status = %s "
+            "WHERE borrower_user_id = %s AND lender_name = %s AND amount = %s AND borrow_date = %s",
+            (new_remaining, new_status, debtor_id, creditor_name, amt, entry_date),
+        )
+        cur.execute(
+            "UPDATE Loans SET remaining_amount = %s, status = %s "
+            "WHERE lender_user_id = %s AND borrower_name = %s AND amount = %s AND loan_date = %s",
+            (new_remaining, new_status, creditor_id, debtor_name, amt, entry_date),
+        )
+
+        conn.commit()
+        return {
+            "repayment_id": repayment_id,
+            "entry_id": row["entry_id"],
+            "remaining_amount": new_remaining,
+            "status": new_status,
+            "debtor_id": debtor_id,
+            "creditor_id": creditor_id,
+            "amount": repay,
+        }
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close(); conn.close()
+
+
+def reject_repayment(repayment_id: int, recipient_user_id: int) -> dict:
+    conn = get_connection()
+    cur  = conn.cursor(dictionary=True)
+    try:
+        conn.start_transaction()
+        cur.execute(
+            """
+            SELECT lr.repayment_id, lr.entry_id, lr.amount AS repay_amount, lr.status AS repay_status,
+                   lr.proposed_by, p.owner_user_id, p.linked_user_id, p.display_name
+            FROM   Ledger_Repayments lr
+            JOIN   Ledger_Entries le ON le.entry_id = lr.entry_id
+            JOIN   People p ON p.person_id = le.person_id
+            WHERE  lr.repayment_id = %s
+            FOR UPDATE
+            """,
+            (repayment_id,),
+        )
+        row = cur.fetchone()
+        if not row:
+            raise ValueError("Repayment request not found.")
+        if row["repay_status"] != "pending":
+            raise ValueError("This repayment has already been resolved.")
+        if row["linked_user_id"] != recipient_user_id:
+            raise ValueError("Not authorised to decline this repayment.")
+        cur.execute(
+            "UPDATE Ledger_Repayments SET status = 'rejected', resolved_at = NOW() WHERE repayment_id = %s",
+            (repayment_id,),
+        )
+        conn.commit()
+        return row
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close(); conn.close()
+
+
+def cancel_repayment(repayment_id: int, proposer_user_id: int) -> dict:
+    """Debtor cancels their own still-pending repayment proposal."""
+    conn = get_connection()
+    cur  = conn.cursor(dictionary=True)
+    try:
+        conn.start_transaction()
+        cur.execute(
+            "SELECT repayment_id, status, proposed_by FROM Ledger_Repayments WHERE repayment_id = %s FOR UPDATE",
+            (repayment_id,),
+        )
+        row = cur.fetchone()
+        if not row:
+            raise ValueError("Repayment request not found.")
+        if row["proposed_by"] != proposer_user_id:
+            raise ValueError("Not authorised to cancel this repayment.")
+        if row["status"] != "pending":
+            raise ValueError("This repayment has already been resolved.")
+        cur.execute("DELETE FROM Ledger_Repayments WHERE repayment_id = %s", (repayment_id,))
+        conn.commit()
+        return {"cancelled": True}
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close(); conn.close()
+
+
+def _apply_settlement(person_id: int, owner_user_id: int) -> dict:
     """
-    Record a net settlement between this owner and a person.
-    Marks all active entries as repaid and inserts one 'settlement' entry
-    that records the final cash transfer. Net becomes 0 after this.
+    Actually performs the settlement — marks all active entries as repaid and
+    inserts a 'settlement' audit entry, mirrored to the linked user's side.
+    Called either directly (creditor settling) or from accept_settlement
+    (creditor confirming a debtor's settle-up proposal).
     """
     conn = get_connection()
     cur  = conn.cursor(dictionary=True)
@@ -636,7 +965,6 @@ def settle_up(person_id: int, owner_user_id: int) -> dict:
         if not person:
             raise ValueError("Person not found.")
 
-        # Net balance from active non-settlement entries only
         cur.execute(
             """
             SELECT COALESCE(SUM(
@@ -662,7 +990,6 @@ def settle_up(person_id: int, owner_user_id: int) -> dict:
         settlement_amount = round(abs(net), 2)
         today = __import__('datetime').date.today().isoformat()
 
-        # Mark ALL active entries for this person as repaid
         cur.execute(
             """
             UPDATE Ledger_Entries
@@ -672,8 +999,6 @@ def settle_up(person_id: int, owner_user_id: int) -> dict:
             (person_id,),
         )
 
-        # Insert a settlement record as an audit trail
-        # direction = 'settlement', no remaining (it's just a record of the cash transfer)
         cur.execute(
             """
             INSERT INTO Ledger_Entries
@@ -690,7 +1015,6 @@ def settle_up(person_id: int, owner_user_id: int) -> dict:
         )
         entry_id = cur.lastrowid
 
-        # Mirror on linked user's side
         linked_user_id = person["linked_user_id"]
         if linked_user_id:
             cur.execute(
@@ -736,6 +1060,247 @@ def settle_up(person_id: int, owner_user_id: int) -> dict:
     except ValueError:
         conn.rollback()
         raise
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close(); conn.close()
+
+
+def propose_or_apply_settlement(person_id: int, requester_user_id: int) -> dict:
+    """
+    Canonical Settle Up entry point.
+    - Unlinked person, or requester is the net CREDITOR (owed money): applies
+      instantly — safe, since the requester isn't the one erasing their own debt.
+    - Linked person, requester is the net DEBTOR (owes money): creates a pending
+      Ledger_Settlement_Requests row instead, awaiting the creditor's confirmation.
+    """
+    conn = get_connection()
+    cur  = conn.cursor(dictionary=True)
+    try:
+        cur.execute(
+            "SELECT person_id, linked_user_id FROM People WHERE person_id = %s AND owner_user_id = %s",
+            (person_id, requester_user_id),
+        )
+        person = cur.fetchone()
+        if not person:
+            raise ValueError("Person not found.")
+
+        cur.execute(
+            """
+            SELECT COALESCE(SUM(
+                CASE
+                    WHEN le.direction = 'lent'     THEN  le.remaining_amount
+                    WHEN le.direction = 'borrowed' THEN -le.remaining_amount
+                    ELSE 0
+                END
+            ), 0) AS net_balance
+            FROM Ledger_Entries le
+            WHERE le.person_id = %s AND le.status = 'active' AND le.direction IN ('lent', 'borrowed')
+            """,
+            (person_id,),
+        )
+        net_row = cur.fetchone()
+        net = float(net_row["net_balance"]) if net_row else 0.0
+        if abs(net) < 0.005:
+            raise ValueError("Already settled — net balance is zero.")
+
+        is_linked = person["linked_user_id"] is not None
+
+        if not is_linked or net > 0:
+            cur.close(); conn.close()
+            result = _apply_settlement(person_id, requester_user_id)
+            result["pending_settlement"] = False
+            return result
+
+        # Requester is the net debtor on a linked person → propose, don't apply.
+        conn.start_transaction()
+        cur.execute(
+            "INSERT INTO Ledger_Settlement_Requests (person_id, proposed_by, net_amount, status) VALUES (%s, %s, %s, 'pending')",
+            (person_id, requester_user_id, round(abs(net), 2)),
+        )
+        request_id = cur.lastrowid
+        conn.commit()
+        return {
+            "pending_settlement": True,
+            "request_id": request_id,
+            "net_amount": round(abs(net), 2),
+            "linked_user_id": person["linked_user_id"],
+        }
+    except Exception:
+        try: conn.rollback()
+        except: pass
+        raise
+    finally:
+        try: cur.close()
+        except: pass
+        try: conn.close()
+        except: pass
+
+
+def fetch_pending_settlements_for_user(recipient_user_id: int) -> list[dict]:
+    """Settle-up proposals from a debtor, awaiting this user's (the creditor's) confirmation."""
+    conn = get_connection()
+    cur  = conn.cursor(dictionary=True)
+    cur.execute(
+        """
+        SELECT lsr.request_id, lsr.net_amount, lsr.created_at,
+               p.display_name AS person_name, p.person_id,
+               u.name AS requested_by
+        FROM   Ledger_Settlement_Requests lsr
+        JOIN   People p ON p.person_id = lsr.person_id
+        JOIN   Users  u ON u.user_id   = lsr.proposed_by
+        WHERE  p.linked_user_id = %s AND lsr.status = 'pending'
+        ORDER  BY lsr.created_at DESC
+        """,
+        (recipient_user_id,),
+    )
+    rows = cur.fetchall()
+    cur.close(); conn.close()
+    for r in rows:
+        r["net_amount"] = float(r["net_amount"])
+        r["created_at"] = str(r["created_at"])
+    return rows
+
+
+def fetch_sent_settlements(proposer_user_id: int) -> list[dict]:
+    """Settle-up proposals this user made, still awaiting the creditor's confirmation."""
+    conn = get_connection()
+    cur  = conn.cursor(dictionary=True)
+    cur.execute(
+        """
+        SELECT lsr.request_id, lsr.net_amount, lsr.created_at,
+               p.display_name AS person_name, p.person_id, p.linked_user_id,
+               u.name AS sent_to
+        FROM   Ledger_Settlement_Requests lsr
+        JOIN   People p ON p.person_id = lsr.person_id
+        LEFT JOIN Users u ON u.user_id = p.linked_user_id
+        WHERE  lsr.proposed_by = %s AND lsr.status = 'pending'
+        ORDER  BY lsr.created_at DESC
+        """,
+        (proposer_user_id,),
+    )
+    rows = cur.fetchall()
+    cur.close(); conn.close()
+    for r in rows:
+        r["net_amount"] = float(r["net_amount"])
+        r["created_at"] = str(r["created_at"])
+    return rows
+
+
+def accept_settlement(request_id: int, recipient_user_id: int) -> dict:
+    """
+    Creditor confirms a debtor-proposed settle-up. Applies via the creditor's own
+    People row (so both mirrored sides settle correctly) — net is recomputed fresh
+    at accept time rather than trusting the proposal-time snapshot.
+    """
+    conn = get_connection()
+    cur  = conn.cursor(dictionary=True)
+    try:
+        conn.start_transaction()
+        cur.execute(
+            """
+            SELECT lsr.request_id, lsr.status, lsr.proposed_by, p.linked_user_id
+            FROM   Ledger_Settlement_Requests lsr
+            JOIN   People p ON p.person_id = lsr.person_id
+            WHERE  lsr.request_id = %s
+            FOR UPDATE
+            """,
+            (request_id,),
+        )
+        row = cur.fetchone()
+        if not row:
+            raise ValueError("Settlement request not found.")
+        if row["status"] != "pending":
+            raise ValueError("This settlement request has already been resolved.")
+        if row["linked_user_id"] != recipient_user_id:
+            raise ValueError("Not authorised to confirm this settlement.")
+
+        proposer_id = row["proposed_by"]
+        cur.execute(
+            "SELECT person_id FROM People WHERE owner_user_id = %s AND linked_user_id = %s",
+            (recipient_user_id, proposer_id),
+        )
+        recip_person = cur.fetchone()
+        if not recip_person:
+            raise ValueError("Could not locate your ledger record for this person.")
+
+        cur.execute(
+            "UPDATE Ledger_Settlement_Requests SET status = 'accepted', resolved_at = NOW() WHERE request_id = %s",
+            (request_id,),
+        )
+        conn.commit()
+        cur.close(); conn.close()
+
+        settle_result = _apply_settlement(recip_person["person_id"], recipient_user_id)
+        settle_result["debtor_id"] = proposer_id
+        settle_result["creditor_id"] = recipient_user_id
+        return settle_result
+    except Exception:
+        try: conn.rollback()
+        except: pass
+        raise
+    finally:
+        try: cur.close()
+        except: pass
+        try: conn.close()
+        except: pass
+
+
+def reject_settlement(request_id: int, recipient_user_id: int) -> dict:
+    conn = get_connection()
+    cur  = conn.cursor(dictionary=True)
+    try:
+        conn.start_transaction()
+        cur.execute(
+            """
+            SELECT lsr.request_id, lsr.status, lsr.proposed_by, lsr.net_amount, p.linked_user_id
+            FROM   Ledger_Settlement_Requests lsr
+            JOIN   People p ON p.person_id = lsr.person_id
+            WHERE  lsr.request_id = %s
+            FOR UPDATE
+            """,
+            (request_id,),
+        )
+        row = cur.fetchone()
+        if not row:
+            raise ValueError("Settlement request not found.")
+        if row["status"] != "pending":
+            raise ValueError("This settlement request has already been resolved.")
+        if row["linked_user_id"] != recipient_user_id:
+            raise ValueError("Not authorised to decline this settlement.")
+        cur.execute(
+            "UPDATE Ledger_Settlement_Requests SET status = 'rejected', resolved_at = NOW() WHERE request_id = %s",
+            (request_id,),
+        )
+        conn.commit()
+        return row
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close(); conn.close()
+
+
+def cancel_settlement(request_id: int, proposer_user_id: int) -> dict:
+    conn = get_connection()
+    cur  = conn.cursor(dictionary=True)
+    try:
+        conn.start_transaction()
+        cur.execute(
+            "SELECT request_id, status, proposed_by FROM Ledger_Settlement_Requests WHERE request_id = %s FOR UPDATE",
+            (request_id,),
+        )
+        row = cur.fetchone()
+        if not row:
+            raise ValueError("Settlement request not found.")
+        if row["proposed_by"] != proposer_user_id:
+            raise ValueError("Not authorised to cancel this settlement.")
+        if row["status"] != "pending":
+            raise ValueError("This settlement request has already been resolved.")
+        cur.execute("DELETE FROM Ledger_Settlement_Requests WHERE request_id = %s", (request_id,))
+        conn.commit()
+        return {"cancelled": True}
     except Exception:
         conn.rollback()
         raise
