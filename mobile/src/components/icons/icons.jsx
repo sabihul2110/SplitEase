@@ -656,6 +656,8 @@ export const TYPE_ICONS = {
   settlement_received: { Icon: Icons.paymentSettled,      bg: "rgba(99,102,241,0.12)",  color: "#10b981" },
   loan_given:          { Icon: Icons.lendMoney,       bg: "rgba(245,158,11,0.12)",  color: "#f59e0b" },
   loan_taken:          { Icon: Icons.borrowMoney,     bg: "rgba(99,102,241,0.12)",  color: "#818cf8" },
+  loan_repayment_received: { Icon: Icons.paymentSettled, bg: "rgba(16,185,129,0.12)", color: "#10b981" },
+  loan_repayment_paid:     { Icon: Icons.paymentSettled, bg: "rgba(239,68,68,0.10)",  color: "#f87171" },
 };
 
 export const CATEGORY_ICONS = {
@@ -680,4 +682,10 @@ export const TYPE_CFG = {
   settlement_received: { sign: "+", bucket: "received" },
   loan_given:          { sign: "-", bucket: "loans"    },
   loan_taken:          { sign: "+", bucket: "loans"    },
+  // Repayment cash flow is distinct from the loan's own "loans" bucket —
+  // the loan_given/loan_taken receivable already reflects the reduced
+  // balance, so repayments count as actual Spent/Received cash movement
+  // instead, to avoid double-counting the outstanding-balance figures.
+  loan_repayment_received: { sign: "+", bucket: "received" },
+  loan_repayment_paid:     { sign: "-", bucket: "spent"    },
 };

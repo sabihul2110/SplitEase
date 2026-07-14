@@ -71,6 +71,16 @@ const TYPE_META = {
     color: "#60a5fa",
     label: "Sent",
   },
+  loan_repayment_received: {
+    bg: "rgba(16,185,129,0.12)",
+    color: "#34d399",
+    label: "Repayment received",
+  },
+  loan_repayment_paid: {
+    bg: "rgba(239,68,68,0.10)",
+    color: "#f87171",
+    label: "Repayment paid",
+  },
 };
 
 const TYPE_ICON = {
@@ -82,6 +92,8 @@ const TYPE_ICON = {
   loan_taken: Icons.borrowMoney,
   settlement_received: Icons.checkCircle,
   settlement_sent: Icons.settlement,
+  loan_repayment_received: Icons.paymentSettled,
+  loan_repayment_paid: Icons.paymentSettled,
 };
 
 // Matches web tabMatches()
@@ -95,13 +107,22 @@ function tabMatches(tab, type) {
     );
   if (tab === "personal")
     return type === "personal_expense" || type === "income";
-  if (tab === "money") return type === "loan_given" || type === "loan_taken";
+  if (tab === "money")
+    return (
+      type === "loan_given" ||
+      type === "loan_taken" ||
+      type === "loan_repayment_received" ||
+      type === "loan_repayment_paid"
+    );
   return true;
 }
 
 function isInflow(type) {
   return (
-    type === "income" || type === "settlement_received" || type === "loan_taken"
+    type === "income" ||
+    type === "settlement_received" ||
+    type === "loan_taken" ||
+    type === "loan_repayment_received"
   );
 }
 

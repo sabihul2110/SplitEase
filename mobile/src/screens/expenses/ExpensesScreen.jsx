@@ -19,6 +19,7 @@ import { Icons, TYPE_ICONS, TYPE_CFG } from "../../components/icons/icons";
 import ScreenHeader from "../../components/layout/ScreenHeader";
 import AppAlert from "../../components/common/AppAlert";
 import Toast from "../../components/common/Toast";
+import DatePickerInput from "../../components/common/DatePickerInput";
 
 // ─────────────────────────────────────────────
 //  Helpers (identical logic to web)
@@ -254,6 +255,7 @@ function MonthNavigator({ value, onChange, availableMonths }) {
 // ─────────────────────────────────────────────
 function InlineRepay({ entry, onSuccess, onToast }) {
   const [amt,    setAmt]    = useState("");
+  const [date,   setDate]   = useState(todayStr());
   const [saving, setSaving] = useState(false);
   const [err,    setErr]    = useState("");
 
@@ -275,7 +277,7 @@ function InlineRepay({ entry, onSuccess, onToast }) {
     if (parsed > remaining)           { setErr(`Max ₹${fmt(remaining)}`); return; }
     setSaving(true);
     try {
-      await expensesApi.repayLoan(entry.ref_id, parsed);
+      await expensesApi.repayLoan(entry.ref_id, parsed, date);
       setAmt("");
       onToast?.("Repayment recorded");
       onSuccess(); // onSuccess calls load() which triggers screen refresh
@@ -295,6 +297,9 @@ function InlineRepay({ entry, onSuccess, onToast }) {
         </Text>
         {"  "}· Record repayment:
       </Text>
+      <View style={{ marginBottom: 6 }}>
+        <DatePickerInput value={date} onChange={setDate} accentColor="#10b981" />
+      </View>
       <View style={styles.repayRow}>
         <TextInput
           style={styles.repayInput}

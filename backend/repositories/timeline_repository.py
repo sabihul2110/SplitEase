@@ -96,36 +96,44 @@ def fetch_timeline_for_period(user_id: int, start_date: str, end_date: str) -> l
             UNION ALL
 
             SELECT
-                CONVERT('loan_given' USING utf8mb4)                       AS type,
-                loan_date                                                 AS date,
-                amount,
-                NULL                                                      AS my_share,
-                remaining_amount                                          AS receivable,
-                CONVERT(CONCAT('Lent to ', borrower_name) USING utf8mb4)  AS label,
-                CONVERT(note USING utf8mb4)                               AS sub,
-                loan_id                                                   AS ref_id,
-                NULL                                                      AS group_id,
-                CONVERT(NULL USING utf8mb4)                               AS group_name,
-                created_at
-            FROM Loans
-            WHERE lender_user_id = %s AND loan_date BETWEEN %s AND %s
+                CONVERT('loan_given' USING utf8mb4)                          AS type,
+                le.entry_date                                                AS date,
+                le.amount,
+                NULL                                                         AS my_share,
+                le.remaining_amount                                          AS receivable,
+                CONVERT(CONCAT('Lent to ', p.display_name) USING utf8mb4)    AS label,
+                CONVERT(le.note USING utf8mb4)                               AS sub,
+                le.entry_id                                                  AS ref_id,
+                NULL                                                         AS group_id,
+                CONVERT(NULL USING utf8mb4)                                  AS group_name,
+                le.created_at
+            FROM Ledger_Entries le
+            JOIN People p ON p.person_id = le.person_id
+            WHERE p.owner_user_id = %s
+              AND le.direction = 'lent'
+              AND le.status IN ('active','repaid')
+              AND le.entry_date BETWEEN %s AND %s
 
             UNION ALL
 
             SELECT
-                CONVERT('loan_taken' USING utf8mb4)                            AS type,
-                borrow_date                                                    AS date,
-                amount,
-                NULL                                                           AS my_share,
-                remaining_amount                                               AS receivable,
-                CONVERT(CONCAT('Borrowed from ', lender_name) USING utf8mb4)   AS label,
-                CONVERT(note USING utf8mb4)                                    AS sub,
-                borrow_id                                                      AS ref_id,
-                NULL                                                           AS group_id,
-                CONVERT(NULL USING utf8mb4)                                    AS group_name,
-                created_at
-            FROM Borrows
-            WHERE borrower_user_id = %s AND borrow_date BETWEEN %s AND %s
+                CONVERT('loan_taken' USING utf8mb4)                             AS type,
+                le.entry_date                                                   AS date,
+                le.amount,
+                NULL                                                            AS my_share,
+                le.remaining_amount                                             AS receivable,
+                CONVERT(CONCAT('Borrowed from ', p.display_name) USING utf8mb4) AS label,
+                CONVERT(le.note USING utf8mb4)                                  AS sub,
+                le.entry_id                                                     AS ref_id,
+                NULL                                                            AS group_id,
+                CONVERT(NULL USING utf8mb4)                                     AS group_name,
+                le.created_at
+            FROM Ledger_Entries le
+            JOIN People p ON p.person_id = le.person_id
+            WHERE p.owner_user_id = %s
+              AND le.direction = 'borrowed'
+              AND le.status IN ('active','repaid')
+              AND le.entry_date BETWEEN %s AND %s
 
             UNION ALL
 
@@ -313,37 +321,43 @@ def fetch_unified_timeline(user_id: int, limit: int = 100, offset: int = 0) -> l
 
             -- 5. Loans given
             SELECT
-                CONVERT('loan_given' USING utf8mb4)                       AS type,
-                loan_date                                                 AS date,
-                amount,
-                NULL                                                      AS my_share,
-                remaining_amount                                          AS receivable,
-                CONVERT(CONCAT('Lent to ', borrower_name) USING utf8mb4)  AS label,
-                CONVERT(note USING utf8mb4)                               AS sub,
-                loan_id                                                   AS ref_id,
-                NULL                                                      AS group_id,
-                CONVERT(NULL USING utf8mb4)                               AS group_name,
-                created_at
-            FROM Loans
-            WHERE lender_user_id = %s
+                CONVERT('loan_given' USING utf8mb4)                          AS type,
+                le.entry_date                                                AS date,
+                le.amount,
+                NULL                                                         AS my_share,
+                le.remaining_amount                                          AS receivable,
+                CONVERT(CONCAT('Lent to ', p.display_name) USING utf8mb4)    AS label,
+                CONVERT(le.note USING utf8mb4)                               AS sub,
+                le.entry_id                                                  AS ref_id,
+                NULL                                                         AS group_id,
+                CONVERT(NULL USING utf8mb4)                                  AS group_name,
+                le.created_at
+            FROM Ledger_Entries le
+            JOIN People p ON p.person_id = le.person_id
+            WHERE p.owner_user_id = %s
+              AND le.direction = 'lent'
+              AND le.status IN ('active','repaid')
 
             UNION ALL
 
             -- 6. Money borrowed
             SELECT
-                CONVERT('loan_taken' USING utf8mb4)                            AS type,
-                borrow_date                                                    AS date,
-                amount,
-                NULL                                                           AS my_share,
-                remaining_amount                                               AS receivable,
-                CONVERT(CONCAT('Borrowed from ', lender_name) USING utf8mb4)   AS label,
-                CONVERT(note USING utf8mb4)                                    AS sub,
-                borrow_id                                                      AS ref_id,
-                NULL                                                           AS group_id,
-                CONVERT(NULL USING utf8mb4)                                    AS group_name,
-                created_at
-            FROM Borrows
-            WHERE borrower_user_id = %s
+                CONVERT('loan_taken' USING utf8mb4)                             AS type,
+                le.entry_date                                                   AS date,
+                le.amount,
+                NULL                                                            AS my_share,
+                le.remaining_amount                                             AS receivable,
+                CONVERT(CONCAT('Borrowed from ', p.display_name) USING utf8mb4) AS label,
+                CONVERT(le.note USING utf8mb4)                                  AS sub,
+                le.entry_id                                                     AS ref_id,
+                NULL                                                            AS group_id,
+                CONVERT(NULL USING utf8mb4)                                     AS group_name,
+                le.created_at
+            FROM Ledger_Entries le
+            JOIN People p ON p.person_id = le.person_id
+            WHERE p.owner_user_id = %s
+              AND le.direction = 'borrowed'
+              AND le.status IN ('active','repaid')
 
             UNION ALL
 

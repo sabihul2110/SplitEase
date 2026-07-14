@@ -1,3 +1,5 @@
+# --- backend/routers/people.py ---
+
 """
 People / Ledger routes.
 Route order matters — static paths before dynamic {person_id} paths.
