@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { getTimeline, downloadStatement } from "../../api/timeline";
 import DateInput from "../../components/common/DateInput";
+import { Icons } from "../../components/icons";
 
 const STYLES = `
   @keyframes actFadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
@@ -91,38 +92,26 @@ const TYPE_META = {
   loan_repayment_paid:      { bg: "rgba(239,68,68,0.10)",   color: "#f87171",  label: "Repayment paid"     },
 };
 
-const ICON_SVG = {
-  expense:    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>,
-  settlement: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
-  paymentSettled: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.76 4 4 0 0 1-4.78 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.78 4 4 0 0 1 0-6.76Z"/><circle cx="12" cy="12" r="5.5"/><polyline points="10 12 11.5 13.5 14.5 10.5"/></svg>,
-  income:     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v12"/><path d="m8 10 4 4 4-4"/><path d="M20 16v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2"/></svg>,
-  loan:       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20 Q4 14 12 14 Q20 14 20 20"/></svg>,
-  search:     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
-  empty:      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>,
-  receipt:    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2h12a1 1 0 0 1 1 1v18l-2.5-1.5L14 21l-2.5-1.5L9 21l-2.5-1.5L4 21V3a1 1 0 0 1 1-1z"/><line x1="8" y1="7" x2="16" y2="7"/><line x1="8" y1="11" x2="16" y2="11"/><line x1="8" y1="15" x2="12" y2="15"/></svg>,
-  close:      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
-  groupExpense: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="7" r="3"/><path d="M5 20 Q5 14 12 14 Q19 14 19 20"/><circle cx="4" cy="9" r="2.2" strokeWidth="1.3" opacity="0.6"/><path d="M1 20 Q1 15 4 15" strokeWidth="1.3" opacity="0.6"/><circle cx="20" cy="9" r="2.2" strokeWidth="1.3" opacity="0.6"/><path d="M23 20 Q23 15 20 15" strokeWidth="1.3" opacity="0.6"/></svg>,
-  checkCircle: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>,
-  lendMoney:  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="18" r="4"/><path d="M12 14V2"/><path d="M7 7l5-5 5 5"/></svg>,
-  borrowMoney: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="18" r="4"/><path d="M12 2v12"/><path d="M7 9l5 5 5-5"/></svg>,
-};
-
+const EMPTY_ICON = (
+  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+);
 
 const TYPE_ICON = {
-  group_expense:            ICON_SVG.groupExpense,
-  group_expense_owed:       ICON_SVG.receipt,
-  personal_expense:         ICON_SVG.expense,
-  income:                   ICON_SVG.income,
-  loan_given:                ICON_SVG.lendMoney,
-  loan_taken:                ICON_SVG.borrowMoney,
-  settlement_received:      ICON_SVG.checkCircle,
-  settlement_sent:          ICON_SVG.settlement,
-  loan_repayment_received:  ICON_SVG.paymentSettled,
-  loan_repayment_paid:      ICON_SVG.paymentSettled,
+  group_expense:            Icons.groupExpense,
+  group_expense_owed:       Icons.receipt,
+  personal_expense:         Icons.personalExpense,
+  income:                   Icons.income,
+  loan_given:                Icons.lendMoney,
+  loan_taken:                Icons.borrowMoney,
+  settlement_received:      Icons.checkCircle,
+  settlement_sent:          Icons.settlement,
+  loan_repayment_received:  Icons.paymentSettled,
+  loan_repayment_paid:      Icons.paymentSettled,
 };
 
-function iconForType(type) {
-  return TYPE_ICON[type] || ICON_SVG.expense;
+function IconForType({ type, size = 16, color }) {
+  const Comp = TYPE_ICON[type] || Icons.personalExpense;
+  return <Comp size={size} color={color} />;
 }
 
 const TABS = [
@@ -318,7 +307,7 @@ export default function Activity() {
             disabled={downloading}
             title="Download statement"
           >
-            {ICON_SVG.receipt}
+            <Icons.receipt size={17} />
           </button>
         </div>
 
@@ -332,7 +321,7 @@ export default function Activity() {
 
         <div className="act-toolbar">
           <div className="act-search-wrap" style={{ marginRight: "auto" }}>
-            <span className="act-search-icon">{ICON_SVG.search}</span>
+            <span className="act-search-icon"><Icons.search size={14} /></span>
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search activity…" />
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -368,7 +357,7 @@ export default function Activity() {
         ) : visible.length === 0 ? (
           <div className="act-feed">
             <div className="act-empty">
-              <div className="act-empty-icon">{ICON_SVG.empty}</div>
+              <div className="act-empty-icon">{EMPTY_ICON}</div>
               <div style={{ fontSize: 15, fontWeight: 600, color: "var(--text2)", marginBottom: 5 }}>
                 {search ? `No results for "${search}"` : "No activity yet"}
               </div>
@@ -394,7 +383,7 @@ export default function Activity() {
                       onClick={() => canNav && navigate(`/groups/${item.group_id}`)}
                     >
                       <div className="act-icon" style={{ background: meta.bg, color: meta.color }}>
-                        {iconForType(item.type)}
+                        <IconForType type={item.type} size={16} color={meta.color} />
                       </div>
                       <div className="act-body">
                         <div className="act-desc"><strong>{item.label}</strong></div>
@@ -507,7 +496,7 @@ export default function Activity() {
               {resultInfo.error ? (
                 <>
                   <div className="act-success-icon-wrap error">
-                    <span style={{ color: "var(--danger, #f87171)" }}>{ICON_SVG.close}</span>
+                    <span style={{ color: "var(--danger, #f87171)" }}><Icons.close size={22} /></span>
                   </div>
                   <div className="act-modal-title">Download failed</div>
                   <div className="act-modal-sub">Could not generate your statement. Please try again.</div>
@@ -515,7 +504,7 @@ export default function Activity() {
               ) : (
                 <>
                   <div className="act-success-icon-wrap">
-                    <span style={{ color: "var(--success)" }}>{ICON_SVG.settlement}</span>
+                    <span style={{ color: "var(--success)" }}><Icons.settlement size={22} /></span>
                   </div>
                   <div className="act-modal-title">Statement Ready</div>
                   <div className="act-modal-sub">splitease-statement.pdf has been downloaded.</div>

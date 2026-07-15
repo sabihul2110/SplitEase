@@ -195,7 +195,7 @@ def fetch_timeline_for_period(user_id: int, start_date: str, end_date: str) -> l
               AND lr.repayment_date BETWEEN %s AND %s
 
         ) AS feed
-        ORDER BY date DESC, created_at DESC
+        ORDER BY date ASC, created_at ASC
         """,
         (
             user_id, start_date, end_date,                    # personal expenses
