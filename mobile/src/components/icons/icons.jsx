@@ -677,15 +677,16 @@ export const TYPE_CFG = {
   personal_expense:    { sign: "-", bucket: "spent"    },
   group_expense:       { sign: "-", bucket: "spent"    },
   group_expense_owed:  { sign: "-", bucket: "spent"    },
-  settlement_sent:     { sign: "-", bucket: "spent"    },
   income:              { sign: "+", bucket: "received" },
-  settlement_received: { sign: "+", bucket: "received" },
   loan_given:          { sign: "-", bucket: "loans"    },
   loan_taken:          { sign: "+", bucket: "loans"    },
-  // Repayment cash flow is distinct from the loan's own "loans" bucket —
-  // the loan_given/loan_taken receivable already reflects the reduced
-  // balance, so repayments count as actual Spent/Received cash movement
-  // instead, to avoid double-counting the outstanding-balance figures.
-  loan_repayment_received: { sign: "+", bucket: "received" },
-  loan_repayment_paid:     { sign: "-", bucket: "spent"    },
+  // Settlements and repayments only move Cash Balance and reduce the
+  // Ledger/receivable — they must never be logged as income or expense.
+  // group_expense_owed / loan_given / loan_taken already carry the true
+  // P&L or receivable effect at accrual time; counting the later cash
+  // movement too would double it. Matches web. Still visible under "All".
+  settlement_sent:          { sign: "-", bucket: "repayment" },
+  settlement_received:      { sign: "+", bucket: "repayment" },
+  loan_repayment_received:  { sign: "+", bucket: "repayment" },
+  loan_repayment_paid:      { sign: "-", bucket: "repayment" },
 };

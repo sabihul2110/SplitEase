@@ -9,6 +9,7 @@ import * as ledgerNotifsApi from "../../api/ledgerNotifications";
 import AddEntryModal from "../../components/feature/AddEntryModal";
 import { Icons } from "../../components/icons";
 import Toast from "../../components/common/Toast";
+import DateInput from "../../components/common/DateInput";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const fmt = (n) => Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 });
@@ -455,7 +456,7 @@ function PeopleLedger() {
               </p>
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label">SETTLEMENT DATE</label>
-                <input type="date" value={settleDate} max={todayStr()} onChange={e => setSettleDate(e.target.value)} />
+                <DateInput value={settleDate} onChange={setSettleDate} maxDate={new Date()} />
               </div>
               <div style={{ display: "flex", gap: 10 }}>
                 <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setShowSettleModal(false)}>Cancel</button>
@@ -627,7 +628,7 @@ function AddEntryModal2({ personName, onClose, onSuccess }) {
           </div>
           <div className="form-group" style={{ marginBottom: 0 }}>
             <label className="form-label">DATE</label>
-            <input type="date" value={date} onChange={e => setDate(e.target.value)} />
+            <DateInput value={date} onChange={setDate} maxDate={new Date()} accentColor={accent} />
           </div>
           <div className="form-group" style={{ marginBottom: 0 }}>
             <label className="form-label">NOTE — optional</label>
@@ -748,11 +749,7 @@ function LoanCard({ item, onRefresh, idx, accentColor, btnColor, btnHover, isLen
 
       {item.status === "active" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          <input type="date" value={repayDate} max={todayStr()}
-            onChange={e => setRepayDate(e.target.value)}
-            style={{ padding: "7px 10px", borderRadius: 7,
-              border: "1px solid var(--border)", background: "var(--surface2)",
-              color: "var(--text)", fontSize: 13, outline: "none" }} />
+          <DateInput value={repayDate} onChange={setRepayDate} maxDate={new Date()} accentColor={btnColor} />
           <div style={{ display: "flex", gap: 8 }}>
             <input type="number" min="0" step="0.01"
               placeholder={`Amount (max ₹${fmt(item.remaining_amount)})`}

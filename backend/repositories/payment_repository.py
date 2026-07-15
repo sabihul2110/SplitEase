@@ -90,6 +90,8 @@ def insert_payment_with_allocations(
     amount: float, note: str | None, payment_date: str,
     allocations: list[dict],
 ) -> int:
+    if payer_id == payee_id:
+        raise ValueError("Payer and payee must be different members.")
     conn = get_connection()
     cur  = conn.cursor()
     try:

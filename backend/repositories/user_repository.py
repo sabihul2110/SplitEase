@@ -279,6 +279,9 @@ def admin_wipe_app(admin_user_id: int) -> dict:
         cur.execute("DELETE FROM Notifications")
         cur.execute("DELETE FROM Ledger_Notifications")
         cur.execute("DELETE FROM Invites")
+        cur.execute("DELETE FROM PasswordResetTokens")
+        cur.execute("DELETE FROM EmailVerificationTokens")
+        cur.execute("DELETE FROM Payment_Allocations")
         cur.execute("DELETE FROM Payments")
         cur.execute("DELETE FROM Expense_Splits")
         cur.execute("DELETE FROM Expenses")
@@ -302,12 +305,16 @@ def admin_wipe_app(admin_user_id: int) -> dict:
         # below that anyway — next new user/group correctly becomes 2 / 1.
         reset_tables = [
             "Users", "`Groups`", "Group_Members", "Expenses", "Expense_Splits",
-            "Payments", "Invites", "Notifications", "Ledger_Notifications",
+            "Payments", "Payment_Allocations", "Invites", "Notifications", "Ledger_Notifications",
             "Personal_Expenses", "Income", "Loans", "Borrows",
-            "Ledger_Entries", "People",
+            "Ledger_Entries", "People", "Ledger_Repayments", "Ledger_Settlement_Requests",
+            "PasswordResetTokens", "EmailVerificationTokens",
         ]
         for table in reset_tables:
-            cur.execute(f"ALTER TABLE {table} AUTO_INCREMENT = 1")
+            try:
+                cur.execute(f"ALTER TABLE {table} AUTO_INCREMENT = 1")
+            except Exception:
+                pass  # composite-PK / no-auto_increment tables (e.g. Group_Members) — safe to skip
 
         return {"wiped": True}
     except Exception:

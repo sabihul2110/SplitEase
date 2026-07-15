@@ -2,6 +2,7 @@
 
 
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -71,6 +72,15 @@ const CSS = `
     animation: diSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     position: relative;
   }
+  
+  .di-close-btn {
+    position: absolute; top: 14px; right: 14px;
+    width: 26px; height: 26px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: transparent; border: 1px solid transparent;
+    color: var(--text3); cursor: pointer; transition: all 0.15s ease;
+  }
+  .di-close-btn:hover { background: var(--surface2); color: var(--text); }
   @keyframes diSlideUp {
     from { opacity: 0; transform: translateY(16px) scale(0.96) }
     to   { opacity: 1; transform: translateY(0) scale(1) }
@@ -313,7 +323,7 @@ export default function DateInput({
         aria-hidden="true"
       />
 
-      {open && (
+      {open && createPortal(
         <div
           className="di-overlay"
           role="dialog"
@@ -321,6 +331,13 @@ export default function DateInput({
           onClick={e => { if (e.target === e.currentTarget) close(); }}
         >
           <div className="di-modal" ref={modalRef} style={accentStyle}>
+
+            <button type="button" className="di-close-btn" onClick={close} aria-label="Close">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
 
             <div className="di-month-row">
               <button className="di-nav-btn" onClick={prevMonth} aria-label="Previous month">
@@ -428,7 +445,8 @@ export default function DateInput({
               </div>
             ))}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

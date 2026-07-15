@@ -267,17 +267,20 @@ const TYPE_CFG = {
   personal_expense:        { sign: "-", bucket: "spent"    },
   group_expense:           { sign: "-", bucket: "spent"    },
   group_expense_owed:      { sign: "-", bucket: "spent"    },
-  settlement_sent:         { sign: "-", bucket: "spent"    },
-  income:                  { sign: "+", bucket: "received" },
-  settlement_received:     { sign: "+", bucket: "received" },
+  // Settlements only move cash + reduce the ledger — never the P&L.
+  // The underlying group_expense_owed already counted the expense at
+  // accrual time; counting the settlement too would double it.
+  settlement_sent:         { sign: "-", bucket: "repayment" },
+  income:                  { sign: "+", bucket: "received"  },
+  settlement_received:     { sign: "+", bucket: "repayment" },
   loan_given:               { sign: "-", bucket: "loans"    },
   loan_taken:               { sign: "+", bucket: "loans"    },
-  // Repayment cash flow is distinct from the loan's own "loans" bucket — the
-  // loan_given/loan_taken receivable already reflects the reduced balance,
-  // so repayments count as actual Spent/Received cash movement instead,
-  // to avoid double-counting the outstanding-balance figures. (Matches mobile.)
-  loan_repayment_received: { sign: "+", bucket: "received" },
-  loan_repayment_paid:     { sign: "-", bucket: "spent"    },
+  // Repayments (in either direction) return money that was never a true
+  // gain or loss — excluded from both buckets so "Total Spent" and
+  // "Money Received" only reflect actual income/consumption, per each
+  // card's own subtitle. Still visible under the "All" tab.
+  loan_repayment_received: { sign: "+", bucket: "repayment" },
+  loan_repayment_paid:     { sign: "-", bucket: "repayment" },
 };
 
 const TABS = [
