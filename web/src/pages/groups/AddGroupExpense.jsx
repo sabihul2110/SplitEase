@@ -1,15 +1,15 @@
-// --- web/src/pages/expenses/AddExpense.jsx ---
+// SplitEase/web/src/pages/groups/AddGroupExpense.jsx
 
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getMembers } from "../../api/groups";
-import { createExpense, getCategories, getSubcategories } from "../../api/expenses";
+import { addExpense, getCategories, getSubcategories } from "../../api/expenses";
 import { useAuth } from "../../context/AuthContext";
 import ReceiptScanner from "../../components/feature/ReceiptScanner";
 import DateInput from "../../components/common/DateInput";
 import { Icons } from "../../components/icons";
 
-export default function AddExpense() {
+export default function AddGroupExpense() {
   const { id }  = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -61,7 +61,7 @@ export default function AddExpense() {
     if (!balanced) { setError(`Amounts must sum to ₹${total.toFixed(2)} (current: ₹${customSum.toFixed(2)})`); return; }
     setLoading(true);
     try {
-      await createExpense(id, {
+      await addExpense(id, {
         ...form, payer_id: parseInt(form.payer_id), category_id: parseInt(form.category_id),
         subcategory_id: form.subcategory_id ? parseInt(form.subcategory_id) : null,
         total_amount: total, splits: buildSplits(),
@@ -96,11 +96,8 @@ export default function AddExpense() {
 
       {error && <div className="alert alert-error mb-4"><Icons.alertTriangle size={14} /> {error}</div>}
 
-      {/* Split screen layout */}
       <div className="form-split">
-        {/* ── LEFT: Form ── */}
         <div>
-          {/* Amount — big input */}
           <div className="card card-p mb-4">
             <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text3)", marginBottom: 10 }}>
               Total Amount
@@ -116,11 +113,10 @@ export default function AddExpense() {
                 placeholder="0.00" 
                 value={form.total_amount}
                 onChange={e => set("total_amount", e.target.value)}
-                onWheel={(e) => e.target.blur()} /* 👈 THE MAGIC FIX */
+                onWheel={(e) => e.target.blur()}
                 style={{ flex: 1 }}
             />
             </div>
-            {/* THE NEW SCANNER BUTTON BLOCK */}
             <div style={{ marginTop: 12 }}>
               <ReceiptScanner onResult={handleScanResult} />
             </div>
@@ -130,7 +126,6 @@ export default function AddExpense() {
             </div>
           </div>
 
-          {/* Details */}
           <div className="card card-p mb-4">
             <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 14 }}>Details</div>
             <div className="form-group">
@@ -161,7 +156,6 @@ export default function AddExpense() {
             </div>
           </div>
 
-          {/* Split strategy */}
           <div className="card card-p">
             <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>Split Strategy</div>
             <div className="split-toggle mb-4">
@@ -193,7 +187,6 @@ export default function AddExpense() {
           </div>
         </div>
 
-        {/* ── RIGHT: Live Preview ── */}
         <div style={{ position: "sticky", top: 24 }}>
           <div className="card">
             <div style={{ padding: "16px 18px", borderBottom: "1px solid var(--border)" }}>
@@ -201,7 +194,6 @@ export default function AddExpense() {
               <div style={{ fontSize: 13, color: "var(--text3)" }}>Live preview of allocations</div>
             </div>
 
-            {/* Member shares */}
             <div style={{ padding: "14px 18px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
                 <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text3)" }}>Member</span>
@@ -235,7 +227,6 @@ export default function AddExpense() {
               )}
             </div>
 
-            {/* Total + submit */}
             <div style={{ padding: "14px 18px", borderTop: "1px solid var(--border)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
                 <span style={{ fontSize: 13, color: "var(--text2)" }}>Total Allocated</span>

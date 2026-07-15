@@ -21,8 +21,8 @@ import Dashboard from "../pages/dashboard/Dashboard";
 import Groups from "../pages/groups/Groups";
 import GroupDetail from "../pages/groups/GroupDetail";
 import JoinGroup from "../pages/groups/JoinGroup";
-import AddExpense from "../pages/expenses/AddExpense";
-import AddPayment from "../pages/payments/AddPayment";
+import AddGroupExpense from "../pages/groups/AddGroupExpense";
+import AddGroupPayment from "../pages/groups/AddGroupPayment";
 import Settlements from "../pages/settlements/Settlements";
 import Activity from "../pages/activity/Activity";
 import Profile from "../pages/settings/Profile";
@@ -55,20 +55,10 @@ export const routes = [
     element: <UserRoute><AppShell /></UserRoute>,
     children: [
       { path: "/dashboard", element: <Dashboard />, handle: { title: "Dashboard" } },
-      // { path: "/groups", element: <Groups />, handle: { title: "Groups" } },
-      // { path: "/groups/:id", element: <GroupDetail /> },
-      // { path: "/groups/:id/add-expense", element: <AddExpense />, handle: { title: "Add Expense" } },
-      // { path: "/groups/:id/add-payment", element: <AddPayment />, handle: { title: "Record Payment" } },
-      // { path: "/settlements", element: <Settlements />, handle: { title: "Settlements" } },
-      // { path: "/activity", element: <Activity />, handle: { title: "Activity" } },
-      // { path: "/profile", element: <Profile />, handle: { title: "Profile" } },
-      // { path: "/settings", element: <Settings />, handle: { title: "Settings" } },
-      // { path: "/expenses", element: <Expenses />, handle: { title: "Expenses" } },
-      // { path: "/loans", element: <Loans />, handle: { title: "Loans & Ledger" } },
       { path: "/groups", element: <Groups /> },
       { path: "/groups/:id", element: <GroupDetail /> },
-      { path: "/groups/:id/add-expense", element: <AddExpense />, handle: { title: "Add Expense" } },
-      { path: "/groups/:id/add-payment", element: <AddPayment />, handle: { title: "Record Payment" } },
+      { path: "/groups/:id/add-expense", element: <AddGroupExpense />, handle: { title: "Add Expense" } },
+      { path: "/groups/:id/add-payment", element: <AddGroupPayment />, handle: { title: "Record Payment" } },
       { path: "/settlements", element: <Settlements /> },
       { path: "/activity", element: <Activity /> },
       { path: "/profile", element: <Profile /> },

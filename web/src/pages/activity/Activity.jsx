@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { getTimeline, downloadStatement } from "../../api/timeline";
+import { getTimeline, downloadStatement } from "../../api/expenses";
 import DateInput from "../../components/common/DateInput";
 import { Icons } from "../../components/icons";
 

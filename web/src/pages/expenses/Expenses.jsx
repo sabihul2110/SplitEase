@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
-import { getTimeline } from "../../api/timeline";
-import { deletePersonalExpense } from "../../api/personalExpenses";
-import { deleteIncome } from "../../api/income";
+import { getTimeline } from "../../api/expenses";
+import { deletePersonalExpense } from "../../api/expenses";
+import { deleteIncome } from "../../api/expenses";
 import { deleteLoan, deleteBorrow, repayLoan } from "../../api/loans";
 import AddEntryModal from "../../components/feature/AddEntryModal";
 import { Icons } from "../../components/icons";

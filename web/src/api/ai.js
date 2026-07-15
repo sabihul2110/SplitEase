@@ -1,5 +1,6 @@
 // SplitEase/web/src/api/ai.js
 
+
 import api from "./client.js";
 
 export const scanReceipt = (formData) => api.post("/ai/scan-receipt", formData, {

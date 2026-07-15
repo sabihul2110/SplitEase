@@ -1,13 +1,13 @@
 // --- web/src/pages/settings/Profile.jsx ---
 
 
-import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { getMyGroups } from "../../api/groups";
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { changePassword } from "../../api/auth";
+import { getGroups } from "../../api/groups";
 import { getSettlementsBulk } from "../../api/settlements";
 import { updateProfile } from "../../api/users";
-import { changePassword } from "../../api/auth";
-import { useAuth }  from "../../context/AuthContext";
+import { useAuth } from "../../context/AuthContext";
 
 // ─────────────────────────────────────────────
 //  Inline icons
@@ -282,7 +282,7 @@ export default function Profile() {
     async function loadStats() {
       setStatsLoading(true);
       try {
-        const { data: groupList } = await getMyGroups();
+        const { data: groupList } = await getGroups();
         setGroups(groupList);
 
         if (!groupList.length) {

@@ -1,15 +1,14 @@
 // --- web/src/pages/groups/Groups.jsx ---
 // v7: Fix isEmpty (wrong sRows check), fix members-bulk 404, fix memberCount=0
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
-import { getMyGroups, createGroup as apiCreateGroup, deleteGroup, getMembersBulk, getHasExpenses } from "../../api/groups";
-import { getSettlementsBulk } from "../../api/settlements";
-import { getUsers } from "../../api/users";
-import { useAuth } from "../../context/AuthContext";
-import { getGroupIcon } from "../../constants/groupIcons";
-import { Icons } from "../../components/icons";
 import api from "../../api/client";
+import { getGroups, createGroup as apiCreateGroup, deleteGroup, getMembersBulk, getHasExpenses, getUsers } from "../../api/groups";
+import { getSettlementsBulk } from "../../api/settlements";
+import { Icons } from "../../components/icons";
+import { getGroupIcon } from "../../constants/groupIcons";
+import { useAuth } from "../../context/AuthContext";
 
 const GLOBAL_STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap');
@@ -406,7 +405,7 @@ export default function Groups() {
 
     let groupList = [];
     try {
-      const { data } = await getMyGroups();
+      const { data } = await getGroups();
       groupList = data;
       setGroups(groupList);
     } catch(e) {

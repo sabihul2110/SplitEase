@@ -1,13 +1,13 @@
 // --- web/src/pages/dashboard/Dashboard.jsx ---
 
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
-import { getMyGroups } from "../../api/groups";
+import { getGroups } from "../../api/groups";
 import { getSettlementsBulk } from "../../api/settlements";
-import { useAuth } from "../../context/AuthContext";
-import { getGroupIcon } from "../../constants/groupIcons";
 import { Icons } from "../../components/icons";
+import { getGroupIcon } from "../../constants/groupIcons";
+import { useAuth } from "../../context/AuthContext";
 
 const STYLES = `
   @keyframes dbFadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -80,7 +80,7 @@ function MiniCard({ label, value, color, sub, icon, iconBg, delay = 0 }) {
   useEffect(() => {
     async function load() {
       try {
-        const { data: groupList } = await getMyGroups();
+        const { data: groupList } = await getGroups();
         setGroups(groupList || []);
 
         if (groupList?.length) {

@@ -1,4 +1,6 @@
 // web/src/api/people.js
+
+
 import api from "./client.js";
 
 export const getPeople          = ()                     => api.get("/people/");

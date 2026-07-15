@@ -1,5 +1,6 @@
 // SplitEase/web/src/api/auth.js
 
+
 import api from "./client.js";
 
 export const login         = (data)  => api.post("/auth/login", data);

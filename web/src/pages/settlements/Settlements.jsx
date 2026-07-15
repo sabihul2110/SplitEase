@@ -1,12 +1,12 @@
 // web/src/pages/settlements/Settlements.jsx
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getMyGroups } from "../../api/groups";
-import { getSettlements, getSimplified } from "../../api/settlements";
+import { getGroups } from "../../api/groups";
 import * as peopleApi from "../../api/people";
-import { useAuth } from "../../context/AuthContext";
+import { getSettlements, getSimplified } from "../../api/settlements";
 import { Icons } from "../../components/icons";
+import { useAuth } from "../../context/AuthContext";
 
 const fmt = (n) => Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 });
 
@@ -74,7 +74,7 @@ export default function Settlements() {
   const [pLoading, setPLoading] = useState(false);
 
   useEffect(() => {
-    getMyGroups()
+    getGroups()
       .then(r => {
         setGroups(r.data || []);
         if (r.data?.length) selectGroup(r.data[0].group_id);

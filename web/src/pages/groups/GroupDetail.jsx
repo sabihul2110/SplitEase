@@ -1,13 +1,12 @@
 // --- web/src/pages/groups/GroupDetail.jsx ---
 
-import { useState, useEffect, useCallback } from "react";
-import { useParams, useNavigate, Link, useOutletContext } from "react-router-dom";
-import { getMembers, getMyGroups, generateInvite, sendReminder, removeMember, deleteGroup } from "../../api/groups";
-import { getExpenses, deleteExpense } from "../../api/expenses";
-import { getPayments, deletePayment } from "../../api/payments";
-import { getSettlements, getSimplified } from "../../api/settlements";
-import { useAuth } from "../../context/AuthContext";
+import { useCallback, useEffect, useState } from "react";
+import { Link, useNavigate, useOutletContext, useParams } from "react-router-dom";
+import { deleteExpense, getExpenses } from "../../api/expenses";
+import { getMembers, getGroups, generateInvite, remindMember, leaveGroup, deleteGroup } from "../../api/groups";
+import { deletePayment, getPayments, getSettlements, getSimplified } from "../../api/settlements";
 import { Icons } from "../../components/icons";
+import { useAuth } from "../../context/AuthContext";
 
 export default function GroupDetail() {
   const { id }   = useParams();
@@ -48,7 +47,7 @@ export default function GroupDetail() {
         getExpenses(id),
         getPayments(id),
         getMembers(id),
-        getMyGroups(),
+        getGroups(),
       ]);
       setExpenses(e.data);
       setPayments(p.data);
@@ -113,7 +112,7 @@ export default function GroupDetail() {
   async function handleLeaveGroup() {
     if (!window.confirm('Leave this group? You must have a zero balance.')) return;
     try {
-      await removeMember(id, user.user_id);
+      await leaveGroup(id, user.user_id);
       navigate('/groups');
     } catch (err) {
       alert(err?.response?.data?.detail || 'Failed to leave group. Settle your balance first.');
@@ -137,10 +136,10 @@ export default function GroupDetail() {
     }
   }
 
-  async function handleSendReminder(s) {
+  async function handleremindMember(s) {
     setReminding(s.from);
     try {
-      await sendReminder(id, {
+      await remindMember(id, {
         debtor_user_id: s.from_user_id,
         amount: s.amount,
       });
@@ -183,7 +182,7 @@ export default function GroupDetail() {
           <button
             className="btn btn-xs"
             disabled={isSending}
-            onClick={() => handleSendReminder(s)}
+            onClick={() => handleremindMember(s)}
             style={{
               display: "flex", alignItems: "center", gap: 5,
               color: "var(--warning)", borderColor: "rgba(245,158,11,0.35)",

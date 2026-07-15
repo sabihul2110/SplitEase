@@ -1,12 +1,5 @@
 // web/src/hooks/useConfirm.js
-//
-// Usage:
-//   const { confirm, dialogProps } = useConfirm();
-//   ...
-//   <ConfirmDialog {...dialogProps} />
-//   ...
-//   const ok = await confirm({ title: "Delete group?", message: "...", danger: true });
-//   if (!ok) return;
+
 
 import { useState, useCallback, useRef } from "react";
 

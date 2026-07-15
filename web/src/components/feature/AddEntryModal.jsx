@@ -1,17 +1,15 @@
 // web/src/components/feature/AddEntryModal.jsx
 
 
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getMyGroups } from "../../api/groups";
 import api from "../../api/client";
-import { createPersonalExpense } from "../../api/personalExpenses";
-import { createIncome } from "../../api/income";
-import { createLoan } from "../../api/loans";
-import { createBorrow } from "../../api/loans";
-import ReceiptScanner from "./ReceiptScanner";
+import { addIncome, addPersonalExpense } from "../../api/expenses";
+import { getGroups } from "../../api/groups";
+import { addBorrow, addLoan } from "../../api/loans";
 import DateInput from "../common/DateInput";
 import { Icons } from "../icons";
+import ReceiptScanner from "./ReceiptScanner";
 
 // ─────────────────────────────────────────────
 //  Styles
@@ -237,7 +235,7 @@ export default function AddEntryModal({ onSuccess, defaultTab = "personal" }) {
 
   useEffect(() => {
     if (open && groups.length === 0) {
-      getMyGroups()
+      getGroups()
         .then((r) => {
           setGroups(r.data || []);
           if (r.data?.length > 0) setGroupId(String(r.data[0].group_id));
@@ -306,7 +304,7 @@ export default function AddEntryModal({ onSuccess, defaultTab = "personal" }) {
     setSaving(true);
     try {
       if (type === "personal") {
-        await createPersonalExpense({
+        await addPersonalExpense({
           amount: amt,
           category: category.trim() || "General",
           note: note.trim() || null,
@@ -315,7 +313,7 @@ export default function AddEntryModal({ onSuccess, defaultTab = "personal" }) {
           merchant_name: merchantName.trim() || null,
         });
       } else if (type === "income") {
-        await createIncome({
+        await addIncome({
           amount: amt,
           source_type: sourceType,
           note: note.trim() || null,
@@ -326,7 +324,7 @@ export default function AddEntryModal({ onSuccess, defaultTab = "personal" }) {
           setErr("Enter the borrower's name.");
           setSaving(false); return;
         }
-        await createLoan({
+        await addLoan({
           borrower_name:  personName.trim(),
           amount:         amt,
           note:           note.trim() || null,
@@ -338,7 +336,7 @@ export default function AddEntryModal({ onSuccess, defaultTab = "personal" }) {
           setErr("Enter the lender's name.");
           setSaving(false); return;
         }
-        await createBorrow({
+        await addBorrow({
           lender_name:    personName.trim(),
           amount:         amt,
           note:           note.trim() || null,
@@ -379,6 +377,13 @@ export default function AddEntryModal({ onSuccess, defaultTab = "personal" }) {
     setSelectedUser(u);
     setSearchResults([]);
   }
+
+  // Group Expense & Settlement intentionally redirect to their full-page
+  // forms (AddExpense.jsx / AddPayment.jsx) instead of being handled inline.
+  // Reason: both need group-member-aware logic (N-way split calculation,
+  // category_id/subcategory_id FK selection, payment allocation) that
+  // doesn't fit a quick-entry modal. Personal/Income/Lend/Borrow stay
+  // inline because they're single-user, low-friction entries.
 
   const isRedirect = type === "group_exp" || type === "settlement";
 

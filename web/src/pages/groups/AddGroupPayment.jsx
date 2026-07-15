@@ -1,14 +1,14 @@
-// --- web/src/pages/payments/AddPayment.jsx ---
+// SplitEase/web/src/pages/groups/AddGroupPayment.jsx
 
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getMembers } from "../../api/groups";
-import { createPayment } from "../../api/payments";
+import { addPayment } from "../../api/settlements";
 import { useAuth } from "../../context/AuthContext";
 import DateInput from "../../components/common/DateInput";
 import { Icons } from "../../components/icons";
 
-export default function AddPayment() {
+export default function AddGroupPayment() {
   const { id }  = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -29,7 +29,7 @@ export default function AddPayment() {
     if (parseInt(form.payer_id) === parseInt(form.payee_id)) { setError("Payer and receiver must be different."); return; }
     setLoading(true);
     try {
-      await createPayment(id, {
+      await addPayment(id, {
         payer_id: parseInt(form.payer_id), payee_id: parseInt(form.payee_id),
         amount: parseFloat(form.amount), note: form.note.trim() || null, payment_date: form.payment_date,
       });
@@ -43,7 +43,6 @@ export default function AddPayment() {
       <button className="back-btn mb-4" onClick={() => navigate(`/groups/${id}`)}><Icons.chevronLeft size={13} /> Back to Group</button>
 
       <div style={{ maxWidth: 520 }}>
-        {/* Preview */}
         {form.payer_id && form.payee_id && form.amount && (
           <div style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: 10, padding: "16px 18px", marginBottom: 20, fontSize: 16, textAlign: "center" }}>
             <strong>{payerName}</strong>

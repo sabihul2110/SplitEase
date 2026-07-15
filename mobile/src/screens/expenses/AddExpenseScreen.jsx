@@ -1,10 +1,7 @@
 // SplitEase/mobile/src/screens/expenses/AddExpenseScreen.jsx
-//
-// Mobile port of web's AddEntryModal.
-// Four tabs: Personal Expense · Income · Lend · Borrow
-// Each tab posts to its own endpoint, then navigates back.
 
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   TextInput, Alert, KeyboardAvoidingView, Platform,
@@ -14,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import * as expensesApi from "../../api/expenses";
 import * as loansApi from "../../api/loans";
+import * as groupsApi from "../../api/groups";
 import { useAuth } from '../../context/AuthContext';
 import { Icons } from '../../components/icons/icons';
 import DatePickerInput from '../../components/common/DatePickerInput';
@@ -137,16 +135,43 @@ function validateDate(d) {
 
 // Personal Expense
 function PersonalForm({ onSuccess }) {
-  const [desc,   setDesc]   = useState('');
+  const [categories,    setCategories]    = useState([]);
+  const [catsLoading,   setCatsLoading]   = useState(true);
+  const [categoryId,    setCategoryId]    = useState(null);
+  const [categoryName,  setCategoryName]  = useState('');
+  const [subcats,       setSubcats]       = useState([]);
+  const [subcategoryId, setSubcategoryId] = useState(null);
   const [amount, setAmount] = useState('');
   const [date,   setDate]   = useState(today());
   const [note,   setNote]   = useState('');
   const [errs,   setErrs]   = useState({});
   const [saving, setSaving] = useState(false);
 
+  // Categories/Subcategories are global (schema.sql, tables 4-5) — same
+  // source as the group-expense picker, not scoped to a group.
+  useEffect(() => {
+    groupsApi.getCategories()
+      .then(({ data }) => setCategories(data || []))
+      .catch(() => {})
+      .finally(() => setCatsLoading(false));
+  }, []);
+
+  async function handlePickCategory(cat) {
+    setCategoryId(cat.category_id);
+    setCategoryName(cat.category_name);
+    setSubcategoryId(null);
+    setErrs(p => ({...p, category: null}));
+    try {
+      const { data } = await groupsApi.getSubcategories(cat.category_id);
+      setSubcats(data || []);
+    } catch {
+      setSubcats([]);
+    }
+  }
+
   async function submit() {
     const e = {};
-    if (!desc.trim())              e.desc   = 'Description is required';
+    if (!categoryName.trim())      e.category = 'Pick a category';
     if (!amount || isNaN(+amount) || +amount <= 0) e.amount = 'Enter a valid amount';
     if (!validateDate(date))       e.date   = 'Use YYYY-MM-DD format';
     setErrs(e);
@@ -154,8 +179,11 @@ function PersonalForm({ onSuccess }) {
 
     setSaving(true);
     try {
+      // Personal_Expenses stores category as free text (no category_id FK)
+      // but subcategory_id as a real FK — see schema.sql table 11 note.
       await expensesApi.addPersonalExpense({
-        category: desc.trim(),
+        category: categoryName.trim(),
+        subcategory_id: subcategoryId || null,
         amount: parseFloat(amount),
         expense_date: date,
         note: note.trim() || null,
@@ -168,9 +196,71 @@ function PersonalForm({ onSuccess }) {
 
   return (
     <View style={styles.form}>
-      <Field label="Category / Description" error={errs.desc}>
-        <StyledInput value={desc} onChangeText={v => { setDesc(v); setErrs(p => ({...p, desc: null})); }} placeholder="e.g. Coffee, Fuel, Groceries…" />
+      <Field label="Category" error={errs.category}>
+        {catsLoading ? (
+          <ActivityIndicator color={C.danger} />
+        ) : (
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            {categories.map(cat => {
+              const isActive = categoryId === cat.category_id;
+              return (
+                <TouchableOpacity
+                  key={cat.category_id}
+                  style={{
+                    paddingHorizontal: 12, paddingVertical: 7,
+                    borderRadius: R.full, borderWidth: 1,
+                    borderColor: isActive ? C.danger + '80' : C.border,
+                    backgroundColor: isActive ? C.dangerLo : C.surface2,
+                  }}
+                  onPress={() => handlePickCategory(cat)}
+                >
+                  <Text style={{ fontSize: F.sm, color: isActive ? C.danger : C.text2, fontWeight: isActive ? W.bold : W.regular }}>
+                    {cat.category_name}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
       </Field>
+
+      {subcats.length > 0 && (
+        <Field label="Subcategory" optional>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            <TouchableOpacity
+              style={{
+                paddingHorizontal: 12, paddingVertical: 7,
+                borderRadius: R.full, borderWidth: 1,
+                borderColor: subcategoryId === null ? C.danger + '80' : C.border,
+                backgroundColor: subcategoryId === null ? C.dangerLo : C.surface2,
+              }}
+              onPress={() => setSubcategoryId(null)}
+            >
+              <Text style={{ fontSize: F.sm, color: subcategoryId === null ? C.danger : C.text2 }}>None</Text>
+            </TouchableOpacity>
+            {subcats.map(s => {
+              const isActive = subcategoryId === s.subcategory_id;
+              return (
+                <TouchableOpacity
+                  key={s.subcategory_id}
+                  style={{
+                    paddingHorizontal: 12, paddingVertical: 7,
+                    borderRadius: R.full, borderWidth: 1,
+                    borderColor: isActive ? C.danger + '80' : C.border,
+                    backgroundColor: isActive ? C.dangerLo : C.surface2,
+                  }}
+                  onPress={() => setSubcategoryId(s.subcategory_id)}
+                >
+                  <Text style={{ fontSize: F.sm, color: isActive ? C.danger : C.text2, fontWeight: isActive ? W.bold : W.regular }}>
+                    {s.subcategory_name}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </Field>
+      )}
+
       <Field label="Amount" error={errs.amount}>
         <AmountInput value={amount} onChangeText={v => { setAmount(v); setErrs(p => ({...p, amount: null})); }} />
       </Field>

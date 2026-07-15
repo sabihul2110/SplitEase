@@ -1,10 +1,10 @@
 // --- web/src/pages/groups/JoinGroup.jsx ---
 
-import { useState, useEffect } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
-import { getInvite, joinInvite } from "../../api/invites";
-import { useAuth } from "../../context/AuthContext";
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { getInviteInfo, joinInvite } from "../../api/groups";
 import { Icons } from "../../components/icons";
+import { useAuth } from "../../context/AuthContext";
 
 export default function JoinGroup() {
   const { token } = useParams();
@@ -17,7 +17,7 @@ export default function JoinGroup() {
 
   // Step 1: fetch invite info (group name) — no auth needed
   useEffect(() => {
-    getInvite(token)
+    getInviteInfo(token)
       .then(r => { setInfo(r.data); setStatus("ready"); })
       .catch(err => {
         setMessage(err.response?.data?.detail || "This invite link is invalid or has expired.");
