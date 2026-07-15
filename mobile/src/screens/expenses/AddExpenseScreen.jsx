@@ -8,7 +8,7 @@ import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   TextInput, Alert, KeyboardAvoidingView, Platform,
-  ActivityIndicator, Modal
+  ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -17,6 +17,7 @@ import * as loansApi from "../../api/loans";
 import { useAuth } from '../../context/AuthContext';
 import { Icons } from '../../components/icons/icons';
 import DatePickerInput from '../../components/common/DatePickerInput';
+import PersonSearchField from '../../components/common/PersonSearchField';
 import { TAB_BAR_HEIGHT } from "../../constants/theme";
 
 // ─── Design tokens (same as GroupDetailScreen) ────────────────────────────────
@@ -257,12 +258,13 @@ function IncomeForm({ onSuccess }) {
 
 // Lend
 function LendForm({ onSuccess }) {
-  const [borrower, setBorrower] = useState('');
-  const [amount,   setAmount]   = useState('');
-  const [date,     setDate]     = useState(today());
-  const [note,     setNote]     = useState('');
-  const [errs,     setErrs]     = useState({});
-  const [saving,   setSaving]   = useState(false);
+  const [borrower, setBorrower]   = useState('');
+  const [amount,   setAmount]     = useState('');
+  const [date,     setDate]       = useState(today());
+  const [note,     setNote]       = useState('');
+  const [errs,     setErrs]       = useState({});
+  const [saving,   setSaving]     = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
 
   async function submit() {
     const e = {};
@@ -279,6 +281,7 @@ function LendForm({ onSuccess }) {
         amount: parseFloat(amount),
         loan_date: date,
         note: note.trim() || null,
+        linked_user_id: selectedUser?.user_id || null,
       });
       onSuccess();
     } catch (err) {
@@ -292,9 +295,16 @@ function LendForm({ onSuccess }) {
         <Icons.info size={14} color={C.warning} />
         <Text style={styles.infoText}>Record money you lent to someone. Track repayments from the Expenses timeline.</Text>
       </View>
-      <Field label="Borrower Name" error={errs.borrower}>
-        <StyledInput value={borrower} onChangeText={v => { setBorrower(v); setErrs(p => ({...p, borrower: null})); }} placeholder="e.g. Rahul, Priya…" />
-      </Field>
+      <PersonSearchField
+        label="Borrower Name"
+        value={borrower}
+        onChangeName={v => { setBorrower(v); setErrs(p => ({...p, borrower: null})); }}
+        selectedUser={selectedUser}
+        onSelectUser={u => { setSelectedUser(u); setBorrower(u.name); }}
+        onClearUser={() => setSelectedUser(null)}
+        placeholder="Search name or add custom…"
+        error={errs.borrower}
+      />
       <Field label="Amount Lent" error={errs.amount}>
         <AmountInput value={amount} onChangeText={v => { setAmount(v); setErrs(p => ({...p, amount: null})); }} />
       </Field>
@@ -311,12 +321,13 @@ function LendForm({ onSuccess }) {
 
 // Borrow
 function BorrowForm({ onSuccess }) {
-  const [lender, setLender] = useState('');
-  const [amount, setAmount] = useState('');
-  const [date,   setDate]   = useState(today());
-  const [note,   setNote]   = useState('');
-  const [errs,   setErrs]   = useState({});
-  const [saving, setSaving] = useState(false);
+  const [lender, setLender]   = useState('');
+  const [amount, setAmount]   = useState('');
+  const [date,   setDate]     = useState(today());
+  const [note,   setNote]     = useState('');
+  const [errs,   setErrs]     = useState({});
+  const [saving, setSaving]   = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
 
   async function submit() {
     const e = {};
@@ -333,6 +344,7 @@ function BorrowForm({ onSuccess }) {
         amount: parseFloat(amount),
         borrow_date: date,
         note: note.trim() || null,
+        linked_user_id: selectedUser?.user_id || null,
       });
       onSuccess();
     } catch (err) {
@@ -346,9 +358,16 @@ function BorrowForm({ onSuccess }) {
         <Icons.info size={14} color={C.purple} />
         <Text style={styles.infoText}>Record money you borrowed from someone. Mark it repaid when you pay them back.</Text>
       </View>
-      <Field label="Lender Name" error={errs.lender}>
-        <StyledInput value={lender} onChangeText={v => { setLender(v); setErrs(p => ({...p, lender: null})); }} placeholder="e.g. Amit, Mom…" />
-      </Field>
+      <PersonSearchField
+        label="Lender Name"
+        value={lender}
+        onChangeName={v => { setLender(v); setErrs(p => ({...p, lender: null})); }}
+        selectedUser={selectedUser}
+        onSelectUser={u => { setSelectedUser(u); setLender(u.name); }}
+        onClearUser={() => setSelectedUser(null)}
+        placeholder="Search name or add custom…"
+        error={errs.lender}
+      />
       <Field label="Amount Borrowed" error={errs.amount}>
         <AmountInput value={amount} onChangeText={v => { setAmount(v); setErrs(p => ({...p, amount: null})); }} />
       </Field>

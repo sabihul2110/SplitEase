@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as peopleApi from '../../api/people';
 import * as ledgerNotifsApi from '../../api/ledgerNotifications';
 import AppAlert from '../../components/common/AppAlert';
+import PersonSearchField from '../../components/common/PersonSearchField';
 import Toast from '../../components/common/Toast';
 import { LoadingState } from '../../components/common/Ui';
 import { Icons } from '../../components/icons/icons';
@@ -104,39 +105,11 @@ function AddPersonModal({ visible, onClose, onSuccess }) {
   const [name, setName]             = useState('');
   const [error, setError]           = useState('');
   const [saving, setSaving]         = useState(false);
-  const [searchResults, setSearchResults] = useState([]);
   const [selectedUser, setSelectedUser]   = useState(null); // registered user if chosen
-  const [searching, setSearching]   = useState(false);
-  const searchTimeout               = useRef(null);
 
   function reset() {
     setName(''); setError(''); setSaving(false);
-    setSearchResults([]); setSelectedUser(null);
-  }
-
-  function handleNameChange(val) {
-    setName(val);
     setSelectedUser(null);
-    setError('');
-    if (searchTimeout.current) clearTimeout(searchTimeout.current);
-    if (val.trim().length < 2) { setSearchResults([]); return; }
-    setSearching(true);
-    searchTimeout.current = setTimeout(async () => {
-      try {
-        const res = await peopleApi.searchUsers(val.trim());
-        setSearchResults(res.data || []);
-      } catch {
-        setSearchResults([]);
-      } finally {
-        setSearching(false);
-      }
-    }, 350);
-  }
-
-  function selectRegisteredUser(user) {
-    setName(user.name);
-    setSelectedUser(user);
-    setSearchResults([]);
   }
 
   async function handleSubmit() {
@@ -193,74 +166,16 @@ function AddPersonModal({ visible, onClose, onSuccess }) {
               </View>
             )}
 
-            <View style={{ gap: SPACING.xs }}>
-              <Text style={modal.label}>NAME OR EMAIL</Text>
-              <View style={modal.inputRow}>
-                {selectedUser
-                  ? <Icons.checkCircle size={15} color={COLORS.success} />
-                  : <Icons.search size={15} color={COLORS.text3} />
-                }
-                <TextInput
-                  style={modal.inputText}
-                  value={name}
-                  onChangeText={handleNameChange}
-                  placeholder="Search by name or email…"
-                  placeholderTextColor={COLORS.text3}
-                  autoCapitalize="words"
-                />
-                {searching && <ActivityIndicator size="small" color={COLORS.text3} />}
-                {selectedUser && (
-                  <TouchableOpacity onPress={() => { setSelectedUser(null); setName(''); }}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                    <Icons.close size={14} color={COLORS.text3} />
-                  </TouchableOpacity>
-                )}
-              </View>
-
-              {/* Registered user results */}
-              {searchResults.length > 0 && !selectedUser && (
-                <View style={modal.searchResults}>
-                  <Text style={modal.searchResultsLabel}>REGISTERED USERS</Text>
-                  {searchResults.map(u => (
-                    <TouchableOpacity
-                      key={u.user_id}
-                      style={modal.searchResultRow}
-                      onPress={() => selectRegisteredUser(u)}
-                    >
-                      <View style={modal.searchResultAvatar}>
-                        <Text style={modal.searchResultAvatarText}>
-                          {u.name[0]?.toUpperCase() || '?'}
-                        </Text>
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={modal.searchResultName}>{u.name}</Text>
-                        <Text style={modal.searchResultEmail}>{u.email}</Text>
-                      </View>
-                      <Icons.chevronRight size={14} color={COLORS.text3} />
-                    </TouchableOpacity>
-                  ))}
-                  <View style={modal.searchDivider} />
-                  <TouchableOpacity
-                    style={modal.searchResultRow}
-                    onPress={() => setSearchResults([])}
-                  >
-                    <Icons.profile size={15} color={COLORS.text3} />
-                    <Text style={[modal.searchResultName, { color: COLORS.text2 }]}>
-                      Add "{name}" as custom person
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-
-              {selectedUser && (
-                <View style={modal.selectedBadge}>
-                  <Icons.checkCircle size={14} color={COLORS.success} />
-                  <Text style={modal.selectedBadgeText}>
-                    Linked to registered user — entries will require their acknowledgement
-                  </Text>
-                </View>
-              )}
-            </View>
+            <PersonSearchField
+              label="NAME OR EMAIL"
+              value={name}
+              onChangeName={v => { setName(v); setError(''); }}
+              selectedUser={selectedUser}
+              onSelectUser={u => { setSelectedUser(u); setName(u.name); }}
+              onClearUser={() => setSelectedUser(null)}
+              placeholder="Search by name or email…"
+              badgeText="Linked to registered user — entries will require their acknowledgement"
+            />
 
             <Text style={modal.hint}>
               {selectedUser
@@ -717,32 +632,4 @@ const modal = StyleSheet.create({
     paddingVertical: 13, borderRadius: RADIUS.lg, backgroundColor: '#818cf8',
   },
   submitText: { fontSize: FONT_SIZE.md, fontWeight: FONT_WEIGHT.bold, color: '#fff' },
-  searchResults: {
-    backgroundColor: COLORS.surface2, borderRadius: RADIUS.lg,
-    borderWidth: 1, borderColor: COLORS.border, overflow: 'hidden',
-  },
-  searchResultsLabel: {
-    fontSize: 9, fontWeight: FONT_WEIGHT.bold, color: COLORS.text3,
-    letterSpacing: 0.9, textTransform: 'uppercase',
-    paddingHorizontal: SPACING.md, paddingTop: SPACING.sm, paddingBottom: 4,
-  },
-  searchResultRow: {
-    flexDirection: 'row', alignItems: 'center', gap: SPACING.sm,
-    paddingHorizontal: SPACING.md, paddingVertical: 10,
-  },
-  searchResultAvatar: {
-    width: 32, height: 32, borderRadius: 16,
-    backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center',
-  },
-  searchResultAvatarText: { fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.bold, color: '#fff' },
-  searchResultName: { fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.semibold, color: COLORS.text },
-  searchResultEmail: { fontSize: FONT_SIZE.xs, color: COLORS.text3 },
-  searchDivider: { height: 1, backgroundColor: COLORS.border, marginHorizontal: SPACING.md },
-  selectedBadge: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 6,
-    backgroundColor: 'rgba(16,185,129,0.08)',
-    borderRadius: RADIUS.md, borderWidth: 1,
-    borderColor: 'rgba(16,185,129,0.2)', padding: SPACING.sm,
-  },
-  selectedBadgeText: { flex: 1, fontSize: FONT_SIZE.xs, color: COLORS.success, lineHeight: 16 },
 });

@@ -20,6 +20,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as loansApi from "../../api/loans";
 import AppAlert from "../../components/common/AppAlert";
+import PersonSearchField from "../../components/common/PersonSearchField";
 import DatePickerInput from "../../components/common/DatePickerInput";
 import Toast from "../../components/common/Toast";
 import { LoadingState } from "../../components/common/Ui";
@@ -306,10 +307,7 @@ function AddLoanModal({ visible, onClose, isLent, onSuccess }) {
   const [note, setNote]                   = useState("");
   const [error, setError]                 = useState("");
   const [saving, setSaving]               = useState(false);
-  const [searchResults, setSearchResults] = useState([]);
   const [selectedUser, setSelectedUser]   = useState(null); // registered user if chosen
-  const [searching, setSearching]         = useState(false);
-  const searchTimeout                     = useRef(null);
 
   useEffect(() => {
     if (visible) {
@@ -318,32 +316,6 @@ function AddLoanModal({ visible, onClose, isLent, onSuccess }) {
       setDate(new Date().toISOString().split("T")[0]);
     }
   }, [visible]);
-
-  function handleNameChange(v) {
-    setPersonName(v);
-    setSelectedUser(null);
-    setError("");
-    if (searchTimeout.current) clearTimeout(searchTimeout.current);
-    if (v.trim().length < 2) { setSearchResults([]); return; }
-    setSearching(true);
-    searchTimeout.current = setTimeout(async () => {
-      try {
-        const { searchUsers } = await import('../../api/people');
-        const res = await searchUsers(v.trim());
-        setSearchResults(res.data || []);
-      } catch {
-        setSearchResults([]);
-      } finally {
-        setSearching(false);
-      }
-    }, 350);
-  }
-
-  function selectRegisteredUser(user) {
-    setPersonName(user.name);
-    setSelectedUser(user);
-    setSearchResults([]);
-  }
 
   async function handleSubmit() {
     Keyboard.dismiss();
@@ -440,77 +412,16 @@ function AddLoanModal({ visible, onClose, isLent, onSuccess }) {
             )}
 
             {/* Person search */}
-            <View style={addStyles.field}>
-              <Text style={addStyles.label}>{personLabel}</Text>
-              <View style={[addStyles.inputRow, selectedUser && { borderColor: COLORS.success }]}>
-                {selectedUser
-                  ? <Icons.checkCircle size={15} color={COLORS.success} />
-                  : <Icons.search size={15} color={COLORS.text3} />
-                }
-                <TextInput
-                  style={addStyles.inputText}
-                  value={personName}
-                  onChangeText={handleNameChange}
-                  placeholder={personPHolder}
-                  placeholderTextColor={COLORS.text3}
-                  autoCapitalize="words"
-                  autoFocus
-                />
-                {searching && <ActivityIndicator size="small" color={COLORS.text3} />}
-                {selectedUser && (
-                  <TouchableOpacity
-                    onPress={() => { setSelectedUser(null); setPersonName(""); }}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  >
-                    <Icons.close size={14} color={COLORS.text3} />
-                  </TouchableOpacity>
-                )}
-              </View>
-
-              {/* Search results dropdown */}
-              {searchResults.length > 0 && !selectedUser && (
-                <View style={addStyles.searchResults}>
-                  <Text style={addStyles.searchResultsLabel}>REGISTERED USERS</Text>
-                  {searchResults.map(u => (
-                    <TouchableOpacity
-                      key={u.user_id}
-                      style={addStyles.searchResultRow}
-                      onPress={() => selectRegisteredUser(u)}
-                    >
-                      <View style={addStyles.searchResultAvatar}>
-                        <Text style={addStyles.searchResultAvatarText}>
-                          {u.name[0]?.toUpperCase() || '?'}
-                        </Text>
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={addStyles.searchResultName}>{u.name}</Text>
-                        <Text style={addStyles.searchResultEmail}>{u.email}</Text>
-                      </View>
-                      <Icons.chevronRight size={14} color={COLORS.text3} />
-                    </TouchableOpacity>
-                  ))}
-                  <View style={addStyles.searchDivider} />
-                  <TouchableOpacity
-                    style={addStyles.searchResultRow}
-                    onPress={() => setSearchResults([])}
-                  >
-                    <Icons.profile size={15} color={COLORS.text3} />
-                    <Text style={[addStyles.searchResultName, { color: COLORS.text2 }]}>
-                      Add "{personName}" as custom person
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-
-              {selectedUser && (
-                <View style={addStyles.selectedBadge}>
-                  <Icons.checkCircle size={14} color={COLORS.success} />
-                  <Text style={addStyles.selectedBadgeText}>
-                    Linked to registered user — entry will need their acknowledgement
-                  </Text>
-                </View>
-              )}
-            </View>
+            <PersonSearchField
+              label={personLabel}
+              value={personName}
+              onChangeName={v => { setPersonName(v); setError(""); }}
+              selectedUser={selectedUser}
+              onSelectUser={u => { setSelectedUser(u); setPersonName(u.name); }}
+              onClearUser={() => setSelectedUser(null)}
+              placeholder={personPHolder}
+              autoFocus
+            />
 
             {/* Amount */}
             <View style={addStyles.field}>
@@ -724,65 +635,6 @@ const addStyles = StyleSheet.create({
     fontSize: FONT_SIZE.md,
     fontWeight: FONT_WEIGHT.bold,
     color: "#fff",
-  },
-  searchResults: {
-    backgroundColor: COLORS.surface2,
-    borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    overflow: 'hidden',
-    marginTop: 4,
-  },
-  searchResultsLabel: {
-    fontSize: 9,
-    fontWeight: FONT_WEIGHT.bold,
-    color: COLORS.text3,
-    letterSpacing: 0.9,
-    textTransform: 'uppercase',
-    paddingHorizontal: SPACING.md,
-    paddingTop: SPACING.sm,
-    paddingBottom: 4,
-  },
-  searchResultRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.sm,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: 10,
-  },
-  searchResultAvatar: {
-    width: 32, height: 32, borderRadius: 16,
-    backgroundColor: COLORS.primary,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  searchResultAvatarText: {
-    fontSize: FONT_SIZE.sm,
-    fontWeight: FONT_WEIGHT.bold,
-    color: '#fff',
-  },
-  searchResultName: {
-    fontSize: FONT_SIZE.sm,
-    fontWeight: FONT_WEIGHT.semibold,
-    color: COLORS.text,
-  },
-  searchResultEmail: { fontSize: FONT_SIZE.xs, color: COLORS.text3 },
-  searchDivider: { height: 1, backgroundColor: COLORS.border, marginHorizontal: SPACING.md },
-  selectedBadge: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 6,
-    backgroundColor: 'rgba(16,185,129,0.08)',
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: 'rgba(16,185,129,0.2)',
-    padding: SPACING.sm,
-    marginTop: 4,
-  },
-  selectedBadgeText: {
-    flex: 1,
-    fontSize: FONT_SIZE.xs,
-    color: COLORS.success,
-    lineHeight: 16,
   },
 });
 
