@@ -1,11 +1,10 @@
 // --- web/src/components/layout/AppShell.jsx ---
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { NavLink, useNavigate, Outlet, useMatches } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import NotificationBell from "./NotificationBell";
 import { Icons as SharedIcons } from "../icons";
-import * as ledgerNotifsApi from "../../api/ledgerNotifications";
 
 // ─────────────────────────────────────────────
 //  SVG Icons — every item DISTINCT
@@ -88,7 +87,6 @@ const Icons = {
   edit:    <SharedIcons.edit size={14} />,
   lock:    <SharedIcons.lock size={14} />,
   chevron: <SharedIcons.chevronDown size={11} />,
-  requests: <SharedIcons.clockPending size={17} />,
 };
 
 const NAV_ITEMS = [
@@ -312,56 +310,6 @@ function SidebarToggleButton({ collapsed, onClick }) {
 }
 
 // ─────────────────────────────────────────────
-//  Requests button — mirrors mobile's Loans-tab -> People -> Requests
-//  badge cascade. Shows a dot whenever anything in Ledger_Notifications
-//  is unread (entries needing acceptance OR repayments/settlements
-//  needing confirmation).
-// ─────────────────────────────────────────────
-function RequestsButton() {
-  const navigate = useNavigate();
-  const [count, setCount] = useState(0);
-
-  const fetchBadge = useCallback(async () => {
-    try {
-      const { data } = await ledgerNotifsApi.getLedgerUnread();
-      setCount(data?.count || 0);
-    } catch { setCount(0); }
-  }, []);
-
-  useEffect(() => {
-    fetchBadge();
-    window.__refreshLedgerBadge = fetchBadge;
-    const id = setInterval(fetchBadge, 15000);
-    return () => { clearInterval(id); if (window.__refreshLedgerBadge === fetchBadge) window.__refreshLedgerBadge = null; };
-  }, [fetchBadge]);
-
-  return (
-    <button
-      onClick={() => navigate("/people/pending")}
-      title="Pending requests"
-      style={{
-        width: 34, height: 34, borderRadius: 8,
-        border: "1px solid var(--border)", background: "transparent",
-        color: count > 0 ? "var(--text)" : "var(--text2)",
-        cursor: "pointer", display: "flex", alignItems: "center",
-        justifyContent: "center", position: "relative", transition: "all 0.12s",
-      }}
-      onMouseEnter={e => { e.currentTarget.style.background = "var(--surface2)"; e.currentTarget.style.color = "var(--text)"; }}
-      onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = count > 0 ? "var(--text)" : "var(--text2)"; }}
-    >
-      {Icons.requests}
-      {count > 0 && (
-        <span style={{
-          position: "absolute", top: -3, right: -3,
-          width: 9, height: 9, borderRadius: 5,
-          background: "var(--danger)", border: "2px solid var(--bg)",
-        }} />
-      )}
-    </button>
-  );
-}
-
-// ─────────────────────────────────────────────
 //  Main AppShell
 // ─────────────────────────────────────────────
 export default function AppShell() {
@@ -471,7 +419,6 @@ export default function AppShell() {
                 {actions}
               </div>
             )}
-            <RequestsButton />
             <NotificationBell />
             <ProfileDropdown user={user} onLogout={() => { logout(); navigate("/login"); }} />
           </div>

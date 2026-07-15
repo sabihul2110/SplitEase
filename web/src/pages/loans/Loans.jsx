@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useOutletContext, useNavigate } from "react-router-dom";
 import { getLoans, deleteLoan, repayLoan, getBorrows, deleteBorrow, repayBorrow } from "../../api/loans";
 import * as peopleApi from "../../api/people";
+import * as ledgerNotifsApi from "../../api/ledgerNotifications";
 import AddEntryModal from "../../components/feature/AddEntryModal";
 import { Icons } from "../../components/icons";
 import Toast from "../../components/common/Toast";
@@ -794,6 +795,21 @@ export default function Loans() {
   const [loading, setLoading]   = useState(true);
   const [pageTab, setPageTab]   = useState("people");   // people | lent | borrowed
   const [filterTab, setFilterTab] = useState("all");
+  const [ledgerDot, setLedgerDot] = useState(false);
+
+  const fetchLedgerBadge = useCallback(async () => {
+    try {
+      const { data } = await ledgerNotifsApi.getLedgerUnread();
+      setLedgerDot((data?.count || 0) > 0);
+    } catch { setLedgerDot(false); }
+  }, []);
+
+  useEffect(() => {
+    fetchLedgerBadge();
+    window.__refreshLedgerBadge = fetchLedgerBadge;
+    const id = setInterval(fetchLedgerBadge, 15000);
+    return () => { clearInterval(id); if (window.__refreshLedgerBadge === fetchLedgerBadge) window.__refreshLedgerBadge = null; };
+  }, [fetchLedgerBadge]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -868,8 +884,16 @@ export default function Loans() {
               color: pageTab === t.id ? "var(--text)" : "var(--text2)",
               borderBottom: `2px solid ${pageTab === t.id ? "var(--primary-h)" : "transparent"}`,
               marginBottom: -2, transition: "all 0.14s",
+              position: "relative",
             }}>
             {t.label}
+            {t.id === "people" && ledgerDot && (
+              <span style={{
+                position: "absolute", top: 6, right: 4,
+                width: 7, height: 7, borderRadius: 4,
+                background: "var(--danger)", border: "2px solid var(--bg)",
+              }} />
+            )}
           </button>
         ))}
       </div>

@@ -11,6 +11,14 @@ def create_ledger_notif(
     message:      str,
     entry_id:     int | None = None,
 ) -> None:
+    """
+    Best-effort — a notification failure (e.g. a stale ENUM missing a newer
+    notif_type value) must never take down the financial action that
+    triggered it. Previously this re-raised, which meant an already-committed
+    repayment/settlement could still cause its own request to 500, silently
+    losing the notification with no dot, no bell entry, and no visible error
+    the person could act on.
+    """
     conn = get_connection()
     cur  = conn.cursor()
     try:
@@ -24,9 +32,13 @@ def create_ledger_notif(
             (entry_id, recipient_id, sender_id, notif_type, message),
         )
         conn.commit()
-    except Exception:
+    except Exception as exc:
         conn.rollback()
-        raise
+        import logging
+        logging.getLogger(__name__).error(
+            "create_ledger_notif failed (type=%s, recipient=%s): %s",
+            notif_type, recipient_id, exc,
+        )
     finally:
         cur.close(); conn.close()
 
