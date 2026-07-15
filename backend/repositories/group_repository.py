@@ -327,10 +327,17 @@ def admin_wipe_groups() -> dict:
         cur.execute("DELETE FROM Expenses")
         cur.execute("DELETE FROM Group_Members")
         cur.execute("DELETE FROM `Groups`")
-        cur.execute("ALTER TABLE `Groups` AUTO_INCREMENT = 1")
-        cur.execute("ALTER TABLE Expenses AUTO_INCREMENT = 1")
-        cur.execute("ALTER TABLE Payments AUTO_INCREMENT = 1")
         conn.commit()
+
+        # DDL auto-commits — run after the DML transaction is committed.
+        # Only include tables that actually have a surrogate AUTO_INCREMENT PK.
+        # Junction tables like Group_Members (composite PK) will error if included — skip them.
+        for table in ["`Groups`", "Expenses", "Payments", "Expense_Splits", "Invites", "Payment_Allocations"]:
+            try:
+                cur.execute(f"ALTER TABLE {table} AUTO_INCREMENT = 1")
+            except Exception:
+                pass  # table has no auto_increment column — safe to ignore
+
         return {"wiped": True, "message": "All groups and related data deleted."}
     except Exception:
         conn.rollback()

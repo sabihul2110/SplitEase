@@ -4,9 +4,6 @@ auth.py — password hashing and JWT utilities.
 Nothing here touches the DB directly — it's pure crypto logic,
 except get_current_user which now validates token_version.
 
-FIX S3b: get_current_user fetches token_version from the DB and compares
-         it to the version embedded in the JWT. A mismatch means the
-         password was changed after this token was issued → reject with 401.
 """
 
 from datetime import datetime, timedelta, timezone

@@ -45,6 +45,18 @@ def fetch_user_by_id(user_id: int) -> dict | None:
     cur.close(); conn.close()
     return row
 
+def fetch_user_auth_state(user_id: int) -> dict | None:
+    """Lightweight lookup used by get_current_user to validate sessions."""
+    conn = get_connection()
+    cur  = conn.cursor(dictionary=True)
+    cur.execute(
+        "SELECT token_version FROM Users WHERE user_id = %s",
+        (user_id,),
+    )
+    row = cur.fetchone()
+    cur.close(); conn.close()
+    return row
+
 
 def count_users() -> int:
     conn = get_connection()
@@ -278,13 +290,25 @@ def admin_wipe_app(admin_user_id: int) -> dict:
         cur.execute("DELETE FROM Borrows")
         cur.execute("DELETE FROM Ledger_Entries")
         cur.execute("DELETE FROM People")
-        # Bump token_version for all non-admin users → their JWTs fail on next /me call → auto logout
         cur.execute(
             "UPDATE Users SET token_version = token_version + 1 WHERE user_id != %s",
             (admin_user_id,),
         )
         cur.execute("DELETE FROM Users WHERE user_id != %s", (admin_user_id,))
         conn.commit()
+
+        # DDL auto-commits, so do this after the DML transaction, not inside it.
+        # Since the admin row keeps id=1, MySQL will refuse to set the counter
+        # below that anyway — next new user/group correctly becomes 2 / 1.
+        reset_tables = [
+            "Users", "`Groups`", "Group_Members", "Expenses", "Expense_Splits",
+            "Payments", "Invites", "Notifications", "Ledger_Notifications",
+            "Personal_Expenses", "Income", "Loans", "Borrows",
+            "Ledger_Entries", "People",
+        ]
+        for table in reset_tables:
+            cur.execute(f"ALTER TABLE {table} AUTO_INCREMENT = 1")
+
         return {"wiped": True}
     except Exception:
         conn.rollback()
