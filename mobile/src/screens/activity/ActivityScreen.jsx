@@ -10,7 +10,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   TextInput,
-  Alert,
+  ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
@@ -262,6 +262,8 @@ export default function ActivityScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [tab, setTab] = useState("all");
   const [search, setSearch] = useState("");
+  const [selMonth, setSelMonth] = useState("all"); // "all" | "YYYY-MM"
+  const [sortOrder, setSortOrder] = useState("newest"); // "newest" | "oldest"
   const [downloading, setDownloading] = useState(false);
   const [showPeriodPicker, setShowPeriodPicker] = useState(false);
   const [periodTab, setPeriodTab] = useState("range"); // range | month | fy | custom
@@ -373,9 +375,27 @@ export default function ActivityScreen() {
     (f) => f.type === "settlement_sent" || f.type === "settlement_received",
   ).length;
 
+  // Available months present in the feed, newest first — powers the month chips
+  const monthOptions = (() => {
+    const seen = new Set();
+    feed.forEach((e) => {
+      if (e.date && e.date.length >= 7) seen.add(e.date.slice(0, 7));
+    });
+    return Array.from(seen).sort().reverse();
+  })();
+
+  function monthChipLabel(m) {
+    const [yr, mo] = m.split("-");
+    return new Date(+yr, +mo - 1, 1).toLocaleDateString("en-IN", {
+      month: "short",
+      year: "numeric",
+    });
+  }
+
   // Filter
   const visible = feed.filter((item) => {
     if (!tabMatches(tab, item.type)) return false;
+    if (selMonth !== "all" && (!item.date || item.date.slice(0, 7) !== selMonth)) return false;
     if (search) {
       const q = search.toLowerCase();
       const hay =
@@ -391,9 +411,8 @@ export default function ActivityScreen() {
     const d = item.date || "Unknown";
     (grouped[d] = grouped[d] || []).push(item);
   });
-  const sections = Object.keys(grouped)
-    .sort()
-    .reverse()
+  const sortedDateKeys = Object.keys(grouped).sort(); // ascending
+  const sections = (sortOrder === "newest" ? sortedDateKeys.slice().reverse() : sortedDateKeys)
     .map((date) => ({ title: dateLabel(date), data: grouped[date] }));
 
   if (loading)
@@ -424,16 +443,28 @@ export default function ActivityScreen() {
       <ScreenHeader
         title="Activity"
         actions={
-          <TouchableOpacity
-            onPress={() => setShowPeriodPicker(true)}
-            disabled={downloading}
-            style={styles.downloadBtn}
-          >
-            <Icons.receipt
-              size={18}
-              color={downloading ? COLORS.text3 : COLORS.primary}
-            />
-          </TouchableOpacity>
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            <TouchableOpacity
+              onPress={() => setSortOrder((s) => (s === "newest" ? "oldest" : "newest"))}
+              style={styles.downloadBtn}
+            >
+              {sortOrder === "newest" ? (
+                <Icons.sortNewest size={18} color={COLORS.primary} />
+              ) : (
+                <Icons.sortOldest size={18} color={COLORS.primary} />
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setShowPeriodPicker(true)}
+              disabled={downloading}
+              style={styles.downloadBtn}
+            >
+              <Icons.receipt
+                size={18}
+                color={downloading ? COLORS.text3 : COLORS.primary}
+              />
+            </TouchableOpacity>
+          </View>
         }
       />
 
@@ -512,6 +543,35 @@ export default function ActivityScreen() {
                 </TouchableOpacity>
               ))}
             </View>
+
+            {/* Month filter chips */}
+            {monthOptions.length > 0 && (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.monthChipRow}
+              >
+                <TouchableOpacity
+                  style={[styles.monthChip, selMonth === "all" && styles.monthChipActive]}
+                  onPress={() => setSelMonth("all")}
+                >
+                  <Text style={[styles.monthChipText, selMonth === "all" && styles.monthChipTextActive]}>
+                    All time
+                  </Text>
+                </TouchableOpacity>
+                {monthOptions.map((m) => (
+                  <TouchableOpacity
+                    key={m}
+                    style={[styles.monthChip, selMonth === m && styles.monthChipActive]}
+                    onPress={() => setSelMonth(m)}
+                  >
+                    <Text style={[styles.monthChipText, selMonth === m && styles.monthChipTextActive]}>
+                      {monthChipLabel(m)}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
 
             <Text style={styles.countText}>
               {visible.length} item{visible.length !== 1 ? "s" : ""}
@@ -789,6 +849,27 @@ const styles = StyleSheet.create({
     fontWeight: FONT_WEIGHT.semibold,
   },
   tabTextActive: { color: COLORS.text },
+
+  monthChipRow: { gap: 8, paddingVertical: 2 },
+  monthChip: {
+    paddingHorizontal: 13,
+    paddingVertical: 7,
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surface2,
+  },
+  monthChipActive: {
+    borderColor: COLORS.primary,
+    backgroundColor: "rgba(37,99,235,0.14)",
+  },
+  monthChipText: {
+    fontSize: FONT_SIZE.xs,
+    fontWeight: FONT_WEIGHT.semibold,
+    color: COLORS.text2,
+  },
+  monthChipTextActive: { color: COLORS.primary },
+
   countText: { fontSize: FONT_SIZE.xs, color: COLORS.text3 },
 
   downloadBtn: {
