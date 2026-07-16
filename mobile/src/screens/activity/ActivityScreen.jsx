@@ -29,7 +29,7 @@ import {
 } from "../../constants/theme";
 import { Icons } from "../../components/icons/icons";
 import { TYPE_ICONS as ENTRY_TYPE_ICONS } from "../../constants/entryTypeIcons";
-import { getExpenseIcon } from "../../constants/categoryIcons";
+import { getExpenseIcon, extractCategoryFromLabel } from "../../constants/categoryIcons";
 import ScreenHeader from "../../components/layout/ScreenHeader";
 import DatePickerInput from "../../components/common/DatePickerInput";
 import { TAB_BAR_HEIGHT } from "../../constants/theme";
@@ -215,7 +215,10 @@ function ActivityRow({ item, onPress }) {
     item.type === "group_expense" ||
     item.type === "group_expense_owed";
   const resolved = isExpenseType
-    ? getExpenseIcon({ description: `${item.label || ""} ${item.sub || ""}` })
+    ? getExpenseIcon({
+        category: extractCategoryFromLabel(item.label),
+        description: item.sub,
+      })
     : null;
 
   const IconComp = resolved?.Icon  || ENTRY_TYPE_ICONS[item.type]?.Icon || Icons.receipt;

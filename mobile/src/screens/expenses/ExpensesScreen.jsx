@@ -17,7 +17,7 @@ import { useAuth } from "../../context/AuthContext";
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS, TAB_BAR_HEIGHT } from "../../constants/theme";
 import { Icons, TYPE_CFG } from "../../components/icons/icons";
 import { TYPE_ICONS } from "../../constants/entryTypeIcons";
-import { getExpenseIcon } from "../../constants/categoryIcons";
+import { getExpenseIcon, extractCategoryFromLabel } from "../../constants/categoryIcons";
 import ScreenHeader from "../../components/layout/ScreenHeader";
 import AppAlert from "../../components/common/AppAlert";
 import Toast from "../../components/common/Toast";
@@ -337,7 +337,10 @@ function EntryRow({ entry, deleting, onDelete, onNavigateGroup, onToast }) {
     entry.type === "group_expense" ||
     entry.type === "group_expense_owed";
   const resolved = isExpenseType
-    ? getExpenseIcon({ description: `${entry.label || ""} ${entry.sub || ""}` })
+    ? getExpenseIcon({
+        category: extractCategoryFromLabel(entry.label),
+        description: entry.sub,
+      })
     : null;
 
   const Icon  = resolved?.Icon  || iconCfg.Icon;

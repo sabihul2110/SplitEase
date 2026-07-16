@@ -26,6 +26,7 @@
     "expo-splash-screen": "~56.0.10",
     "expo-status-bar": "~56.0.4",
     "expo-updates": "~56.0.19",
+    "lucide-react-native": "^1.24.0",
     "react": "19.2.3",
     "react-native": "0.85.3",
     "react-native-gesture-handler": "~2.31.1",
