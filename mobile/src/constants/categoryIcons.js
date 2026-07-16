@@ -28,7 +28,7 @@
 import {
   Plane, Building2, UtensilsCrossed, Ticket, Zap, ShoppingBasket,
   ShoppingBag, Car, Film, HeartPulse, Music, Tv, Wifi, Droplet,
-  Sparkles, Bus, TrainFront, GraduationCap, Dumbbell, Receipt,
+  Sparkles, Bus, TramFront, TrainFront, Ship, GraduationCap, Dumbbell, Receipt,
 } from "lucide-react-native";
 
 // ── Fixed-category fallback (checked after keyword matching) ─────────────
@@ -54,9 +54,11 @@ const SPECIFIC_KEYWORDS = [
   { keywords: ["water bill", "water can", "water supply"], Icon: Droplet, color: "#38bdf8" },
   { keywords: ["maid", "cook", "cleaning", "housekeeping", "laundry", "ironing"], Icon: Sparkles, color: "#4ade80" },
   { keywords: ["zomato", "swiggy", "restaurant", "cafe", "coffee", "lunch", "dinner", "breakfast", "snack", "tiffin", "mess", "canteen", "pizza", "burger", "biryani"], Icon: UtensilsCrossed, color: "#fb923c" },
-  { keywords: ["metro", "local train", "bus"], Icon: Bus, color: "#38bdf8" },
+  { keywords: ["metro", "tram", "subway"], Icon: TramFront, color: "#a78bfa" },
+  { keywords: ["bus", "local bus"], Icon: Bus, color: "#38bdf8" },
   { keywords: ["train", "railway", "irctc"], Icon: TrainFront, color: "#60a5fa" },
   { keywords: ["flight", "airport", "airline"], Icon: Plane, color: "#60a5fa" },
+  { keywords: ["ship", "ferry", "cruise", "boat"], Icon: Ship, color: "#38bdf8" },
   { keywords: ["cab", "taxi", "uber", "ola", "rapido", "auto", "fuel", "petrol", "diesel", "parking", "toll"], Icon: Car, color: "#38bdf8" },
   { keywords: ["amazon", "flipkart", "myntra", "bigbasket", "zepto", "blinkit"], Icon: ShoppingBag, color: "#f472b6" },
   { keywords: ["doctor", "medical", "medicine", "pharmacy", "hospital", "clinic"], Icon: HeartPulse, color: "#f87171" },

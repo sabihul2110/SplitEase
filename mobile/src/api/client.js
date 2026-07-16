@@ -1,16 +1,5 @@
 // SplitEase/mobile/src/api/client.js
 
-/**
- * api/client.js
- *
- * Axios instance for React Native.
- * - Reads JWT from AsyncStorage (async, unlike localStorage)
- * - Attaches Bearer token to every request
- * - On 401 → clears storage and navigates to Login
- *
- * Note: Navigation on 401 is done via navigationRef (set in App.js)
- * because we can't use hooks outside React components.
- */
 
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';

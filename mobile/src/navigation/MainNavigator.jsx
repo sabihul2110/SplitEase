@@ -27,6 +27,10 @@ import NotificationsScreen from "../screens/notifications/NotificationsScreen";
 import AccountScreen from "../screens/account/AccountScreen";
 import SettingsScreen from "../screens/settings/SettingsScreen";
 import MenuScreen from "../screens/menu/MenuScreen";
+import ManageTemplatesScreen from "../screens/templates/ManageTemplatesScreen";
+import EditTemplateScreen from "../screens/templates/EditTemplateScreen";
+import ManageBillsScreen from "../screens/bills/ManageBillsScreen";
+import EditBillScreen from "../screens/bills/EditBillScreen";
 
 
 function TabIcon({ name, focused, badgeCount }) {
@@ -65,6 +69,10 @@ function DashboardStack() {
       <DashStack.Screen name="Settings"       component={SettingsScreen} />
       <DashStack.Screen name="Notifications"  component={NotificationsScreen} />
       <DashStack.Screen name="VerifyEmail"    component={VerifyEmailScreen} />
+      <DashStack.Screen name="ManageTemplates" component={ManageTemplatesScreen} />
+      <DashStack.Screen name="EditTemplate"    component={EditTemplateScreen} />
+      <DashStack.Screen name="ManageBills"     component={ManageBillsScreen} />
+      <DashStack.Screen name="EditBill"        component={EditBillScreen} />
     </DashStack.Navigator>
   );
 }

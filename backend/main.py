@@ -1,13 +1,5 @@
 # --- backend/main.py ---
-"""
-main.py — FastAPI entry point
-Run: uvicorn main:app --reload --loop asyncio
 
-FIX S6: CORS allowed_origins no longer hardcoded to localhost.
-         Reads from ALLOWED_ORIGINS env var (comma-separated list).
-         Defaults to http://localhost:5173 for local dev so existing
-         workflows are unaffected — but production MUST set the env var.
-"""
 
 import uuid
 import sentry_sdk
@@ -29,14 +21,13 @@ if SENTRY_DSN:
 from routers import (
     auth_router, users, groups, expenses, payments,
     settlements, invites, notifications, personal_expenses,
-    income, loans, people, ledger_notifications, timeline, borrows, ai_agent,
+    income, loans, people, ledger_notifications, timeline, borrows, ai_agent, quick_templates, recurring_bills, pending_bills,
 )
 
 configure_logging()
 
 app = FastAPI(title="SplitEase API", version="2.1.0")
 
-# FIX S6: origins come from config, which reads from the environment
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
@@ -74,6 +65,9 @@ api_v1.include_router(ledger_notifications.router,                            ta
 api_v1.include_router(timeline.router,                                        tags=["Timeline"])
 api_v1.include_router(borrows.router,                                         tags=["Borrows"])
 api_v1.include_router(ai_agent.router,                                        tags=["AI Agent"])
+api_v1.include_router(quick_templates.router,     prefix="/quick-templates",  tags=["Quick Templates"])
+api_v1.include_router(recurring_bills.router,     prefix="/recurring-bills",  tags=["Recurring Bills"])
+api_v1.include_router(pending_bills.router,       prefix="/pending-bills",    tags=["Pending Bills"])
 
 app.include_router(api_v1)
 

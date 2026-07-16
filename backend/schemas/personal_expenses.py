@@ -7,5 +7,16 @@ class PersonalExpenseIn(BaseModel):
     category:       str        = "General"
     note:           str | None = None
     expense_date:   str  # YYYY-MM-DD
+    expense_time:   str | None = None  # HH:MM or HH:MM:SS
+    subcategory_id: int | None = None
+    merchant_name:  str | None = None
+
+
+class PersonalExpenseUpdate(BaseModel):
+    amount:         float
+    category:       str        = "General"
+    note:           str | None = None
+    expense_date:   str  # YYYY-MM-DD
+    expense_time:   str | None = None
     subcategory_id: int | None = None
     merchant_name:  str | None = None

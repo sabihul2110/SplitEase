@@ -48,6 +48,9 @@ class Settings(BaseSettings):
     # ── Env ────────────────────────────────────────────────────────────────
     TESTING: bool = False
 
+    # ── Cron / scheduled sweeps (hit by UptimeRobot) ─────────────────────────
+    CRON_SECRET: str = ""
+
     model_config = {"env_file": ".env", "extra": "ignore"}
 
     @field_validator("JWT_SECRET")
@@ -97,6 +100,7 @@ SENTRY_DSN:          str       = settings.SENTRY_DSN
 BREVO_API_KEY: str = settings.BREVO_API_KEY
 BREVO_SENDER_EMAIL: str = settings.BREVO_SENDER_EMAIL
 APP_BASE_URL:        str       = settings.APP_BASE_URL
+CRON_SECRET:         str       = settings.CRON_SECRET
 
 VALID_SOURCE_TYPES: frozenset[str] = frozenset({
     "salary", "pocket_money", "stipend", "other"

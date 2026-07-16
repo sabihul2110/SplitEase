@@ -293,27 +293,6 @@ def remove_group_member(group_id: int, user_id: int) -> None:
         cur.close(); conn.close()
 
 
-def fetch_categories() -> list[dict]:
-    conn = get_connection()
-    cur  = conn.cursor(dictionary=True)
-    cur.execute("SELECT category_id, category_name FROM Categories ORDER BY category_id ASC")
-    rows = cur.fetchall()
-    cur.close(); conn.close()
-    return rows
-
-
-def fetch_subcategories(category_id: int) -> list[dict]:
-    conn = get_connection()
-    cur  = conn.cursor(dictionary=True)
-    cur.execute(
-        "SELECT subcategory_id, subcategory_name FROM Subcategories WHERE category_id = %s ORDER BY subcategory_id ASC",
-        (category_id,),
-    )
-    rows = cur.fetchall()
-    cur.close(); conn.close()
-    return rows
-
-
 def admin_wipe_groups() -> dict:
     conn = get_connection()
     cur  = conn.cursor()

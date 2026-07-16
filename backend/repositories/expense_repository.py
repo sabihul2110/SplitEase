@@ -108,7 +108,7 @@ def insert_expense(
     group_id: int, payer_id: int, category_id: int,
     subcategory_id: int | None, total_amount: float,
     description: str, split_type: str, expense_date: str,
-    splits: list[dict],
+    splits: list[dict], expense_time: str | None = None,
 ) -> int:
     conn = get_connection()
     cur  = conn.cursor()
@@ -118,11 +118,11 @@ def insert_expense(
             """
             INSERT INTO Expenses
                 (group_id, payer_id, category_id, subcategory_id,
-                 total_amount, description, split_type, expense_date)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                 total_amount, description, split_type, expense_date, expense_time)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
             """,
             (group_id, payer_id, category_id, subcategory_id,
-             total_amount, description, split_type, expense_date),
+             total_amount, description, split_type, expense_date, expense_time),
         )
         expense_id = cur.lastrowid
         cur.executemany(
@@ -142,7 +142,7 @@ def update_expense(
     expense_id: int, payer_id: int, category_id: int,
     subcategory_id: int | None, total_amount: float,
     description: str, split_type: str, expense_date: str,
-    splits: list[dict],
+    splits: list[dict], expense_time: str | None = None,
 ) -> None:
     conn = get_connection()
     cur  = conn.cursor()
@@ -152,11 +152,11 @@ def update_expense(
             """
             UPDATE Expenses
             SET payer_id=%s, category_id=%s, subcategory_id=%s,
-                total_amount=%s, description=%s, split_type=%s, expense_date=%s
+                total_amount=%s, description=%s, split_type=%s, expense_date=%s, expense_time=%s
             WHERE expense_id=%s
             """,
             (payer_id, category_id, subcategory_id,
-             total_amount, description, split_type, expense_date, expense_id),
+             total_amount, description, split_type, expense_date, expense_time, expense_id),
         )
         cur.execute("DELETE FROM Expense_Splits WHERE expense_id = %s", (expense_id,))
         cur.executemany(

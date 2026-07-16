@@ -8,7 +8,7 @@ DELETE /personal-expenses/{id}    → delete (owner only)
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from schemas.personal_expenses import PersonalExpenseIn
+from schemas.personal_expenses import PersonalExpenseIn, PersonalExpenseUpdate
 
 from repositories import personal_expense_repository
 from core.dependencies import get_current_user
@@ -48,8 +48,33 @@ def add_personal_expense(
         expense_date   = body.expense_date,
         subcategory_id = body.subcategory_id,
         merchant_name  = body.merchant_name,
+        expense_time   = body.expense_time,
     )
     return {"expense_id": new_id, "message": "Personal expense added."}
+
+
+@router.put("/personal-expenses/{expense_id}", status_code=status.HTTP_200_OK)
+def update_personal_expense(
+    expense_id: int,
+    body: PersonalExpenseUpdate,
+    current_user: dict = Depends(get_current_user),
+):
+    if body.amount <= 0:
+        raise HTTPException(status_code=422, detail="Amount must be positive.")
+    updated = personal_expense_repository.update_personal_expense(
+        expense_id     = expense_id,
+        user_id        = current_user["user_id"],
+        amount         = body.amount,
+        category       = body.category,
+        note           = body.note,
+        expense_date   = body.expense_date,
+        subcategory_id = body.subcategory_id,
+        merchant_name  = body.merchant_name,
+        expense_time   = body.expense_time,
+    )
+    if not updated:
+        raise HTTPException(status_code=404, detail="Expense not found.")
+    return {"message": "Personal expense updated."}
 
 
 @router.delete("/personal-expenses/{expense_id}", status_code=status.HTTP_200_OK)

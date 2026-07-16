@@ -20,7 +20,7 @@ from schemas.groups import (
     UpdateMembersRequest, BulkGroupIdsRequest,
 )
 
-from repositories import group_repository, settlement_repository
+from repositories import group_repository, categories_repository, settlement_repository
 from core.dependencies import get_current_user, require_admin
 
 router = APIRouter()
@@ -51,12 +51,12 @@ def all_groups(current_user: dict = Depends(require_admin)):
 
 @router.get("/categories")
 def categories(current_user: dict = Depends(get_current_user)):
-    return group_repository.fetch_categories()
+    return categories_repository.fetch_categories()
 
 
 @router.get("/subcategories/{category_id}")
 def subcategories(category_id: int, current_user: dict = Depends(get_current_user)):
-    return group_repository.fetch_subcategories(category_id)
+    return categories_repository.fetch_subcategories(category_id)
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
