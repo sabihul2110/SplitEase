@@ -10,6 +10,11 @@ import AddEntryModal from "../../components/feature/AddEntryModal";
 import { Icons } from "../../components/icons";
 import Toast from "../../components/common/Toast";
 import DateInput from "../../components/common/DateInput";
+import Avatar from "../../components/common/Avatar";
+import Badge from "../../components/common/Badge";
+import ConfirmDialog from "../../components/common/ConfirmDialog";
+import { useToast } from "../../hooks/useToast";
+import { useConfirm } from "../../hooks/useConfirm";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const fmt = (n) => Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 });
@@ -37,16 +42,13 @@ function PeopleLedger() {
   const [showAddEntry, setShowAddEntry]   = useState(false);
   const [search, setSearch]         = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
-  const [toast, setToast]           = useState(null);
   const [pendingCount, setPendingCount] = useState(0);
   const [showSettleModal, setShowSettleModal] = useState(false);
   const [settleDate, setSettleDate] = useState(todayStr());
   const navigate = useNavigate();
 
-  const notify = (msg, isErr = false) => {
-    setToast({ msg, isErr });
-    setTimeout(() => setToast(null), 3000);
-  };
+  const { toast, notify } = useToast(3000);
+  const { confirm, dialogProps } = useConfirm();
 
   const loadPeople = useCallback(async () => {
     setLoading(true);
@@ -82,13 +84,15 @@ function PeopleLedger() {
   );
 
   async function handleDeletePerson(id, name) {
-    if (!window.confirm(`Delete ${name} and all their entries?`)) return;
+    const ok = await confirm({ title: `Delete ${name}?`, message: "This removes them and all their entries.", danger: true, confirmLabel: "Delete" });
+    if (!ok) return;
     try { await peopleApi.deletePerson(id); if (selected === id) setSelected(null); notify(`${name} deleted`); loadPeople(); }
     catch { notify("Failed to delete", true); }
   }
 
   async function handleDeleteEntry(id) {
-    if (!window.confirm("Delete this entry?")) return;
+    const ok = await confirm({ title: "Delete this entry?", danger: true, confirmLabel: "Delete" });
+    if (!ok) return;
     try { await peopleApi.deleteEntry(id); notify("Entry deleted"); loadEntries(selected); loadPeople(); }
     catch (err) { notify(err.response?.data?.detail || "Failed to delete", true); }
   }
@@ -190,12 +194,7 @@ function PeopleLedger() {
                     background: isSelected ? "var(--surface2)" : "transparent",
                     transition: "all 0.1s",
                   }}>
-                  <div style={{ width: 38, height: 38, borderRadius: "50%",
-                    background: avatarBg(p.display_name), display: "flex",
-                    alignItems: "center", justifyContent: "center",
-                    fontSize: 13, fontWeight: 700, color: "#fff", flexShrink: 0 }}>
-                    {initials(p.display_name)}
-                  </div>
+                  <Avatar name={p.display_name} size={38} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text)",
                       overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -222,12 +221,7 @@ function PeopleLedger() {
               borderBottom: "1px solid var(--border)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                  <div style={{ width: 56, height: 56, borderRadius: "50%",
-                    background: avatarBg(selectedPerson.display_name),
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 20, fontWeight: 700, color: "#fff" }}>
-                    {initials(selectedPerson.display_name)}
-                  </div>
+                  <Avatar name={selectedPerson.display_name} size={56} />
                   <div>
                     <h2 style={{ fontSize: 22, fontWeight: 800, margin: "0 0 4px",
                       letterSpacing: "-0.02em", color: "var(--text)" }}>
@@ -477,6 +471,8 @@ function PeopleLedger() {
           onSuccess={handleAddEntry}
         />
       )}
+
+      <ConfirmDialog {...dialogProps} />
     </>
   );
 }
@@ -679,7 +675,8 @@ function LoanCard({ item, onRefresh, idx, accentColor, btnColor, btnHover, isLen
   }
 
   async function handleDelete() {
-    if (!window.confirm("Delete this record?")) return;
+    const ok = await confirm({ title: "Delete this record?", danger: true, confirmLabel: "Delete" });
+    if (!ok) return;
     setDeleting(true);
     try { await (isLent ? deleteLoan(idField) : deleteBorrow(idField)); onRefresh(); }
     catch { setDeleting(false); }
@@ -698,11 +695,9 @@ function LoanCard({ item, onRefresh, idx, accentColor, btnColor, btnHover, isLen
           </div>
           <div style={{ fontSize: 17, fontWeight: 700, color: "var(--text)" }}>{personLabel}</div>
           <div style={{ marginTop: 6 }}>
-            <span className={`badge ${item.status === "active" ? "badge-amber" : "badge-success"}`}>
-              {item.status === "active" ? "Active" : "Settled"}
-            </span>
+            <Badge label={item.status === "active" ? "Active" : "Settled"} variant={item.status === "active" ? "amber" : "success"} />
             {item.status === "pending" && (
-              <span className="badge badge-neutral" style={{ marginLeft: 6 }}>Pending</span>
+              <Badge label="Pending" variant="neutral" style={{ marginLeft: 6 }} />
             )}
           </div>
         </div>

@@ -1,7 +1,7 @@
 // web/src/pages/loans/PendingRequests.jsx
 
-// Web equivalent of mobile's PendingRequestsScreen.jsx.
 // Received/Sent tabs × Entries/Confirmations sub-tabs.
+
 
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
@@ -9,6 +9,9 @@ import * as peopleApi from "../../api/people";
 import * as ledgerNotifsApi from "../../api/ledgerNotifications";
 import { Icons } from "../../components/icons";
 import Toast from "../../components/common/Toast";
+import ConfirmDialog from "../../components/common/ConfirmDialog";
+import { useToast } from "../../hooks/useToast";
+import { useConfirm } from "../../hooks/useConfirm";
 
 const fmt = (n) => Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 });
 
@@ -170,12 +173,8 @@ export default function PendingRequests() {
   const [sentConfirms, setSentConfirms] = useState([]);
 
   const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState(null);
-
-  function notify(msg, isErr = false) {
-    setToast({ msg, isErr });
-    setTimeout(() => setToast(null), 3000);
-  }
+  const { toast, notify } = useToast(3000);
+  const { confirm, dialogProps } = useConfirm();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -237,7 +236,8 @@ export default function PendingRequests() {
   }
 
   async function handleReject(entryId) {
-    if (!window.confirm("Decline this request?")) return;
+    const ok = await confirm({ title: "Decline this request?", danger: true, confirmLabel: "Decline" });
+    if (!ok) return;
     try {
       await peopleApi.rejectEntry(entryId);
       setReceived(prev => prev.filter(r => r.entry_id !== entryId));
@@ -248,7 +248,8 @@ export default function PendingRequests() {
   }
 
   async function handleCancelSent(entryId) {
-    if (!window.confirm("Cancel this request? It will be deleted and they won't be notified.")) return;
+    const ok = await confirm({ title: "Cancel this request?", message: "It will be deleted and they won't be notified.", danger: true, confirmLabel: "Cancel Request" });
+    if (!ok) return;
     try {
       await peopleApi.deleteEntry(entryId);
       setSent(prev => prev.filter(r => r.entry_id !== entryId));
@@ -407,6 +408,8 @@ export default function PendingRequests() {
           ))}
         </div>
       )}
+
+      <ConfirmDialog {...dialogProps} />
     </>
   );
 }

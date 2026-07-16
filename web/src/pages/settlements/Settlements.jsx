@@ -7,10 +7,11 @@ import * as peopleApi from "../../api/people";
 import { getSettlements, getSimplified } from "../../api/settlements";
 import { Icons } from "../../components/icons";
 import { useAuth } from "../../context/AuthContext";
+import Avatar from "../../components/common/Avatar";
+import EmptyState from "../../components/common/EmptyState";
 
 const fmt = (n) => Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 });
 
-// --- Helper UI Components ---
 
 const Card = ({ children, style }) => (
   <div style={{
@@ -22,38 +23,6 @@ const Card = ({ children, style }) => (
     ...style
   }}>
     {children}
-  </div>
-);
-
-const Avatar = ({ name, size = 40 }) => (
-  <div style={{
-    width: size, height: size, borderRadius: "50%",
-    background: "var(--surface3)", border: "1px solid var(--border2)",
-    display: "flex", alignItems: "center", justifyContent: "center",
-    fontSize: size * 0.35, fontWeight: 700, flexShrink: 0, color: "var(--text)"
-  }}>
-    {name ? name.charAt(0).toUpperCase() : "?"}
-  </div>
-);
-
-const EmptyState = ({ icon, title, subtitle }) => (
-  <div style={{
-    display: "flex", flexDirection: "column", alignItems: "center",
-    justifyContent: "center", padding: "64px 24px", textAlign: "center"
-  }}>
-    <div style={{
-      width: 64, height: 64, borderRadius: "50%", background: "rgba(16,185,129,0.08)",
-      color: "var(--success)", display: "flex", alignItems: "center",
-      justifyContent: "center", marginBottom: 16, border: "1px solid rgba(16,185,129,0.2)"
-    }}>
-      {icon}
-    </div>
-    <h3 style={{ fontSize: 18, fontWeight: 700, color: "var(--text)", margin: "0 0 8px 0" }}>
-      {title}
-    </h3>
-    <p style={{ fontSize: 14, color: "var(--text2)", margin: 0, maxWidth: 300 }}>
-      {subtitle}
-    </p>
   </div>
 );
 
