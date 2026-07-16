@@ -1,21 +1,29 @@
 // mobile/src/constants/categoryIcons.js
 //
-// Icon + color resolution for individual expense line items — used by
-// GroupDetailScreen's ledger (CategoryIcon) and, for personal/group
-// expense entries only, by ExpensesScreen/ActivityScreen's timeline
-// rows. Two layers, most specific wins:
+// USED IN:
+//   - GroupDetailScreen.jsx  → CategoryIcon (per-expense icon in a group's ledger)
+//   - ExpensesScreen.jsx     → EntryRow (personal_expense / group_expense rows)
+//   - ActivityScreen.jsx     → ActivityRow (personal_expense / group_expense rows)
 //
-//   1. KEYWORD_MAP     — scans category/subcategory/description text
-//      for specific merchants or bill types (e.g. "Spotify", "wifi",
-//      "maid") and returns a closely-matching generic icon.
-//   2. CATEGORY_ICONS  — exact match on the fixed category names the
-//      backend assigns (Travel, Food & Dining, Utilities, ...), used
-//      when nothing more specific is found.
+// Resolves an icon + color for a single expense line item, using the
+// category the user picked (authoritative) plus an optional free-text
+// note/description (a hint, not authoritative).
 //
-// NOTE: lucide-react-native ships generic outline icons only, not
-// trademarked brand logos. "Spotify"/"Apple Music" resolve to a music
-// note, "Netflix"/"Prime Video" to a TV icon, "Amazon"/"Flipkart" to a
-// shopping bag, etc. — recognizable without reproducing anyone's logo.
+// Two-tier keyword system — this split exists to fix a real bug:
+//   SPECIFIC_KEYWORDS  — safe to match against the free-text NOTE.
+//                        Brand names and precise transit/service words
+//                        ("Metro", "Netflix", "Spotify") are specific
+//                        enough that matching them in a casual note is
+//                        very unlikely to be a false positive.
+//   BROAD_KEYWORDS     — only matched against the CATEGORY text, never
+//                        the note. Words like "college" or "shopping"
+//                        are common enough that they could appear in
+//                        an unrelated note (e.g. a "Travel" expense
+//                        noted "College" was previously mis-matching
+//                        to a graduation cap icon). Restricting these
+//                        to category-only matching fixes that while
+//                        still letting a genuinely-categorized
+//                        "College" expense show the right icon.
 
 import {
   Plane, Building2, UtensilsCrossed, Ticket, Zap, ShoppingBasket,
@@ -23,7 +31,7 @@ import {
   Sparkles, Bus, TrainFront, GraduationCap, Dumbbell, Receipt,
 } from "lucide-react-native";
 
-// ── Layer 2 (checked last): fixed category name → icon ───────────────────
+// ── Fixed-category fallback (checked after keyword matching) ─────────────
 export const CATEGORY_ICONS = {
   "Travel":        { Icon: Plane,           color: "#60a5fa" },
   "Accommodation": { Icon: Building2,       color: "#a78bfa" },
@@ -37,32 +45,45 @@ export const CATEGORY_ICONS = {
   "Health":        { Icon: HeartPulse,      color: "#f87171" },
 };
 
-// ── Layer 1 (checked first): keyword scan for finer-grained icons ────────
-const KEYWORD_MAP = [
-  { keywords: ["spotify", "apple music", "gaana", "jiosaavn", "wynk", "music subscription"], Icon: Music, color: "#4ade80" },
-  { keywords: ["netflix", "prime video", "hotstar", "disney", "sonyliv", "zee5", "youtube premium", "streaming"], Icon: Tv, color: "#f87171" },
+// ── Tier 1: safe to match against the user's free-text note ──────────────
+const SPECIFIC_KEYWORDS = [
+  { keywords: ["spotify", "apple music", "gaana", "jiosaavn", "wynk"], Icon: Music, color: "#4ade80" },
+  { keywords: ["netflix", "prime video", "hotstar", "disney", "sonyliv", "zee5", "youtube premium"], Icon: Tv, color: "#f87171" },
   { keywords: ["wifi", "broadband", "internet", "router"], Icon: Wifi, color: "#38bdf8" },
   { keywords: ["electricity", "power bill", "eb bill"], Icon: Zap, color: "#fde047" },
   { keywords: ["water bill", "water can", "water supply"], Icon: Droplet, color: "#38bdf8" },
   { keywords: ["maid", "cook", "cleaning", "housekeeping", "laundry", "ironing"], Icon: Sparkles, color: "#4ade80" },
-  { keywords: ["zomato", "swiggy", "food", "restaurant", "cafe", "coffee", "lunch", "dinner", "breakfast", "snack", "tiffin", "mess", "canteen", "pizza", "burger"], Icon: UtensilsCrossed, color: "#fb923c" },
+  { keywords: ["zomato", "swiggy", "restaurant", "cafe", "coffee", "lunch", "dinner", "breakfast", "snack", "tiffin", "mess", "canteen", "pizza", "burger", "biryani"], Icon: UtensilsCrossed, color: "#fb923c" },
   { keywords: ["metro", "local train", "bus"], Icon: Bus, color: "#38bdf8" },
   { keywords: ["train", "railway", "irctc"], Icon: TrainFront, color: "#60a5fa" },
-  { keywords: ["flight", "airport", "airline", "travel", "trip", "vacation", "holiday"], Icon: Plane, color: "#60a5fa" },
-  { keywords: ["cab", "taxi", "uber", "ola", "rapido", "auto", "fuel", "petrol", "diesel", "parking", "toll", "commute"], Icon: Car, color: "#38bdf8" },
-  { keywords: ["amazon", "flipkart", "myntra", "shopping", "grocery", "groceries", "market", "bigbasket", "zepto", "blinkit"], Icon: ShoppingBag, color: "#f472b6" },
-  { keywords: ["movie", "cinema", "concert", "event", "show"], Icon: Film, color: "#c084fc" },
+  { keywords: ["flight", "airport", "airline"], Icon: Plane, color: "#60a5fa" },
+  { keywords: ["cab", "taxi", "uber", "ola", "rapido", "auto", "fuel", "petrol", "diesel", "parking", "toll"], Icon: Car, color: "#38bdf8" },
+  { keywords: ["amazon", "flipkart", "myntra", "bigbasket", "zepto", "blinkit"], Icon: ShoppingBag, color: "#f472b6" },
   { keywords: ["doctor", "medical", "medicine", "pharmacy", "hospital", "clinic"], Icon: HeartPulse, color: "#f87171" },
-  { keywords: ["college", "school", "course", "tuition", "coaching", "exam"], Icon: GraduationCap, color: "#818cf8" },
-  { keywords: ["gym", "workout", "fitness", "yoga", "sport"], Icon: Dumbbell, color: "#f87171" },
+  { keywords: ["gym", "workout", "fitness", "yoga"], Icon: Dumbbell, color: "#f87171" },
 ];
+
+// ── Tier 2: category-text only — never matched against the free note ─────
+const BROAD_KEYWORDS = [
+  { keywords: ["travel", "trip", "vacation", "holiday"], Icon: Plane, color: "#60a5fa" },
+  { keywords: ["college", "school", "course", "tuition", "coaching", "sem", "semester", "exam"], Icon: GraduationCap, color: "#818cf8" },
+  { keywords: ["movie", "cinema", "concert", "event", "show"], Icon: Film, color: "#c084fc" },
+  { keywords: ["shopping", "grocery", "groceries", "market"], Icon: ShoppingBag, color: "#f472b6" },
+];
+
+function matchKeywords(text, list) {
+  if (!text) return null;
+  const lower = text.toLowerCase();
+  for (const entry of list) {
+    if (entry.keywords.some((kw) => lower.includes(kw))) return entry;
+  }
+  return null;
+}
 
 /**
  * Personal/group expense timeline labels are formatted "Spent on
- * <Category>" by the backend. This pulls the category text back out
- * so callers (ExpensesScreen, ActivityScreen) can pass the real
- * category to getExpenseIcon instead of relying on the free-text
- * note alone. Returns "" if the label doesn't match that pattern.
+ * <Category>" by the backend. Pulls the category text back out so
+ * callers can pass the real category to getExpenseIcon.
  */
 export function extractCategoryFromLabel(label = "") {
   const match = label.match(/^Spent on (.+)$/i);
@@ -72,33 +93,29 @@ export function extractCategoryFromLabel(label = "") {
 /**
  * Resolves the best icon/color for an expense line item.
  *
- *   1. category + subcategory text vs. KEYWORD_MAP  (authoritative)
- *   2. exact CATEGORY_ICONS[category] match          (authoritative)
- *   3. description text vs. KEYWORD_MAP              (best-effort)
- *   4. generic receipt icon                          (fallback)
+ *   1. NOTE text     vs SPECIFIC_KEYWORDS only  (e.g. "Metro" → Bus,
+ *      refining a broad "Travel" category down to the actual mode)
+ *   2. CATEGORY text vs SPECIFIC + BROAD        (the authoritative
+ *      classification the user picked)
+ *   3. Exact CATEGORY_ICONS[category] match
+ *   4. Generic receipt icon
+ *
+ * Step 1 deliberately excludes BROAD_KEYWORDS — a note like "College"
+ * under a "Travel" category must never hijack the icon; only the
+ * category itself can trigger a broad-keyword match.
  */
 export function getExpenseIcon({ category, subcategory, description } = {}) {
-  const categoryText = `${category || ""} ${subcategory || ""}`.toLowerCase().trim();
-  const noteText = `${description || ""}`.toLowerCase().trim();
+  const categoryText = `${category || ""} ${subcategory || ""}`.trim();
+  const noteText = `${description || ""}`.trim();
 
-  if (categoryText) {
-    for (const entry of KEYWORD_MAP) {
-      if (entry.keywords.some((kw) => categoryText.includes(kw))) {
-        return { Icon: entry.Icon, color: entry.color };
-      }
-    }
-  }
+  let hit = matchKeywords(noteText, SPECIFIC_KEYWORDS);
+  if (hit) return { Icon: hit.Icon, color: hit.color };
+
+  hit = matchKeywords(categoryText, [...SPECIFIC_KEYWORDS, ...BROAD_KEYWORDS]);
+  if (hit) return { Icon: hit.Icon, color: hit.color };
 
   if (category && CATEGORY_ICONS[category]) {
     return CATEGORY_ICONS[category];
-  }
-
-  if (noteText) {
-    for (const entry of KEYWORD_MAP) {
-      if (entry.keywords.some((kw) => noteText.includes(kw))) {
-        return { Icon: entry.Icon, color: entry.color };
-      }
-    }
   }
 
   return { Icon: Receipt, color: "#8892b0" };

@@ -180,16 +180,20 @@ function GroupRow({ group, onPress }) {
         year: "numeric",
       })
     : "";
-  const { IconComponent, bg, color } = getGroupIcon(group.group_name);
+  const { IconComponent, bg, color, matched } = getGroupIcon(group.group_name);
   return (
     <TouchableOpacity
       style={styles.groupRow}
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <View style={[styles.groupIconBox, { backgroundColor: bg }]}>
-        <IconComponent size={19} color={color} strokeWidth={2} />
-      </View>
+      {matched ? (
+        <View style={[styles.groupIconBox, { backgroundColor: bg }]}>
+          <IconComponent size={19} color={color} strokeWidth={2} />
+        </View>
+      ) : (
+        <Avatar name={group.group_name} size={38} />
+      )}
       <View style={styles.groupInfo}>
         <Text style={styles.groupName} numberOfLines={1}>
           {group.group_name}

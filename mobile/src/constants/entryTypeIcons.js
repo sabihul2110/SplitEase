@@ -1,15 +1,10 @@
 // mobile/src/constants/entryTypeIcons.js
 //
-// Icon + color config per ledger entry type (personal expense, group
-// expense, income, loans, settlements). Same bg/color values as the
-// legacy TYPE_ICONS in components/icons/icons.jsx — only the icon
-// components changed, from hand-drawn SVGs to lucide-react-native,
-// for a more polished, professional look on Expenses/Group Detail.
-//
-// NOTE: group_expense and group_expense_owed intentionally share the
-// same bg/color/icon (carried over unchanged from the original config).
-// Row-level context (payer name, "your share" breakdown) is what
-// distinguishes them in the UI, not icon color.
+// USED IN:
+//   - ExpensesScreen.jsx  → EntryRow (fallback icon for income/loan/settlement rows;
+//                            personal_expense & group_expense rows prefer categoryIcons.js instead)
+//   - ActivityScreen.jsx  → ActivityRow (same split as above)
+
 
 import {
   Receipt,

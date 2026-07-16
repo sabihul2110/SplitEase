@@ -91,8 +91,39 @@ function avatarColor(name = "") {
 const initials = getInitials;
 
 function GroupAvatar({ name, size = 48 }) {
-  // Same keyword-matched category icon as web's getGroupIcon —
-  const { IconComponent, bg, color } = getGroupIcon(name);
+  const { IconComponent, bg, color, matched } = getGroupIcon(name);
+
+  if (!matched) {
+    // No keyword matched this group's name — fall back to the
+    // original flat-color + initials avatar instead of a generic
+    // default icon, so an unrecognized group still looks like a
+    // deliberate design choice.
+    const fallbackBg = avatarColor(name);
+    return (
+      <View
+        style={{
+          width: size,
+          height: size,
+          borderRadius: size * 0.28,
+          backgroundColor: fallbackBg,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Text
+          style={{
+            fontSize: size * 0.35,
+            fontWeight: W.heavy,
+            color: "#fff",
+            letterSpacing: 0.4,
+          }}
+        >
+          {initials(name)}
+        </Text>
+      </View>
+    );
+  }
+
   return (
     <View
       style={{

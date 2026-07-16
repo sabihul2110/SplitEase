@@ -1,10 +1,9 @@
 // mobile/src/constants/groupIcons.js
 //
-// Keyword → icon/color mapping for group avatars (GroupsScreen.jsx).
-// Ported 1:1 from web/src/constants/groupIcons.js — same keyword list,
-// same colors — using lucide-react-native instead of lucide-react so
-// mobile and web resolve to the identical icon for the identical
-// group name.
+// USED IN:
+//   - GroupsScreen.jsx     → GroupAvatar (group list cards)
+//   - DashboardScreen.jsx  → GroupRow (recent groups on the dashboard)
+
 
 import {
   Plane, Utensils, Home, ShoppingBag, Zap, Car, Film,
@@ -38,8 +37,8 @@ export function getGroupIcon(groupName = "") {
   const lower = groupName.toLowerCase();
   for (const entry of KEYWORD_MAP) {
     if (entry.keywords.some(kw => lower.includes(kw))) {
-      return { IconComponent: ICONS[entry.icon], bg: entry.bg, color: entry.color };
+      return { IconComponent: ICONS[entry.icon], bg: entry.bg, color: entry.color, matched: true };
     }
   }
-  return { IconComponent: ICONS[DEFAULT.icon], bg: DEFAULT.bg, color: DEFAULT.color };
+  return { IconComponent: ICONS[DEFAULT.icon], bg: DEFAULT.bg, color: DEFAULT.color, matched: false };
 }
