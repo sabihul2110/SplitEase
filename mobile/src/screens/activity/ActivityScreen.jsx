@@ -28,6 +28,8 @@ import {
   RADIUS,
 } from "../../constants/theme";
 import { Icons } from "../../components/icons/icons";
+import { TYPE_ICONS as ENTRY_TYPE_ICONS } from "../../constants/entryTypeIcons";
+import { getExpenseIcon } from "../../constants/categoryIcons";
 import ScreenHeader from "../../components/layout/ScreenHeader";
 import DatePickerInput from "../../components/common/DatePickerInput";
 import { TAB_BAR_HEIGHT } from "../../constants/theme";
@@ -83,18 +85,23 @@ const TYPE_META = {
   },
 };
 
-const TYPE_ICON = {
-  group_expense: Icons.groupExpense,
-  group_expense_owed: Icons.receipt,
-  personal_expense: Icons.personalExpense,
-  income: Icons.income,
-  loan_given: Icons.lendMoney,
-  loan_taken: Icons.borrowMoney,
-  settlement_received: Icons.checkCircle,
-  settlement_sent: Icons.settlement,
-  loan_repayment_received: Icons.paymentSettled,
-  loan_repayment_paid: Icons.paymentSettled,
-};
+// const TYPE_ICON = {
+//   group_expense: Icons.groupExpense,
+//   group_expense_owed: Icons.receipt,
+//   personal_expense: Icons.personalExpense,
+//   income: Icons.income,
+//   loan_given: Icons.lendMoney,
+//   loan_taken: Icons.borrowMoney,
+//   settlement_received: Icons.checkCircle,
+//   settlement_sent: Icons.settlement,
+//   loan_repayment_received: Icons.paymentSettled,
+//   loan_repayment_paid: Icons.paymentSettled,
+// };
+
+// Entry-type icons now come from constants/entryTypeIcons.js — the
+// same source ExpensesScreen uses, since both screens render the
+// same timeline data. See ActivityRow below for the per-row
+// keyword-icon resolution logic shared with Expenses.
 
 // Matches web tabMatches()
 function tabMatches(tab, type) {
@@ -202,7 +209,18 @@ function ActivityRow({ item, onPress }) {
   const inflow = isInflow(item.type);
   const canNav = !!item.group_id;
   const amount = Number(item.amount || 0);
-  const IconComp = TYPE_ICON[item.type] || Icons.receipt;
+
+  const isExpenseType =
+    item.type === "personal_expense" ||
+    item.type === "group_expense" ||
+    item.type === "group_expense_owed";
+  const resolved = isExpenseType
+    ? getExpenseIcon({ description: `${item.label || ""} ${item.sub || ""}` })
+    : null;
+
+  const IconComp = resolved?.Icon  || ENTRY_TYPE_ICONS[item.type]?.Icon || Icons.receipt;
+  const iconColor = resolved?.color || meta.color;
+  const iconBg    = resolved ? `${resolved.color}18` : meta.bg;
 
   return (
     <TouchableOpacity
@@ -210,8 +228,8 @@ function ActivityRow({ item, onPress }) {
       onPress={canNav ? onPress : undefined}
       activeOpacity={canNav ? 0.7 : 1}
     >
-      <View style={[styles.rowIcon, { backgroundColor: meta.bg }]}>
-        <IconComp size={18} color={meta.color} />
+      <View style={[styles.rowIcon, { backgroundColor: iconBg }]}>
+        <IconComp size={18} color={iconColor} />
       </View>
       <View style={styles.rowBody}>
         <Text style={styles.rowLabel} numberOfLines={1}>

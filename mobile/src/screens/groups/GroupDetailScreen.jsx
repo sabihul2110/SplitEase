@@ -21,7 +21,8 @@ import * as groupsApi from "../../api/groups";
 import * as expensesApi from "../../api/expenses";
 import * as settlementsApi from "../../api/settlements";
 import { useAuth } from '../../context/AuthContext';
-import { Icons, CATEGORY_ICONS } from '../../components/icons/icons';
+import { Icons } from '../../components/icons/icons';
+import { getExpenseIcon } from '../../constants/categoryIcons';
 import { TAB_BAR_HEIGHT } from '../../constants/theme';
 import AppAlert from "../../components/common/AppAlert";
 
@@ -135,13 +136,11 @@ function SectionHead({ title, right }) {
 }
 
 // ─── Category icon for expense rows ──────────────────────────────────────────
-function CategoryIcon({ categoryName, size = 40 }) {
-  const cfg = CATEGORY_ICONS[categoryName];
-  const color = cfg?.color || C.text3;
-  const IconComp = cfg?.Icon || Icons.receipt;
+function CategoryIcon({ category, subcategory, description, size = 40 }) {
+  const { Icon, color } = getExpenseIcon({ category, subcategory, description });
   return (
     <View style={[styles.ledgerIcon, { backgroundColor: color + '18' }]}>
-      <IconComp size={20} color={color} />
+      <Icon size={20} color={color} />
     </View>
   );
 }
@@ -183,7 +182,11 @@ function ExpenseRow({ item, currentUserName, onDelete, onEdit, settlementBadge, 
         }}
         activeOpacity={0.7}
       >
-        <CategoryIcon categoryName={item.category_name} />
+        <CategoryIcon
+          category={item.category_name}
+          subcategory={item.subcategory_name}
+          description={item.description}
+        />
         <View style={styles.ledgerMid}>
           <Text style={styles.ledgerDesc} numberOfLines={1}>
             {item.description}

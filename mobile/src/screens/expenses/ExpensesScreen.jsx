@@ -15,7 +15,9 @@ import { useNavigation } from "@react-navigation/native";
 import * as expensesApi from "../../api/expenses";
 import { useAuth } from "../../context/AuthContext";
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS, TAB_BAR_HEIGHT } from "../../constants/theme";
-import { Icons, TYPE_ICONS, TYPE_CFG } from "../../components/icons/icons";
+import { Icons, TYPE_CFG } from "../../components/icons/icons";
+import { TYPE_ICONS } from "../../constants/entryTypeIcons";
+import { getExpenseIcon } from "../../constants/categoryIcons";
 import ScreenHeader from "../../components/layout/ScreenHeader";
 import AppAlert from "../../components/common/AppAlert";
 import Toast from "../../components/common/Toast";
@@ -326,12 +328,21 @@ function InlineRepay({ entry, onSuccess, onToast }) {
 //  Single Entry Row
 // ─────────────────────────────────────────────
 function EntryRow({ entry, deleting, onDelete, onNavigateGroup, onToast }) {
-  // Removed local alert state!
   const cfg     = TYPE_CFG[entry.type];
   const iconCfg = TYPE_ICONS[entry.type];
   if (!cfg || !iconCfg) return null;
 
-  const { Icon, bg, color } = iconCfg;
+  const isExpenseType =
+    entry.type === "personal_expense" ||
+    entry.type === "group_expense" ||
+    entry.type === "group_expense_owed";
+  const resolved = isExpenseType
+    ? getExpenseIcon({ description: `${entry.label || ""} ${entry.sub || ""}` })
+    : null;
+
+  const Icon  = resolved?.Icon  || iconCfg.Icon;
+  const color = resolved?.color || iconCfg.color;
+  const bg    = resolved ? `${color}18` : iconCfg.bg;
   const disp        = displayAmount(entry);
   const isGrp       = entry.type === "group_expense";
   const isLoanGiven = entry.type === "loan_given";

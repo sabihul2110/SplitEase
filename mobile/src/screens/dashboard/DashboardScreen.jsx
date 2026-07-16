@@ -26,6 +26,7 @@ import {
 } from "../../constants/theme";
 import { Avatar, LoadingState, EmptyState } from "../../components/common/Ui";
 import { Icons } from "../../components/icons/icons";
+import { getGroupIcon } from "../../constants/groupIcons";
 
 function fmt(n) {
   return Number(n || 0).toLocaleString("en-IN", {
@@ -179,13 +180,16 @@ function GroupRow({ group, onPress }) {
         year: "numeric",
       })
     : "";
+  const { IconComponent, bg, color } = getGroupIcon(group.group_name);
   return (
     <TouchableOpacity
       style={styles.groupRow}
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <Avatar name={group.group_name} size={38} />
+      <View style={[styles.groupIconBox, { backgroundColor: bg }]}>
+        <IconComponent size={19} color={color} strokeWidth={2} />
+      </View>
       <View style={styles.groupInfo}>
         <Text style={styles.groupName} numberOfLines={1}>
           {group.group_name}
@@ -656,6 +660,14 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.md,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
+  },
+  groupIconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 11,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
   },
   groupInfo: { flex: 1 },
   groupName: {

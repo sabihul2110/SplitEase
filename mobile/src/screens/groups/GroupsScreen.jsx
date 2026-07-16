@@ -27,6 +27,7 @@ import * as settlementsApi from "../../api/settlements";
 import { useAuth } from "../../context/AuthContext";
 import { Icons } from "../../components/icons/icons";
 import { getInitials } from "../../components/common/Ui";
+import { getGroupIcon } from "../../constants/groupIcons";
 import { TAB_BAR_HEIGHT } from '../../constants/theme';
 import AppAlert from "../../components/common/AppAlert";
 import Toast from "../../components/common/Toast";
@@ -90,7 +91,8 @@ function avatarColor(name = "") {
 const initials = getInitials;
 
 function GroupAvatar({ name, size = 48 }) {
-  const bg = avatarColor(name);
+  // Same keyword-matched category icon as web's getGroupIcon —
+  const { IconComponent, bg, color } = getGroupIcon(name);
   return (
     <View
       style={{
@@ -102,16 +104,7 @@ function GroupAvatar({ name, size = 48 }) {
         justifyContent: "center",
       }}
     >
-      <Text
-        style={{
-          fontSize: size * 0.35,
-          fontWeight: W.heavy,
-          color: "#fff",
-          letterSpacing: 0.4,
-        }}
-      >
-        {initials(name)}
-      </Text>
+      <IconComponent size={size * 0.5} color={color} strokeWidth={2} />
     </View>
   );
 }

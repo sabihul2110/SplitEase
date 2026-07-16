@@ -647,31 +647,13 @@ export const Icons = {
 
 // ─── §MAPS — Metadata maps ───────────────────────────────────────────────────
 
-export const TYPE_ICONS = {
-  personal_expense:    { Icon: Icons.personalExpense, bg: "rgba(239,68,68,0.12)",   color: "#f87171" },
-  group_expense:       { Icon: Icons.groupExpense,    bg: "rgba(37,99,235,0.12)",   color: "#f87171" },
-  group_expense_owed:  { Icon: Icons.groupExpense,    bg: "rgba(37,99,235,0.12)",   color: "#f87171" },
-  settlement_sent:     { Icon: Icons.paymentSettled,      bg: "rgba(239,68,68,0.10)",   color: "#f87171" },
-  income:              { Icon: Icons.income,          bg: "rgba(16,185,129,0.12)",  color: "#10b981" },
-  settlement_received: { Icon: Icons.paymentSettled,      bg: "rgba(99,102,241,0.12)",  color: "#10b981" },
-  loan_given:          { Icon: Icons.lendMoney,       bg: "rgba(245,158,11,0.12)",  color: "#f59e0b" },
-  loan_taken:          { Icon: Icons.borrowMoney,     bg: "rgba(99,102,241,0.12)",  color: "#818cf8" },
-  loan_repayment_received: { Icon: Icons.paymentSettled, bg: "rgba(16,185,129,0.12)", color: "#10b981" },
-  loan_repayment_paid:     { Icon: Icons.paymentSettled, bg: "rgba(239,68,68,0.10)",  color: "#f87171" },
-};
-
-export const CATEGORY_ICONS = {
-  'Travel':        { Icon: Icons.travel,        color: "#60a5fa" },
-  'Accommodation': { Icon: Icons.accommodation, color: "#a78bfa" },
-  'Food & Dining': { Icon: Icons.foodDining,    color: "#fb923c" },
-  'Activities':    { Icon: Icons.activities,    color: "#facc15" },
-  'Utilities':     { Icon: Icons.utilities,     color: "#fde047" },
-  'Groceries':     { Icon: Icons.groceries,     color: "#4ade80" },
-  'Shopping':      { Icon: Icons.shopping,      color: "#f472b6" },
-  'Transport':     { Icon: Icons.transport,     color: "#38bdf8" },
-  'Entertainment': { Icon: Icons.entertainment, color: "#c084fc" },
-  'Health':        { Icon: Icons.health,        color: "#f87171" },
-};
+// TYPE_ICONS and CATEGORY_ICONS have moved to dedicated constants files
+// using lucide-react-native icons instead of hand-drawn SVGs:
+//   - constants/entryTypeIcons.js  → TYPE_ICONS
+//   - constants/categoryIcons.js   → CATEGORY_ICONS
+// This file (icons.jsx) still owns TYPE_CFG below plus all generic
+// navigation/action icons used above — those remain hand-drawn since
+// they're custom brand marks, not semantic data-driven mappings.
 
 export const TYPE_CFG = {
   personal_expense:    { sign: "-", bucket: "spent"    },
