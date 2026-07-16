@@ -14,7 +14,7 @@ import * as ledgerNotifsApi from '../../api/ledgerNotifications';
 import AppAlert from '../../components/common/AppAlert';
 import PersonSearchField from '../../components/common/PersonSearchField';
 import Toast from '../../components/common/Toast';
-import { LoadingState } from '../../components/common/Ui';
+import { LoadingState, Avatar } from '../../components/common/Ui';
 import { Icons } from '../../components/icons/icons';
 import ScreenHeader from '../../components/layout/ScreenHeader';
 import {
@@ -39,22 +39,6 @@ function PersonCard({ item, onPress, onLongPress, onDelete, isSelecting, isSelec
     ? `You owe ₹${fmt(Math.abs(net))}`
     : 'All settled';
 
-  const initials = item.display_name
-    .split(' ')
-    .slice(0, 2)
-    .map(w => w[0]?.toUpperCase() || '')
-    .join('');
-
-  // deterministic colour from name
-  const AVATAR_COLORS = [
-    '#2563eb','#7c3aed','#059669','#d97706','#dc2626',
-    '#0891b2','#65a30d','#9333ea','#e11d48','#0369a1',
-  ];
-  let hash = 0;
-  for (let i = 0; i < item.display_name.length; i++)
-    hash = item.display_name.charCodeAt(i) + ((hash << 5) - hash);
-  const avatarBg = AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-
   return (
     <TouchableOpacity
       style={[styles.personCard, isSelected && styles.personCardSelected]}
@@ -64,9 +48,7 @@ function PersonCard({ item, onPress, onLongPress, onDelete, isSelecting, isSelec
       delayLongPress={350}
     >
       {/* Avatar */}
-      <View style={[styles.avatar, { backgroundColor: avatarBg }]}>
-        <Text style={styles.avatarText}>{initials || '?'}</Text>
-      </View>
+      <Avatar name={item.display_name} size={44} />
 
       {/* Name + meta */}
       <View style={styles.personMeta}>
@@ -497,11 +479,6 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: COLORS.border,
     padding: SPACING.base,
   },
-  avatar: {
-    width: 44, height: 44, borderRadius: 22,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  avatarText: { fontSize: FONT_SIZE.base, fontWeight: FONT_WEIGHT.bold, color: '#fff' },
   personMeta: { flex: 1, gap: 2 },
   personName: { fontSize: FONT_SIZE.base, fontWeight: FONT_WEIGHT.bold, color: COLORS.text },
   personNet:  { fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.semibold },

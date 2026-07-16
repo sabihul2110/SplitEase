@@ -181,7 +181,7 @@ export default function Settlements() {
                     {simple.length === 0 ? (
                       <Card>
                         <EmptyState 
-                          icon={<Icons.check size={32} />}
+                          icon={Icons.check}
                           title="All Settled Up"
                           subtitle={`No outstanding balances remain in ${selectedGroup.group_name}.`}
                         />
@@ -321,7 +321,7 @@ export default function Settlements() {
             ) : peopleWithBalance.length === 0 ? (
               <Card>
                 <EmptyState 
-                  icon={<Icons.check size={32} />}
+                  icon={Icons.check}
                   title="Zero Balances"
                   subtitle="You have no outstanding debts or loans with any individual contacts."
                 />

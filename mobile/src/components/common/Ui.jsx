@@ -92,12 +92,16 @@ function colorForName(name = '') {
   return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
 }
 
-export function Avatar({ name = '?', size = 36, style }) {
-  const initials = name
+export function getInitials(name = '') {
+  return name
     .split(' ')
     .slice(0, 2)
     .map(w => w[0]?.toUpperCase() || '')
     .join('');
+}
+
+export function Avatar({ name = '?', size = 36, style }) {
+  const initials = getInitials(name);
   const bg = colorForName(name);
 
   return (

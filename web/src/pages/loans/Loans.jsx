@@ -645,7 +645,7 @@ function AddEntryModal2({ personName, onClose, onSuccess }) {
 }
 
 // ── LoanCard (Normal Loans tab) ───────────────────────────────────────────────
-function LoanCard({ item, onRefresh, idx, accentColor, btnColor, btnHover, isLent }) {
+function LoanCard({ item, onRefresh, idx, accentColor, btnColor, btnHover, isLent, confirm }) {
   const [repayAmt, setRepayAmt] = useState("");
   const [repayDate, setRepayDate] = useState(todayStr());
   const [repayErr, setRepayErr] = useState("");
@@ -960,7 +960,8 @@ export default function Loans() {
                   isLent={pageTab === "lent"}
                   accentColor={pageTab === "lent" ? "#f59e0b" : "#818cf8"}
                   btnColor={pageTab === "lent" ? "#10b981" : "#6366f1"}
-                  btnHover={pageTab === "lent" ? "#0d9e6e" : "#4f46e5"} />
+                  btnHover={pageTab === "lent" ? "#0d9e6e" : "#4f46e5"}
+                  confirm={confirm} />
               ))}
             </div>
           )}

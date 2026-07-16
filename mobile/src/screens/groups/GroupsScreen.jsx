@@ -26,6 +26,7 @@ import * as groupsApi from "../../api/groups";
 import * as settlementsApi from "../../api/settlements";
 import { useAuth } from "../../context/AuthContext";
 import { Icons } from "../../components/icons/icons";
+import { getInitials } from "../../components/common/Ui";
 import { TAB_BAR_HEIGHT } from '../../constants/theme';
 import AppAlert from "../../components/common/AppAlert";
 import Toast from "../../components/common/Toast";
@@ -83,14 +84,10 @@ function avatarColor(name = "") {
   return AVATAR_PALETTE[name.charCodeAt(0) % AVATAR_PALETTE.length];
 }
 
-function initials(name = "") {
-  return name
-    .split(" ")
-    .map((w) => w[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-}
+// initials() now comes from shared Ui.jsx (getInitials) — palette and hash
+// here stay local since group avatars use a different palette + shape
+// (squircle, first-char hash) than person avatars intentionally.
+const initials = getInitials;
 
 function GroupAvatar({ name, size = 48 }) {
   const bg = avatarColor(name);
