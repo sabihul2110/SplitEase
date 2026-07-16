@@ -7,6 +7,12 @@ import { getMembers, getGroups, generateInvite, remindMember, leaveGroup, delete
 import { deletePayment, getPayments, getSettlements, getSimplified } from "../../api/settlements";
 import { Icons } from "../../components/icons";
 import { useAuth } from "../../context/AuthContext";
+import Avatar from "../../components/common/Avatar";
+import Badge from "../../components/common/Badge";
+import ConfirmDialog from "../../components/common/ConfirmDialog";
+import Toast from "../../components/common/Toast";
+import { useConfirm } from "../../hooks/useConfirm";
+import { useToast } from "../../hooks/useToast";
 
 export default function GroupDetail() {
   const { id }   = useParams();
@@ -30,15 +36,11 @@ export default function GroupDetail() {
   const [copied,        setCopied]        = useState(false);
 
   // Feedback toast
-  const [toast, setToast] = useState("");
+  const { toast, notify: showToast } = useToast(3500);
+  const { confirm, dialogProps } = useConfirm();
 
   // Reminder sending state — tracks which debtor name is currently being reminded
   const [reminding, setReminding] = useState("");
-
-  function showToast(msg) {
-    setToast(msg);
-    setTimeout(() => setToast(""), 3500);
-  }
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -93,12 +95,14 @@ export default function GroupDetail() {
   }
 
   async function delExpense(eid) {
-    if (!confirm("Delete expense?")) return;
+    const ok = await confirm({ title: "Delete expense?", danger: true, confirmLabel: "Delete" });
+    if (!ok) return;
     await deleteExpense(eid);
     setExpenses(p => p.filter(e => e.expense_id !== eid));
   }
   async function delPayment(pid) {
-    if (!confirm("Delete payment?")) return;
+    const ok = await confirm({ title: "Delete payment?", danger: true, confirmLabel: "Delete" });
+    if (!ok) return;
     await deletePayment(pid);
     setPayments(p => p.filter(x => x.payment_id !== pid));
   }
@@ -110,20 +114,22 @@ export default function GroupDetail() {
   }
 
   async function handleLeaveGroup() {
-    if (!window.confirm('Leave this group? You must have a zero balance.')) return;
+    const ok = await confirm({ title: "Leave this group?", message: "You must have a zero balance.", danger: true, confirmLabel: "Leave" });
+    if (!ok) return;
     try {
       await leaveGroup(id, user.user_id);
       navigate('/groups');
     } catch (err) {
-      alert(err?.response?.data?.detail || 'Failed to leave group. Settle your balance first.');
+      showToast(err?.response?.data?.detail || 'Failed to leave group. Settle your balance first.', true);
     }
   }
 
   async function handleDeleteGroup(force = false) {
-    const msg = force
+    const message = force
       ? 'Group has unsettled balances. Delete anyway? This cannot be undone.'
-      : `Permanently delete this group and all its data?`;
-    if (!window.confirm(msg)) return;
+      : 'This cannot be undone.';
+    const ok = await confirm({ title: force ? "Delete group anyway?" : "Permanently delete this group and all its data?", message, danger: true, confirmLabel: "Delete" });
+    if (!ok) return;
     try {
       await deleteGroup(id, force);
       navigate('/groups');
@@ -131,8 +137,8 @@ export default function GroupDetail() {
       const status = err?.response?.status;
       const detail = err?.response?.data?.detail;
       if (status === 409) handleDeleteGroup(true);
-      else if (status === 403) alert(detail || 'Only the group creator or admin can delete this group.');
-      else alert(detail || 'Failed to delete group.');
+      else if (status === 403) showToast(detail || 'Only the group creator or admin can delete this group.', true);
+      else showToast(detail || 'Failed to delete group.', true);
     }
   }
 
@@ -243,12 +249,7 @@ export default function GroupDetail() {
     <>
         <button className="back-btn mb-4" onClick={() => navigate("/groups")}><Icons.chevronLeft size={13}/> Back to Groups</button>
 
-        {/* Toast */}
-        {toast && (
-          <div className="alert alert-success" style={{ marginBottom: 16 }}>
-            {toast}
-          </div>
-        )}
+        <Toast toast={toast} />
 
         {/* Members */}
         <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap", marginBottom: 24 }}>
@@ -338,9 +339,7 @@ export default function GroupDetail() {
                               ₹{Number(item.total_amount).toLocaleString("en-IN")}
                             </td>
                             <td>
-                              <span className={`badge ${item.split_type === "equal" ? "badge-success" : "badge-primary"}`}>
-                                {item.split_type}
-                              </span>
+                              <Badge label={item.split_type} variant={item.split_type === "equal" ? "success" : "primary"} />
                             </td>
                             <td>
                               <button className="btn btn-danger btn-xs" onClick={() => delExpense(item.expense_id)}>
@@ -505,31 +504,13 @@ export default function GroupDetail() {
                         }}
                       >
                         <div className="settle-names">
-                          <div style={{
-                            width: 30, height: 30, borderRadius: "50%", flexShrink: 0,
-                            background: isDebtor ? "rgba(239,68,68,0.15)" : "var(--surface3)",
-                            border: `1px solid ${isDebtor ? "rgba(239,68,68,0.3)" : "var(--border)"}`,
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                            fontSize: 11, fontWeight: 700,
-                            color: isDebtor ? "var(--danger)" : "var(--text2)",
-                          }}>
-                            {s.from.split(" ").map(w => w[0]).slice(0,2).join("")}
-                          </div>
+                          <Avatar name={s.from} size={30} ringColor={isDebtor ? "rgba(239,68,68,0.3)" : undefined} />
                           <div>
                             <span style={{ fontWeight: 600, fontSize: 14 }}>{s.from}</span>
                             {isDebtor && <span style={{ fontSize: 11, color: "var(--danger)", marginLeft: 5 }}>·you</span>}
                           </div>
                           <span className="settle-sep">→</span>
-                          <div style={{
-                            width: 30, height: 30, borderRadius: "50%", flexShrink: 0,
-                            background: isCreditor ? "rgba(16,185,129,0.12)" : "var(--surface3)",
-                            border: `1px solid ${isCreditor ? "rgba(16,185,129,0.25)" : "var(--border)"}`,
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                            fontSize: 11, fontWeight: 700,
-                            color: isCreditor ? "var(--success)" : "var(--text2)",
-                          }}>
-                            {s.to.split(" ").map(w => w[0]).slice(0,2).join("")}
-                          </div>
+                          <Avatar name={s.to} size={30} ringColor={isCreditor ? "rgba(16,185,129,0.25)" : undefined} />
                           <div>
                             <span style={{ fontWeight: 600, fontSize: 14 }}>{s.to}</span>
                             {isCreditor && <span style={{ fontSize: 11, color: "var(--success)", marginLeft: 5 }}>·you</span>}
@@ -586,13 +567,7 @@ export default function GroupDetail() {
                 borderRadius: 10, padding: "12px 16px",
                 ...(m.name === user?.name ? { borderColor: "rgba(37,99,235,0.3)", background: "rgba(37,99,235,0.04)" } : {}),
               }}>
-                <div style={{
-                  width: 38, height: 38, borderRadius: "50%", flexShrink: 0,
-                  background: "var(--primary)", display: "flex", alignItems: "center",
-                  justifyContent: "center", fontSize: 13, fontWeight: 700, color: "#fff",
-                }}>
-                  {m.name.split(" ").map(w => w[0]).slice(0,2).join("")}
-                </div>
+                <Avatar name={m.name} size={38} />
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 14, fontWeight: 600 }}>
                     {m.name}
@@ -657,6 +632,8 @@ export default function GroupDetail() {
           </div>
         </div>
       )}
+      
+      <ConfirmDialog {...dialogProps} />
     </>
   );
 }
