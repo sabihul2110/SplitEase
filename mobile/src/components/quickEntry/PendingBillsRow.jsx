@@ -1,12 +1,12 @@
 // SplitEase/mobile/src/components/dashboard/PendingBillsRow.jsx
 
-import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useCallback, useState } from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import * as pendingBillsApi from '../../api/pendingBills';
-import { Icons } from '../icons/icons';
 import { TemplateIcon } from '../../constants/templateIcons';
-import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS } from '../../constants/theme';
+import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SPACING } from '../../constants/theme';
+import { Icons } from '../icons/icons';
 import EntrySheet from './EntrySheet';
 
 export default function PendingBillsRow({ embedded = false }) {

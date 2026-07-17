@@ -4,30 +4,37 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import { Activity, ArrowLeftRight, Settings as SettingsIcon, Zap, ChevronRight } from 'lucide-react-native';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS, TAB_BAR_HEIGHT } from '../../constants/theme';
 import ScreenHeader from '../../components/layout/ScreenHeader';
-import { Icons } from '../../components/icons/icons';
 
 const ITEMS = [
   {
-    icon:   Icons.activity,
+    Icon:   Activity,
     label:  'Activity',
     sub:    'Your complete financial timeline',
-    screen: 'Activity',
+    nav:    { screen: 'Activity' },
     color:  '#f59e0b',
   },
   {
-    icon:   Icons.settlements,
+    Icon:   ArrowLeftRight,
     label:  'Settle Up',
     sub:    'View and clear outstanding balances',
-    screen: 'Settlements',
+    nav:    { screen: 'Settlements' },
     color:  '#8b5cf6',
   },
   {
-    icon:   Icons.settings,
+    Icon:   Zap,
+    label:  'Quick Entry',
+    sub:    'Templates, recurring bills, routines',
+    nav:    { screen: 'Expenses', params: { screen: 'QuickEntry' } },
+    color:  COLORS.primary,
+  },
+  {
+    Icon:   SettingsIcon,
     label:  'Settings',
     sub:    'App preferences, theme, sign out',
-    screen: 'Settings',
+    nav:    { screen: 'Settings' },
     color:  COLORS.text2,
   },
 ];
@@ -43,21 +50,26 @@ export default function MoreScreen() {
       >
         {ITEMS.map(item => (
           <TouchableOpacity
-            key={item.screen}
+            key={item.label}
             style={styles.row}
-            onPress={() => navigation.navigate(item.screen)}
+            onPress={() => {
+              if (item.nav.params) navigation.navigate(item.nav.screen, item.nav.params);
+              else navigation.navigate(item.nav.screen);
+            }}
             activeOpacity={0.7}
           >
-            <View style={[styles.iconBox, { borderColor: item.color + '30', backgroundColor: item.color + '12' }]}>
-              <item.icon size={20} color={item.color} />
+            <View style={[styles.iconBox, { backgroundColor: item.color + '14' }]}>
+              <item.Icon size={20} color={item.color} strokeWidth={1.8} />
             </View>
             <View style={styles.info}>
               <Text style={styles.label}>{item.label}</Text>
               <Text style={styles.sub}>{item.sub}</Text>
             </View>
-            <Icons.chevronRight size={16} color={COLORS.text3} />
+            <ChevronRight size={16} color={COLORS.text3} />
           </TouchableOpacity>
         ))}
+
+        <Text style={styles.version}>SplitEase v1.1.0</Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -74,10 +86,13 @@ const styles = StyleSheet.create({
   },
   iconBox: {
     width: 44, height: 44, borderRadius: 12,
-    borderWidth: 1,
     alignItems: 'center', justifyContent: 'center',
   },
   info:  { flex: 1 },
   label: { fontSize: FONT_SIZE.md, fontWeight: FONT_WEIGHT.semibold, color: COLORS.text },
   sub:   { fontSize: FONT_SIZE.xs, color: COLORS.text3, marginTop: 3 },
+  version: {
+    textAlign: 'center', fontSize: FONT_SIZE.xs, color: COLORS.text3,
+    marginTop: SPACING.lg,
+  },
 });

@@ -1,16 +1,16 @@
 // SplitEase/mobile/src/screens/quickentry/QuickEntryScreen.jsx
 
-import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useCallback, useState } from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import * as routinesApi from '../../api/routines';
-import ScreenHeader from '../../components/layout/ScreenHeader';
-import QuickTapRow from '../../components/dashboard/QuickTapRow';
-import PendingBillsRow from '../../components/dashboard/PendingBillsRow';
-import { TemplateIcon } from '../../constants/templateIcons';
 import { Icons } from '../../components/icons/icons';
-import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS, TAB_BAR_HEIGHT } from '../../constants/theme';
+import ScreenHeader from '../../components/layout/ScreenHeader';
+import PendingBillsRow from '../../components/quickEntry/PendingBillsRow';
+import QuickTapRow from '../../components/quickEntry/QuickTapRow';
+import { TemplateIcon } from '../../constants/templateIcons';
+import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SPACING, TAB_BAR_HEIGHT } from '../../constants/theme';
 
 function SectionCard({ icon, iconColor, title, manageLabel, onManage, children }) {
   return (
