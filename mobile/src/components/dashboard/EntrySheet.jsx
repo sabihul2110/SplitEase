@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   Modal, View, Text, StyleSheet, TouchableOpacity, TextInput,
-  KeyboardAvoidingView, Platform,
+  KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
 import client from '../../api/client';
 import { ENDPOINTS } from '../../config/api';
@@ -68,8 +68,15 @@ export default function EntrySheet({
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.backdrop}>
         <TouchableOpacity style={StyleSheet.absoluteFill} onPress={onClose} />
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <View style={styles.sheet}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
+        >
+          <ScrollView
+            style={styles.sheet}
+            contentContainerStyle={{ gap: SPACING.md }}
+            keyboardShouldPersistTaps="handled"
+          >
             <Text style={styles.title}>{title}</Text>
 
             <View style={styles.field}>
@@ -154,7 +161,7 @@ export default function EntrySheet({
                 style={{ flex: 1 }}
               />
             </View>
-          </View>
+          </ScrollView>
         </KeyboardAvoidingView>
       </View>
     </Modal>
@@ -167,7 +174,8 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface,
     borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl,
     borderWidth: 1, borderColor: COLORS.border,
-    padding: SPACING.lg, gap: SPACING.md,
+    padding: SPACING.lg,
+    maxHeight: '85%',
   },
   title: { fontSize: FONT_SIZE.lg, fontWeight: FONT_WEIGHT.bold, color: COLORS.text },
   field: { gap: SPACING.xs },

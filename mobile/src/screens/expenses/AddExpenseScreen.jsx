@@ -134,16 +134,17 @@ function validateDate(d) {
 // ─── Tab forms ────────────────────────────────────────────────────────────────
 
 // Personal Expense
-function PersonalForm({ onSuccess }) {
+function PersonalForm({ onSuccess, editing }) {
+  const isEdit = !!editing;
   const [categories,    setCategories]    = useState([]);
   const [catsLoading,   setCatsLoading]   = useState(true);
   const [categoryId,    setCategoryId]    = useState(null);
-  const [categoryName,  setCategoryName]  = useState('');
+  const [categoryName,  setCategoryName]  = useState(editing?.category || '');
   const [subcats,       setSubcats]       = useState([]);
   const [subcategoryId, setSubcategoryId] = useState(null);
-  const [amount, setAmount] = useState('');
-  const [date,   setDate]   = useState(today());
-  const [note,   setNote]   = useState('');
+  const [amount, setAmount] = useState(editing ? String(editing.amount) : '');
+  const [date,   setDate]   = useState(editing?.expense_date || today());
+  const [note,   setNote]   = useState(editing?.note || '');
   const [errs,   setErrs]   = useState({});
   const [saving, setSaving] = useState(false);
 
@@ -151,7 +152,23 @@ function PersonalForm({ onSuccess }) {
   // source as the group-expense picker, not scoped to a group.
   useEffect(() => {
     groupsApi.getCategories()
-      .then(({ data }) => setCategories(data || []))
+      .then(async ({ data }) => {
+        setCategories(data || []);
+        if (isEdit && editing.category) {
+          const match = (data || []).find(c => c.category_name === editing.category);
+          if (match) {
+            setCategoryId(match.category_id);
+            try {
+              const sub = await groupsApi.getSubcategories(match.category_id);
+              setSubcats(sub.data || []);
+              if (editing.subcategory_name) {
+                const smatch = sub.data?.find(s => s.subcategory_name === editing.subcategory_name);
+                if (smatch) setSubcategoryId(smatch.subcategory_id);
+              }
+            } catch {}
+          }
+        }
+      })
       .catch(() => {})
       .finally(() => setCatsLoading(false));
   }, []);
@@ -181,16 +198,21 @@ function PersonalForm({ onSuccess }) {
     try {
       // Personal_Expenses stores category as free text (no category_id FK)
       // but subcategory_id as a real FK — see schema.sql table 11 note.
-      await expensesApi.addPersonalExpense({
+      const payload = {
         category: categoryName.trim(),
         subcategory_id: subcategoryId || null,
         amount: parseFloat(amount),
         expense_date: date,
         note: note.trim() || null,
-      });
+      };
+      if (isEdit) {
+        await expensesApi.editPersonalExpense(editing.expense_id, payload);
+      } else {
+        await expensesApi.addPersonalExpense(payload);
+      }
       onSuccess();
     } catch (err) {
-      Alert.alert('Error', err?.response?.data?.detail || 'Failed to add expense');
+      Alert.alert('Error', err?.response?.data?.detail || `Failed to ${isEdit ? 'update' : 'add'} expense`);
     } finally { setSaving(false); }
   }
 
@@ -270,7 +292,7 @@ function PersonalForm({ onSuccess }) {
       <Field label="Note" optional>
         <StyledInput value={note} onChangeText={setNote} placeholder="Any extra details…" multiline />
       </Field>
-      <SubmitBtn label="Add Expense →" color={C.danger} loading={saving} onPress={submit} />
+      <SubmitBtn label={isEdit ? "Save Changes →" : "Add Expense →"} color={C.danger} loading={saving} onPress={submit} />
     </View>
   );
 }
@@ -481,6 +503,8 @@ export default function AddExpenseScreen() {
   // e.g. navigation.navigate('AddEntry', { tab: 'income' })
   const initialTab = route.params?.tab || 'personal';
   const [activeTab, setActiveTab] = useState(initialTab);
+  const editingPersonal = route.params?.editPersonalExpense || null;
+  const isEditMode = !!editingPersonal;
 
   function onSuccess() {
     navigation.goBack();
@@ -500,7 +524,7 @@ export default function AddExpenseScreen() {
           <Icons.back size={20} color={C.text2} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>Add Entry</Text>
+          <Text style={styles.headerTitle}>{isEditMode ? 'Edit Entry' : 'Add Entry'}</Text>
           <Text style={styles.headerSub}>
             {activeTab === 'personal' && 'Personal Expense'}
             {activeTab === 'income'   && 'Income'}
@@ -510,7 +534,8 @@ export default function AddExpenseScreen() {
         </View>
       </View>
 
-      {/* Tab bar */}
+      {/* Tab bar — hidden in edit mode, only Personal applies to edits */}
+      {!isEditMode && (
       <View style={styles.tabBar}>
         {TABS.map(t => {
           const isActive = activeTab === t.id;
@@ -533,8 +558,10 @@ export default function AddExpenseScreen() {
           );
         })}
       </View>
+      )}
 
       {/* Active tab description */}
+      {!isEditMode && (
       <View style={[styles.tabDesc, { backgroundColor: activeCfg.colorLo, borderColor: activeCfg.color + '40' }]}>
         <Text style={[styles.tabDescText, { color: activeCfg.color }]}>
           {activeTab === 'personal' && 'Track a personal expense not linked to a group'}
@@ -543,17 +570,19 @@ export default function AddExpenseScreen() {
           {activeTab === 'borrow'   && 'Record money you borrowed from someone'}
         </Text>
       </View>
+      )}
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
         <ScrollView
           contentContainerStyle={styles.scroll}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {activeTab === 'personal' && <PersonalForm onSuccess={onSuccess} />}
+          {activeTab === 'personal' && <PersonalForm onSuccess={onSuccess} editing={editingPersonal} />}
           {activeTab === 'income'   && <IncomeForm   onSuccess={onSuccess} />}
           {activeTab === 'lend'     && <LendForm     onSuccess={onSuccess} />}
           {activeTab === 'borrow'   && <BorrowForm   onSuccess={onSuccess} />}

@@ -8,6 +8,7 @@ import * as recurringBillsApi from '../../api/recurringBills';
 import ScreenHeader from '../../components/layout/ScreenHeader';
 import { LoadingState, EmptyState } from '../../components/common/Ui';
 import { Icons } from '../../components/icons/icons';
+import { TemplateIcon } from '../../constants/templateIcons';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS, TAB_BAR_HEIGHT } from '../../constants/theme';
 
 export default function ManageBillsScreen() {
@@ -57,7 +58,6 @@ export default function ManageBillsScreen() {
           <EmptyState icon="calendarDays" title="No recurring bills" subtitle="Add rent, wifi, electricity…" />
         }
         renderItem={({ item }) => {
-          const IconComp = Icons[item.icon_name] || Icons.zap;
           return (
             <TouchableOpacity
               style={styles.row}
@@ -65,7 +65,7 @@ export default function ManageBillsScreen() {
               onLongPress={() => confirmDelete(item)}
               activeOpacity={0.7}
             >
-              <View style={styles.iconBox}><IconComp size={18} color={COLORS.warning} /></View>
+              <View style={styles.iconBox}><TemplateIcon name={item.icon_name} size={18} color={COLORS.warning} /></View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.name}>{item.name}</Text>
                 <Text style={styles.meta}>

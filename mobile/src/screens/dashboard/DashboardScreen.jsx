@@ -27,8 +27,6 @@ import {
 import { Avatar, LoadingState, EmptyState } from "../../components/common/Ui";
 import { Icons } from "../../components/icons/icons";
 import { getGroupIcon } from "../../constants/groupIcons";
-import QuickTapRow from "../../components/dashboard/QuickTapRow";
-import PendingBillsRow from "../../components/dashboard/PendingBillsRow";
 
 function fmt(n) {
   return Number(n || 0).toLocaleString("en-IN", {
@@ -404,8 +402,6 @@ export default function DashboardScreen() {
               </View>
             </View>
 
-            <PendingBillsRow />
-            <QuickTapRow />
 
             {/* Recent groups heading */}
             <View style={styles.sectionHead}>

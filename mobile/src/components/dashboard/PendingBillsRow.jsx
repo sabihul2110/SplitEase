@@ -5,6 +5,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import * as pendingBillsApi from '../../api/pendingBills';
 import { Icons } from '../icons/icons';
+import { TemplateIcon } from '../../constants/templateIcons';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS } from '../../constants/theme';
 import EntrySheet from './EntrySheet';
 
@@ -46,11 +47,10 @@ export default function PendingBillsRow() {
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
         {bills.map((b) => {
-          const IconComp = Icons[b.icon_name] || Icons.zap;
           return (
             <View key={b.pending_id} style={styles.card}>
               <View style={styles.cardTop}>
-                <View style={styles.iconBox}><IconComp size={16} color={COLORS.warning} /></View>
+                <View style={styles.iconBox}><TemplateIcon name={b.icon_name} size={16} color={COLORS.warning} /></View>
                 <TouchableOpacity onPress={() => handleDismiss(b)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                   <Icons.close size={14} color={COLORS.text3} />
                 </TouchableOpacity>

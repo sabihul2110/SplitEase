@@ -27,9 +27,10 @@
 
 import {
   Plane, Building2, UtensilsCrossed, Ticket, Zap, ShoppingBasket,
-  ShoppingBag, Car, Film, HeartPulse, Music, Tv, Wifi, Droplet,
-  Sparkles, Bus, TramFront, TrainFront, Ship, GraduationCap, Dumbbell, Receipt,
+  ShoppingBag, Car, Film, HeartPulse, Wifi, Droplet,
+  Sparkles, Bus, TrainFront, GraduationCap, Dumbbell, Receipt,
 } from "lucide-react-native";
+import { getBrandIcon } from "../components/icons/BrandIcon";
 
 // ── Fixed-category fallback (checked after keyword matching) ─────────────
 export const CATEGORY_ICONS = {
@@ -46,9 +47,19 @@ export const CATEGORY_ICONS = {
 };
 
 // ── Tier 1: safe to match against the user's free-text note ──────────────
+const BRAND_KEYWORDS = [
+  { keywords: ["spotify"], brand: "spotify" },
+  { keywords: ["apple music"], brand: "applemusic" },
+  { keywords: ["jiosaavn"], brand: "jiosaavn" },
+  { keywords: ["netflix"], brand: "netflix" },
+  { keywords: ["youtube"], brand: "youtube" },
+  { keywords: ["amazon"], brand: "amazon" },
+  { keywords: ["zomato"], brand: "zomato" },
+  { keywords: ["swiggy"], brand: "swiggy" },
+  { keywords: ["uber"], brand: "uber" },
+];
+
 const SPECIFIC_KEYWORDS = [
-  { keywords: ["spotify", "apple music", "gaana", "jiosaavn", "wynk"], Icon: Music, color: "#4ade80" },
-  { keywords: ["netflix", "prime video", "hotstar", "disney", "sonyliv", "zee5", "youtube premium"], Icon: Tv, color: "#f87171" },
   { keywords: ["wifi", "broadband", "internet", "router"], Icon: Wifi, color: "#38bdf8" },
   { keywords: ["electricity", "power bill", "eb bill"], Icon: Zap, color: "#fde047" },
   { keywords: ["water bill", "water can", "water supply"], Icon: Droplet, color: "#38bdf8" },
@@ -82,6 +93,18 @@ function matchKeywords(text, list) {
   return null;
 }
 
+function matchBrand(text) {
+  if (!text) return null;
+  const lower = text.toLowerCase();
+  for (const entry of BRAND_KEYWORDS) {
+    if (entry.keywords.some((kw) => lower.includes(kw))) {
+      const icon = getBrandIcon(entry.brand);
+      return icon ? { brand: entry.brand, color: `#${icon.hex}` } : null;
+    }
+  }
+  return null;
+}
+
 /**
  * Personal/group expense timeline labels are formatted "Spent on
  * <Category>" by the backend. Pulls the category text back out so
@@ -109,6 +132,9 @@ export function extractCategoryFromLabel(label = "") {
 export function getExpenseIcon({ category, subcategory, description } = {}) {
   const categoryText = `${category || ""} ${subcategory || ""}`.trim();
   const noteText = `${description || ""}`.trim();
+
+  let brandHit = matchBrand(noteText) || matchBrand(categoryText);
+  if (brandHit) return { brand: brandHit.brand, color: brandHit.color };
 
   let hit = matchKeywords(noteText, SPECIFIC_KEYWORDS);
   if (hit) return { Icon: hit.Icon, color: hit.color };

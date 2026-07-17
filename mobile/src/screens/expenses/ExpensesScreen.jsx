@@ -22,6 +22,7 @@ import ScreenHeader from "../../components/layout/ScreenHeader";
 import AppAlert from "../../components/common/AppAlert";
 import Toast from "../../components/common/Toast";
 import DatePickerInput from "../../components/common/DatePickerInput";
+import { Icons as IconLib } from "../../components/icons/icons";
 
 // ─────────────────────────────────────────────
 //  Helpers (identical logic to web)
@@ -327,7 +328,7 @@ function InlineRepay({ entry, onSuccess, onToast }) {
 // ─────────────────────────────────────────────
 //  Single Entry Row
 // ─────────────────────────────────────────────
-function EntryRow({ entry, deleting, onDelete, onNavigateGroup, onToast }) {
+function EntryRow({ entry, deleting, onDelete, onNavigateGroup, onToast, onLongPressEdit }) {
   const cfg     = TYPE_CFG[entry.type];
   const iconCfg = TYPE_ICONS[entry.type];
   if (!cfg || !iconCfg) return null;
@@ -353,8 +354,15 @@ function EntryRow({ entry, deleting, onDelete, onNavigateGroup, onToast }) {
   const isDeletable = ["personal_expense", "income", "loan_given", "loan_taken"].includes(entry.type);
   const isDeleting  = deleting === entry.ref_id;
 
+  const canEdit = entry.type === "personal_expense";
+
   return (
-    <View style={styles.entry}>
+    <TouchableOpacity
+      style={styles.entry}
+      activeOpacity={canEdit ? 0.7 : 1}
+      onLongPress={canEdit ? () => onLongPressEdit?.(entry) : undefined}
+      delayLongPress={350}
+    >
       {/* Icon */}
       <View style={[styles.entryIcon, { backgroundColor: bg }]}>
         <Icon size={18} color={color} />
@@ -443,7 +451,7 @@ function EntryRow({ entry, deleting, onDelete, onNavigateGroup, onToast }) {
           </TouchableOpacity>
         )}
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -520,6 +528,38 @@ export default function ExpensesScreen() {
   }), [monthEntries, filter, search]);
 
   const grouped = useMemo(() => groupByMonthAndDay(visible), [visible]);
+
+  function handleLongPressEdit(entry) {
+    setAlertConfig({
+      title: entry.label,
+      message: "What would you like to do?",
+      buttons: [
+        { text: "Cancel", style: "cancel", onPress: () => setAlertConfig(null) },
+        {
+          text: "Edit", onPress: () => {
+            setAlertConfig(null);
+            navigation.navigate("AddEntry", {
+              tab: "personal",
+              editPersonalExpense: {
+                expense_id: entry.ref_id,
+                category: extractLabelCategory(entry.label),
+                subcategory_name: entry.subcategory_name,
+                amount: entry.amount,
+                expense_date: entry.date,
+                note: entry.sub,
+              },
+            });
+          },
+        },
+        { text: "Delete", style: "destructive", onPress: () => { setAlertConfig(null); handleDelete(entry, "confirm"); } },
+      ],
+    });
+  }
+
+  function extractLabelCategory(label = "") {
+    const m = label.match(/^Spent on (.+)$/i);
+    return m ? m[1] : "General";
+  }
 
   async function handleDelete(entry, mode) {
     if (mode === "refresh") { load(); return; }
@@ -613,6 +653,7 @@ export default function ExpensesScreen() {
         deleting={deleting}
         onDelete={handleDelete}
         onToast={showToast}
+        onLongPressEdit={handleLongPressEdit}
         onNavigateGroup={(gid) =>
           navigation.navigate("Groups", {
             screen: "GroupDetail",
@@ -628,13 +669,18 @@ export default function ExpensesScreen() {
       <ScreenHeader
         title="Expenses"
         actions={
-          <TouchableOpacity
-            style={styles.addBtn}
-            onPress={() => navigation.navigate("AddEntry")}
-          >
-            <Icons.plus size={16} color="#fff" />
-            <Text style={styles.addBtnText}>Add</Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <TouchableOpacity style={styles.quickEntryBtn} onPress={() => navigation.navigate("QuickEntry")}>
+              <IconLib.zap size={16} color={COLORS.primary} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.addBtn}
+              onPress={() => navigation.navigate("AddEntry")}
+            >
+              <Icons.plus size={16} color="#fff" />
+              <Text style={styles.addBtnText}>Add</Text>
+            </TouchableOpacity>
+          </View>
         }
       />
 
@@ -1131,6 +1177,11 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.sm,
     fontWeight: FONT_WEIGHT.semibold,
     color: "#fff",
+  },
+  quickEntryBtn: {
+    width: 32, height: 32, borderRadius: 8,
+    backgroundColor: 'rgba(37,99,235,0.12)',
+    alignItems: 'center', justifyContent: 'center',
   },
 
   /* 🔥 Picker Modal Styles */

@@ -21,7 +21,7 @@ if SENTRY_DSN:
 from routers import (
     auth_router, users, groups, expenses, payments,
     settlements, invites, notifications, personal_expenses,
-    income, loans, people, ledger_notifications, timeline, borrows, ai_agent, quick_templates, recurring_bills, pending_bills,
+    income, loans, people, ledger_notifications, timeline, borrows, ai_agent, quick_templates, recurring_bills, pending_bills, routines,
 )
 
 configure_logging()
@@ -68,6 +68,7 @@ api_v1.include_router(ai_agent.router,                                        ta
 api_v1.include_router(quick_templates.router,     prefix="/quick-templates",  tags=["Quick Templates"])
 api_v1.include_router(recurring_bills.router,     prefix="/recurring-bills",  tags=["Recurring Bills"])
 api_v1.include_router(pending_bills.router,       prefix="/pending-bills",    tags=["Pending Bills"])
+api_v1.include_router(routines.router,            prefix="/routines",         tags=["Routines"])
 
 app.include_router(api_v1)
 

@@ -17,7 +17,7 @@ import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import { Avatar } from '../../components/common/Ui';
 import { Icons } from '../../components/icons/icons';
-import { ICON_PICKER } from '../../constants/templateIcons';
+import { ICON_PICKER, TemplateIcon } from '../../constants/templateIcons';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS, TAB_BAR_HEIGHT } from '../../constants/theme';
 
 export default function EditBillScreen() {
@@ -124,7 +124,11 @@ export default function EditBillScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       <ScreenHeader title={isEdit ? 'Edit Recurring Bill' : 'New Recurring Bill'} showBack />
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      >
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <Input label="Name" value={name} onChangeText={setName} placeholder="e.g. Rent, WiFi, Electricity" />
 
@@ -132,7 +136,6 @@ export default function EditBillScreen() {
             <Text style={styles.label}>ICON</Text>
             <View style={styles.iconGrid}>
               {ICON_PICKER.map((opt) => {
-                const IconComp = Icons[opt.key] || Icons.zap;
                 const isActive = iconName === opt.key;
                 return (
                   <TouchableOpacity
@@ -140,7 +143,7 @@ export default function EditBillScreen() {
                     style={[styles.iconOpt, isActive && styles.iconOptActive]}
                     onPress={() => setIconName(opt.key)}
                   >
-                    <IconComp size={18} color={isActive ? COLORS.warning : COLORS.text3} />
+                    <TemplateIcon name={opt.key} size={18} color={isActive ? COLORS.warning : COLORS.text3} />
                   </TouchableOpacity>
                 );
               })}

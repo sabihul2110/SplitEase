@@ -31,6 +31,10 @@ import ManageTemplatesScreen from "../screens/templates/ManageTemplatesScreen";
 import EditTemplateScreen from "../screens/templates/EditTemplateScreen";
 import ManageBillsScreen from "../screens/bills/ManageBillsScreen";
 import EditBillScreen from "../screens/bills/EditBillScreen";
+import QuickEntryScreen from "../screens/quickentry/QuickEntryScreen";
+import RunRoutineScreen from "../screens/routines/RunRoutineScreen";
+import ManageRoutinesScreen from "../screens/routines/ManageRoutinesScreen";
+import EditRoutineScreen from "../screens/routines/EditRoutineScreen";
 
 
 function TabIcon({ name, focused, badgeCount }) {
@@ -69,10 +73,6 @@ function DashboardStack() {
       <DashStack.Screen name="Settings"       component={SettingsScreen} />
       <DashStack.Screen name="Notifications"  component={NotificationsScreen} />
       <DashStack.Screen name="VerifyEmail"    component={VerifyEmailScreen} />
-      <DashStack.Screen name="ManageTemplates" component={ManageTemplatesScreen} />
-      <DashStack.Screen name="EditTemplate"    component={EditTemplateScreen} />
-      <DashStack.Screen name="ManageBills"     component={ManageBillsScreen} />
-      <DashStack.Screen name="EditBill"        component={EditBillScreen} />
     </DashStack.Navigator>
   );
 }
@@ -83,6 +83,14 @@ function ExpensesStack() {
     <ExpensesTabStack.Navigator screenOptions={{ headerShown: false }}>
       <ExpensesTabStack.Screen name="ExpensesHome" component={ExpensesScreen} />
       <ExpensesTabStack.Screen name="AddEntry"     component={AddExpenseScreen} />
+      <ExpensesTabStack.Screen name="QuickEntry"   component={QuickEntryScreen} />
+      <ExpensesTabStack.Screen name="RunRoutine"   component={RunRoutineScreen} />
+      <ExpensesTabStack.Screen name="ManageRoutines" component={ManageRoutinesScreen} />
+      <ExpensesTabStack.Screen name="EditRoutine"    component={EditRoutineScreen} />
+      <ExpensesTabStack.Screen name="ManageTemplates" component={ManageTemplatesScreen} />
+      <ExpensesTabStack.Screen name="EditTemplate"    component={EditTemplateScreen} />
+      <ExpensesTabStack.Screen name="ManageBills"     component={ManageBillsScreen} />
+      <ExpensesTabStack.Screen name="EditBill"        component={EditBillScreen} />
     </ExpensesTabStack.Navigator>
   );
 }

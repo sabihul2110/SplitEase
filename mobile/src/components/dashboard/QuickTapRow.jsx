@@ -5,6 +5,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import * as quickTemplatesApi from '../../api/quickTemplates';
 import { Icons } from '../icons/icons';
+import { TemplateIcon } from '../../constants/templateIcons';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS } from '../../constants/theme';
 import EntrySheet from './EntrySheet';
 
@@ -36,16 +37,13 @@ export default function QuickTapRow() {
         </TouchableOpacity>
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
-        {templates.map((t) => {
-          const IconComp = Icons[t.icon_name] || Icons.zap;
-          return (
+        {templates.map((t) => (
             <TouchableOpacity key={t.template_id} style={styles.chip} onPress={() => setActive(t)} activeOpacity={0.75}>
-              <View style={styles.iconBox}><IconComp size={18} color={COLORS.primary} /></View>
+              <View style={styles.iconBox}><TemplateIcon name={t.icon_name} size={18} color={COLORS.primary} /></View>
               <Text style={styles.chipLabel} numberOfLines={1}>{t.name}</Text>
               {t.default_amount != null && <Text style={styles.chipAmt}>₹{Number(t.default_amount).toFixed(0)}</Text>}
             </TouchableOpacity>
-          );
-        })}
+        ))}
         <TouchableOpacity style={[styles.chip, styles.addChip]} onPress={() => navigation.navigate('EditTemplate')} activeOpacity={0.75}>
           <Icons.plus size={18} color={COLORS.text3} />
           <Text style={[styles.chipLabel, { color: COLORS.text3 }]}>New</Text>

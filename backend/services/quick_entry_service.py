@@ -14,6 +14,7 @@ from repositories import (
     quick_template_repository,
     recurring_bill_repository,
     pending_bill_repository,
+    routine_repository,
     group_repository,
     expense_repository,
     personal_expense_repository,
@@ -21,6 +22,7 @@ from repositories import (
 )
 from schemas.quick_templates import QuickTemplateExecuteRequest
 from schemas.pending_bills import PendingBillPayRequest
+from schemas.routines import RoutineExecuteRequest
 
 
 def _compute_equal_splits(total_amount: float, member_ids: list[int]) -> list[dict]:
@@ -154,6 +156,61 @@ def execute_template(template_id: int, user_id: int, body: QuickTemplateExecuteR
         expense_time   = expense_time,
         note           = body.note or template["name"],
     )
+
+
+def execute_routine(routine_id: int, user_id: int, body: RoutineExecuteRequest) -> dict:
+    routine = routine_repository.fetch_routine_detail(routine_id, user_id)
+    if routine is None:
+        raise ValueError("Routine not found.")
+
+    template_map = {t["template_id"]: t for t in routine["items"]}
+    results = []
+    errors = []
+
+    for run_item in body.items:
+        if not run_item.include:
+            continue
+        tpl = template_map.get(run_item.template_id)
+        if tpl is None:
+            errors.append(f"Template {run_item.template_id} is not part of this routine.")
+            continue
+
+        amount = run_item.amount if run_item.amount is not None else tpl.get("default_amount")
+        if amount is None or amount <= 0:
+            errors.append(f"'{tpl['name']}' needs an amount.")
+            continue
+
+        try:
+            if tpl["group_id"]:
+                r = _execute_group_entry(
+                    group_id       = tpl["group_id"],
+                    user_id        = user_id,
+                    payer_id       = user_id,
+                    category_id    = tpl["category_id"],
+                    subcategory_id = tpl["subcategory_id"],
+                    amount         = amount,
+                    description    = tpl["name"],
+                    expense_date   = body.expense_date,
+                    expense_time   = tpl["default_time"],
+                    split_type     = tpl["split_type"],
+                    split_config   = tpl["split_config"],
+                    note           = run_item.note,
+                )
+            else:
+                r = _execute_personal_entry(
+                    user_id        = user_id,
+                    category_id    = tpl["category_id"],
+                    subcategory_id = tpl["subcategory_id"],
+                    amount         = amount,
+                    expense_date   = body.expense_date,
+                    expense_time   = tpl["default_time"],
+                    note           = run_item.note or tpl["name"],
+                )
+            results.append({"template_id": tpl["template_id"], "name": tpl["name"], **r})
+        except (PermissionError, ValueError) as exc:
+            errors.append(f"'{tpl['name']}': {exc}")
+
+    return {"created": results, "errors": errors}
 
 
 def pay_pending_bill(pending_id: int, user_id: int, body: PendingBillPayRequest) -> dict:
