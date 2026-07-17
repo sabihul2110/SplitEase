@@ -26,7 +26,7 @@ import SettlementsScreen from "../screens/settlements/SettlementsScreen";
 import NotificationsScreen from "../screens/notifications/NotificationsScreen";
 import AccountScreen from "../screens/account/AccountScreen";
 import SettingsScreen from "../screens/settings/SettingsScreen";
-import MoreScreen from "../screens/menu/MoreScreen";
+import MoreScreen from "../screens/more/MoreScreen";
 import ManageTemplatesScreen from "../screens/templates/ManageTemplatesScreen";
 import EditTemplateScreen from "../screens/templates/EditTemplateScreen";
 import ManageBillsScreen from "../screens/bills/ManageBillsScreen";

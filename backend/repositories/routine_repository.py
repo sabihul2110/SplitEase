@@ -15,6 +15,78 @@ def fetch_routines(user_id: int) -> list[dict]:
     cur.close(); conn.close()
     return rows
 
+def fetch_reminder_candidates() -> list[dict]:
+    """
+    All routines whose owner has a push token. active_days / last_reminded_date
+    live directly on Routines — no join needed for those. Whether "already ran
+    today" is checked separately per-row against Routine_Runs in the service,
+    since that's a per-date lookup, not a static join.
+    """
+    conn = get_connection()
+    cur  = conn.cursor(dictionary=True)
+    cur.execute(
+        """
+        SELECT r.routine_id, r.user_id, r.name, r.active_days, r.last_reminded_date,
+               u.expo_push_token
+        FROM   Routines r
+        JOIN   Users u ON u.user_id = r.user_id
+        WHERE  u.expo_push_token IS NOT NULL
+        """
+    )
+    rows = cur.fetchall()
+    cur.close(); conn.close()
+    for r in rows:
+        r["last_reminded_date"] = str(r["last_reminded_date"]) if r["last_reminded_date"] else None
+    return rows
+
+
+def has_run_on_date(routine_id: int, run_date) -> bool:
+    conn = get_connection()
+    cur  = conn.cursor()
+    cur.execute(
+        "SELECT 1 FROM Routine_Runs WHERE routine_id = %s AND run_date = %s",
+        (routine_id, run_date),
+    )
+    found = cur.fetchone() is not None
+    cur.close(); conn.close()
+    return found
+
+
+def log_routine_run(routine_id: int, user_id: int, run_date) -> None:
+    """Idempotent via uq_rr_routine_date — re-running a routine same day is a no-op insert."""
+    conn = get_connection()
+    cur  = conn.cursor()
+    try:
+        conn.start_transaction()
+        cur.execute(
+            "INSERT INTO Routine_Runs (routine_id, user_id, run_date) VALUES (%s, %s, %s)",
+            (routine_id, user_id, run_date),
+        )
+        conn.commit()
+    except Exception as exc:
+        conn.rollback()
+        if "Duplicate entry" not in str(exc):
+            raise
+    finally:
+        cur.close(); conn.close()
+
+
+def mark_reminded(routine_id: int, today) -> None:
+    conn = get_connection()
+    cur  = conn.cursor()
+    try:
+        conn.start_transaction()
+        cur.execute(
+            "UPDATE Routines SET last_reminded_date = %s WHERE routine_id = %s",
+            (today, routine_id),
+        )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close(); conn.close()
+
 
 def fetch_routine_detail(routine_id: int, user_id: int) -> dict | None:
     conn = get_connection()

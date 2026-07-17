@@ -40,12 +40,22 @@ async def send_push(token: str | None, title: str, body: str, data: dict | None 
 
 
 def send_push_sync(token: str | None, title: str, body: str, data: dict | None = None) -> None:
-    """Synchronous wrapper for use in non-async route handlers."""
-    import asyncio
+    """Blocking sender for sync (non-async def) route handlers, e.g. the
+    pending-bills sweep. Uses a plain blocking httpx.Client — no event loop
+    juggling, no silent swallow."""
+    if not token or not token.startswith("ExponentPushToken"):
+        return
+    payload = {
+        "to":    token,
+        "title": title,
+        "body":  body,
+        "sound": "default",
+        "data":  data or {},
+    }
     try:
-        asyncio.get_event_loop().run_until_complete(
-            send_push(token, title, body, data)
-        )
-    except RuntimeError:
-        # Already inside an event loop (FastAPI async context) — use background task instead
-        pass
+        with httpx.Client(timeout=5.0) as client:
+            resp = client.post(EXPO_PUSH_URL, json=payload)
+            if resp.status_code != 200:
+                logger.warning("Push (sync) failed: %s %s", resp.status_code, resp.text)
+    except Exception as exc:
+        logger.warning("Push (sync) send error: %s", exc)

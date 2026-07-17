@@ -119,3 +119,48 @@ def dismiss_pending_bill(pending_id: int, user_id: int) -> None:
         raise
     finally:
         cur.close(); conn.close()
+
+
+def fetch_reminder_candidates() -> list[dict]:
+    """
+    All still-pending bills, joined with their Recurring_Bills.cron_day
+    (to compute the due date) and the owner's push token. Excludes bills
+    already paid or dismissed — those stop appearing here automatically
+    since the WHERE is on Pending_Bills.status = 'pending'.
+    """
+    conn = get_connection()
+    cur  = conn.cursor(dictionary=True)
+    cur.execute(
+        """
+        SELECT pb.pending_id, pb.user_id, pb.generated_for_month, pb.last_reminded_date,
+               rb.name, rb.cron_day,
+               u.expo_push_token
+        FROM   Pending_Bills pb
+        JOIN   Recurring_Bills rb ON rb.bill_id = pb.bill_id
+        JOIN   Users u            ON u.user_id  = pb.user_id
+        WHERE  pb.status = 'pending'
+        """
+    )
+    rows = cur.fetchall()
+    cur.close(); conn.close()
+    for r in rows:
+        r["generated_for_month"] = str(r["generated_for_month"])
+        r["last_reminded_date"]  = str(r["last_reminded_date"]) if r["last_reminded_date"] else None
+    return rows
+
+
+def mark_reminded(pending_id: int, today: date) -> None:
+    conn = get_connection()
+    cur  = conn.cursor()
+    try:
+        conn.start_transaction()
+        cur.execute(
+            "UPDATE Pending_Bills SET last_reminded_date = %s WHERE pending_id = %s",
+            (today, pending_id),
+        )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close(); conn.close()

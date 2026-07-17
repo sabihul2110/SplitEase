@@ -31,19 +31,45 @@ export function usePushNotifications() {
 function handleNotificationTap(response) {
   const data = response?.notification?.request?.content?.data || {};
   const nav = getNavigationRef();
-  if (!nav?.isReady() || data.screen !== 'PendingRequests') return;
+  if (!nav?.isReady()) return;
 
-  const isConfirmation = !!(data.repayment_id || data.request_id);
-  nav.navigate('Main', {
-    screen: 'Loans',
-    params: {
-      screen: 'PendingRequests',
+  if (data.screen === 'PendingRequests') {
+    const isConfirmation = !!(data.repayment_id || data.request_id);
+    nav.navigate('Main', {
+      screen: 'Loans',
       params: {
-        initialTab: 'received',
-        initialSubTab: isConfirmation ? 'confirmations' : 'entries',
+        screen: 'PendingRequests',
+        params: {
+          initialTab: 'received',
+          initialSubTab: isConfirmation ? 'confirmations' : 'entries',
+        },
       },
-    },
-  });
+    });
+    return;
+  }
+
+  if (data.screen === 'GroupDetail' && data.group_id) {
+    nav.navigate('Main', {
+      screen: 'Groups',
+      params: {
+        screen: 'GroupDetail',
+        params: { groupId: data.group_id, groupName: data.group_name || '' },
+      },
+    });
+    return;
+  }
+
+  if (data.screen === 'QuickEntry') {
+    nav.navigate('Main', { screen: 'Expenses', params: { screen: 'QuickEntry' } });
+    return;
+  }
+
+  if (data.screen === 'RunRoutine' && data.routine_id) {
+    nav.navigate('Main', {
+      screen: 'Expenses',
+      params: { screen: 'RunRoutine', params: { routineId: data.routine_id } },
+    });
+  }
 }
 
 async function registerForPush() {

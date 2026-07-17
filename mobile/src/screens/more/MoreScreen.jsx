@@ -1,4 +1,4 @@
-// SplitEase/mobile/src/screens/menu/MenuScreen.jsx
+// SplitEase/mobile/src/screens/more/MoreScreen.jsx
 
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';

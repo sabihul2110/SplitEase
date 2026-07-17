@@ -14,13 +14,14 @@ GET    /groups/categories            → all categories
 GET    /groups/subcategories/{cat_id}→ subcategories for a category
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from schemas.groups import (
     CreateGroupRequest, UpdateGroupRequest,
     UpdateMembersRequest, BulkGroupIdsRequest,
 )
 
-from repositories import group_repository, categories_repository, settlement_repository
+from repositories import group_repository, categories_repository, settlement_repository, notification_repository, push_repository
+from services.push_service import send_push
 from core.dependencies import get_current_user, require_admin
 
 router = APIRouter()
@@ -209,3 +210,40 @@ def leave_group(group_id: int, user_id: int, current_user: dict = Depends(get_cu
 
     group_repository.remove_group_member(group_id, user_id)
     return {"message": "Left the group."}
+
+
+@router.post("/{group_id}/remind")
+def remind_member(
+    group_id:          int,
+    body:              dict,
+    background_tasks:  BackgroundTasks,
+    current_user:      dict = Depends(get_current_user),
+):
+    """Nudge a group member who owes money. In-app + push."""
+    debtor_id = body.get("debtor_user_id")
+    amount    = body.get("amount")
+    if not debtor_id:
+        raise HTTPException(status_code=422, detail="debtor_user_id is required.")
+    if not group_repository.is_group_member(group_id, current_user["user_id"]):
+        raise HTTPException(status_code=403, detail="Not a member of this group.")
+    if not group_repository.is_group_member(group_id, debtor_id):
+        raise HTTPException(status_code=404, detail="That member isn't in this group.")
+
+    sender_name = notification_repository.get_user_name(current_user["user_id"])
+    group_name  = notification_repository.get_group_name(group_id)
+    amt_label   = f"₹{float(amount):,.0f}" if amount is not None else "their balance"
+    msg = f"{sender_name} reminded you to settle {amt_label} in {group_name}."
+
+    notification_repository.create_notification(
+        user_id            = debtor_id,
+        message            = msg,
+        notification_type  = "reminder",
+        from_user_id       = current_user["user_id"],
+        group_id           = group_id,
+    )
+    token = push_repository.get_push_token(debtor_id)
+    background_tasks.add_task(
+        send_push, token, "Payment Reminder", msg,
+        {"screen": "GroupDetail", "group_id": group_id, "group_name": group_name},
+    )
+    return {"message": "Reminder sent."}

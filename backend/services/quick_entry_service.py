@@ -210,6 +210,9 @@ def execute_routine(routine_id: int, user_id: int, body: RoutineExecuteRequest) 
         except (PermissionError, ValueError) as exc:
             errors.append(f"'{tpl['name']}': {exc}")
 
+    if results:
+        routine_repository.log_routine_run(routine_id, user_id, body.expense_date)
+
     return {"created": results, "errors": errors}
 
 

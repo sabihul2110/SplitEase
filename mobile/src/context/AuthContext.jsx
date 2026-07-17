@@ -18,7 +18,9 @@ async function registerPushTokenSilently() {
     if (!Device.isDevice) return;
     const { status } = await Notifications.getPermissionsAsync();
     if (status !== 'granted') return;
-    const tokenData = await Notifications.getExpoPushTokenAsync();
+    const tokenData = await Notifications.getExpoPushTokenAsync({
+      projectId: '65d9e537-7893-4341-a5d7-5531ef671f7e', // splitease acc.
+    });
     await client.post(ENDPOINTS.pushToken, { token: tokenData.data });
   } catch {}
 }

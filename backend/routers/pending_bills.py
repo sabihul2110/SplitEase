@@ -32,8 +32,10 @@ def sweep_all(cron_secret: str):
     """
     if not settings.CRON_SECRET or cron_secret != settings.CRON_SECRET:
         raise HTTPException(status_code=401, detail="Invalid cron secret.")
-    created = recurring_bill_service.sweep_generate_all()
-    return {"created": created}
+    created          = recurring_bill_service.sweep_generate_all()
+    bills_reminded   = recurring_bill_service.sweep_send_bill_reminders()
+    routines_reminded = recurring_bill_service.sweep_send_routine_reminders()
+    return {"created": created, "bills_reminded": bills_reminded, "routines_reminded": routines_reminded}
 
 
 @router.post("/{pending_id}/pay", status_code=status.HTTP_201_CREATED)
