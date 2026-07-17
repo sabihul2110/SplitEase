@@ -19,7 +19,8 @@ FIX #13: get_user_by_name_in_group replaced with get_user_by_id_in_group.
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from schemas.notifications import ReminderRequest
 
-from repositories import notification_repository, group_repository
+from repositories import notification_repository, group_repository, push_repository
+from services.push_service import send_push_sync
 from core.dependencies import get_current_user
 
 router = APIRouter()
@@ -117,6 +118,14 @@ def send_reminder(
         notification_type = "reminder",
         message           = message,
         group_id          = group_id,
+    )
+
+    token = push_repository.get_push_token(debtor["user_id"])
+    send_push_sync(
+        token,
+        title="Payment Reminder",
+        body=message,
+        data={"screen": "GroupDetail", "group_id": group_id, "group_name": group_name},
     )
 
     return {"message": f"Reminder sent to {debtor['name']}."}

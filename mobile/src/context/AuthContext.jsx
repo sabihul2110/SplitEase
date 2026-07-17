@@ -58,6 +58,7 @@ export function AuthProvider({ children }) {
       const freshUser = { ...parsed, ...data };
       setUser(freshUser);
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(freshUser));
+      registerPushTokenSilently();
     } catch {
       await AsyncStorage.removeItem(STORAGE_KEY);
       setUser(null);
