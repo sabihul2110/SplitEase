@@ -1051,12 +1051,6 @@ export default function AccountScreen() {
           <DangerZone onAlert={setAlert} />
         </Group>
 
-        {/* ── About ── */}
-        <SectionLabel title="ABOUT" />
-        <Group>
-          <Row label="App" value="SplitEase" chevron={false} plainDivider />
-          <Row label="Version" value="2.1.0" chevron={false} last />
-        </Group>
 
       </ScrollView>
       

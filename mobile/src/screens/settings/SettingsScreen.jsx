@@ -281,12 +281,6 @@ export default function SettingsScreen() {
           <SignOutRow />
         </Group>
 
-        {/* ── About ── */}
-        <SectionLabel title="ABOUT" />
-        <Group>
-          <Row label="App" value="SplitEase" noChevron plainSeparator />
-          <Row label="Version" value="2.1.0" noChevron last />
-        </Group>
 
         <Text style={styles.footer}>
           Made with care · SplitEase © 2025
