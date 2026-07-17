@@ -17,7 +17,8 @@ import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import { Avatar } from '../../components/common/Ui';
 import { Icons } from '../../components/icons/icons';
-import { ICON_PICKER, TemplateIcon } from '../../constants/templateIcons';
+import { ICON_GROUPS } from '../../constants/templateIcons';
+import IconPickerGrid from '../../components/common/IconPickerGrid';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS, TAB_BAR_HEIGHT } from '../../constants/theme';
 
 export default function EditTemplateScreen() {
@@ -28,7 +29,7 @@ export default function EditTemplateScreen() {
   const isEdit = !!editing;
 
   const [name, setName] = useState(editing?.name || '');
-  const [iconName, setIconName] = useState(editing?.icon_name || ICON_PICKER[0].key);
+  const [iconName, setIconName] = useState(editing?.icon_name || ICON_GROUPS[0].items[0].key);
   const [groupId, setGroupId] = useState(editing?.group_id || null);
   const [groups, setGroups] = useState([]);
   const [isFixed, setIsFixed] = useState(editing ? editing.default_amount != null : true);
@@ -141,20 +142,7 @@ export default function EditTemplateScreen() {
 
           <View style={styles.field}>
             <Text style={styles.label}>ICON</Text>
-            <View style={styles.iconGrid}>
-              {ICON_PICKER.map((opt) => {
-                const isActive = iconName === opt.key;
-                return (
-                  <TouchableOpacity
-                    key={opt.key}
-                    style={[styles.iconOpt, isActive && styles.iconOptActive]}
-                    onPress={() => setIconName(opt.key)}
-                  >
-                    <TemplateIcon name={opt.key} size={18} color={isActive ? COLORS.primary : COLORS.text3} />
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+            <IconPickerGrid value={iconName} onChange={setIconName} activeColor={COLORS.primary} />
           </View>
 
           <View style={styles.field}>

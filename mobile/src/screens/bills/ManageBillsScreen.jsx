@@ -1,7 +1,7 @@
 // SplitEase/mobile/src/screens/bills/ManageBillsScreen.jsx
 
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import * as recurringBillsApi from '../../api/recurringBills';
@@ -9,12 +9,14 @@ import ScreenHeader from '../../components/layout/ScreenHeader';
 import { LoadingState, EmptyState } from '../../components/common/Ui';
 import { Icons } from '../../components/icons/icons';
 import { TemplateIcon } from '../../constants/templateIcons';
+import AppAlert from '../../components/common/AppAlert';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS, TAB_BAR_HEIGHT } from '../../constants/theme';
 
 export default function ManageBillsScreen() {
   const navigation = useNavigation();
   const [bills, setBills] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [alertConfig, setAlertConfig] = useState(null);
 
   const load = useCallback(async () => {
     try {
@@ -26,15 +28,20 @@ export default function ManageBillsScreen() {
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   function confirmDelete(b) {
-    Alert.alert('Delete Recurring Bill', `Delete "${b.name}"? Past pending entries stay; future ones stop generating.`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete', style: 'destructive', onPress: async () => {
-          await recurringBillsApi.deleteBill(b.bill_id);
-          load();
+    setAlertConfig({
+      title: 'Delete Recurring Bill',
+      message: `Delete "${b.name}"? Past pending entries stay; future ones stop generating.`,
+      buttons: [
+        { text: 'Cancel', style: 'cancel', onPress: () => setAlertConfig(null) },
+        {
+          text: 'Delete', style: 'destructive', onPress: async () => {
+            setAlertConfig(null);
+            await recurringBillsApi.deleteBill(b.bill_id);
+            load();
+          },
         },
-      },
-    ]);
+      ],
+    });
   }
 
   if (loading) return <LoadingState label="Loading bills…" />;
@@ -79,6 +86,7 @@ export default function ManageBillsScreen() {
           );
         }}
       />
+      <AppAlert config={alertConfig} />
     </SafeAreaView>
   );
 }

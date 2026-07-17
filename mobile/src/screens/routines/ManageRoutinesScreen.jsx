@@ -1,7 +1,7 @@
 // SplitEase/mobile/src/screens/routines/ManageRoutinesScreen.jsx
 
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import * as routinesApi from '../../api/routines';
@@ -9,6 +9,7 @@ import ScreenHeader from '../../components/layout/ScreenHeader';
 import { LoadingState, EmptyState } from '../../components/common/Ui';
 import { Icons } from '../../components/icons/icons';
 import { TemplateIcon } from '../../constants/templateIcons';
+import AppAlert from '../../components/common/AppAlert';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS, TAB_BAR_HEIGHT } from '../../constants/theme';
 
 const DAY_LABELS = { 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat', 7: 'Sun' };
@@ -24,6 +25,7 @@ export default function ManageRoutinesScreen() {
   const navigation = useNavigation();
   const [routines, setRoutines] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [alertConfig, setAlertConfig] = useState(null);
 
   const load = useCallback(async () => {
     try {
@@ -35,15 +37,20 @@ export default function ManageRoutinesScreen() {
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   function confirmDelete(r) {
-    Alert.alert('Delete Routine', `Delete "${r.name}"? Its templates stay intact — only the bundle is removed.`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete', style: 'destructive', onPress: async () => {
-          await routinesApi.deleteRoutine(r.routine_id);
-          load();
+    setAlertConfig({
+      title: 'Delete Routine',
+      message: `Delete "${r.name}"? Its templates stay intact — only the bundle is removed.`,
+      buttons: [
+        { text: 'Cancel', style: 'cancel', onPress: () => setAlertConfig(null) },
+        {
+          text: 'Delete', style: 'destructive', onPress: async () => {
+            setAlertConfig(null);
+            await routinesApi.deleteRoutine(r.routine_id);
+            load();
+          },
         },
-      },
-    ]);
+      ],
+    });
   }
 
   if (loading) return <LoadingState label="Loading routines…" />;
@@ -88,6 +95,7 @@ export default function ManageRoutinesScreen() {
           </TouchableOpacity>
         )}
       />
+      <AppAlert config={alertConfig} />
     </SafeAreaView>
   );
 }

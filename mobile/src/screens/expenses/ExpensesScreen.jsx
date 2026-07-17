@@ -23,6 +23,7 @@ import AppAlert from "../../components/common/AppAlert";
 import Toast from "../../components/common/Toast";
 import DatePickerInput from "../../components/common/DatePickerInput";
 import { Icons as IconLib } from "../../components/icons/icons";
+import BrandIcon from "../../components/icons/BrandIcon";
 
 // ─────────────────────────────────────────────
 //  Helpers (identical logic to web)
@@ -347,6 +348,7 @@ function EntryRow({ entry, deleting, onDelete, onNavigateGroup, onToast, onLongP
   const Icon  = resolved?.Icon  || iconCfg.Icon;
   const color = resolved?.color || iconCfg.color;
   const bg    = resolved ? `${color}18` : iconCfg.bg;
+  const isBrand      = !!resolved?.brand;
   const disp        = displayAmount(entry);
   const isGrp       = entry.type === "group_expense";
   const isLoanGiven = entry.type === "loan_given";
@@ -365,7 +367,7 @@ function EntryRow({ entry, deleting, onDelete, onNavigateGroup, onToast, onLongP
     >
       {/* Icon */}
       <View style={[styles.entryIcon, { backgroundColor: bg }]}>
-        <Icon size={18} color={color} />
+        {isBrand ? <BrandIcon brand={resolved.brand} size={18} /> : <Icon size={18} color={color} />}
       </View>
 
       {/* Body */}
@@ -1184,7 +1186,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
 
-  /* 🔥 Picker Modal Styles */
+  /* Picker Modal Styles */
   pickerOverlay: {
     flex: 1,
     justifyContent: 'center',

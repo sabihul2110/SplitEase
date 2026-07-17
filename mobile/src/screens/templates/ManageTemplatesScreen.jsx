@@ -1,7 +1,7 @@
 // SplitEase/mobile/src/screens/templates/ManageTemplatesScreen.jsx
 
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import * as quickTemplatesApi from '../../api/quickTemplates';
@@ -9,12 +9,14 @@ import ScreenHeader from '../../components/layout/ScreenHeader';
 import { LoadingState, EmptyState } from '../../components/common/Ui';
 import { Icons } from '../../components/icons/icons';
 import { TemplateIcon } from '../../constants/templateIcons';
+import AppAlert from '../../components/common/AppAlert';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS, TAB_BAR_HEIGHT } from '../../constants/theme';
 
 export default function ManageTemplatesScreen() {
   const navigation = useNavigation();
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [alertConfig, setAlertConfig] = useState(null);
 
   const load = useCallback(async () => {
     try {
@@ -26,15 +28,20 @@ export default function ManageTemplatesScreen() {
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   function confirmDelete(t) {
-    Alert.alert('Delete Template', `Delete "${t.name}"?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete', style: 'destructive', onPress: async () => {
-          await quickTemplatesApi.deleteTemplate(t.template_id);
-          load();
+    setAlertConfig({
+      title: 'Delete Template',
+      message: `Delete "${t.name}"?`,
+      buttons: [
+        { text: 'Cancel', style: 'cancel', onPress: () => setAlertConfig(null) },
+        {
+          text: 'Delete', style: 'destructive', onPress: async () => {
+            setAlertConfig(null);
+            await quickTemplatesApi.deleteTemplate(t.template_id);
+            load();
+          },
         },
-      },
-    ]);
+      ],
+    });
   }
 
   if (loading) return <LoadingState label="Loading templates…" />;
@@ -81,6 +88,7 @@ export default function ManageTemplatesScreen() {
           );
         }}
       />
+      <AppAlert config={alertConfig} />
     </SafeAreaView>
   );
 }

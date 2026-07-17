@@ -50,11 +50,30 @@ function RoutinesSection() {
   );
 }
 
+function ManageLinksRow() {
+  const navigation = useNavigation();
+  const links = [
+    { label: 'Templates', screen: 'ManageTemplates' },
+    { label: 'Recurring Bills', screen: 'ManageBills' },
+    { label: 'Routines', screen: 'ManageRoutines' },
+  ];
+  return (
+    <View style={{ flexDirection: 'row', gap: SPACING.sm, paddingHorizontal: SPACING.base }}>
+      {links.map((l) => (
+        <TouchableOpacity key={l.screen} style={styles.manageLinkBtn} onPress={() => navigation.navigate(l.screen)}>
+          <Text style={styles.manageLinkText}>{l.label}</Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+}
+
 export default function QuickEntryScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       <ScreenHeader title="Quick Entry" showBack />
       <ScrollView contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT + SPACING.base, gap: SPACING.lg }}>
+        <ManageLinksRow />
         <RoutinesSection />
         <PendingBillsRow />
         <QuickTapRow />
@@ -84,4 +103,10 @@ const styles = StyleSheet.create({
   routineIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(37,99,235,0.12)', alignItems: 'center', justifyContent: 'center' },
   routineName: { flex: 1, fontSize: FONT_SIZE.md, fontWeight: FONT_WEIGHT.semibold, color: COLORS.text },
   routineArrow: { fontSize: FONT_SIZE.sm, color: COLORS.primary, fontWeight: FONT_WEIGHT.semibold },
+  manageLinkBtn: {
+    flex: 1, paddingVertical: 10, borderRadius: RADIUS.md,
+    backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border,
+    alignItems: 'center',
+  },
+  manageLinkText: { fontSize: FONT_SIZE.xs, color: COLORS.text2, fontWeight: FONT_WEIGHT.semibold, textAlign: 'center' },
 });

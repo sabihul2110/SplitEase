@@ -35,8 +35,6 @@ export default function PendingBillsRow() {
     load();
   }
 
-  if (loaded && bills.length === 0) return null;
-
   return (
     <View style={styles.wrap}>
       <View style={styles.head}>
@@ -45,6 +43,11 @@ export default function PendingBillsRow() {
           <Icons.settings size={16} color={COLORS.text3} />
         </TouchableOpacity>
       </View>
+      {loaded && bills.length === 0 ? (
+        <TouchableOpacity style={styles.emptyCard} onPress={() => navigation.navigate('ManageBills')}>
+          <Text style={styles.emptyCardText}>No recurring bills yet — tap to add rent, wifi, electricity…</Text>
+        </TouchableOpacity>
+      ) : (
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
         {bills.map((b) => {
           return (
@@ -64,6 +67,7 @@ export default function PendingBillsRow() {
           );
         })}
       </ScrollView>
+      )}
 
       {active && (
         <EntrySheet
@@ -97,6 +101,12 @@ const styles = StyleSheet.create({
   },
   cardName: { fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.semibold, color: COLORS.text, marginTop: 4 },
   cardMonth: { fontSize: 10, color: COLORS.text3 },
+  emptyCard: {
+    marginHorizontal: SPACING.base, padding: SPACING.md,
+    backgroundColor: COLORS.surface, borderRadius: RADIUS.lg,
+    borderWidth: 1, borderColor: COLORS.border, borderStyle: 'dashed',
+  },
+  emptyCardText: { fontSize: FONT_SIZE.sm, color: COLORS.text3, textAlign: 'center' },
   payBtn: {
     marginTop: 6, backgroundColor: 'rgba(245,158,11,0.14)',
     borderRadius: RADIUS.sm, paddingVertical: 6, alignItems: 'center',

@@ -87,7 +87,7 @@ export default function RunRoutineScreen() {
               {result.errors.map((e, i) => <Text key={i} style={styles.errLine}>{e}</Text>)}
             </View>
           )}
-          <Button title="Done" onPress={() => navigation.goBack()} fullWidth size="lg" />
+          <Button title="Done" onPress={() => navigation.navigate('ExpensesHome')} fullWidth size="lg" />
         </View>
       </SafeAreaView>
     );

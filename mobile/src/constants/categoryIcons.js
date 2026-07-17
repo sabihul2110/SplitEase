@@ -28,9 +28,9 @@
 import {
   Plane, Building2, UtensilsCrossed, Ticket, Zap, ShoppingBasket,
   ShoppingBag, Car, Film, HeartPulse, Wifi, Droplet,
-  Sparkles, Bus, TrainFront, GraduationCap, Dumbbell, Receipt,
+  Sparkles, Bus, TrainFront, GraduationCap, Dumbbell, Receipt, Ship
 } from "lucide-react-native";
-import { getBrandIcon } from "../components/icons/BrandIcon";
+import { isBrandSupported, BRAND_TINTS } from "../components/icons/BrandIcon";
 
 // ── Fixed-category fallback (checked after keyword matching) ─────────────
 export const CATEGORY_ICONS = {
@@ -65,7 +65,7 @@ const SPECIFIC_KEYWORDS = [
   { keywords: ["water bill", "water can", "water supply"], Icon: Droplet, color: "#38bdf8" },
   { keywords: ["maid", "cook", "cleaning", "housekeeping", "laundry", "ironing"], Icon: Sparkles, color: "#4ade80" },
   { keywords: ["zomato", "swiggy", "restaurant", "cafe", "coffee", "lunch", "dinner", "breakfast", "snack", "tiffin", "mess", "canteen", "pizza", "burger", "biryani"], Icon: UtensilsCrossed, color: "#fb923c" },
-  { keywords: ["metro", "tram", "subway"], Icon: TramFront, color: "#a78bfa" },
+  { keywords: ["metro", "tram", "subway"], Icon: TrainFront, color: "#a78bfa" },
   { keywords: ["bus", "local bus"], Icon: Bus, color: "#38bdf8" },
   { keywords: ["train", "railway", "irctc"], Icon: TrainFront, color: "#60a5fa" },
   { keywords: ["flight", "airport", "airline"], Icon: Plane, color: "#60a5fa" },
@@ -97,14 +97,12 @@ function matchBrand(text) {
   if (!text) return null;
   const lower = text.toLowerCase();
   for (const entry of BRAND_KEYWORDS) {
-    if (entry.keywords.some((kw) => lower.includes(kw))) {
-      const icon = getBrandIcon(entry.brand);
-      return icon ? { brand: entry.brand, color: `#${icon.hex}` } : null;
+    if (entry.keywords.some((kw) => lower.includes(kw)) && isBrandSupported(entry.brand)) {
+      return { brand: entry.brand, color: BRAND_TINTS[entry.brand] || "#8892b0" };
     }
   }
   return null;
 }
-
 /**
  * Personal/group expense timeline labels are formatted "Spent on
  * <Category>" by the backend. Pulls the category text back out so

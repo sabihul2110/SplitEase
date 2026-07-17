@@ -34,6 +34,7 @@ import ScreenHeader from "../../components/layout/ScreenHeader";
 import DatePickerInput from "../../components/common/DatePickerInput";
 import { TAB_BAR_HEIGHT } from "../../constants/theme";
 import { Modal } from "react-native";
+import BrandIcon from "../../components/icons/BrandIcon";
 
 // Matches web TYPE_META exactly
 const TYPE_META = {
@@ -224,6 +225,7 @@ function ActivityRow({ item, onPress }) {
   const IconComp = resolved?.Icon  || ENTRY_TYPE_ICONS[item.type]?.Icon || Icons.receipt;
   const iconColor = resolved?.color || meta.color;
   const iconBg    = resolved ? `${resolved.color}18` : meta.bg;
+  const isBrand   = !!resolved?.brand;
 
   return (
     <TouchableOpacity
@@ -232,7 +234,7 @@ function ActivityRow({ item, onPress }) {
       activeOpacity={canNav ? 0.7 : 1}
     >
       <View style={[styles.rowIcon, { backgroundColor: iconBg }]}>
-        <IconComp size={18} color={iconColor} />
+        {isBrand ? <BrandIcon brand={resolved.brand} size={18} /> : <IconComp size={18} color={iconColor} />}
       </View>
       <View style={styles.rowBody}>
         <Text style={styles.rowLabel} numberOfLines={1}>

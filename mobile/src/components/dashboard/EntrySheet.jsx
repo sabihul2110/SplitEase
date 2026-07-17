@@ -65,103 +65,105 @@ export default function EntrySheet({
   }
 
   return (
-    <Modal visible transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent>
       <View style={styles.backdrop}>
-        <TouchableOpacity style={StyleSheet.absoluteFill} onPress={onClose} />
+        <TouchableOpacity style={StyleSheet.absoluteFill} onPress={onClose} activeOpacity={1} />
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
+          keyboardVerticalOffset={0}
         >
-          <ScrollView
-            style={styles.sheet}
-            contentContainerStyle={{ gap: SPACING.md }}
-            keyboardShouldPersistTaps="handled"
-          >
-            <Text style={styles.title}>{title}</Text>
+          <View style={styles.sheetContainer}>
+            <ScrollView
+              contentContainerStyle={styles.scrollContent}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
+              <Text style={styles.title}>{title}</Text>
 
-            <View style={styles.field}>
-              <Text style={styles.label}>AMOUNT</Text>
-              <View style={styles.amountRow}>
-                <Text style={styles.amountSymbol}>₹</Text>
+              <View style={styles.field}>
+                <Text style={styles.label}>AMOUNT</Text>
+                <View style={styles.amountRow}>
+                  <Text style={styles.amountSymbol}>₹</Text>
+                  <TextInput
+                    style={styles.amountInput}
+                    value={amount}
+                    onChangeText={(v) => { setAmount(v); setErr(''); }}
+                    placeholder="0.00"
+                    placeholderTextColor={COLORS.text3}
+                    keyboardType="decimal-pad"
+                  />
+                </View>
+              </View>
+
+              <View style={styles.field}>
+                <Text style={styles.label}>DATE</Text>
+                {!showFullDate ? (
+                  <View style={styles.dateToggleRow}>
+                    <TouchableOpacity
+                      style={[styles.dateChip, date === todayStr() && styles.dateChipActive]}
+                      onPress={() => setDate(todayStr())}
+                    >
+                      <Text style={[styles.dateChipText, date === todayStr() && styles.dateChipTextActive]}>Today</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.dateChip, date === yesterdayStr() && styles.dateChipActive]}
+                      onPress={() => setDate(yesterdayStr())}
+                    >
+                      <Text style={[styles.dateChipText, date === yesterdayStr() && styles.dateChipTextActive]}>Yesterday</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.dateChip} onPress={() => setShowFullDate(true)}>
+                      <Text style={styles.dateChipText}>Pick date…</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <DatePickerInput value={date} onChange={setDate} accentColor={COLORS.primary} />
+                )}
+              </View>
+
+              {isGroup && members.length > 0 && (
+                <View style={styles.field}>
+                  <Text style={styles.label}>PAID BY</Text>
+                  <View style={styles.payerRow}>
+                    {members.map((m) => (
+                      <TouchableOpacity
+                        key={m.user_id}
+                        style={[styles.payerChip, payerId === m.user_id && styles.payerChipActive]}
+                        onPress={() => setPayerId(m.user_id)}
+                      >
+                        <Avatar name={m.name} size={20} />
+                        <Text style={[styles.payerChipText, payerId === m.user_id && styles.payerChipTextActive]}>
+                          {m.user_id === user.user_id ? 'You' : m.name}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              <View style={styles.field}>
+                <Text style={styles.label}>NOTE — optional</Text>
                 <TextInput
-                  style={styles.amountInput}
-                  value={amount}
-                  onChangeText={(v) => { setAmount(v); setErr(''); }}
-                  placeholder="0.00"
+                  style={styles.noteInput}
+                  value={note}
+                  onChangeText={setNote}
+                  placeholder="Any extra details…"
                   placeholderTextColor={COLORS.text3}
-                  keyboardType="decimal-pad"
                 />
               </View>
-            </View>
 
-            <View style={styles.field}>
-              <Text style={styles.label}>DATE</Text>
-              {!showFullDate ? (
-                <View style={styles.dateToggleRow}>
-                  <TouchableOpacity
-                    style={[styles.dateChip, date === todayStr() && styles.dateChipActive]}
-                    onPress={() => setDate(todayStr())}
-                  >
-                    <Text style={[styles.dateChipText, date === todayStr() && styles.dateChipTextActive]}>Today</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.dateChip, date === yesterdayStr() && styles.dateChipActive]}
-                    onPress={() => setDate(yesterdayStr())}
-                  >
-                    <Text style={[styles.dateChipText, date === yesterdayStr() && styles.dateChipTextActive]}>Yesterday</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.dateChip} onPress={() => setShowFullDate(true)}>
-                    <Text style={styles.dateChipText}>Pick date…</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <DatePickerInput value={date} onChange={setDate} accentColor={COLORS.primary} />
-              )}
-            </View>
+              {!!err && <Text style={styles.err}>{err}</Text>}
 
-            {isGroup && members.length > 0 && (
-              <View style={styles.field}>
-                <Text style={styles.label}>PAID BY</Text>
-                <View style={styles.payerRow}>
-                  {members.map((m) => (
-                    <TouchableOpacity
-                      key={m.user_id}
-                      style={[styles.payerChip, payerId === m.user_id && styles.payerChipActive]}
-                      onPress={() => setPayerId(m.user_id)}
-                    >
-                      <Avatar name={m.name} size={20} />
-                      <Text style={[styles.payerChipText, payerId === m.user_id && styles.payerChipTextActive]}>
-                        {m.user_id === user.user_id ? 'You' : m.name}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
+              <View style={styles.actions}>
+                <Button title="Cancel" variant="ghost" onPress={onClose} style={{ flex: 1 }} />
+                <Button
+                  title={saving ? 'Saving…' : 'Confirm →'}
+                  onPress={submit}
+                  loading={saving}
+                  style={{ flex: 1 }}
+                />
               </View>
-            )}
-
-            <View style={styles.field}>
-              <Text style={styles.label}>NOTE — optional</Text>
-              <TextInput
-                style={styles.noteInput}
-                value={note}
-                onChangeText={setNote}
-                placeholder="Any extra details…"
-                placeholderTextColor={COLORS.text3}
-              />
-            </View>
-
-            {!!err && <Text style={styles.err}>{err}</Text>}
-
-            <View style={styles.actions}>
-              <Button title="Cancel" variant="ghost" onPress={onClose} style={{ flex: 1 }} />
-              <Button
-                title={saving ? 'Saving…' : 'Confirm →'}
-                onPress={submit}
-                loading={saving}
-                style={{ flex: 1 }}
-              />
-            </View>
-          </ScrollView>
+            </ScrollView>
+          </View>
         </KeyboardAvoidingView>
       </View>
     </Modal>
@@ -169,14 +171,14 @@ export default function EntrySheet({
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
-  sheet: {
+  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'flex-end' },
+  sheetContainer: {
     backgroundColor: COLORS.surface,
     borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl,
     borderWidth: 1, borderColor: COLORS.border,
-    padding: SPACING.lg,
     maxHeight: '85%',
   },
+  scrollContent: { padding: SPACING.lg, paddingBottom: Platform.OS === 'ios' ? 40 : 30, gap: SPACING.md },
   title: { fontSize: FONT_SIZE.lg, fontWeight: FONT_WEIGHT.bold, color: COLORS.text },
   field: { gap: SPACING.xs },
   label: { fontSize: FONT_SIZE.xs, fontWeight: FONT_WEIGHT.semibold, color: COLORS.text3, letterSpacing: 0.8 },
