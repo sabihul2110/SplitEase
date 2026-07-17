@@ -9,7 +9,7 @@ import { TemplateIcon } from '../../constants/templateIcons';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS } from '../../constants/theme';
 import EntrySheet from './EntrySheet';
 
-export default function QuickTapRow() {
+export default function QuickTapRow({ embedded = false }) {
   const navigation = useNavigation();
   const [templates, setTemplates] = useState([]);
   const [active, setActive] = useState(null);
@@ -30,12 +30,14 @@ export default function QuickTapRow() {
 
   return (
     <View style={styles.wrap}>
+      {!embedded && (
       <View style={styles.head}>
         <Text style={styles.title}>QUICK ENTRIES</Text>
         <TouchableOpacity onPress={() => navigation.navigate('ManageTemplates')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Icons.settings size={16} color={COLORS.text3} />
         </TouchableOpacity>
       </View>
+      )}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
         {templates.map((t) => (
             <TouchableOpacity key={t.template_id} style={styles.chip} onPress={() => setActive(t)} activeOpacity={0.75}>

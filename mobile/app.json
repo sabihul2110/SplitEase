@@ -18,7 +18,8 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0d0e14"
       },
-      "package": "com.splitease.app"
+      "package": "com.splitease.app",
+      "softwareKeyboardLayoutMode": "pan"
     },
     "web": {
       "favicon": "./assets/favicon.png"

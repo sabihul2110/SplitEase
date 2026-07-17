@@ -31,6 +31,9 @@ export const COLORS = {
   danger:   '#ef4444',
   warning:  '#f59e0b',
 
+  moneyOut: '#f87171',
+  moneyIn:  '#34d399',
+
   // Text
   text:     '#f0f1f5',
   text2:    '#9095a8',

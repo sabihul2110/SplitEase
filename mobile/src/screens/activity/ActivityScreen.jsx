@@ -211,21 +211,24 @@ function ActivityRow({ item, onPress }) {
   const canNav = !!item.group_id;
   const amount = Number(item.amount || 0);
 
-  const isExpenseType =
+    const isExpenseType =
     item.type === "personal_expense" ||
     item.type === "group_expense" ||
     item.type === "group_expense_owed";
   const resolved = isExpenseType
     ? getExpenseIcon({
-        category: extractCategoryFromLabel(item.label),
+        category: item.category_name || extractCategoryFromLabel(item.label),
+        subcategory: item.subcategory_name,
         description: item.sub,
       })
     : null;
 
-  const IconComp = resolved?.Icon  || ENTRY_TYPE_ICONS[item.type]?.Icon || Icons.receipt;
-  const iconColor = resolved?.color || meta.color;
-  const iconBg    = resolved ? `${resolved.color}18` : meta.bg;
-  const isBrand   = !!resolved?.brand;
+  const IconComp = resolved?.Icon || ENTRY_TYPE_ICONS[item.type]?.Icon || Icons.receipt;
+  const isBrand  = !!resolved?.brand;
+  
+  const iconGlyphColor = isBrand ? undefined : COLORS.text2;
+  const iconBg         = COLORS.surface2;
+  const moneyColor     = inflow ? COLORS.moneyIn : COLORS.moneyOut;
 
   return (
     <TouchableOpacity
@@ -234,7 +237,7 @@ function ActivityRow({ item, onPress }) {
       activeOpacity={canNav ? 0.7 : 1}
     >
       <View style={[styles.rowIcon, { backgroundColor: iconBg }]}>
-        {isBrand ? <BrandIcon brand={resolved.brand} size={18} /> : <IconComp size={18} color={iconColor} />}
+        {isBrand ? <BrandIcon brand={resolved.brand} size={18} /> : <IconComp size={18} color={iconGlyphColor} />}
       </View>
       <View style={styles.rowBody}>
         <Text style={styles.rowLabel} numberOfLines={1}>
@@ -261,7 +264,7 @@ function ActivityRow({ item, onPress }) {
       <Text
         style={[
           styles.rowAmt,
-          { color: inflow ? COLORS.success : COLORS.text },
+          { color: moneyColor },
         ]}
       >
         {inflow ? "+" : ""}₹{fmt(amount)}

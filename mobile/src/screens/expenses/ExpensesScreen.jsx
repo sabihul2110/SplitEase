@@ -340,16 +340,18 @@ function EntryRow({ entry, deleting, onDelete, onNavigateGroup, onToast, onLongP
     entry.type === "group_expense_owed";
   const resolved = isExpenseType
     ? getExpenseIcon({
-        category: extractCategoryFromLabel(entry.label),
+        category: entry.category_name || extractCategoryFromLabel(entry.label),
+        subcategory: entry.subcategory_name,
         description: entry.sub,
       })
     : null;
 
-  const Icon  = resolved?.Icon  || iconCfg.Icon;
-  const color = resolved?.color || iconCfg.color;
-  const bg    = resolved ? `${color}18` : iconCfg.bg;
-  const isBrand      = !!resolved?.brand;
+  const Icon    = resolved?.Icon || iconCfg.Icon;
+  const isBrand = !!resolved?.brand;
+  const iconGlyphColor = isBrand ? undefined : COLORS.text2;
+  const iconBg         = COLORS.surface2;
   const disp        = displayAmount(entry);
+  const moneyColor  = cfg.sign === "-" ? COLORS.moneyOut : COLORS.moneyIn;
   const isGrp       = entry.type === "group_expense";
   const isLoanGiven = entry.type === "loan_given";
   const isLoanTaken = entry.type === "loan_taken";
@@ -366,8 +368,8 @@ function EntryRow({ entry, deleting, onDelete, onNavigateGroup, onToast, onLongP
       delayLongPress={350}
     >
       {/* Icon */}
-      <View style={[styles.entryIcon, { backgroundColor: bg }]}>
-        {isBrand ? <BrandIcon brand={resolved.brand} size={18} /> : <Icon size={18} color={color} />}
+      <View style={[styles.entryIcon, { backgroundColor: iconBg }]}>
+        {isBrand ? <BrandIcon brand={resolved.brand} size={18} /> : <Icon size={18} color={iconGlyphColor} />}
       </View>
 
       {/* Body */}
@@ -438,7 +440,7 @@ function EntryRow({ entry, deleting, onDelete, onNavigateGroup, onToast, onLongP
 
       {/* Right: amount + delete */}
       <View style={styles.entryRight}>
-        <Text style={[styles.entryAmount, { color }]}>
+        <Text style={[styles.entryAmount, { color: moneyColor }]}>
           {cfg.sign}₹{fmt(disp)}
         </Text>
         {isDeletable && (

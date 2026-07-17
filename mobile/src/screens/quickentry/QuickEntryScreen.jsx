@@ -9,74 +9,104 @@ import ScreenHeader from '../../components/layout/ScreenHeader';
 import QuickTapRow from '../../components/dashboard/QuickTapRow';
 import PendingBillsRow from '../../components/dashboard/PendingBillsRow';
 import { TemplateIcon } from '../../constants/templateIcons';
+import { Icons } from '../../components/icons/icons';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS, TAB_BAR_HEIGHT } from '../../constants/theme';
+
+function SectionCard({ icon, iconColor, title, manageLabel, onManage, children }) {
+  return (
+    <View style={styles.card}>
+      <View style={styles.cardHead}>
+        <View style={styles.cardHeadLeft}>
+          <View style={[styles.cardIconBox, { backgroundColor: iconColor + '18' }]}>
+            {icon}
+          </View>
+          <Text style={styles.cardTitle}>{title}</Text>
+        </View>
+        {onManage && (
+          <TouchableOpacity onPress={onManage} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Text style={styles.manageLink}>{manageLabel || 'Manage'}</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+      {children}
+    </View>
+  );
+}
 
 function RoutinesSection() {
   const navigation = useNavigation();
   const [routines, setRoutines] = useState([]);
+  const [loaded, setLoaded] = useState(false);
 
   useFocusEffect(useCallback(() => {
-    routinesApi.getRoutines().then(({ data }) => setRoutines(data || [])).catch(() => {});
+    routinesApi.getRoutines()
+      .then(({ data }) => setRoutines(data || []))
+      .catch(() => {})
+      .finally(() => setLoaded(true));
   }, []));
 
   return (
-    <View style={styles.section}>
-      <View style={styles.sectionHead}>
-        <Text style={styles.sectionTitle}>ROUTINES</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('ManageRoutines')}>
-          <Text style={styles.manageLink}>Manage</Text>
-        </TouchableOpacity>
-      </View>
-      {routines.length === 0 ? (
-        <TouchableOpacity style={styles.emptyRoutine} onPress={() => navigation.navigate('ManageRoutines')}>
-          <Text style={styles.emptyRoutineText}>Build a routine — e.g. "College Day" — to log your whole commute in one tap.</Text>
+    <SectionCard
+      icon={<Icons.zap size={16} color={COLORS.primary} />}
+      iconColor={COLORS.primary}
+      title="Routines"
+      onManage={() => navigation.navigate('ManageRoutines')}
+    >
+      {loaded && routines.length === 0 ? (
+        <TouchableOpacity style={styles.emptyRow} onPress={() => navigation.navigate('ManageRoutines')}>
+          <Text style={styles.emptyRowText}>Bundle your daily commute legs into one tap — e.g. "College Day".</Text>
         </TouchableOpacity>
       ) : (
         <View style={{ gap: SPACING.sm }}>
           {routines.map((r) => (
             <TouchableOpacity
               key={r.routine_id}
-              style={styles.routineCard}
+              style={styles.itemRow}
               onPress={() => navigation.navigate('RunRoutine', { routineId: r.routine_id })}
+              activeOpacity={0.75}
             >
-              <View style={styles.routineIcon}><TemplateIcon name={r.icon_name} size={20} color={COLORS.primary} /></View>
-              <Text style={styles.routineName}>{r.name}</Text>
-              <Text style={styles.routineArrow}>Run →</Text>
+              <View style={styles.itemIcon}><TemplateIcon name={r.icon_name} size={18} color={COLORS.primary} /></View>
+              <Text style={styles.itemName} numberOfLines={1}>{r.name}</Text>
+              <View style={styles.runPill}>
+                <Text style={styles.runPillText}>Run</Text>
+                <Icons.chevronRight size={12} color={COLORS.primary} />
+              </View>
             </TouchableOpacity>
           ))}
         </View>
       )}
-    </View>
-  );
-}
-
-function ManageLinksRow() {
-  const navigation = useNavigation();
-  const links = [
-    { label: 'Templates', screen: 'ManageTemplates' },
-    { label: 'Recurring Bills', screen: 'ManageBills' },
-    { label: 'Routines', screen: 'ManageRoutines' },
-  ];
-  return (
-    <View style={{ flexDirection: 'row', gap: SPACING.sm, paddingHorizontal: SPACING.base }}>
-      {links.map((l) => (
-        <TouchableOpacity key={l.screen} style={styles.manageLinkBtn} onPress={() => navigation.navigate(l.screen)}>
-          <Text style={styles.manageLinkText}>{l.label}</Text>
-        </TouchableOpacity>
-      ))}
-    </View>
+    </SectionCard>
   );
 }
 
 export default function QuickEntryScreen() {
+  const navigation = useNavigation();
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       <ScreenHeader title="Quick Entry" showBack />
-      <ScrollView contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT + SPACING.base, gap: SPACING.lg }}>
-        <ManageLinksRow />
+      <ScrollView
+        contentContainerStyle={{ padding: SPACING.base, paddingBottom: TAB_BAR_HEIGHT + SPACING.base, gap: SPACING.md }}
+        showsVerticalScrollIndicator={false}
+      >
         <RoutinesSection />
-        <PendingBillsRow />
-        <QuickTapRow />
+
+        <SectionCard
+          icon={<Icons.calendarDays size={16} color={COLORS.warning} />}
+          iconColor={COLORS.warning}
+          title="Pending Bills"
+          onManage={() => navigation.navigate('ManageBills')}
+        >
+          <PendingBillsRow embedded />
+        </SectionCard>
+
+        <SectionCard
+          icon={<Icons.zap size={16} color={COLORS.success} />}
+          iconColor={COLORS.success}
+          title="Quick Entries"
+          onManage={() => navigation.navigate('ManageTemplates')}
+        >
+          <QuickTapRow embedded />
+        </SectionCard>
       </ScrollView>
     </SafeAreaView>
   );
@@ -84,29 +114,32 @@ export default function QuickEntryScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg },
-  section: { gap: SPACING.sm },
-  sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: SPACING.base },
-  sectionTitle: { fontSize: 10, fontWeight: FONT_WEIGHT.bold, color: COLORS.text3, letterSpacing: 0.9, textTransform: 'uppercase' },
+  card: {
+    backgroundColor: COLORS.surface, borderRadius: RADIUS.xl,
+    borderWidth: 1, borderColor: COLORS.border,
+    padding: SPACING.base, gap: SPACING.sm,
+  },
+  cardHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  cardHeadLeft: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
+  cardIconBox: { width: 30, height: 30, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
+  cardTitle: { fontSize: FONT_SIZE.md, fontWeight: FONT_WEIGHT.bold, color: COLORS.text },
   manageLink: { fontSize: FONT_SIZE.xs, color: COLORS.primary, fontWeight: FONT_WEIGHT.semibold },
-  emptyRoutine: {
-    marginHorizontal: SPACING.base, padding: SPACING.md,
-    backgroundColor: COLORS.surface, borderRadius: RADIUS.lg,
+  emptyRow: {
+    padding: SPACING.md, backgroundColor: COLORS.surface2, borderRadius: RADIUS.lg,
     borderWidth: 1, borderColor: COLORS.border, borderStyle: 'dashed',
   },
-  emptyRoutineText: { fontSize: FONT_SIZE.sm, color: COLORS.text3, textAlign: 'center' },
-  routineCard: {
+  emptyRowText: { fontSize: FONT_SIZE.sm, color: COLORS.text3, textAlign: 'center' },
+  itemRow: {
     flexDirection: 'row', alignItems: 'center', gap: SPACING.sm,
-    marginHorizontal: SPACING.base, padding: SPACING.md,
-    backgroundColor: COLORS.surface, borderRadius: RADIUS.lg,
-    borderWidth: 1, borderColor: COLORS.border,
+    backgroundColor: COLORS.surface2, borderRadius: RADIUS.lg,
+    borderWidth: 1, borderColor: COLORS.border, padding: SPACING.sm,
   },
-  routineIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(37,99,235,0.12)', alignItems: 'center', justifyContent: 'center' },
-  routineName: { flex: 1, fontSize: FONT_SIZE.md, fontWeight: FONT_WEIGHT.semibold, color: COLORS.text },
-  routineArrow: { fontSize: FONT_SIZE.sm, color: COLORS.primary, fontWeight: FONT_WEIGHT.semibold },
-  manageLinkBtn: {
-    flex: 1, paddingVertical: 10, borderRadius: RADIUS.md,
-    backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border,
-    alignItems: 'center',
+  itemIcon: { width: 32, height: 32, borderRadius: 9, backgroundColor: 'rgba(37,99,235,0.12)', alignItems: 'center', justifyContent: 'center' },
+  itemName: { flex: 1, fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.semibold, color: COLORS.text },
+  runPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 2,
+    backgroundColor: 'rgba(37,99,235,0.12)', borderRadius: RADIUS.full,
+    paddingHorizontal: 10, paddingVertical: 5,
   },
-  manageLinkText: { fontSize: FONT_SIZE.xs, color: COLORS.text2, fontWeight: FONT_WEIGHT.semibold, textAlign: 'center' },
+  runPillText: { fontSize: FONT_SIZE.xs, color: COLORS.primary, fontWeight: FONT_WEIGHT.bold },
 });

@@ -9,7 +9,7 @@ import { TemplateIcon } from '../../constants/templateIcons';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS } from '../../constants/theme';
 import EntrySheet from './EntrySheet';
 
-export default function PendingBillsRow() {
+export default function PendingBillsRow({ embedded = false }) {
   const navigation = useNavigation();
   const [bills, setBills] = useState([]);
   const [loaded, setLoaded] = useState(false);
@@ -37,12 +37,14 @@ export default function PendingBillsRow() {
 
   return (
     <View style={styles.wrap}>
+      {!embedded && (
       <View style={styles.head}>
         <Text style={styles.title}>PENDING BILLS</Text>
         <TouchableOpacity onPress={() => navigation.navigate('ManageBills')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Icons.settings size={16} color={COLORS.text3} />
         </TouchableOpacity>
       </View>
+      )}
       {loaded && bills.length === 0 ? (
         <TouchableOpacity style={styles.emptyCard} onPress={() => navigation.navigate('ManageBills')}>
           <Text style={styles.emptyCardText}>No recurring bills yet — tap to add rent, wifi, electricity…</Text>

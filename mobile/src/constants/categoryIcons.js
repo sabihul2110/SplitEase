@@ -27,7 +27,7 @@
 
 import {
   Plane, Building2, UtensilsCrossed, Ticket, Zap, ShoppingBasket,
-  ShoppingBag, Car, Film, HeartPulse, Wifi, Droplet,
+  ShoppingBag, Car, Film, HeartPulse, Wifi, Droplet, Home,
   Sparkles, Bus, TrainFront, GraduationCap, Dumbbell, Receipt, Ship
 } from "lucide-react-native";
 import { isBrandSupported, BRAND_TINTS } from "../components/icons/BrandIcon";
@@ -60,6 +60,7 @@ const BRAND_KEYWORDS = [
 ];
 
 const SPECIFIC_KEYWORDS = [
+  { keywords: ["flat", "hostel", "pg", "room rent"], Icon: Home, color: "#a78bfa" },
   { keywords: ["wifi", "broadband", "internet", "router"], Icon: Wifi, color: "#38bdf8" },
   { keywords: ["electricity", "power bill", "eb bill"], Icon: Zap, color: "#fde047" },
   { keywords: ["water bill", "water can", "water supply"], Icon: Droplet, color: "#38bdf8" },

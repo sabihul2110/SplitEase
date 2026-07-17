@@ -230,29 +230,40 @@ def fetch_unified_timeline(user_id: int, limit: int = 100, offset: int = 0) -> l
     """
     Returns a unified, date-sorted feed of all financial events for a user.
     Single UNION ALL query — replaces 8 sequential round-trips.
+
+    SYNC-FIX: category_name/subcategory_name are now real columns on every
+    row (NULL where not applicable) instead of being parsed out of the
+    display label. Icon resolution on the frontend previously regex-matched
+    labels like "Spent on X" — which never matched group-expense rows
+    labeled "Paid in <group>" — so category was silently empty for every
+    group expense. This closes that gap at the source.
     """
     with get_db() as (conn, cur):
         cur.execute(
         """
         SELECT type, date, amount, my_share, receivable,
-               label, sub, ref_id, group_id, group_name
+               label, sub, ref_id, group_id, group_name,
+               category_name, subcategory_name
         FROM (
 
             -- 1. Personal expenses
             SELECT
                 CONVERT('personal_expense' USING utf8mb4)            AS type,
-                expense_date                                         AS date,
-                amount,
+                pe.expense_date                                      AS date,
+                pe.amount,
                 NULL                                                 AS my_share,
                 NULL                                                 AS receivable,
-                CONVERT(CONCAT('Spent on ', category) USING utf8mb4) AS label,
-                CONVERT(IFNULL(note, category) USING utf8mb4)        AS sub,
-                expense_id                                           AS ref_id,
+                CONVERT(CONCAT('Spent on ', pe.category) USING utf8mb4) AS label,
+                CONVERT(IFNULL(pe.note, pe.category) USING utf8mb4)  AS sub,
+                pe.expense_id                                        AS ref_id,
                 NULL                                                 AS group_id,
                 CONVERT(NULL USING utf8mb4)                          AS group_name,
-                created_at
-            FROM Personal_Expenses
-            WHERE user_id = %s
+                CONVERT(pe.category USING utf8mb4)                   AS category_name,
+                CONVERT(sc1.subcategory_name USING utf8mb4)          AS subcategory_name,
+                pe.created_at
+            FROM Personal_Expenses pe
+            LEFT JOIN Subcategories sc1 ON sc1.subcategory_id = pe.subcategory_id
+            WHERE pe.user_id = %s
 
             UNION ALL
 
@@ -268,9 +279,13 @@ def fetch_unified_timeline(user_id: int, limit: int = 100, offset: int = 0) -> l
                 e.expense_id                                                   AS ref_id,
                 e.group_id                                                     AS group_id,
                 CONVERT(g.group_name USING utf8mb4)                            AS group_name,
+                CONVERT(c2.category_name USING utf8mb4)                        AS category_name,
+                CONVERT(sc2.subcategory_name USING utf8mb4)                    AS subcategory_name,
                 e.created_at
             FROM Expenses e
             JOIN `Groups` g ON g.group_id = e.group_id
+            JOIN Categories c2 ON c2.category_id = e.category_id
+            LEFT JOIN Subcategories sc2 ON sc2.subcategory_id = e.subcategory_id
             LEFT JOIN Expense_Splits es
                 ON es.expense_id = e.expense_id AND es.user_id = %s
             WHERE e.payer_id = %s
@@ -292,10 +307,14 @@ def fetch_unified_timeline(user_id: int, limit: int = 100, offset: int = 0) -> l
                 e.expense_id                                              AS ref_id,
                 e.group_id                                                AS group_id,
                 CONVERT(g.group_name USING utf8mb4)                       AS group_name,
+                CONVERT(c3.category_name USING utf8mb4)                   AS category_name,
+                CONVERT(sc3.subcategory_name USING utf8mb4)               AS subcategory_name,
                 e.created_at
             FROM Expense_Splits es
             JOIN Expenses e ON e.expense_id = es.expense_id
             JOIN `Groups` g ON g.group_id   = e.group_id
+            JOIN Categories c3 ON c3.category_id = e.category_id
+            LEFT JOIN Subcategories sc3 ON sc3.subcategory_id = e.subcategory_id
             WHERE es.user_id = %s
               AND e.payer_id <> %s
 
@@ -313,6 +332,8 @@ def fetch_unified_timeline(user_id: int, limit: int = 100, offset: int = 0) -> l
                 income_id                                                          AS ref_id,
                 NULL                                                               AS group_id,
                 CONVERT(NULL USING utf8mb4)                                        AS group_name,
+                CONVERT(NULL USING utf8mb4)                                        AS category_name,
+                CONVERT(NULL USING utf8mb4)                                        AS subcategory_name,
                 created_at
             FROM Income
             WHERE user_id = %s
@@ -331,6 +352,8 @@ def fetch_unified_timeline(user_id: int, limit: int = 100, offset: int = 0) -> l
                 le.entry_id                                                  AS ref_id,
                 NULL                                                         AS group_id,
                 CONVERT(NULL USING utf8mb4)                                  AS group_name,
+                CONVERT(NULL USING utf8mb4)                                  AS category_name,
+                CONVERT(NULL USING utf8mb4)                                  AS subcategory_name,
                 le.created_at
             FROM Ledger_Entries le
             JOIN People p ON p.person_id = le.person_id
@@ -352,6 +375,8 @@ def fetch_unified_timeline(user_id: int, limit: int = 100, offset: int = 0) -> l
                 le.entry_id                                                     AS ref_id,
                 NULL                                                            AS group_id,
                 CONVERT(NULL USING utf8mb4)                                     AS group_name,
+                CONVERT(NULL USING utf8mb4)                                     AS category_name,
+                CONVERT(NULL USING utf8mb4)                                     AS subcategory_name,
                 le.created_at
             FROM Ledger_Entries le
             JOIN People p ON p.person_id = le.person_id
@@ -373,6 +398,8 @@ def fetch_unified_timeline(user_id: int, limit: int = 100, offset: int = 0) -> l
                 p.payment_id                                                   AS ref_id,
                 p.group_id                                                     AS group_id,
                 CONVERT(g.group_name USING utf8mb4)                            AS group_name,
+                CONVERT(NULL USING utf8mb4)                                    AS category_name,
+                CONVERT(NULL USING utf8mb4)                                    AS subcategory_name,
                 p.created_at
             FROM Payments p
             JOIN Users u    ON u.user_id  = p.payer_id
@@ -393,6 +420,8 @@ def fetch_unified_timeline(user_id: int, limit: int = 100, offset: int = 0) -> l
                 p.payment_id                                                   AS ref_id,
                 p.group_id                                                     AS group_id,
                 CONVERT(g.group_name USING utf8mb4)                            AS group_name,
+                CONVERT(NULL USING utf8mb4)                                    AS category_name,
+                CONVERT(NULL USING utf8mb4)                                    AS subcategory_name,
                 p.created_at
             FROM Payments p
             JOIN Users u    ON u.user_id  = p.payee_id
@@ -413,6 +442,8 @@ def fetch_unified_timeline(user_id: int, limit: int = 100, offset: int = 0) -> l
                 lr.repayment_id                                                AS ref_id,
                 NULL                                                           AS group_id,
                 CONVERT(NULL USING utf8mb4)                                    AS group_name,
+                CONVERT(NULL USING utf8mb4)                                    AS category_name,
+                CONVERT(NULL USING utf8mb4)                                    AS subcategory_name,
                 lr.resolved_at                                                 AS created_at
             FROM Ledger_Repayments lr
             JOIN Ledger_Entries le ON le.entry_id = lr.entry_id
@@ -450,7 +481,7 @@ def fetch_unified_timeline(user_id: int, limit: int = 100, offset: int = 0) -> l
         r.pop("created_at", None)
         if r.get("my_share")   is not None: r["my_share"]   = float(r["my_share"])
         if r.get("receivable") is not None: r["receivable"] = float(r["receivable"])
-        
+
         # Safely format the loan/borrow subtitles in Python to avoid SQL collation crashes
         if r["type"] == "loan_given" and not r.get("sub"):
             r["sub"] = f"₹{r['amount']} lent"
