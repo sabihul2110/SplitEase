@@ -18,6 +18,7 @@ def list_pending_bills(current_user: dict = Depends(get_current_user)):
     return pending_bill_repository.fetch_pending_bills(current_user["user_id"])
 
 
+@router.head("/sweep/{cron_secret}")
 @router.get("/sweep/{cron_secret}")
 def sweep_all(cron_secret: str):
     """

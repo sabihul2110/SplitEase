@@ -312,7 +312,7 @@ function AddLoanModal({ visible, onClose, isLent, onSuccess }) {
   useEffect(() => {
     if (visible) {
       setPersonName(""); setAmount(""); setNote(""); setError("");
-      setSearchResults([]); setSelectedUser(null);
+      setSelectedUser(null);
       setDate(new Date().toISOString().split("T")[0]);
     }
   }, [visible]);
