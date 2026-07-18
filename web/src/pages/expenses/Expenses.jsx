@@ -8,6 +8,8 @@ import { deleteIncome } from "../../api/expenses";
 import { deleteLoan, deleteBorrow, repayLoan } from "../../api/loans";
 import AddEntryModal from "../../components/feature/AddEntryModal";
 import { Icons } from "../../components/icons";
+import { getExpenseIcon } from "../../constants/categoryIcons";
+import BrandIcon from "../../components/icons/BrandIcon";
 import DateInput from "../../components/common/DateInput";
 import Toast from "../../components/common/Toast";
 
@@ -282,6 +284,18 @@ const TYPE_CFG = {
   loan_repayment_received: { sign: "+", bucket: "repayment" },
   loan_repayment_paid:     { sign: "-", bucket: "repayment" },
 };
+
+// Category-icon override applies only to these types — matches mobile's
+// categoryIcons.js scope exactly. Everything else (loans, income,
+// settlements) keeps its TYPE_ICONS treatment unchanged.
+const CATEGORY_ICON_TYPES = new Set(["personal_expense", "group_expense", "group_expense_owed"]);
+
+function hexToRgba(hex, alpha = 0.14) {
+  const h = hex.replace("#", "");
+  const full = h.length === 3 ? h.split("").map(c => c + c).join("") : h;
+  const n = parseInt(full, 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+}
 
 const TABS = [
   { id: "all",      label: "All"      },
@@ -567,6 +581,21 @@ function EntryRow({ entry, idx, deleting, onDelete, navigate, onToast, onRepaySu
   const iconCfg = TYPE_ICONS[entry.type];
   if (!cfg || !iconCfg) return null;
 
+  // Category/brand icon takes priority for expense rows — mirrors
+  // mobile's ExpensesScreen.jsx, which prefers categoryIcons.js over
+  // the generic per-type icon for these three types.
+  const catResult = CATEGORY_ICON_TYPES.has(entry.type)
+    ? getExpenseIcon({
+        category: entry.category_name,
+        subcategory: entry.subcategory_name,
+        description: entry.sub,
+      })
+    : null;
+
+  const displayIcon = catResult
+    ? { brand: catResult.brand, Icon: catResult.Icon, bg: hexToRgba(catResult.color), color: catResult.color }
+    : { Icon: iconCfg.Icon, bg: iconCfg.bg, color: iconCfg.color };
+
   const disp        = displayAmount(entry);
   const isGrp       = entry.type === "group_expense";
   const isLoanGiven = entry.type === "loan_given";
@@ -579,8 +608,10 @@ function EntryRow({ entry, idx, deleting, onDelete, navigate, onToast, onRepaySu
       className="me-entry"
       style={{ animationDelay: `${idx * 0.025}s` }}
     >
-      <div className="me-entry-icon" style={{ background: iconCfg.bg, color: iconCfg.color }}>
-        <iconCfg.Icon size={18} />
+      <div className="me-entry-icon" style={{ background: displayIcon.bg, color: displayIcon.color }}>
+        {displayIcon.brand
+          ? <BrandIcon brand={displayIcon.brand} size={18} />
+          : <displayIcon.Icon size={18} />}
       </div>
 
       <div className="me-entry-body">

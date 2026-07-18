@@ -219,3 +219,160 @@ export function isValidAmount(value) {
   const n = parseFloat(value);
   return !isNaN(n) && n > 0;
 }
+
+
+// ── Brand icons (Simple Icons CDN — cdn.simpleicons.org) ──────────────────
+// Pure data only. Rendering differs per platform: mobile uses SvgUri
+// (react-native-svg), web uses a plain <img> tag — see each platform's
+// components/icons/BrandIcon.jsx.
+export const BRAND_SLUGS = {
+  spotify:    'spotify',
+  applemusic: 'applemusic',
+  netflix:    'netflix',
+  youtube:    'youtube',
+  amazon:     'amazon',
+  zomato:     'zomato',
+  swiggy:     'swiggy',
+  uber:       'uber',
+};
+
+// Approximate brand tints for background chips only — not the logo itself
+// (the CDN always serves real official colors).
+export const BRAND_TINTS = {
+  spotify:    '#1DB954',
+  applemusic: '#FA243C',
+  netflix:    '#E50914',
+  youtube:    '#FF0000',
+  amazon:     '#FF9900',
+  zomato:     '#E23744',
+  swiggy:     '#FC8019',
+  uber:       '#000000',
+};
+
+export function isBrandSupported(key) {
+  return !!BRAND_SLUGS[key];
+}
+
+// ── Expense/category icon resolution (canonical, mirrors mobile's
+// categoryIcons.js — the only platform with this feature until now) ───────
+// Returns icon *names* (strings), never components — each platform maps
+// the name to its own local lucide component. This is the same split
+// used for group icons: matching logic shared, rendering local.
+
+export const EXPENSE_CATEGORY_ICON_MAP = {
+  "Travel":        { icon: "Plane",           color: "#60a5fa" },
+  "Accommodation": { icon: "Building2",       color: "#a78bfa" },
+  "Food & Dining": { icon: "UtensilsCrossed", color: "#fb923c" },
+  "Activities":    { icon: "Ticket",          color: "#facc15" },
+  "Utilities":     { icon: "Zap",             color: "#fde047" },
+  "Groceries":     { icon: "ShoppingBasket",  color: "#4ade80" },
+  "Shopping":      { icon: "ShoppingBag",     color: "#f472b6" },
+  "Transport":     { icon: "Car",             color: "#38bdf8" },
+  "Entertainment": { icon: "Film",            color: "#c084fc" },
+  "Health":        { icon: "HeartPulse",      color: "#f87171" },
+};
+
+// Tier 0: brand keywords, matched against note OR category text.
+// NOTE: "jiosaavn" has never actually matched anything — mobile's
+// BRAND_SLUGS/BRAND_TINTS never included a "jiosaavn" entry, so
+// isBrandSupported("jiosaavn") is always false and this keyword silently
+// falls through to keyword/category matching instead. Pre-existing
+// behavior on mobile, preserved as-is here — not something introduced
+// by this port, just carried over faithfully.
+export const EXPENSE_BRAND_KEYWORDS = [
+  { keywords: ["spotify"], brand: "spotify" },
+  { keywords: ["apple music"], brand: "applemusic" },
+  { keywords: ["jiosaavn"], brand: "jiosaavn" },
+  { keywords: ["netflix"], brand: "netflix" },
+  { keywords: ["youtube"], brand: "youtube" },
+  { keywords: ["amazon"], brand: "amazon" },
+  { keywords: ["zomato"], brand: "zomato" },
+  { keywords: ["swiggy"], brand: "swiggy" },
+  { keywords: ["uber"], brand: "uber" },
+];
+
+// Tier 1: safe to match against free-text note.
+export const EXPENSE_SPECIFIC_KEYWORDS = [
+  { keywords: ["flat", "hostel", "pg", "room rent"], icon: "Home", color: "#a78bfa" },
+  { keywords: ["wifi", "broadband", "internet", "router"], icon: "Wifi", color: "#38bdf8" },
+  { keywords: ["electricity", "power bill", "eb bill"], icon: "Zap", color: "#fde047" },
+  { keywords: ["water bill", "water can", "water supply"], icon: "Droplet", color: "#38bdf8" },
+  { keywords: ["maid", "cook", "cleaning", "housekeeping", "laundry", "ironing"], icon: "Sparkles", color: "#4ade80" },
+  { keywords: ["zomato", "swiggy", "restaurant", "cafe", "coffee", "lunch", "dinner", "breakfast", "snack", "tiffin", "mess", "canteen", "pizza", "burger", "biryani"], icon: "UtensilsCrossed", color: "#fb923c" },
+  { keywords: ["metro", "tram", "subway"], icon: "TrainFront", color: "#a78bfa" },
+  { keywords: ["bus", "local bus"], icon: "Bus", color: "#38bdf8" },
+  { keywords: ["train", "railway", "irctc"], icon: "TrainFront", color: "#60a5fa" },
+  { keywords: ["flight", "airport", "airline"], icon: "Plane", color: "#60a5fa" },
+  { keywords: ["ship", "ferry", "cruise", "boat"], icon: "Ship", color: "#38bdf8" },
+  { keywords: ["cab", "taxi", "uber", "ola", "rapido", "auto", "fuel", "petrol", "diesel", "parking", "toll"], icon: "Car", color: "#38bdf8" },
+  { keywords: ["amazon", "flipkart", "myntra", "bigbasket", "zepto", "blinkit"], icon: "ShoppingBag", color: "#f472b6" },
+  { keywords: ["doctor", "medical", "medicine", "pharmacy", "hospital", "clinic"], icon: "HeartPulse", color: "#f87171" },
+  { keywords: ["gym", "workout", "fitness", "yoga"], icon: "Dumbbell", color: "#f87171" },
+];
+
+// Tier 2: category-text only — never matched against the free note.
+export const EXPENSE_BROAD_KEYWORDS = [
+  { keywords: ["travel", "trip", "vacation", "holiday"], icon: "Plane", color: "#60a5fa" },
+  { keywords: ["college", "school", "course", "tuition", "coaching", "sem", "semester", "exam"], icon: "GraduationCap", color: "#818cf8" },
+  { keywords: ["movie", "cinema", "concert", "event", "show"], icon: "Film", color: "#c084fc" },
+  { keywords: ["shopping", "grocery", "groceries", "market"], icon: "ShoppingBag", color: "#f472b6" },
+];
+
+function matchKeywordEntry(text, list) {
+  if (!text) return null;
+  const lower = text.toLowerCase();
+  for (const entry of list) {
+    if (entry.keywords.some((kw) => lower.includes(kw))) return entry;
+  }
+  return null;
+}
+
+function matchBrandEntry(text) {
+  if (!text) return null;
+  const lower = text.toLowerCase();
+  for (const entry of EXPENSE_BRAND_KEYWORDS) {
+    if (entry.keywords.some((kw) => lower.includes(kw)) && isBrandSupported(entry.brand)) {
+      return { brand: entry.brand, color: BRAND_TINTS[entry.brand] || "#8892b0" };
+    }
+  }
+  return null;
+}
+
+/**
+ * Personal/group expense timeline labels are formatted "Spent on
+ * <Category>" by the backend. Pulls the category text back out.
+ */
+export function extractCategoryFromLabel(label = "") {
+  const match = label.match(/^Spent on (.+)$/i);
+  return match ? match[1] : "";
+}
+
+/**
+ * Resolves the best icon for an expense line item. Returns an icon
+ * *name* (string), not a component — each platform maps it locally.
+ * Return shape: { kind: 'brand', brand, color } | { kind: 'icon', icon, color }
+ *
+ *   1. NOTE text     vs SPECIFIC_KEYWORDS only
+ *   2. CATEGORY text vs SPECIFIC + BROAD (authoritative classification)
+ *   3. Exact EXPENSE_CATEGORY_ICON_MAP[category] match
+ *   4. Generic receipt icon fallback
+ */
+export function resolveExpenseIcon({ category, subcategory, description } = {}) {
+  const categoryText = `${category || ""} ${subcategory || ""}`.trim();
+  const noteText = `${description || ""}`.trim();
+
+  const brandHit = matchBrandEntry(noteText) || matchBrandEntry(categoryText);
+  if (brandHit) return { kind: "brand", brand: brandHit.brand, color: brandHit.color };
+
+  let hit = matchKeywordEntry(noteText, EXPENSE_SPECIFIC_KEYWORDS);
+  if (hit) return { kind: "icon", icon: hit.icon, color: hit.color };
+
+  hit = matchKeywordEntry(categoryText, [...EXPENSE_SPECIFIC_KEYWORDS, ...EXPENSE_BROAD_KEYWORDS]);
+  if (hit) return { kind: "icon", icon: hit.icon, color: hit.color };
+
+  if (category && EXPENSE_CATEGORY_ICON_MAP[category]) {
+    return { kind: "icon", icon: EXPENSE_CATEGORY_ICON_MAP[category].icon, color: EXPENSE_CATEGORY_ICON_MAP[category].color };
+  }
+
+  return { kind: "icon", icon: "Receipt", color: "#8892b0" };
+}

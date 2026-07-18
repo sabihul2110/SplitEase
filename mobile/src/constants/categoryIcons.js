@@ -30,120 +30,27 @@ import {
   ShoppingBag, Car, Film, HeartPulse, Wifi, Droplet, Home,
   Sparkles, Bus, TrainFront, GraduationCap, Dumbbell, Receipt, Ship
 } from "lucide-react-native";
-import { isBrandSupported, BRAND_TINTS } from "../components/icons/BrandIcon";
+import { resolveExpenseIcon, extractCategoryFromLabel } from "@splitease/shared";
 
-// ── Fixed-category fallback (checked after keyword matching) ─────────────
-export const CATEGORY_ICONS = {
-  "Travel":        { Icon: Plane,           color: "#60a5fa" },
-  "Accommodation": { Icon: Building2,       color: "#a78bfa" },
-  "Food & Dining": { Icon: UtensilsCrossed, color: "#fb923c" },
-  "Activities":    { Icon: Ticket,          color: "#facc15" },
-  "Utilities":     { Icon: Zap,             color: "#fde047" },
-  "Groceries":     { Icon: ShoppingBasket,  color: "#4ade80" },
-  "Shopping":      { Icon: ShoppingBag,     color: "#f472b6" },
-  "Transport":     { Icon: Car,             color: "#38bdf8" },
-  "Entertainment": { Icon: Film,            color: "#c084fc" },
-  "Health":        { Icon: HeartPulse,      color: "#f87171" },
+// Icon *components* stay local (lucide-react-native). Matching logic
+// (keywords, categories, brand detection) now lives in @splitease/shared.
+const ICON_COMPONENTS = {
+  Plane, Building2, UtensilsCrossed, Ticket, Zap, ShoppingBasket,
+  ShoppingBag, Car, Film, HeartPulse, Wifi, Droplet, Home,
+  Sparkles, Bus, TrainFront, GraduationCap, Dumbbell, Receipt, Ship,
 };
 
-// ── Tier 1: safe to match against the user's free-text note ──────────────
-const BRAND_KEYWORDS = [
-  { keywords: ["spotify"], brand: "spotify" },
-  { keywords: ["apple music"], brand: "applemusic" },
-  { keywords: ["jiosaavn"], brand: "jiosaavn" },
-  { keywords: ["netflix"], brand: "netflix" },
-  { keywords: ["youtube"], brand: "youtube" },
-  { keywords: ["amazon"], brand: "amazon" },
-  { keywords: ["zomato"], brand: "zomato" },
-  { keywords: ["swiggy"], brand: "swiggy" },
-  { keywords: ["uber"], brand: "uber" },
-];
-
-const SPECIFIC_KEYWORDS = [
-  { keywords: ["flat", "hostel", "pg", "room rent"], Icon: Home, color: "#a78bfa" },
-  { keywords: ["wifi", "broadband", "internet", "router"], Icon: Wifi, color: "#38bdf8" },
-  { keywords: ["electricity", "power bill", "eb bill"], Icon: Zap, color: "#fde047" },
-  { keywords: ["water bill", "water can", "water supply"], Icon: Droplet, color: "#38bdf8" },
-  { keywords: ["maid", "cook", "cleaning", "housekeeping", "laundry", "ironing"], Icon: Sparkles, color: "#4ade80" },
-  { keywords: ["zomato", "swiggy", "restaurant", "cafe", "coffee", "lunch", "dinner", "breakfast", "snack", "tiffin", "mess", "canteen", "pizza", "burger", "biryani"], Icon: UtensilsCrossed, color: "#fb923c" },
-  { keywords: ["metro", "tram", "subway"], Icon: TrainFront, color: "#a78bfa" },
-  { keywords: ["bus", "local bus"], Icon: Bus, color: "#38bdf8" },
-  { keywords: ["train", "railway", "irctc"], Icon: TrainFront, color: "#60a5fa" },
-  { keywords: ["flight", "airport", "airline"], Icon: Plane, color: "#60a5fa" },
-  { keywords: ["ship", "ferry", "cruise", "boat"], Icon: Ship, color: "#38bdf8" },
-  { keywords: ["cab", "taxi", "uber", "ola", "rapido", "auto", "fuel", "petrol", "diesel", "parking", "toll"], Icon: Car, color: "#38bdf8" },
-  { keywords: ["amazon", "flipkart", "myntra", "bigbasket", "zepto", "blinkit"], Icon: ShoppingBag, color: "#f472b6" },
-  { keywords: ["doctor", "medical", "medicine", "pharmacy", "hospital", "clinic"], Icon: HeartPulse, color: "#f87171" },
-  { keywords: ["gym", "workout", "fitness", "yoga"], Icon: Dumbbell, color: "#f87171" },
-];
-
-// ── Tier 2: category-text only — never matched against the free note ─────
-const BROAD_KEYWORDS = [
-  { keywords: ["travel", "trip", "vacation", "holiday"], Icon: Plane, color: "#60a5fa" },
-  { keywords: ["college", "school", "course", "tuition", "coaching", "sem", "semester", "exam"], Icon: GraduationCap, color: "#818cf8" },
-  { keywords: ["movie", "cinema", "concert", "event", "show"], Icon: Film, color: "#c084fc" },
-  { keywords: ["shopping", "grocery", "groceries", "market"], Icon: ShoppingBag, color: "#f472b6" },
-];
-
-function matchKeywords(text, list) {
-  if (!text) return null;
-  const lower = text.toLowerCase();
-  for (const entry of list) {
-    if (entry.keywords.some((kw) => lower.includes(kw))) return entry;
-  }
-  return null;
-}
-
-function matchBrand(text) {
-  if (!text) return null;
-  const lower = text.toLowerCase();
-  for (const entry of BRAND_KEYWORDS) {
-    if (entry.keywords.some((kw) => lower.includes(kw)) && isBrandSupported(entry.brand)) {
-      return { brand: entry.brand, color: BRAND_TINTS[entry.brand] || "#8892b0" };
-    }
-  }
-  return null;
-}
-/**
- * Personal/group expense timeline labels are formatted "Spent on
- * <Category>" by the backend. Pulls the category text back out so
- * callers can pass the real category to getExpenseIcon.
- */
-export function extractCategoryFromLabel(label = "") {
-  const match = label.match(/^Spent on (.+)$/i);
-  return match ? match[1] : "";
-}
+export { extractCategoryFromLabel };
 
 /**
- * Resolves the best icon/color for an expense line item.
- *
- *   1. NOTE text     vs SPECIFIC_KEYWORDS only  (e.g. "Metro" → Bus,
- *      refining a broad "Travel" category down to the actual mode)
- *   2. CATEGORY text vs SPECIFIC + BROAD        (the authoritative
- *      classification the user picked)
- *   3. Exact CATEGORY_ICONS[category] match
- *   4. Generic receipt icon
- *
- * Step 1 deliberately excludes BROAD_KEYWORDS — a note like "College"
- * under a "Travel" category must never hijack the icon; only the
- * category itself can trigger a broad-keyword match.
+ * Resolves the best icon/color for an expense line item. Same public
+ * shape as before this refactor: { brand, color } for brand hits,
+ * { Icon, color } for keyword/category hits.
  */
 export function getExpenseIcon({ category, subcategory, description } = {}) {
-  const categoryText = `${category || ""} ${subcategory || ""}`.trim();
-  const noteText = `${description || ""}`.trim();
-
-  let brandHit = matchBrand(noteText) || matchBrand(categoryText);
-  if (brandHit) return { brand: brandHit.brand, color: brandHit.color };
-
-  let hit = matchKeywords(noteText, SPECIFIC_KEYWORDS);
-  if (hit) return { Icon: hit.Icon, color: hit.color };
-
-  hit = matchKeywords(categoryText, [...SPECIFIC_KEYWORDS, ...BROAD_KEYWORDS]);
-  if (hit) return { Icon: hit.Icon, color: hit.color };
-
-  if (category && CATEGORY_ICONS[category]) {
-    return CATEGORY_ICONS[category];
+  const result = resolveExpenseIcon({ category, subcategory, description });
+  if (result.kind === "brand") {
+    return { brand: result.brand, color: result.color };
   }
-
-  return { Icon: Receipt, color: "#8892b0" };
+  return { Icon: ICON_COMPONENTS[result.icon] || Receipt, color: result.color };
 }

@@ -6,6 +6,8 @@ import { useNavigate } from "react-router-dom";
 import { getTimeline, downloadStatement } from "../../api/expenses";
 import DateInput from "../../components/common/DateInput";
 import { Icons } from "../../components/icons";
+import { getExpenseIcon } from "../../constants/categoryIcons";
+import BrandIcon from "../../components/icons/BrandIcon";
 
 const STYLES = `
   @keyframes actFadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
@@ -108,6 +110,32 @@ const TYPE_ICON = {
   loan_repayment_received:  Icons.paymentSettled,
   loan_repayment_paid:      Icons.paymentSettled,
 };
+
+const CATEGORY_ICON_TYPES = new Set(["personal_expense", "group_expense", "group_expense_owed"]);
+
+function hexToRgba(hex, alpha = 0.14) {
+  const h = hex.replace("#", "");
+  const full = h.length === 3 ? h.split("").map(c => c + c).join("") : h;
+  const n = parseInt(full, 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+}
+
+// Resolves category/brand icon for expense-type rows, falling back to
+// the generic per-type icon/color for everything else (loans, income,
+// settlements) — same split as Expenses.jsx.
+function resolveActivityIcon(item, fallbackMeta) {
+  if (!CATEGORY_ICON_TYPES.has(item.type)) {
+    return { Icon: TYPE_ICON[item.type] || Icons.personalExpense, bg: fallbackMeta.bg, color: fallbackMeta.color, brand: null };
+  }
+  const result = getExpenseIcon({
+    category: item.category_name,
+    subcategory: item.subcategory_name,
+    description: item.sub,
+  });
+  return result.brand
+    ? { brand: result.brand, Icon: null, bg: hexToRgba(result.color), color: result.color }
+    : { brand: null, Icon: result.Icon, bg: hexToRgba(result.color), color: result.color };
+}
 
 function IconForType({ type, size = 16, color }) {
   const Comp = TYPE_ICON[type] || Icons.personalExpense;
@@ -370,7 +398,8 @@ export default function Activity() {
               <div key={dateKey}>
                 <div className="act-date-head">{dateLabel(dateKey)}</div>
                 {grouped[dateKey].map((item, idx) => {
-                  const meta      = TYPE_META[item.type] || TYPE_META.group_expense;
+                  const meta        = TYPE_META[item.type] || TYPE_META.group_expense;
+                  const displayIcon = resolveActivityIcon(item, meta);
                   const canNav    = !!item.group_id;
                   const amount    = Number(item.amount || 0);
                   const isInflow = item.type === "income" || item.type === "settlement_received" ||
@@ -382,8 +411,10 @@ export default function Activity() {
                       style={{ animationDelay: `${idx * 0.02}s` }}
                       onClick={() => canNav && navigate(`/groups/${item.group_id}`)}
                     >
-                      <div className="act-icon" style={{ background: meta.bg, color: meta.color }}>
-                        <IconForType type={item.type} size={16} color={meta.color} />
+                      <div className="act-icon" style={{ background: displayIcon.bg, color: displayIcon.color }}>
+                        {displayIcon.brand
+                          ? <BrandIcon brand={displayIcon.brand} size={16} />
+                          : <displayIcon.Icon size={16} />}
                       </div>
                       <div className="act-body">
                         <div className="act-desc"><strong>{item.label}</strong></div>
