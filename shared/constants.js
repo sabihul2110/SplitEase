@@ -34,14 +34,20 @@ export const COLORS = {
 export const BASE_URL    = 'https://splitease-kfda.onrender.com';
 export const STORAGE_KEY = 'splitease_user'; // AsyncStorage / localStorage key
 
-// ── Expense categories (matches DB seed data) ─────────────────────────────
+// ── Expense categories (matches DB seed data, sql/schema.sql) ─────────────
+
 export const CATEGORIES = [
-  { id: 1, name: 'Travel',        emoji: '✈️'  },
-  { id: 2, name: 'Accommodation', emoji: '🏨'  },
-  { id: 3, name: 'Food & Dining', emoji: '🍽️' },
-  { id: 4, name: 'Activities',    emoji: '🎉'  },
-  { id: 5, name: 'Utilities',     emoji: '💡'  },
-  { id: 6, name: 'Groceries',     emoji: '🛒'  },
+  { id: 1,  name: 'Travel' },
+  { id: 2,  name: 'Accommodation' },
+  { id: 3,  name: 'Food & Dining' },
+  { id: 4,  name: 'Activities' },
+  { id: 5,  name: 'Utilities' },
+  { id: 6,  name: 'Groceries' },
+  { id: 7,  name: 'Shopping' },
+  { id: 8,  name: 'Entertainment' },
+  { id: 9,  name: 'Health & Medical' },
+  { id: 10, name: 'Education' },
+  { id: 11, name: 'Miscellaneous' },
 ];
 
 // ── Roles ─────────────────────────────────────────────────────────────────

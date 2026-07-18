@@ -3,6 +3,12 @@
 // USED IN:
 //   - GroupsScreen.jsx     → GroupAvatar (group list cards)
 //   - DashboardScreen.jsx  → GroupRow (recent groups on the dashboard)
+//
+// KEEP IN SYNC WITH: web/src/constants/groupIcons.js
+// KEYWORD_MAP and DEFAULT must stay identical on both platforms — this
+// isn't imported from a shared module (mobile's Metro / web's Vite aren't
+// configured to resolve outside their own project root yet), so any
+// change to keywords/icons/colors here needs the same edit made there.
 
 
 import {
