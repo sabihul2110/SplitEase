@@ -21,7 +21,7 @@ import * as groupsApi from "../../api/groups";
 import * as expensesApi from "../../api/expenses";
 import * as settlementsApi from "../../api/settlements";
 import { useAuth } from '../../context/AuthContext';
-import { Icons } from '../../components/icons/icons';
+import { Icons } from '../../components/icons';
 import { getExpenseIcon } from '../../constants/categoryIcons';
 import { TAB_BAR_HEIGHT } from '../../constants/theme';
 import AppAlert from "../../components/common/AppAlert";

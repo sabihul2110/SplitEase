@@ -25,7 +25,7 @@ import {
   TAB_BAR_HEIGHT,
 } from "../../constants/theme";
 import { Avatar, LoadingState, EmptyState } from "../../components/common/Ui";
-import { Icons } from "../../components/icons/icons";
+import { Icons } from "../../components/icons";
 import { getGroupIcon } from "../../constants/groupIcons";
 
 function fmt(n) {

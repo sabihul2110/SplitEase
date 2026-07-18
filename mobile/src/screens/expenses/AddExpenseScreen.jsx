@@ -13,7 +13,7 @@ import * as expensesApi from "../../api/expenses";
 import * as loansApi from "../../api/loans";
 import * as groupsApi from "../../api/groups";
 import { useAuth } from '../../context/AuthContext';
-import { Icons } from '../../components/icons/icons';
+import { Icons } from '../../components/icons';
 import DatePickerInput from '../../components/common/DatePickerInput';
 import PersonSearchField from '../../components/common/PersonSearchField';
 import { TAB_BAR_HEIGHT } from "../../constants/theme";

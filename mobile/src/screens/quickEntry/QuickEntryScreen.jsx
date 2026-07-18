@@ -5,7 +5,7 @@ import { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as routinesApi from '../../api/routines';
-import { Icons } from '../../components/icons/icons';
+import { Icons } from '../../components/icons';
 import ScreenHeader from '../../components/layout/ScreenHeader';
 import PendingBillsRow from '../../components/quickEntry/PendingBillsRow';
 import QuickTapRow from '../../components/quickEntry/QuickTapRow';

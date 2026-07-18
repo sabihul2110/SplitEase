@@ -28,7 +28,7 @@ import {
   RADIUS,
   TAB_BAR_HEIGHT,
 } from "../../constants/theme";
-import { Icons } from "../../components/icons/icons";
+import { Icons } from "../../components/icons";
 import AppAlert from "../../components/common/AppAlert";
 import Toast from "../../components/common/Toast";
 

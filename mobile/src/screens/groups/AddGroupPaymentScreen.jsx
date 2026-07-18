@@ -10,7 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import * as settlementsApi from "../../api/settlements";
 import { useAuth } from '../../context/AuthContext';
-import { Icons } from '../../components/icons/icons';
+import { Icons } from '../../components/icons';
 import { TAB_BAR_HEIGHT } from "../../constants/theme";
 import AppAlert from "../../components/common/AppAlert";
 

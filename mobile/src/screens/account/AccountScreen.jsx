@@ -41,7 +41,7 @@ import {
 } from "../../constants/theme";
 import Input from "../../components/common/Input";
 import Button from "../../components/common/Button";
-import { Icons } from "../../components/icons/icons";
+import { Icons } from "../../components/icons";
 import { useOTAUpdate } from "../../hooks/useOTAUpdate";
 import Toast from "../../components/common/Toast";
 import AppAlert from "../../components/common/AppAlert";

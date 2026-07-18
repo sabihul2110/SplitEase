@@ -27,7 +27,7 @@ import {
   SPACING,
   RADIUS,
 } from "../../constants/theme";
-import { Icons } from "../../components/icons/icons";
+import { Icons } from "../../components/icons";
 import { TYPE_ICONS as ENTRY_TYPE_ICONS } from "../../constants/entryTypeIcons";
 import { getExpenseIcon, extractCategoryFromLabel } from "../../constants/categoryIcons";
 import ScreenHeader from "../../components/layout/ScreenHeader";

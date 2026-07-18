@@ -24,7 +24,7 @@ import PersonSearchField from "../../components/common/PersonSearchField";
 import DatePickerInput from "../../components/common/DatePickerInput";
 import Toast from "../../components/common/Toast";
 import { LoadingState } from "../../components/common/Ui";
-import { Icons } from "../../components/icons/icons";
+import { Icons } from "../../components/icons";
 import ScreenHeader from "../../components/layout/ScreenHeader";
 import {
   COLORS,

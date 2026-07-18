@@ -16,7 +16,7 @@ import ScreenHeader from '../../components/layout/ScreenHeader';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import { Avatar } from '../../components/common/Ui';
-import { Icons } from '../../components/icons/icons';
+import { Icons } from '../../components/icons';
 import { ICON_GROUPS } from '../../constants/templateIcons';
 import IconPickerGrid from '../../components/common/IconPickerGrid';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS, TAB_BAR_HEIGHT } from '../../constants/theme';

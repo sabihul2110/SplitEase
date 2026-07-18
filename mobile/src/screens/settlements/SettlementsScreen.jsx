@@ -31,7 +31,7 @@ import {
   TAB_BAR_HEIGHT,
 } from "../../constants/theme";
 import { Avatar, Badge } from "../../components/common/Ui";
-import { Icons } from "../../components/icons/icons";
+import { Icons } from "../../components/icons";
 import ScreenHeader from "../../components/layout/ScreenHeader";
 
 // ── Settlement card ────────────────────────────────────────────────────────

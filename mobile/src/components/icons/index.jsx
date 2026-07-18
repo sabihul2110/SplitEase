@@ -1,7 +1,7 @@
-// SplitEase/mobile/src/components/icons/icons.jsx
+// SplitEase/mobile/src/components/icons/index.jsx
 
 /**
- * icons.jsx — full icon library + metadata maps
+ * index.jsx — full icon library + metadata maps
  *
  * Sections (use cmd+F to navigate):
  *   ── Navigation ──────── dashboard, expenses, groups, settlements, activity, settings, more, bell, back

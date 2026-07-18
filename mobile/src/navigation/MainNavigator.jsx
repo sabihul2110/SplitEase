@@ -6,7 +6,7 @@ import { Platform, View } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { COLORS } from "../constants/theme";
-import { Icons } from "../components/icons/icons";
+import { Icons } from "../components/icons";
 
 // Screens
 import DashboardScreen from "../screens/dashboard/DashboardScreen";

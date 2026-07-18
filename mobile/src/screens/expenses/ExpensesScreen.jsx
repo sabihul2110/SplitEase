@@ -15,14 +15,14 @@ import { useNavigation } from "@react-navigation/native";
 import * as expensesApi from "../../api/expenses";
 import { useAuth } from "../../context/AuthContext";
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS, TAB_BAR_HEIGHT } from "../../constants/theme";
-import { Icons, TYPE_CFG } from "../../components/icons/icons";
+import { Icons, TYPE_CFG } from "../../components/icons";
 import { TYPE_ICONS } from "../../constants/entryTypeIcons";
 import { getExpenseIcon, extractCategoryFromLabel } from "../../constants/categoryIcons";
 import ScreenHeader from "../../components/layout/ScreenHeader";
 import AppAlert from "../../components/common/AppAlert";
 import Toast from "../../components/common/Toast";
 import DatePickerInput from "../../components/common/DatePickerInput";
-import { Icons as IconLib } from "../../components/icons/icons";
+import { Icons as IconLib } from "../../components/icons";
 import BrandIcon from "../../components/icons/BrandIcon";
 
 // ─────────────────────────────────────────────

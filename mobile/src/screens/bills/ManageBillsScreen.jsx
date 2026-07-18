@@ -7,7 +7,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import * as recurringBillsApi from '../../api/recurringBills';
 import ScreenHeader from '../../components/layout/ScreenHeader';
 import { LoadingState, EmptyState } from '../../components/common/Ui';
-import { Icons } from '../../components/icons/icons';
+import { Icons } from '../../components/icons';
 import { TemplateIcon } from '../../constants/templateIcons';
 import AppAlert from '../../components/common/AppAlert';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS, TAB_BAR_HEIGHT } from '../../constants/theme';

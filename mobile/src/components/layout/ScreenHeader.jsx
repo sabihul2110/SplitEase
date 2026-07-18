@@ -6,7 +6,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { COLORS, FONT_SIZE, SPACING } from '../../constants/theme';
-import { Icons } from '../../components/icons/icons';
+import { Icons } from '../../components/icons';
 
 export default function ScreenHeader({
   title,
