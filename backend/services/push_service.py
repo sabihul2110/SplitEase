@@ -12,11 +12,19 @@ break the API response that triggered it.
 """
 
 import logging
+import os
 import httpx
 
 logger = logging.getLogger("splitease.push")
 
 EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send"
+EXPO_ACCESS_TOKEN = os.environ.get("EXPO_ACCESS_TOKEN")
+
+
+def _headers() -> dict:
+    """Only sent if Enhanced Security for Push Notifications is enabled on
+    the Expo project — harmless no-op otherwise."""
+    return {"Authorization": f"Bearer {EXPO_ACCESS_TOKEN}"} if EXPO_ACCESS_TOKEN else {}
 
 
 async def send_push(token: str | None, title: str, body: str, data: dict | None = None) -> None:
@@ -32,7 +40,7 @@ async def send_push(token: str | None, title: str, body: str, data: dict | None 
     }
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
-            resp = await client.post(EXPO_PUSH_URL, json=payload)
+            resp = await client.post(EXPO_PUSH_URL, json=payload, headers=_headers())
             _log_expo_response(resp)
     except Exception as exc:
         logger.warning("Push send error: %s", exc)
@@ -74,7 +82,7 @@ def send_push_sync(token: str | None, title: str, body: str, data: dict | None =
     }
     try:
         with httpx.Client(timeout=5.0) as client:
-            resp = client.post(EXPO_PUSH_URL, json=payload)
+            resp = client.post(EXPO_PUSH_URL, json=payload, headers=_headers())
             _log_expo_response(resp)
     except Exception as exc:
         logger.warning("Push (sync) send error: %s", exc)
