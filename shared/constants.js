@@ -6,16 +6,7 @@
  * USAGE:
  *   Web:    import { COLORS, CATEGORIES } from '../../shared/constants'
  *   Mobile: import { COLORS, CATEGORIES } from '../../shared/constants'
- *
- * NOTE: COLORS here are the raw hex values — no CSS variable syntax.
- * Web: reference these in index.css as CSS vars (already done).
- * Mobile: import and use directly in StyleSheet.
- *
- * INDUSTRY STANDARD NOTE:
- * For a monorepo, shared logic lives in packages/shared or a shared/ folder
- * at the root. Both web and mobile import from it via relative paths or
- * a workspace alias (if using npm/yarn workspaces). This file follows that
- * pattern without requiring a build step.
+
  */
 
 // ── Design tokens ─────────────────────────────────────────────────────────
