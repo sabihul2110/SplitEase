@@ -6,14 +6,10 @@
  */
 
 
-// 🎚️ TOGGLE THIS: Set to 'true' to use laptop's Python backend
-const USE_LOCAL_BACKEND = false; 
-
-export const BASE_URL = (__DEV__ && USE_LOCAL_BACKEND)
-  // ? 'http://192.168.29.115:8000' // home
-  ? 'http://10.187.109.122:8000'
-  : 'https://splitease-4hcc.onrender.com';
-
+// BASE_URL now comes from EXPO_PUBLIC_API_URL, set via mobile/.env,
+// .env.local, or .env.production — see mobile/.env.local for the
+// dev-time toggle and the repo-root TESTING_ENVIRONMENTS.md guide.
+export const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://splitease-4hcc.onrender.com';
 
 export const STORAGE_KEY = 'splitease_user';
 

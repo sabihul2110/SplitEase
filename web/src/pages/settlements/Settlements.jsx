@@ -195,7 +195,7 @@ export default function Settlements() {
                               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                                   <Avatar name={s.from} size={36} />
-                                  <Icons.settlements size={18} style={{ color: "var(--text3)" }} />
+                                  <Icons.settlement size={18} style={{ color: "var(--text3)" }} />
                                   <Avatar name={s.to} size={36} />
                                 </div>
                                 <div style={{ textAlign: "right" }}>

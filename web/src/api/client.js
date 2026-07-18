@@ -3,8 +3,24 @@
 
 import axios from "axios";
 
+function resolveApiBase() {
+  // Runtime override for Scenario 2 (deployed web + local backend) —
+  // lets you point an ALREADY-DEPLOYED build at a different backend
+  // without rebuilding/redeploying, since this code still runs in
+  // the browser regardless of where the HTML/JS was served from.
+  // In browser devtools console on the live site:
+  //   localStorage.setItem('splitease_api_override', 'http://localhost:8000')
+  // then reload. Clear it to go back to the build-time default:
+  //   localStorage.removeItem('splitease_api_override')
+  try {
+    const override = localStorage.getItem('splitease_api_override');
+    if (override) return override;
+  } catch {}
+  return import.meta.env.VITE_API_URL || "https://splitease-4hcc.onrender.com";
+}
+
 const api = axios.create({
-  baseURL: (import.meta.env.VITE_API_URL || "https://splitease-kfda.onrender.com") + "/api/v1",
+  baseURL: resolveApiBase() + "/api/v1",
 });
 
 // ── Request: attach token ─────────────────────────────────────────────────

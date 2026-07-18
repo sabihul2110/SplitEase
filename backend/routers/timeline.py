@@ -16,12 +16,13 @@ from fastapi.responses import StreamingResponse
 
 from repositories import timeline_repository, user_repository
 from services import pdf_service
+from schemas.timeline import TimelineEvent
 from core.dependencies import get_current_user
 
 router = APIRouter()
 
 
-@router.get("/timeline/")
+@router.get("/timeline/", response_model=list[TimelineEvent])
 def get_timeline(
     limit:  int = Query(default=50,  ge=1,  le=200),
     offset: int = Query(default=0,   ge=0),

@@ -1,0 +1,10 @@
+{
+  "//": "SplitEase/package.json — monorepo root, defines npm workspaces linking mobile/, web/, shared/",
+  "name": "splitease",
+  "private": true,
+  "workspaces": [
+    "mobile",
+    "web",
+    "shared"
+  ]
+}
