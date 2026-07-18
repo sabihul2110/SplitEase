@@ -3,13 +3,10 @@
 # =========================
 # ENV / SECRETS
 # =========================
+# .env and .env.* match at ANY depth (no leading slash)
 .env
 .env.*
-backend/.env
-web/.env
-web/.env.production
-web/.env.local
-/.secrets
+.secrets/
 
 # =========================
 # PYTHON
@@ -27,11 +24,9 @@ env/
 # NODE
 # =========================
 node_modules/
-web/node_modules/
 
 # build output
 dist/
-web/dist/
 build/
 
 # =========================
@@ -64,13 +59,21 @@ Thumbs.db
 coverage/
 
 # =========================
-# MISC
+# TREE / STRUCTURE DUMPS
 # =========================
-tree.txt
-SplitEase.txt
-structure.txt
 **/tree.txt
 **/structure.txt
+**/SplitEase.txt
 
+# =========================
+# DOCS (internal notes, not versioned)
+# =========================
 docs/
-.DS_Store
+
+# =========================
+# AI-TOOLING / AGENT SCAFFOLDING
+# (Expo/Claude Code auto-generates these — not app source)
+# =========================
+.claude/
+CLAUDE.md
+AGENTS.md

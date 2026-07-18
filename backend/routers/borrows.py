@@ -13,6 +13,7 @@ from schemas.borrows import BorrowIn, BorrowRepayIn
 
 from repositories import borrow_repository, loan_repository, ledger_notification_repository, notification_repository, push_repository
 from services.push_service import send_push
+from core.push_channels import CHANNEL_LEDGER
 from core.dependencies import get_current_user
 
 router = APIRouter()
@@ -56,6 +57,7 @@ def add_borrow(
         background_tasks.add_task(
             send_push, token, "New Ledger Request", msg,
             {"entry_id": result["entry_id"], "screen": "PendingRequests"},
+            channel_id=CHANNEL_LEDGER,
         )
 
     return {
@@ -101,6 +103,7 @@ def repay_borrow(
             background_tasks.add_task(
                 send_push, token, "Repayment Awaiting Confirmation", msg,
                 {"repayment_id": result.get("repayment_id"), "screen": "PendingRequests"},
+                channel_id=CHANNEL_LEDGER,
             )
         else:
             msg = f"₹{body.repayment_amount:,.0f} repayment recorded on your shared ledger entry."
@@ -112,7 +115,7 @@ def repay_borrow(
                 entry_id     = borrow_id,
             )
             token = push_repository.get_push_token(linked_user_id)
-            background_tasks.add_task(send_push, token, "Repayment Recorded", msg, {"entry_id": borrow_id})
+            background_tasks.add_task(send_push, token, "Repayment Recorded", msg, {"entry_id": borrow_id}, channel_id=CHANNEL_LEDGER)
     return result
 
 

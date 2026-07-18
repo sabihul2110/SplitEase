@@ -7,6 +7,17 @@ import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import client, { getNavigationRef } from '../api/client';
 import { ENDPOINTS } from '../config/api';
+import { COLORS } from '../constants/theme';
+
+// Must match backend/core/push_channels.py channel IDs exactly.
+const CHANNELS = [
+  { id: 'default',     name: 'General',          color: COLORS.primary },
+  { id: 'ledger',      name: 'Loans & Ledger',    color: COLORS.primary },
+  { id: 'reminders',   name: 'Payment Reminders', color: COLORS.warning },
+  { id: 'bills',       name: 'Recurring Bills',   color: COLORS.warning },
+  { id: 'routines',    name: 'Routines',          color: COLORS.primary },
+  { id: 'settlements', name: 'Settlements',       color: COLORS.success },
+];
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -87,12 +98,15 @@ async function registerForPush() {
   if (finalStatus !== 'granted') return;
 
   if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync('default', {
-      name:             'default',
-      importance:       Notifications.AndroidImportance.MAX,
-      vibrationPattern: [0, 250, 250, 250],
-      lightColor:       '#2563eb',
-    });
+    for (const ch of CHANNELS) {
+      await Notifications.setNotificationChannelAsync(ch.id, {
+        name:             ch.name,
+        importance:       Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor:       ch.color,
+        color:            ch.color,
+      });
+    }
   }
 
   try {

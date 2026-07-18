@@ -20,6 +20,7 @@ from repositories import (
     routine_repository, push_repository,
 )
 from services.push_service import send_push_sync
+from core.push_channels import CHANNEL_BILLS, CHANNEL_ROUTINES
 
 IST = timezone(timedelta(hours=5, minutes=30))
 ROUTINE_REMINDER_HOUR_IST = 22  # 10:00 PM IST
@@ -53,6 +54,7 @@ def sweep_generate_for_user(user_id: int, today: date | None = None) -> int:
                 "Bill Due",
                 f"\u2018{bill['name']}\u2019 is due this month \u2014 tap to log it.",
                 {"screen": "QuickEntry", "bill_id": bill["bill_id"]},
+                channel_id=CHANNEL_BILLS,
             )
     return created
 
@@ -104,6 +106,7 @@ def sweep_send_bill_reminders(today: date | None = None) -> int:
             "Bill Overdue" if is_overdue else "Bill Due Soon",
             body,
             {"screen": "QuickEntry", "bill_id": row["pending_id"]},
+            channel_id=CHANNEL_BILLS,
         )
         pending_bill_repository.mark_reminded(row["pending_id"], today)
         sent += 1
@@ -147,6 +150,7 @@ def sweep_send_routine_reminders(now_ist: datetime | None = None) -> int:
             "Routine Reminder",
             f"You haven't run '{row['name']}' today \u2014 log it before you forget.",
             {"screen": "RunRoutine", "routine_id": row["routine_id"]},
+            channel_id=CHANNEL_ROUTINES,
         )
         routine_repository.mark_reminded(row["routine_id"], today)
         sent += 1

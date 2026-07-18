@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, 
 from schemas.people import PersonCreate, EntryCreate, EntryRepay, SettleUpIn
 from repositories import people_repository, push_repository, ledger_notification_repository, notification_repository
 from services.push_service import send_push
+from core.push_channels import CHANNEL_LEDGER
 from core.dependencies import get_current_user
 
 router = APIRouter()
@@ -53,6 +54,7 @@ def settle_up(
         background_tasks.add_task(
             send_push, token, "Settle Up — Confirmation Needed", msg,
             {"request_id": result.get("request_id"), "screen": "PendingRequests"},
+            channel_id=CHANNEL_LEDGER,
         )
         return {
             "message": "Settlement request sent — awaiting their confirmation.",
@@ -74,7 +76,7 @@ def settle_up(
         entry_id     = None,
     )
     token = push_repository.get_push_token(linked_user_id)
-    background_tasks.add_task(send_push, token, "Ledger Settled", msg, {})
+    background_tasks.add_task(send_push, token, "Ledger Settled", msg, {}, channel_id=CHANNEL_LEDGER)
     return {"message": "Settled up.", "settled_amount": amt}
 
 
@@ -112,7 +114,7 @@ def accept_settlement_route(
         entry_id     = None,
     )
     token = push_repository.get_push_token(result["debtor_id"])
-    background_tasks.add_task(send_push, token, "Settlement Confirmed", msg, {})
+    background_tasks.add_task(send_push, token, "Settlement Confirmed", msg, {}, channel_id=CHANNEL_LEDGER)
     return {"message": "Settlement confirmed.", "settled_amount": result["settled_amount"]}
 
 
@@ -137,7 +139,7 @@ def reject_settlement_route(
         entry_id     = None,
     )
     token = push_repository.get_push_token(row["proposed_by"])
-    background_tasks.add_task(send_push, token, "Settlement Declined", msg, {})
+    background_tasks.add_task(send_push, token, "Settlement Declined", msg, {}, channel_id=CHANNEL_LEDGER)
     return {"message": "Settlement declined."}
 
 
@@ -291,7 +293,7 @@ def accept_entry(
     )
     creator_token = push_repository.get_push_token(row["created_by"])
     background_tasks.add_task(
-        send_push, creator_token, "Entry Accepted", msg, {"entry_id": entry_id}
+        send_push, creator_token, "Entry Accepted", msg, {"entry_id": entry_id}, channel_id=CHANNEL_LEDGER
     )
     return {"message": "Entry accepted."}
 
@@ -325,7 +327,7 @@ def reject_entry(
     )
     creator_token = push_repository.get_push_token(row["created_by"])
     background_tasks.add_task(
-        send_push, creator_token, "Entry Rejected", msg, {"entry_id": entry_id}
+        send_push, creator_token, "Entry Rejected", msg, {"entry_id": entry_id}, channel_id=CHANNEL_LEDGER
     )
     return {"message": "Entry rejected."}
 
@@ -365,6 +367,7 @@ def repay_entry(
             background_tasks.add_task(
                 send_push, token, "Repayment Awaiting Confirmation", msg,
                 {"repayment_id": result.get("repayment_id"), "screen": "PendingRequests"},
+                channel_id=CHANNEL_LEDGER,
             )
         else:
             msg = f"₹{body.repayment_amount:,.0f} repayment recorded on your shared ledger entry."
@@ -376,7 +379,7 @@ def repay_entry(
                 entry_id     = entry_id,
             )
             token = push_repository.get_push_token(linked_user_id)
-            background_tasks.add_task(send_push, token, "Repayment Recorded", msg, {"entry_id": entry_id})
+            background_tasks.add_task(send_push, token, "Repayment Recorded", msg, {"entry_id": entry_id}, channel_id=CHANNEL_LEDGER)
     return result
 
 
@@ -417,7 +420,7 @@ def delete_entry(
         )
         other_token = push_repository.get_push_token(linked_user_id)
         background_tasks.add_task(
-            send_push, other_token, "Entry Removed", msg, {}
+            send_push, other_token, "Entry Removed", msg, {}, channel_id=CHANNEL_LEDGER
         )
 
     return {"message": "Entry deleted."}
@@ -504,6 +507,7 @@ def add_entry(
             "New Ledger Request",
             msg,
             {"entry_id": new_id, "screen": "PendingRequests"},
+            channel_id=CHANNEL_LEDGER,
         )
 
     return {"entry_id": new_id, "message": "Entry recorded.", "is_pending": is_pending}

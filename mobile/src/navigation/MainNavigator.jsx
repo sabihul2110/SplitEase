@@ -124,7 +124,7 @@ const MoreStack = createNativeStackNavigator();
 function MoreTabStack() {
   return (
     <MoreStack.Navigator screenOptions={{ headerShown: false }}>
-      <MoreStack.Screen name="MoreHome"      component={MenuScreen} />
+      <MoreStack.Screen name="MoreHome"      component={MoreScreen} />
       <MoreStack.Screen name="Activity"      component={ActivityScreen} />
       <MoreStack.Screen name="Settlements"   component={SettlementsScreen} />
       <MoreStack.Screen name="Settings"      component={SettingsScreen} />

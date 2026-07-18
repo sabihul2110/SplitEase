@@ -22,6 +22,7 @@ from schemas.groups import (
 
 from repositories import group_repository, categories_repository, settlement_repository, notification_repository, push_repository
 from services.push_service import send_push
+from core.push_channels import CHANNEL_REMINDERS
 from core.dependencies import get_current_user, require_admin
 
 router = APIRouter()
@@ -245,5 +246,6 @@ def remind_member(
     background_tasks.add_task(
         send_push, token, "Payment Reminder", msg,
         {"screen": "GroupDetail", "group_id": group_id, "group_name": group_name},
+        channel_id=CHANNEL_REMINDERS,
     )
     return {"message": "Reminder sent."}

@@ -27,16 +27,17 @@ def _headers() -> dict:
     return {"Authorization": f"Bearer {EXPO_ACCESS_TOKEN}"} if EXPO_ACCESS_TOKEN else {}
 
 
-async def send_push(token: str | None, title: str, body: str, data: dict | None = None) -> None:
+async def send_push(token: str | None, title: str, body: str, data: dict | None = None, channel_id: str = "default") -> None:
     """Fire-and-forget. Swallows all errors."""
     if not token or not token.startswith("ExponentPushToken"):
         return
     payload = {
-        "to":    token,
-        "title": title,
-        "body":  body,
-        "sound": "default",
-        "data":  data or {},
+        "to":        token,
+        "title":     title,
+        "body":      body,
+        "sound":     "default",
+        "data":      data or {},
+        "channelId": channel_id,
     }
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
@@ -66,7 +67,7 @@ def _log_expo_response(resp: "httpx.Response") -> None:
             )
 
 
-def send_push_sync(token: str | None, title: str, body: str, data: dict | None = None) -> None:
+def send_push_sync(token: str | None, title: str, body: str, data: dict | None = None, channel_id: str = "default") -> None:
     """Blocking sender for sync (non-async def) route handlers, e.g. the
     pending-bills sweep. Uses a plain blocking httpx.Client — no event loop
     juggling, no silent swallow."""
@@ -74,11 +75,12 @@ def send_push_sync(token: str | None, title: str, body: str, data: dict | None =
         logger.warning("send_push_sync: no/invalid token, skipping.")
         return
     payload = {
-        "to":    token,
-        "title": title,
-        "body":  body,
-        "sound": "default",
-        "data":  data or {},
+        "to":        token,
+        "title":     title,
+        "body":      body,
+        "sound":     "default",
+        "data":      data or {},
+        "channelId": channel_id,
     }
     try:
         with httpx.Client(timeout=5.0) as client:
