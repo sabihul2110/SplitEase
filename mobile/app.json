@@ -19,6 +19,7 @@
         "backgroundColor": "#0d0e14"
       },
       "package": "com.splitease.app",
+      "googleServicesFile": "./google-services.json",
       "softwareKeyboardLayoutMode": "pan"
     },
     "web": {
