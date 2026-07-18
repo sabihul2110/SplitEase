@@ -5,7 +5,7 @@ import {
   View, Text, StyleSheet, TouchableOpacity, Modal,
 } from 'react-native';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SPACING } from '../../constants/theme';
-import { Icons } from '../icons/icons';
+import { Icons } from '../icons';
 
 export default function DatePickerInput({ value, onChange, accentColor }) {
   const accent = accentColor || COLORS.primary;

@@ -21,7 +21,7 @@ import {
   Platform,
 } from "react-native";
 import { COLORS, FONT_SIZE, SPACING, RADIUS, FONT_WEIGHT } from "../../constants/theme";
-import { Icons } from "../icons/icons";
+import { Icons } from "../icons";
 
 export default function Input({
   label,

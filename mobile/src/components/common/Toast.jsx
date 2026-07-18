@@ -17,7 +17,7 @@ import { Animated, Text, View, StyleSheet } from 'react-native';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Icons } from '../icons/icons';
+import { Icons } from '../icons';
 
 const AnimatedBlurView = Animated.createAnimatedComponent(BlurView);
 

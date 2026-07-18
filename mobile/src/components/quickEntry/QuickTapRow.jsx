@@ -6,7 +6,7 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 import * as quickTemplatesApi from '../../api/quickTemplates';
 import { TemplateIcon } from '../../constants/templateIcons';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SPACING } from '../../constants/theme';
-import { Icons } from '../icons/icons';
+import { Icons } from '../icons';
 import EntrySheet from './EntrySheet';
 
 export default function QuickTapRow({ embedded = false }) {

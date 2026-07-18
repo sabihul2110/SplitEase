@@ -6,7 +6,7 @@ import {
   View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator,
 } from 'react-native';
 import * as peopleApi from '../../api/people';
-import { Icons } from '../icons/icons';
+import { Icons } from '../icons';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SPACING } from '../../constants/theme';
 
 // Shared "search registered users / add custom person" field.

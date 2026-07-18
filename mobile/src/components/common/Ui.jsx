@@ -15,7 +15,7 @@ import {
   View, Text, StyleSheet, ActivityIndicator, TouchableOpacity,
 } from 'react-native';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS } from '../../constants/theme';
-import { Icons } from '../icons/icons';
+import { Icons } from '../icons';
 
 // ── Card ──────────────────────────────────────────────────────────────────
 export function Card({ children, style, onPress, padding = true }) {
