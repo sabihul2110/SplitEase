@@ -202,7 +202,9 @@ export default function EditRoutineScreen() {
           <View style={styles.field}>
             <Text style={styles.label}>ADD TEMPLATES TO THIS ROUTINE</Text>
             {allTemplates.length === 0 ? (
-              <Text style={styles.hint}>No templates yet — create Quick Templates first, then bundle them here.</Text>
+              <TouchableOpacity style={styles.emptyTplBox} onPress={() => navigation.navigate('EditTemplate')}>
+                <Text style={styles.hint}>No templates yet — tap to create one first, then come back to bundle it here.</Text>
+              </TouchableOpacity>
             ) : (
               <View style={styles.chipsRow}>
                 {allTemplates.filter((t) => !isSelected(t.template_id)).map((t) => (
@@ -276,5 +278,9 @@ const styles = StyleSheet.create({
   },
   addTplChipText: { fontSize: FONT_SIZE.sm, color: COLORS.text2 },
   hint: { fontSize: FONT_SIZE.xs, color: COLORS.text3 },
+  emptyTplBox: {
+    padding: SPACING.md, backgroundColor: COLORS.surface2, borderRadius: RADIUS.lg,
+    borderWidth: 1, borderColor: COLORS.border, borderStyle: 'dashed',
+  },
   err: { fontSize: FONT_SIZE.sm, color: COLORS.danger },
 });

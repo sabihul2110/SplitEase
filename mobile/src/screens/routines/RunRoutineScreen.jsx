@@ -74,6 +74,21 @@ export default function RunRoutineScreen() {
 
   if (loading || !routine) return <LoadingState label="Loading routine…" />;
 
+  if (routine.items.length === 0) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+        <ScreenHeader title={routine.name} showBack />
+        <View style={styles.resultWrap}>
+          <Text style={styles.resultTitle}>No templates left in this routine</Text>
+          <Text style={styles.emptyBodyText}>
+            Every template in "{routine.name}" has been deleted. Edit the routine to add templates back, or delete it.
+          </Text>
+          <Button title="Edit Routine" onPress={() => navigation.replace('EditRoutine', { routine })} fullWidth size="lg" />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   const includedCount = Object.values(state).filter((s) => s.include).length;
 
   if (result) {
@@ -193,6 +208,7 @@ const styles = StyleSheet.create({
   },
   resultWrap: { padding: SPACING.lg, gap: SPACING.md },
   resultTitle: { fontSize: FONT_SIZE.lg, fontWeight: FONT_WEIGHT.bold, color: COLORS.text },
+  emptyBodyText: { fontSize: FONT_SIZE.sm, color: COLORS.text3, lineHeight: 19 },
   errBox: { backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: RADIUS.md, padding: SPACING.md, gap: 4 },
   errLine: { fontSize: FONT_SIZE.sm, color: COLORS.danger },
 });

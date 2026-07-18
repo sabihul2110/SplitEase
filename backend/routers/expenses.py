@@ -7,11 +7,6 @@ GET    /expenses/{group_id}/{exp_id}/splits    → splits for one expense
 POST   /expenses/{group_id}                    → add expense
 DELETE /expenses/{expense_id}                  → delete expense (Batch 1 fix retained)
 
-FIX #10: list_expenses now allows admins to see expenses for ANY group,
-          even ones they are not a member of.
-          Previously the DB query's sub-SELECT filtered by membership,
-          so admins got an empty list for groups they hadn't joined.
-          AdminTransactions was silently missing data as a result.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status

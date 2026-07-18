@@ -579,16 +579,17 @@ export default function ExpensesScreen() {
       return;
     }
     setDeleting(entry.ref_id);
+    const snapshot = entries;
+    setEntries((prev) => prev.filter((e) => !(e.type === entry.type && e.ref_id === entry.ref_id)));
     try {
       if (entry.type === "personal_expense") await expensesApi.deletePersonalExpense(entry.ref_id);
       else if (entry.type === "income")      await expensesApi.deleteIncome(entry.ref_id);
       else if (entry.type === "loan_given")  await expensesApi.deleteLoan(entry.ref_id);
       else if (entry.type === "loan_taken")  await expensesApi.deleteBorrow(entry.ref_id);
 
-      showToast("Deleted"); 
-
-      await load();
+      showToast("Deleted");
     } catch (err) {
+      setEntries(snapshot); // rollback
       setAlertConfig({
         title: "Delete Failed",
         message: err?.response?.data?.detail || err.message || "An unexpected error occurred while deleting.",
