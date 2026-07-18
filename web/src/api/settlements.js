@@ -1,13 +1,14 @@
 // SplitEase/web/src/api/settlements.js
 
 import api from "./client.js";
+import { ENDPOINTS } from "../config/api";
 
-export const getSettlements     = (groupId) => api.get(`/settlements/${groupId}`);
-export const getSimplified      = (groupId) => api.get(`/settlements/${groupId}/simplified`);
-export const getSettlementsBulk = (groupIds) => api.post("/settlements/bulk", { group_ids: groupIds });
+export const getSettlements     = (groupId) => api.get(ENDPOINTS.settlementsRaw(groupId));
+export const getSimplified      = (groupId) => api.get(ENDPOINTS.settlementsSimplified(groupId));
+export const getSettlementsBulk = (groupIds) => api.post(ENDPOINTS.settlementsBulk, { group_ids: groupIds });
 export const getPendingSplits   = (groupId, debtorId, creditorId) =>
-  api.get(`/payments/pending-splits/${groupId}?debtor_id=${debtorId}&creditor_id=${creditorId}`);
+  api.get(ENDPOINTS.pendingSplits(groupId, debtorId, creditorId));
 
-export const getPayments   = (groupId) => api.get(`/payments/${groupId}`);
-export const addPayment    = (groupId, data) => api.post(`/payments/${groupId}`, data);
-export const deletePayment = (id) => api.delete(`/payments/${id}`);
+export const getPayments   = (groupId) => api.get(ENDPOINTS.payments(groupId));
+export const addPayment    = (groupId, data) => api.post(ENDPOINTS.addPayment(groupId), data);
+export const deletePayment = (id) => api.delete(ENDPOINTS.delPayment(id));

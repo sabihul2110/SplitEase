@@ -1,18 +1,19 @@
 // SplitEase/web/src/api/groups.js
 
 import api from "./client.js";
+import { ENDPOINTS } from "../config/api";
 
-export const getGroups      = () => api.get("/groups/");
-export const getAllGroups   = () => api.get("/groups/all");
-export const wipeAllGroups  = () => api.delete("/groups/admin/wipe-groups");
-export const getUsers       = () => api.get("/users/");
-export const createGroup    = (data) => api.post("/groups/", data);
-export const deleteGroup    = (id, force=false) => api.delete(`/groups/${id}${force?"?force=true":""}`);
-export const getMembers     = (id) => api.get(`/groups/${id}/members`);
-export const leaveGroup     = (groupId, userId) => api.delete(`/groups/${groupId}/members/${userId}`);
-export const generateInvite = (id) => api.post(`/groups/${id}/invite`);
-export const remindMember   = (id, data) => api.post(`/groups/${id}/remind`, data);
-export const getMembersBulk = (ids) => api.post("/groups/members-bulk", { group_ids: ids });
-export const getHasExpenses = (ids) => api.post("/groups/has-expenses-bulk", { group_ids: ids });
-export const getInviteInfo  = (token) => api.get(`/invite/${token}`);
-export const joinInvite     = (token) => api.post(`/invite/${token}/join`);
+export const getGroups      = () => api.get(ENDPOINTS.groups);
+export const getAllGroups   = () => api.get("/groups/all"); // admin-only, not in shared (rare path, kept local)
+export const wipeAllGroups  = () => api.delete("/groups/admin/wipe-groups"); // admin-only, kept local
+export const getUsers       = () => api.get(ENDPOINTS.users);
+export const createGroup    = (data) => api.post(ENDPOINTS.createGroup, data);
+export const deleteGroup    = (id, force=false) => api.delete(`${ENDPOINTS.deleteGroup(id)}${force?"?force=true":""}`);
+export const getMembers     = (id) => api.get(ENDPOINTS.groupMembers(id));
+export const leaveGroup     = (groupId, userId) => api.delete(ENDPOINTS.leaveGroup(groupId, userId));
+export const generateInvite = (id) => api.post(ENDPOINTS.generateInvite(id));
+export const remindMember   = (id, data) => api.post(ENDPOINTS.remind(id), data);
+export const getMembersBulk = (ids) => api.post(ENDPOINTS.membersBulk, { group_ids: ids });
+export const getHasExpenses = (ids) => api.post(ENDPOINTS.hasExpensesBulk, { group_ids: ids });
+export const getInviteInfo  = (token) => api.get(ENDPOINTS.inviteInfo(token));
+export const joinInvite     = (token) => api.post(ENDPOINTS.joinInvite(token));

@@ -2,10 +2,11 @@
 
 
 import api from "./client.js";
+import { ENDPOINTS } from "../config/api";
 
-export const getNotificationCount    = ()           => api.get("/notifications/unread-count");
-export const getNotifications        = (limit, offset) => api.get(`/notifications/?limit=${limit}&offset=${offset}`);
-export const markRead                = (id)         => api.post(`/notifications/read/${id}`);
-export const markAllRead             = ()           => api.post("/notifications/read-all");
-export const deleteNotification      = (id)         => api.delete(`/notifications/${id}`);
-export const deleteReadNotifications = ()           => api.delete("/notifications/read");
+export const getNotificationCount    = ()           => api.get(ENDPOINTS.notifCount);
+export const getNotifications        = (limit, offset) => api.get(`${ENDPOINTS.notifs}?limit=${limit}&offset=${offset}`);
+export const markRead                = (id)         => api.post(ENDPOINTS.readNotif(id));
+export const markAllRead             = ()           => api.post(ENDPOINTS.readAll);
+export const deleteNotification      = (id)         => api.delete(ENDPOINTS.delNotif(id));
+export const deleteReadNotifications = ()           => api.delete(ENDPOINTS.delReadNotifs);

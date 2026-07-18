@@ -220,6 +220,12 @@ export function isValidAmount(value) {
   return !isNaN(n) && n > 0;
 }
 
+// endpoints.js is a separate file for organization, but shared/package.json's
+// "main" field points only at this file (constants.js) — so anything in
+// endpoints.js needs to be re-exported here to actually be reachable via
+// `import { ... } from '@splitease/shared'`.
+export * from './endpoints.js';
+
 
 // ── Brand icons (Simple Icons CDN — cdn.simpleicons.org) ──────────────────
 // Pure data only. Rendering differs per platform: mobile uses SvgUri

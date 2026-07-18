@@ -1,9 +1,8 @@
 // SplitEase/mobile/src/api/pendingBills.js
 
 import client from './client';
+import { ENDPOINTS } from '../config/api';
 
-const BASE = '/api/v1/pending-bills';
-
-export const getPendingBills    = ()            => client.get(`${BASE}/`);
-export const payPendingBill     = (id, payload) => client.post(`${BASE}/${id}/pay`, payload);
-export const dismissPendingBill = (id)          => client.post(`${BASE}/${id}/dismiss`);
+export const getPendingBills    = ()            => client.get(ENDPOINTS.pendingBills);
+export const payPendingBill     = (id, payload) => client.post(ENDPOINTS.pendingBillPay(id), payload);
+export const dismissPendingBill = (id)          => client.post(ENDPOINTS.pendingBillDismiss(id));

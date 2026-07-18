@@ -2,9 +2,10 @@
 
 
 import api from "./client.js";
+import { ENDPOINTS } from "../config/api";
 
-export const getLedgerNotifs   = () => api.get("/ledger-notifications/");
-export const getLedgerUnread   = () => api.get("/ledger-notifications/unread-count");
-export const markLedgerRead    = (id) => api.post(`/ledger-notifications/${id}/read`);
-export const markAllLedgerRead = () => api.post("/ledger-notifications/read-all");
-export const markCategoryRead  = (category) => api.post(`/ledger-notifications/read-category/${category}`);
+export const getLedgerNotifs   = () => api.get(ENDPOINTS.ledgerNotifs);
+export const getLedgerUnread   = () => api.get(ENDPOINTS.ledgerUnreadCount);
+export const markLedgerRead    = (id) => api.post(ENDPOINTS.ledgerNotifRead(id));
+export const markAllLedgerRead = () => api.post(ENDPOINTS.ledgerNotifReadAll);
+export const markCategoryRead  = (category) => api.post(ENDPOINTS.ledgerNotifReadCategory(category));

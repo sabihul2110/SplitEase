@@ -2,12 +2,13 @@
 
 
 import api from "./client.js";
+import { ENDPOINTS } from "../config/api";
 
-export const login         = (data)  => api.post("/auth/login", data);
-export const signup        = (data)  => api.post("/auth/signup", data);
-export const forgotPassword = (email) => api.post("/auth/forgot-password", { email });
-export const verifyEmail        = (token) => api.post("/auth/verify-email",        { token });
-export const resendVerification = ()      => api.post("/auth/resend-verification");
-export const resetPassword = (data)  => api.post("/auth/reset-password", data);
-export const getMe         = ()      => api.get("/auth/me");
-export const changePassword = (data) => api.post("/auth/change-password", data);
+export const login         = (data)  => api.post(ENDPOINTS.login, data);
+export const signup        = (data)  => api.post(ENDPOINTS.signup, data);
+export const forgotPassword = (email) => api.post(ENDPOINTS.forgotPassword, { email });
+export const verifyEmail        = (token) => api.post(ENDPOINTS.verifyEmail,        { token });
+export const resendVerification = ()      => api.post(ENDPOINTS.resendVerification);
+export const resetPassword = (data)  => api.post(ENDPOINTS.resetPassword, data);
+export const getMe         = ()      => api.get(ENDPOINTS.me);
+export const changePassword = (data) => api.post(ENDPOINTS.changePass, data);
