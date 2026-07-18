@@ -1,6 +1,6 @@
 // --- web/vite.config.js ---
 
-import { defineConfig } from 'vite'
+import { defineConfig, searchForWorkspaceRoot } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
@@ -9,4 +9,9 @@ export default defineConfig({
     tailwindcss(),
     react(),
   ],
+  server: {
+    fs: {
+      allow: [searchForWorkspaceRoot(process.cwd())],
+    },
+  },
 })
