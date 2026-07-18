@@ -1028,7 +1028,7 @@ export default function GroupDetailScreen() {
             members={members}
             onEdit={async (exp) => {
               try {
-                const { data } = await expensesApi.getExpenseSplits(exp.expense_id);
+                const { data } = await expensesApi.getExpenseSplits(groupId, exp.expense_id);
                 navigation.navigate('AddExpense', {
                   groupId, groupName, members,
                   editExpense: { ...exp, splits: data || [] },

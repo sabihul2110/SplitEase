@@ -7,7 +7,7 @@ export const addExpense          = (groupId, data) => api.post(`/expenses/${grou
 export const editExpense         = (id, data) => api.put(`/expenses/${id}`, data);
 export const deleteExpense       = (id) => api.delete(`/expenses/${id}`);
 export const getSettlementStatus = (groupId) => api.get(`/expenses/${groupId}/settlement-status`);
-export const getExpenseSplits    = (id) => api.get(`/expenses/${id}/splits`);
+export const getExpenseSplits    = (groupId, expenseId) => api.get(`/expenses/${groupId}/${expenseId}/splits`);
 export const getCategories       = () => api.get("/groups/categories");
 export const getSubcategories    = (catId) => api.get(`/groups/subcategories/${catId}`);
 
