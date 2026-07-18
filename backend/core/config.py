@@ -81,6 +81,7 @@ DB_CONFIG: dict = {
     "database":           settings.DB_NAME,
     "ssl_disabled":       settings.DB_SSL_DISABLED,
     "connection_timeout": 30,
+    "use_pure":           False,
 }
 
 JWT_SECRET:         str = settings.JWT_SECRET
