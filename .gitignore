@@ -25,6 +25,14 @@ env/
 # =========================
 node_modules/
 
+# Root lockfile intentionally NOT committed — a lockfile generated on
+# one platform (macOS/arm64) can cause npm to silently skip installing
+# a different platform's required optional native binary (a known npm
+# bug: github.com/npm/cli/issues/4828), which is exactly what broke
+# Vercel's Linux build here. Each environment now generates its own
+# fresh, platform-correct lockfile at install time.
+package-lock.json
+
 # build output
 dist/
 build/
