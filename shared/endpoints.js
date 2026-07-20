@@ -23,6 +23,8 @@ export const ENDPOINT_PATHS = {
   groups:            '/groups/',
   groupMembers:      (id) => `/groups/${id}/members`,
   createGroup:       '/groups/',
+  allGroups:         '/groups/all',
+  wipeAllGroups:     '/groups/admin/wipe-groups',
   categories:        '/groups/categories',
   subcategories:     (catId) => `/groups/subcategories/${catId}`,
   membersBulk:       '/groups/members-bulk',
