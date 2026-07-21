@@ -1,5 +1,5 @@
 # backend/repositories/user_repository.py
-from core.database import get_connection
+from core.database import get_connection, get_db
 
 
 def fetch_users() -> list[dict]:
@@ -268,6 +268,8 @@ def admin_wipe_app(admin_user_id: int) -> dict:
             conn.start_transaction()
             cur.execute("DELETE FROM Notifications")
             cur.execute("DELETE FROM Ledger_Notifications")
+            cur.execute("DELETE FROM Ledger_Repayments")
+            cur.execute("DELETE FROM Ledger_Settlement_Requests")
             cur.execute("DELETE FROM Invites")
             cur.execute("DELETE FROM PasswordResetTokens")
             cur.execute("DELETE FROM EmailVerificationTokens")
@@ -275,6 +277,9 @@ def admin_wipe_app(admin_user_id: int) -> dict:
             cur.execute("DELETE FROM Payments")
             cur.execute("DELETE FROM Expense_Splits")
             cur.execute("DELETE FROM Expenses")
+            cur.execute("DELETE FROM Pending_Bills")
+            cur.execute("DELETE FROM Recurring_Bills")
+            cur.execute("DELETE FROM Quick_Templates")
             cur.execute("DELETE FROM Group_Members")
             cur.execute("DELETE FROM `Groups`")
             cur.execute("DELETE FROM Personal_Expenses")
@@ -298,6 +303,7 @@ def admin_wipe_app(admin_user_id: int) -> dict:
                 "Payments", "Payment_Allocations", "Invites", "Notifications", "Ledger_Notifications",
                 "Personal_Expenses", "Income", "Loans", "Borrows",
                 "Ledger_Entries", "People", "Ledger_Repayments", "Ledger_Settlement_Requests",
+                "Quick_Templates", "Recurring_Bills", "Pending_Bills",
                 "PasswordResetTokens", "EmailVerificationTokens",
             ]
             for table in reset_tables:
