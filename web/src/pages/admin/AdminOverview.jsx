@@ -17,7 +17,7 @@ function AdminWipe() {
     try {
       await adminWipe();
       setStep("done");
-      setTimeout(() => window.location.reload(), 1500); // reload after 1.5s
+      setTimeout(() => { window.location.href = "/"; }, 1500);
     } catch (e) {
       setError(e.response?.data?.detail || "Wipe failed.");
       setStep("error");

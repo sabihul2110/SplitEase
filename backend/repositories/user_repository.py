@@ -119,6 +119,14 @@ def update_user(user_id: int, name: str, email: str, upi_id: str | None = None) 
 
 
 def delete_user(user_id: int) -> None:
+    """
+    Admin-initiated full removal of a user: reuses reset_user_data's
+    cleanup (personal data, group membership, ledger, routines, bills,
+    templates) so admin-delete and self-service reset-my-data can never
+    drift out of sync — one cleanup routine, two entry points — then
+    removes the account row itself.
+    """
+    reset_user_data(user_id)
     conn = get_connection()
     cur  = conn.cursor()
     try:
@@ -242,6 +250,24 @@ def reset_user_data(user_id: int) -> dict:
             # Payments they sent or received
             cur.execute("DELETE FROM Payments WHERE payer_id = %s OR payee_id = %s", (user_id, user_id))
 
+            # Routines — Routine_Runs/Routine_Items (children) before Routines
+            # (parent). Routine_Items also FKs to Quick_Templates, so it must
+            # go before that delete too, below.
+            cur.execute("DELETE FROM Routine_Runs WHERE user_id = %s", (user_id,))
+            cur.execute(
+                "DELETE FROM Routine_Items WHERE routine_id IN (SELECT routine_id FROM Routines WHERE user_id = %s)",
+                (user_id,),
+            )
+            cur.execute("DELETE FROM Routines WHERE user_id = %s", (user_id,))
+
+            # Pending_Bills (child of Recurring_Bills) before Recurring_Bills
+            cur.execute("DELETE FROM Pending_Bills WHERE user_id = %s", (user_id,))
+            cur.execute("DELETE FROM Recurring_Bills WHERE user_id = %s", (user_id,))
+
+            # Quick_Templates last — Routine_Items (deleted above) was the
+            # only thing referencing it
+            cur.execute("DELETE FROM Quick_Templates WHERE user_id = %s", (user_id,))
+
             # Groups where they are the sole member — delete the group
             cur.execute("""
                 DELETE FROM `Groups` WHERE group_id IN (
@@ -277,6 +303,9 @@ def admin_wipe_app(admin_user_id: int) -> dict:
             cur.execute("DELETE FROM Payments")
             cur.execute("DELETE FROM Expense_Splits")
             cur.execute("DELETE FROM Expenses")
+            cur.execute("DELETE FROM Routine_Runs")
+            cur.execute("DELETE FROM Routine_Items")
+            cur.execute("DELETE FROM Routines")
             cur.execute("DELETE FROM Pending_Bills")
             cur.execute("DELETE FROM Recurring_Bills")
             cur.execute("DELETE FROM Quick_Templates")
@@ -304,6 +333,7 @@ def admin_wipe_app(admin_user_id: int) -> dict:
                 "Personal_Expenses", "Income", "Loans", "Borrows",
                 "Ledger_Entries", "People", "Ledger_Repayments", "Ledger_Settlement_Requests",
                 "Quick_Templates", "Recurring_Bills", "Pending_Bills",
+                "Routines", "Routine_Items", "Routine_Runs",
                 "PasswordResetTokens", "EmailVerificationTokens",
             ]
             for table in reset_tables:

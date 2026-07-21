@@ -4,8 +4,8 @@ import api from "./client.js";
 import { ENDPOINTS } from "../config/api";
 
 export const getGroups      = () => api.get(ENDPOINTS.groups);
-export const getAllGroups   = () => api.get("/groups/all"); // admin-only, not in shared (rare path, kept local)
-export const wipeAllGroups  = () => api.delete("/groups/admin/wipe-groups"); // admin-only, kept local
+export const getAllGroups   = () => api.get(ENDPOINTS.allGroups);
+export const wipeAllGroups  = () => api.delete(ENDPOINTS.wipeAllGroups);
 export const getUsers       = () => api.get(ENDPOINTS.users);
 export const createGroup    = (data) => api.post(ENDPOINTS.createGroup, data);
 export const deleteGroup    = (id, force=false) => api.delete(`${ENDPOINTS.deleteGroup(id)}${force?"?force=true":""}`);

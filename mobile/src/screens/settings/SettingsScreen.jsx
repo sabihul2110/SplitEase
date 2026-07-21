@@ -244,6 +244,25 @@ export default function SettingsScreen() {
           />
         </Group>
 
+        {/* ── Admin (only visible to admin accounts) ── */}
+        {user?.role === 'admin' && (
+          <>
+            <SectionLabel title="ADMIN" />
+            <Group>
+              <Row
+                icon={Icons.info}
+                iconBg="rgba(37,99,235,0.12)"
+                iconColor={COLORS.primaryH}
+                label="Admin Panel"
+                sub="Users, groups, transactions, danger zone"
+                onPress={() => navigation.navigate('AdminOverview')}
+                last
+              />
+            </Group>
+          </>
+        )}
+
+
         {/* ── Account links ── */}
         <SectionLabel title="ACCOUNT" />
         <Group>

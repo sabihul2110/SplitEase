@@ -19,6 +19,14 @@ import ResetPasswordScreen  from '../screens/auth/ResetPasswordScreen';
 // Main navigator (tabs + nested stacks)
 import MainNavigator  from './MainNavigator';
 
+// Admin screens — top-level, sibling to Main, reachable via
+// navigation.navigate('AdminOverview') from any nested screen (React
+// Navigation bubbles unresolved screen names up to ancestor navigators)
+import AdminOverviewScreen from '../screens/admin/AdminOverviewScreen';
+import AdminUsersScreen from '../screens/admin/AdminUsersScreen';
+import AdminGroupsScreen from '../screens/admin/AdminGroupsScreen';
+import AdminTransactionsScreen from '../screens/admin/AdminTransactionsScreen';
+
 const Stack = createNativeStackNavigator();
 
 // Custom nav theme — keeps backgrounds dark everywhere
@@ -49,7 +57,13 @@ export default function RootNavigator() {
           <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} />
         ) : user ? (
           // Fully authenticated
-          <Stack.Screen name="Main" component={MainNavigator} />
+          <Stack.Group>
+            <Stack.Screen name="Main" component={MainNavigator} />
+            <Stack.Screen name="AdminOverview" component={AdminOverviewScreen} />
+            <Stack.Screen name="AdminUsers" component={AdminUsersScreen} />
+            <Stack.Screen name="AdminGroups" component={AdminGroupsScreen} />
+            <Stack.Screen name="AdminTransactions" component={AdminTransactionsScreen} />
+          </Stack.Group>
         ) : (
           // Not logged in
           <Stack.Group>
