@@ -14,6 +14,8 @@ export const getExpenseSplits = (groupId, expenseId) =>
   client.get(ENDPOINTS.expenseSplits(groupId, expenseId));
 export const getTimeline    = (limit = 200)  =>
   client.get(`${ENDPOINTS.timeline}?limit=${limit}`);
+
+export const getFinancialSummary = () => client.get(`${ENDPOINTS.timeline}summary`);
 export const downloadStatement = (startDate, endDate, label, periodType = 'range') => {
   const qs = new URLSearchParams();
   if (startDate) qs.set('start_date', startDate);

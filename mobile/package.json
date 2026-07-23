@@ -6,7 +6,9 @@
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "dev:build": "APP_VARIANT=development npx expo prebuild --clean --platform android && npx expo run:android",
+    "dev:start": "APP_VARIANT=development npx expo start --dev-client"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",

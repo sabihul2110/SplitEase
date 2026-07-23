@@ -26,7 +26,7 @@ import { Icons as IconLib } from "../../components/icons";
 import BrandIcon from "../../components/icons/BrandIcon";
 
 // ─────────────────────────────────────────────
-//  Helpers (identical logic to web)
+//  Helpers
 // ─────────────────────────────────────────────
 
 function todayStr() {
@@ -126,7 +126,7 @@ function SummaryCard({ label, value, color, sub, loading }) {
 }
 
 // ─────────────────────────────────────────────
-//  Month Navigator (With Picker Modal)
+//  Month Navigator
 // ─────────────────────────────────────────────
 function MonthNavigator({ value, onChange, availableMonths }) {
   const [showPicker, setShowPicker] = useState(false);
@@ -284,7 +284,7 @@ function InlineRepay({ entry, onSuccess, onToast }) {
       await expensesApi.repayLoan(entry.ref_id, parsed, date);
       setAmt("");
       onToast?.("Repayment recorded");
-      onSuccess(); // onSuccess calls load() which triggers screen refresh
+      onSuccess();
     } catch (ex) {
       setErr(ex?.response?.data?.detail || "Failed.");
     } finally {
@@ -589,7 +589,7 @@ export default function ExpensesScreen() {
 
       showToast("Deleted");
     } catch (err) {
-      setEntries(snapshot); // rollback
+      setEntries(snapshot);
       setAlertConfig({
         title: "Delete Failed",
         message: err?.response?.data?.detail || err.message || "An unexpected error occurred while deleting.",
@@ -601,10 +601,10 @@ export default function ExpensesScreen() {
   }
 
   const sumCards = [
-    { label: "Total Spent",    value: summary.spent,    color: COLORS.danger,  sub: "personal + your group share" },
-    { label: "Money Received", value: summary.received, color: COLORS.success, sub: "income + settlements in"     },
-    { label: "You Are Owed",   value: summary.lent,     color: summary.lent     > 0 ? COLORS.success : COLORS.text2, sub: "group balances + loans" },
-    { label: "You Owe",        value: summary.borrowed, color: summary.borrowed > 0 ? COLORS.danger  : COLORS.text2, sub: "outstanding borrowed"    },
+    { label: "Total Spent",    value: summary.spent,    color: COLORS.danger,  sub: "Personal and Group Share" },
+    { label: "Money Received", value: summary.received, color: COLORS.success, sub: "Income" },
+    { label: "You Are Owed",   value: summary.lent,     color: summary.lent     > 0 ? COLORS.success : COLORS.text2, sub: "Group and Loans" },
+    { label: "You Owe",        value: summary.borrowed, color: summary.borrowed > 0 ? COLORS.danger  : COLORS.text2, sub: "Outstanding Group and Borrows"    },
   ];
 
   const monthDisplayLabel = fmtMonthLabel(selMonth);
@@ -1217,7 +1217,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.xs,
   },
   pickerYearText: {
-    fontSize: 17, // Slightly reduced font
+    fontSize: 17,
     fontWeight: FONT_WEIGHT.bold,
     color: COLORS.text,
   },
@@ -1225,12 +1225,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    gap: SPACING.sm, // Tighter gap between buttons
+    gap: SPACING.sm,
   },
   pickerMonthBtn: {
-    width: '31%', // Ensures tight 3-column fit
+    width: '31%',
     alignItems: 'center',
-    paddingVertical: 10, // Hardcoded tighter height
+    paddingVertical: 10,
     borderRadius: RADIUS.md,
     borderWidth: 1,
     borderColor: 'transparent',
@@ -1243,7 +1243,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
   },
   pickerMonthBtnDisabled: {
-    opacity: 0.3, // Visually fade out future, un-clickable months
+    opacity: 0.3,
   },
   pickerMonthText: {
     fontSize: 13,

@@ -1,32 +1,33 @@
 // SplitEase/mobile/src/screens/dashboard/DashboardScreen.jsx
 
-import React, { useState, useCallback } from "react";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import { useCallback, useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
   FlatList,
-  TouchableOpacity,
-  RefreshControl,
   Image,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import * as expensesApi from "../../api/expenses";
 import * as groupsApi from "../../api/groups";
-import * as settlementsApi from "../../api/settlements";
 import * as notificationsApi from "../../api/notifications";
-import { useAuth } from "../../context/AuthContext";
+import * as settlementsApi from "../../api/settlements";
+import { Avatar, EmptyState, LoadingState } from "../../components/common/Ui";
+import { Icons } from "../../components/icons";
+import { getGroupIcon } from "../../constants/groupIcons";
 import {
   COLORS,
   FONT_SIZE,
   FONT_WEIGHT,
-  SPACING,
   RADIUS,
+  SPACING,
   TAB_BAR_HEIGHT,
 } from "../../constants/theme";
-import { Avatar, LoadingState, EmptyState } from "../../components/common/Ui";
-import { Icons } from "../../components/icons";
-import { getGroupIcon } from "../../constants/groupIcons";
+import { useAuth } from "../../context/AuthContext";
 
 function fmt(n) {
   return Number(n || 0).toLocaleString("en-IN", {
@@ -98,47 +99,31 @@ function TopBar({ initials, unreadCount = 0, onAvatar, onBell }) {
 }
 
 // ── Hero card ──────────────────────────────────────────────────────────────
-function HeroCard({ user, groups, netBalance, owedToYou, youOwe }) {
-  const isPositive = netBalance >= 0;
-  const netColor = isPositive ? COLORS.success : COLORS.danger;
+function HeroCard({ user, groups, accountBalance }) {
+  const isPositive = accountBalance >= 0;
+  const balColor = isPositive ? COLORS.success : COLORS.danger;
   const firstName = user?.name?.split(" ")[0] || "You";
 
   return (
     <View style={styles.hero}>
-      <Text style={styles.heroLabel}>YOUR ACCOUNT</Text>
-      <Text style={styles.heroName}>{firstName}'s SplitEase</Text>
-      <Text style={styles.heroEmail}>{user?.email}</Text>
+      <View style={styles.heroTopRow}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.heroLabel}>YOUR ACCOUNT</Text>
+          <Text style={styles.heroName}>{firstName}'s SplitEase</Text>
+          <Text style={styles.heroEmail}>{user?.email}</Text>
+        </View>
+        <View style={styles.heroGroupsPill}>
+          <Text style={styles.heroGroupsPillText}>
+            {groups.length} group{groups.length !== 1 ? "s" : ""}
+          </Text>
+        </View>
+      </View>
 
-      <View style={styles.heroStats}>
-        <View style={styles.heroStat}>
-          <Text style={[styles.heroStatVal, { color: "#93c5fd" }]}>
-            {groups.length}
-          </Text>
-          <Text style={styles.heroStatLbl}>GROUPS</Text>
-        </View>
-        <View style={styles.heroStat}>
-          <Text style={[styles.heroStatVal, { color: netColor }]}>
-            {isPositive ? "+" : "−"}₹{fmt(Math.abs(netBalance))}
-          </Text>
-          <Text style={styles.heroStatLbl}>NET BALANCE</Text>
-        </View>
-        <View style={styles.heroStat}>
-          <Text style={[styles.heroStatVal, { color: COLORS.success }]}>
-            ₹{fmt(owedToYou)}
-          </Text>
-          <Text style={styles.heroStatLbl}>YOU ARE OWED</Text>
-        </View>
-        <View style={styles.heroStat}>
-          <Text
-            style={[
-              styles.heroStatVal,
-              { color: youOwe > 0 ? COLORS.danger : COLORS.text2 },
-            ]}
-          >
-            ₹{fmt(youOwe)}
-          </Text>
-          <Text style={styles.heroStatLbl}>YOU OWE</Text>
-        </View>
+      <View style={styles.heroBalanceBlock}>
+        <Text style={styles.heroBalanceLabel}>ACCOUNT BALANCE</Text>
+        <Text style={[styles.heroBalanceVal, { color: balColor }]}>
+          {isPositive ? "+" : "−"}₹{fmt(Math.abs(accountBalance))}
+        </Text>
       </View>
     </View>
   );
@@ -213,6 +198,7 @@ export default function DashboardScreen() {
   const [groups, setGroups] = useState([]);
   const [owedToYou, setOwedToYou] = useState(0);
   const [youOwe, setYouOwe] = useState(0);
+  const [accountBalance, setAccountBalance] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -232,12 +218,12 @@ export default function DashboardScreen() {
         const { data: groupList } = await groupsApi.getGroups();
         setGroups(groupList || []);
 
+        let owe = 0,
+          owed = 0;
         if (groupList?.length) {
           const { data: bulkResult } = await settlementsApi.getSettlementsBulk(
             groupList.map((g) => g.group_id),
           );
-          let owe = 0,
-            owed = 0;
           Object.values(bulkResult).forEach((rows) => {
             const myRow = rows.find((s) => s.user_id === user?.user_id);
             if (!myRow) return;
@@ -245,12 +231,19 @@ export default function DashboardScreen() {
             if (net < 0) owe += Math.abs(net);
             if (net > 0) owed += net;
           });
-          setOwedToYou(owed);
-          setYouOwe(owe);
-        } else {
-          setOwedToYou(0);
-          setYouOwe(0);
         }
+
+        try {
+          const { data: summary } = await expensesApi.getFinancialSummary();
+          setAccountBalance(Number(summary?.account_balance || 0));
+          owed += Number(summary?.loans_receivable || 0);
+          owe += Number(summary?.borrows_payable || 0);
+        } catch {
+          setAccountBalance(0);
+        }
+
+        setOwedToYou(owed);
+        setYouOwe(owe);
 
         try {
           const { data: nc } = await notificationsApi.getUnreadCount();
@@ -272,25 +265,7 @@ export default function DashboardScreen() {
     }, [load]),
   );
 
-  const netBalance = owedToYou - youOwe;
-  const isPositive = netBalance >= 0;
-
   if (loading) return <LoadingState label="Loading dashboard…" />;
-
-  const chips = [
-    {
-      label: `${groups.length} active group${groups.length !== 1 ? "s" : ""}`,
-      color: "#3b82f6",
-    },
-    {
-      label: user?.role === "admin" ? "Admin account" : "Member account",
-      color: "#10b981",
-    },
-    {
-      label: `Net balance: ${isPositive ? "+" : "−"}₹${fmt(Math.abs(netBalance))}`,
-      color: isPositive ? "#10b981" : "#ef4444",
-    },
-  ];
 
   return (
     <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
@@ -323,26 +298,12 @@ export default function DashboardScreen() {
               }}
             />
 
-            {/* Status chips */}
-            <View style={styles.chips}>
-              {chips.map((c, i) => (
-                <View key={i} style={styles.chip}>
-                  <View
-                    style={[styles.chipDot, { backgroundColor: c.color }]}
-                  />
-                  <Text style={styles.chipText}>{c.label}</Text>
-                </View>
-              ))}
-            </View>
-
             <View style={styles.grid}>
               {/* Hero */}
               <HeroCard
                 user={user}
                 groups={groups}
-                netBalance={netBalance}
-                owedToYou={owedToYou}
-                youOwe={youOwe}
+                accountBalance={accountBalance}
               />
 
               {/* Mini cards */}
@@ -564,12 +525,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(37,99,235,0.22)",
     padding: SPACING.xl,
-    gap: SPACING.sm,
+    gap: SPACING.md,
     shadowColor: "#2563eb",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 3,
+  },
+  heroTopRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: SPACING.sm,
   },
   heroLabel: {
     fontSize: FONT_SIZE.xs,
@@ -581,24 +548,39 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE["2xl"],
     fontWeight: FONT_WEIGHT.extrabold,
     color: "#93c5fd",
+    marginTop: 2,
   },
-  heroEmail: { fontSize: FONT_SIZE.sm, color: "rgba(147,197,253,0.55)" },
-  heroStats: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: SPACING.lg,
+  heroEmail: { fontSize: FONT_SIZE.sm, color: "rgba(147,197,253,0.55)", marginTop: 2 },
+  heroGroupsPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: RADIUS.full,
+    backgroundColor: "rgba(37,99,235,0.14)",
+    borderWidth: 1,
+    borderColor: "rgba(37,99,235,0.3)",
+  },
+  heroGroupsPillText: {
+    fontSize: FONT_SIZE.xs,
+    fontWeight: FONT_WEIGHT.bold,
+    color: "#93c5fd",
+  },
+  heroBalanceBlock: {
     marginTop: SPACING.sm,
     paddingTop: SPACING.md,
     borderTopWidth: 1,
     borderTopColor: "rgba(37,99,235,0.2)",
+    gap: 4,
   },
-  heroStat: { gap: 3 },
-  heroStatVal: { fontSize: FONT_SIZE.lg, fontWeight: FONT_WEIGHT.extrabold },
-  heroStatLbl: {
-    fontSize: 9,
+  heroBalanceLabel: {
+    fontSize: 10,
     fontWeight: FONT_WEIGHT.bold,
     color: COLORS.text3,
     letterSpacing: 0.8,
+  },
+  heroBalanceVal: {
+    fontSize: FONT_SIZE["4xl"],
+    fontWeight: FONT_WEIGHT.extrabold,
+    letterSpacing: -0.5,
   },
 
   // ── Mini cards ──
