@@ -42,6 +42,20 @@ const ICON_COMPONENTS = {
 
 export { extractCategoryFromLabel };
 
+// Used by AddGroupExpenseScreen.jsx / AddExpenseScreen.jsx for the
+// category-picker chips (icon + color per category name), independent
+// of the per-line-item resolveExpenseIcon() logic above.
+export const CATEGORY_ICONS = {
+  "Travel":        { Icon: Plane,           color: "#3b82f6" },
+  "Accommodation": { Icon: Building2,       color: "#8b5cf6" },
+  "Food & Dining": { Icon: UtensilsCrossed, color: "#f59e0b" },
+  "Activities":    { Icon: Ticket,          color: "#ec4899" },
+  "Utilities":     { Icon: Zap,             color: "#eab308" },
+  "Groceries":     { Icon: ShoppingBasket,  color: "#10b981" },
+  "Shopping":      { Icon: ShoppingBag,     color: "#f97316" },
+  "Transport":     { Icon: Car,             color: "#06b6d4" },
+};
+
 /**
  * Resolves the best icon/color for an expense line item. Same public
  * shape as before this refactor: { brand, color } for brand hits,

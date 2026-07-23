@@ -871,10 +871,12 @@ function CreateGroupModal({ visible, onClose, onCreated }) {
       animationType="slide"
       transparent
       onRequestClose={onClose}
+      statusBarTranslucent
     >
       <KeyboardAvoidingView
         style={modalS.overlay}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 24}
       >
         <TouchableOpacity
           style={StyleSheet.absoluteFill}
@@ -1128,10 +1130,12 @@ function JoinGroupModal({ visible, onClose, onJoined }) {
       animationType="slide"
       transparent
       onRequestClose={onClose}
+      statusBarTranslucent
     >
       <KeyboardAvoidingView
         style={modalS.overlay}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 24}
       >
         <TouchableOpacity
           style={StyleSheet.absoluteFill}

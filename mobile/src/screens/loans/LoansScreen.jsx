@@ -376,10 +376,17 @@ function AddLoanModal({ visible, onClose, isLent, onSuccess }) {
   const IconComp     = isLent ? Icons.sendMoney : Icons.receiveMoney;
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent
+      onRequestClose={onClose}
+      statusBarTranslucent
+    >
       <KeyboardAvoidingView
         style={addStyles.overlay}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 24}
       >
         <TouchableOpacity style={StyleSheet.absoluteFill} onPress={onClose} activeOpacity={1} />
         <View style={addStyles.sheet}>
