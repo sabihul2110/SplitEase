@@ -489,3 +489,100 @@ def fetch_unified_timeline(user_id: int, limit: int = 100, offset: int = 0) -> l
             r["sub"] = f"₹{r['amount']} borrowed"
 
     return rows
+
+
+def fetch_financial_summary(user_id: int) -> dict:
+    """
+    All-time financial position for a user — the "Account Balance" system.
+    Unlike fetch_unified_timeline (paginated, capped at 200 on mobile),
+    every figure here is a server-side SUM over full history, so it's
+    correct regardless of how many events the user has ever logged.
+
+    account_balance: running cash position across every transaction type
+      that actually moves money (income, personal expenses, group expenses
+      you paid in full, settlements sent/received, loans given/taken, and
+      their repayments). group_expense_owed never moves your cash (you
+      haven't paid yet), so it's excluded — matches the mobile TYPE_CFG
+      convention that settlements/repayments affect cash only, never P&L,
+      to avoid double-counting.
+
+    total_income / total_expense: pure P&L, matching the "spent"/"received"
+      buckets already used by ExpensesScreen's computeSummary — expense
+      includes your share of group bills whether you paid or owed it.
+
+    loans_receivable / borrows_payable: outstanding principal on the
+      standalone Loans/Borrows tables (status='active'). Combine these
+      with the existing group-settlement net balances on the client to
+      get the full "You Are Owed" / "You Owe" totals across both systems.
+    """
+    with get_db() as (conn, cur):
+        cur.execute(
+            """
+            SELECT
+                IFNULL((SELECT SUM(amount) FROM Income WHERE user_id = %s), 0)
+                    AS total_income,
+
+                IFNULL((SELECT SUM(amount) FROM Personal_Expenses WHERE user_id = %s), 0)
+              + IFNULL((
+                    SELECT SUM(es.amount_owed)
+                    FROM Expense_Splits es JOIN Expenses e ON e.expense_id = es.expense_id
+                    WHERE e.payer_id = %s
+                ), 0)
+              + IFNULL((
+                    SELECT SUM(es.amount_owed)
+                    FROM Expense_Splits es JOIN Expenses e ON e.expense_id = es.expense_id
+                    WHERE es.user_id = %s AND e.payer_id <> %s
+                ), 0)
+                    AS total_expense,
+
+                (
+                    IFNULL((SELECT SUM(amount) FROM Income WHERE user_id = %s), 0)
+                  - IFNULL((SELECT SUM(amount) FROM Personal_Expenses WHERE user_id = %s), 0)
+                  - IFNULL((SELECT SUM(total_amount) FROM Expenses WHERE payer_id = %s), 0)
+                  + IFNULL((SELECT SUM(amount) FROM Payments WHERE payee_id = %s), 0)
+                  - IFNULL((SELECT SUM(amount) FROM Payments WHERE payer_id = %s), 0)
+                  - IFNULL((
+                        SELECT SUM(le.amount)
+                        FROM Ledger_Entries le JOIN People p ON p.person_id = le.person_id
+                        WHERE p.owner_user_id = %s AND le.direction = 'lent'
+                          AND le.status IN ('active','repaid')
+                    ), 0)
+                  + IFNULL((
+                        SELECT SUM(le.amount)
+                        FROM Ledger_Entries le JOIN People p ON p.person_id = le.person_id
+                        WHERE p.owner_user_id = %s AND le.direction = 'borrowed'
+                          AND le.status IN ('active','repaid')
+                    ), 0)
+                  + IFNULL((
+                        SELECT SUM(lr.amount)
+                        FROM Ledger_Repayments lr
+                        JOIN Ledger_Entries le ON le.entry_id = lr.entry_id
+                        JOIN People p ON p.person_id = le.person_id
+                        WHERE p.owner_user_id = %s AND le.direction = 'lent' AND lr.status = 'accepted'
+                    ), 0)
+                  - IFNULL((
+                        SELECT SUM(lr.amount)
+                        FROM Ledger_Repayments lr
+                        JOIN Ledger_Entries le ON le.entry_id = lr.entry_id
+                        JOIN People p ON p.person_id = le.person_id
+                        WHERE p.owner_user_id = %s AND le.direction = 'borrowed' AND lr.status = 'accepted'
+                    ), 0)
+                )
+                    AS account_balance,
+
+                IFNULL((SELECT SUM(remaining_amount) FROM Loans   WHERE lender_user_id   = %s AND status = 'active'), 0)
+                    AS loans_receivable,
+                IFNULL((SELECT SUM(remaining_amount) FROM Borrows WHERE borrower_user_id = %s AND status = 'active'), 0)
+                    AS borrows_payable
+            """,
+            (user_id,) * 16,
+        )
+        row = cur.fetchone()
+
+    return {
+        "account_balance":  float(row["account_balance"]  or 0),
+        "total_income":     float(row["total_income"]     or 0),
+        "total_expense":    float(row["total_expense"]     or 0),
+        "loans_receivable": float(row["loans_receivable"]  or 0),
+        "borrows_payable":  float(row["borrows_payable"]   or 0),
+    }

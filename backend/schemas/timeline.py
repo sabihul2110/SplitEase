@@ -25,3 +25,16 @@ class TimelineEvent(BaseModel):
     group_name: str | None = None
     category_name: str | None = None
     subcategory_name: str | None = None
+
+
+class FinancialSummary(BaseModel):
+    """
+    All-time financial position — powers the mobile Account Balance /
+    Net Worth card. See timeline_repository.fetch_financial_summary for
+    exactly what each figure includes and excludes.
+    """
+    account_balance:  float
+    total_income:     float
+    total_expense:    float
+    loans_receivable: float
+    borrows_payable:  float

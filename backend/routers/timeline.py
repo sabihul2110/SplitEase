@@ -16,7 +16,7 @@ from fastapi.responses import StreamingResponse
 
 from repositories import timeline_repository, user_repository
 from services import pdf_service
-from schemas.timeline import TimelineEvent
+from schemas.timeline import TimelineEvent, FinancialSummary
 from core.dependencies import get_current_user
 
 router = APIRouter()
@@ -33,6 +33,15 @@ def get_timeline(
         limit=limit,
         offset=offset,
     )
+
+@router.get("/timeline/summary", response_model=FinancialSummary)
+def get_financial_summary(current_user: dict = Depends(get_current_user)):
+    """
+    All-time Account Balance / Income / Expense / Loans-Receivable /
+    Borrows-Payable — server-side SUMs, correct regardless of how much
+    history the user has (unlike the paginated /timeline/ feed).
+    """
+    return timeline_repository.fetch_financial_summary(current_user["user_id"])
 
 
 @router.get("/timeline/statement")
