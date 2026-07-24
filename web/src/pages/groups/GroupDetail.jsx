@@ -444,31 +444,6 @@ export default function GroupDetail() {
           ) : (
             <div className="group-detail-grid">
               <div>
-                {/* My personal balance banner */}
-                {settlements.length > 0 && (() => {
-                  const me = settlements.find(s => s.user_name === user?.name);
-                  if (!me) return null;
-                  const net = Number(me.net_balance);
-                  if (net === 0) return (
-                    <div style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.18)", borderRadius: 8, padding: "12px 16px", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
-                      <Icons.checkSquare size={15} color="var(--success)" />
-                      <span style={{ fontSize: 14, color: "var(--success)", fontWeight: 500 }}>You're all settled up.</span>
-                    </div>
-                  );
-                  if (net > 0) return (
-                    <div style={{ background: "rgba(16,185,129,0.06)", border: "1px solid rgba(16,185,129,0.15)", borderRadius: 8, padding: "12px 16px", marginBottom: 16 }}>
-                      <div style={{ fontSize: 11, color: "var(--text3)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 2 }}>You are owed</div>
-                      <div style={{ fontSize: 22, fontWeight: 800, color: "var(--success)", fontVariantNumeric: "tabular-nums" }}>+₹{Math.abs(net).toLocaleString("en-IN")}</div>
-                    </div>
-                  );
-                  return (
-                    <div style={{ background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.15)", borderRadius: 8, padding: "12px 16px", marginBottom: 16 }}>
-                      <div style={{ fontSize: 11, color: "var(--text3)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 2 }}>You owe</div>
-                      <div style={{ fontSize: 22, fontWeight: 800, color: "var(--danger)", fontVariantNumeric: "tabular-nums" }}>₹{Math.abs(net).toLocaleString("en-IN")}</div>
-                    </div>
-                  );
-                })()}
-
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
                   <div style={{ fontSize: 15, fontWeight: 600 }}>Who pays whom</div>
                   <button className="btn btn-ghost btn-sm" onClick={loadSettlements}>↻ Refresh</button>

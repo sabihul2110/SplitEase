@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
 import { getGroups } from "../../api/groups";
 import { getSettlementsBulk } from "../../api/settlements";
+import { getFinancialSummary } from "../../api/expenses";
 import { Icons } from "../../components/icons";
 import { getGroupIcon } from "../../constants/groupIcons";
 import { useAuth } from "../../context/AuthContext";
@@ -73,9 +74,10 @@ function MiniCard({ label, value, color, sub, icon, iconBg, delay = 0 }) {
     () => localStorage.getItem("verifyBannerDismissed") === "true"
   );
   const navigate  = useNavigate();
-  const [groups,   setGroups]   = useState([]);
-  const [balances, setBalances] = useState({ youOwe: 0, owedToYou: 0 });
-  const [loading,  setLoading]  = useState(true);
+  const [groups,         setGroups]         = useState([]);
+  const [balances,       setBalances]       = useState({ youOwe: 0, owedToYou: 0 });
+  const [accountBalance, setAccountBalance] = useState(0);
+  const [loading,        setLoading]        = useState(true);
 
   useEffect(() => {
     async function load() {
@@ -83,21 +85,30 @@ function MiniCard({ label, value, color, sub, icon, iconBg, delay = 0 }) {
         const { data: groupList } = await getGroups();
         setGroups(groupList || []);
 
+        let youOwe = 0, owedToYou = 0;
         if (groupList?.length) {
           const groupIds = groupList.map(g => g.group_id);
           const { data: bulkResult } = await getSettlementsBulk(groupIds);
 
-          let youOwe = 0, owedToYou = 0;
           Object.values(bulkResult).forEach(rows => {
-            // FIX #9: match by user_id not user_name
             const myRow = rows.find(s => s.user_id === user?.user_id);
             if (!myRow) return;
             const net = Number(myRow.net_balance);
             if (net < 0) youOwe    += Math.abs(net);
             if (net > 0) owedToYou += net;
           });
-          setBalances({ youOwe, owedToYou });
         }
+
+        try {
+          const { data: summary } = await getFinancialSummary();
+          setAccountBalance(Number(summary?.account_balance || 0));
+          owedToYou += Number(summary?.loans_receivable || 0);
+          youOwe    += Number(summary?.borrows_payable  || 0);
+        } catch {
+          setAccountBalance(0);
+        }
+
+        setBalances({ youOwe, owedToYou });
       } finally { setLoading(false); }
     }
     load();
@@ -109,17 +120,11 @@ function MiniCard({ label, value, color, sub, icon, iconBg, delay = 0 }) {
     return () => setPageActions(null);
   }, []);
 
-  const netBalance = balances.owedToYou - balances.youOwe;
-  const isPositive = netBalance >= 0;
+  const isPositive = accountBalance >= 0;
 
   return (
     <>
       <style>{STYLES}</style>
-      <div className="db-insights">
-          <div className="db-chip"><span className="db-chip-dot" style={{ background: "#3b82f6" }} />{groups.length} active group{groups.length !== 1 ? "s" : ""}</div>
-          <div className="db-chip"><span className="db-chip-dot" style={{ background: "#10b981" }} />{user?.role === "admin" ? "Admin account" : "Member account"}</div>
-          <div className="db-chip"><span className="db-chip-dot" style={{ background: isPositive ? "#10b981" : "#ef4444" }} />Net balance: {isPositive ? "+" : "−"}₹{fmt(Math.abs(netBalance))}</div>
-        </div>
 
         {!user?.email_verified && !verifyBannerDismissed && (
           <div style={{
@@ -146,14 +151,27 @@ function MiniCard({ label, value, color, sub, icon, iconBg, delay = 0 }) {
 
         <div className="db-wrap">
           <div className="db-hero">
-            <div className="db-hero-label">Your Account</div>
-            <div className="db-hero-name"> {user?.name?.split(" ")[0]}'s SplitEase</div>
-            <div className="db-hero-sub">{user?.email}</div>
-            <div className="db-hero-stats">
-              <div><div className="db-hero-stat-val" style={{ color: "#93c5fd" }}>{groups.length}</div><div className="db-hero-stat-lbl">Groups</div></div>
-              <div><div className="db-hero-stat-val" style={{ color: isPositive ? "#34d399" : "#f87171" }}>{isPositive ? "+" : "−"}₹{fmt(Math.abs(netBalance))}</div><div className="db-hero-stat-lbl">Net Balance</div></div>
-              <div><div className="db-hero-stat-val" style={{ color: "#34d399" }}>₹{fmt(balances.owedToYou)}</div><div className="db-hero-stat-lbl">You Are Owed</div></div>
-              <div><div className="db-hero-stat-val" style={{ color: balances.youOwe > 0 ? "#f87171" : "var(--text2)" }}>₹{fmt(balances.youOwe)}</div><div className="db-hero-stat-lbl">You Owe</div></div>
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+              <div>
+                <div className="db-hero-label">Your Account</div>
+                <div className="db-hero-name"> {user?.name?.split(" ")[0]}'s SplitEase</div>
+                <div className="db-hero-sub">{user?.email}</div>
+              </div>
+              <div style={{
+                padding: "6px 13px", borderRadius: 20,
+                background: "rgba(37,99,235,0.14)", border: "1px solid rgba(37,99,235,0.3)",
+                fontSize: 12, fontWeight: 700, color: "#93c5fd", whiteSpace: "nowrap",
+              }}>
+                {groups.length} group{groups.length !== 1 ? "s" : ""}
+              </div>
+            </div>
+            <div className="db-hero-stats" style={{ gap: 0 }}>
+              <div>
+                <div className="db-hero-stat-lbl" style={{ marginTop: 0, marginBottom: 4 }}>Account Balance</div>
+                <div className="db-hero-stat-val" style={{ fontSize: 34, color: isPositive ? "#34d399" : "#f87171" }}>
+                  {isPositive ? "+" : "−"}₹{fmt(Math.abs(accountBalance))}
+                </div>
+              </div>
             </div>
           </div>
 

@@ -13,6 +13,7 @@ export const getCategories       = () => api.get(ENDPOINTS.categories);
 export const getSubcategories    = (catId) => api.get(ENDPOINTS.subcategories(catId));
 
 export const getTimeline = (limit = 200) => api.get(`${ENDPOINTS.timeline}?limit=${limit}`);
+export const getFinancialSummary = () => api.get(`${ENDPOINTS.timeline}summary`);
 export const downloadStatement = (startDate, endDate, label, periodType = "range") => {
   const qs = new URLSearchParams();
   if (startDate) qs.set("start_date", startDate);

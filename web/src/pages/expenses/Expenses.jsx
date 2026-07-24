@@ -365,10 +365,18 @@ function computeSummary(entries) {
     const disp = displayAmount(e);
     if (cfg.bucket === "spent")    spent    += disp;
     if (cfg.bucket === "received") received += disp;
-    if (e.type === "group_expense")      net += (e.receivable ?? 0);
-    if (e.type === "group_expense_owed") net -= (e.amount ?? 0);
-    if (e.type === "loan_given")         net += (e.receivable ?? 0);
-    if (e.type === "loan_taken")         net -= (e.receivable ?? 0);
+    if (e.type === "group_expense")          net += (e.receivable ?? 0);
+    if (e.type === "group_expense_owed")     net -= (e.amount ?? 0);
+    if (e.type === "loan_given")             net += (e.receivable ?? 0);
+    if (e.type === "loan_taken")             net -= (e.receivable ?? 0);
+    // Settlements/repayments accrue nothing new (excluded from spent/received
+    // above to avoid double-counting) but they DO cancel out the receivable/
+    // payable that group_expense/group_expense_owed/loans already added —
+    // without this, a paid-off balance keeps showing as owed forever.
+    if (e.type === "settlement_sent")        net += (e.amount ?? 0);
+    if (e.type === "settlement_received")    net -= (e.amount ?? 0);
+    if (e.type === "loan_repayment_paid")    net += (e.amount ?? 0);
+    if (e.type === "loan_repayment_received") net -= (e.amount ?? 0);
   }
   return {
     spent,
@@ -769,7 +777,7 @@ export default function Expenses() {
 
   const sumCards = [
     { label: "Total Spent",    value: summary.spent,    color: "var(--danger)",  sub: "personal + your group share" },
-    { label: "Money Received", value: summary.received, color: "var(--success)", sub: "income + settlements in"     },
+    { label: "Money Received", value: summary.received, color: "var(--success)", sub: "income only — settlements under All" },
     { label: "You Are Owed",   value: summary.lent,     color: summary.lent     > 0 ? "var(--success)" : "var(--text2)", sub: "group balances + loans" },
     { label: "You Owe",        value: summary.borrowed, color: summary.borrowed  > 0 ? "var(--danger)"  : "var(--text2)", sub: "outstanding borrowed"    },
   ];
