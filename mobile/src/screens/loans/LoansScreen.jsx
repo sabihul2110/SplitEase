@@ -719,6 +719,12 @@ export default function LoansScreen({ navigation, route }) {
         : i.status === "repaid",
   );
 
+  const filterCounts = {
+    all: items.length,
+    active: items.filter((i) => i.status === "active" || i.status === "pending").length,
+    repaid: items.filter((i) => i.status === "repaid").length,
+  };
+
   const totalLent = loans.reduce((s, l) => s + (Number(l.amount) || 0), 0);
   const outstandingLent = loans
     .filter((l) => l.status === "active")

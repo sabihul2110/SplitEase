@@ -6,7 +6,7 @@ import { useNavigate, useOutletContext } from "react-router-dom";
 import { getGroups } from "../../api/groups";
 import { getSettlementsBulk } from "../../api/settlements";
 import { getFinancialSummary } from "../../api/expenses";
-import { getLoans, getBorrows } from "../../api/loans";
+import { getPeople } from "../../api/people";
 import { Icons } from "../../components/icons";
 import { getGroupIcon } from "../../constants/groupIcons";
 import { useAuth } from "../../context/AuthContext";
@@ -191,22 +191,18 @@ function MiniCard({ label, value, color, sub, icon, iconBg, delay = 0, breakdown
         }
 
         try {
-          const [{ data: loans }, { data: borrows }] = await Promise.all([getLoans(), getBorrows()]);
-          (loans || [])
-            .filter(l => l.status === "active" && Number(l.remaining_amount) > 0)
-            .forEach(l => owedList.push({
-              label: `Lent to ${l.borrower_name}`,
-              value: Number(l.remaining_amount),
-              onClick: () => navigate("/loans", { state: { initialTab: "lent", highlightId: l.loan_id } }),
-            }));
-          (borrows || [])
-            .filter(b => b.status === "active" && Number(b.remaining_amount) > 0)
-            .forEach(b => oweList.push({
-              label: `Borrowed from ${b.lender_name}`,
-              value: Number(b.remaining_amount),
-              onClick: () => navigate("/loans", { state: { initialTab: "borrowed", highlightId: b.borrow_id } }),
-            }));
-        } catch {}
+          const { data: people } = await getPeople();
+          (people || [])
+            .filter(p => Number(p.net_balance) !== 0)
+            .forEach(p => {
+              const net = Number(p.net_balance);
+              const onClick = () => navigate("/loans", { state: { initialTab: "people", personId: p.person_id } });
+              if (net > 0) owedList.push({ label: `Owed by ${p.display_name}`, value: net, onClick });
+              else         oweList.push({ label: `Owed to ${p.display_name}`, value: Math.abs(net), onClick });
+            });
+        } catch (err) {
+          console.error("Dashboard: getPeople() failed, loan/borrow breakdown rows omitted:", err);
+        }
 
         setBalances({ youOwe, owedToYou });
         setOwedBreakdown(owedList);

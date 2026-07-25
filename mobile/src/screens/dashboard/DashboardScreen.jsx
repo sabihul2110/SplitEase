@@ -17,7 +17,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as expensesApi from "../../api/expenses";
 import * as groupsApi from "../../api/groups";
-import * as loansApi from "../../api/loans";
+import * as peopleApi from "../../api/people";
 import * as notificationsApi from "../../api/notifications";
 import * as settlementsApi from "../../api/settlements";
 
@@ -305,24 +305,22 @@ export default function DashboardScreen() {
         }
 
         try {
-          const [loansRes, borrowsRes] = await Promise.all([
-            loansApi.getLoans(),
-            loansApi.getBorrows(),
-          ]);
-          (loansRes.data || [])
-            .filter((l) => l.status === "active" && Number(l.remaining_amount) > 0)
-            .forEach((l) => owedList.push({
-              label: `Lent to ${l.borrower_name}`,
-              value: Number(l.remaining_amount),
-              onPress: () => navigation.navigate("Loans", { initialTab: "lent", highlightId: l.loan_id }),
-            }));
-          (borrowsRes.data || [])
-            .filter((b) => b.status === "active" && Number(b.remaining_amount) > 0)
-            .forEach((b) => oweList.push({
-              label: `Borrowed from ${b.lender_name}`,
-              value: Number(b.remaining_amount),
-              onPress: () => navigation.navigate("Loans", { initialTab: "borrowed", highlightId: b.borrow_id }),
-            }));
+          const { data: people } = await peopleApi.getPeople();
+          (people || [])
+            .filter((p) => Number(p.net_balance) !== 0)
+            .forEach((p) => {
+              const net = Number(p.net_balance);
+              const goToPerson = () =>
+                navigation.navigate("Loans", {
+                  screen: "PersonLedger",
+                  params: { personId: p.person_id, personName: p.display_name },
+                });
+              if (net > 0) {
+                owedList.push({ label: `Owed by ${p.display_name}`, value: net, onPress: goToPerson });
+              } else {
+                oweList.push({ label: `Owed to ${p.display_name}`, value: Math.abs(net), onPress: goToPerson });
+              }
+            });
         } catch {}
 
         setOwedToYou(owed);

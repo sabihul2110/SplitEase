@@ -31,7 +31,7 @@ function initials(name = "") {
 }
 
 // ── People Ledger tab ─────────────────────────────────────────────────────────
-function PeopleLedger() {
+function PeopleLedger({ initialPersonId } = {}) {
   const [people, setPeople]         = useState([]);
   const [selected, setSelected]     = useState(null);
   const [entries, setEntries]       = useState([]);
@@ -69,6 +69,13 @@ function PeopleLedger() {
 
   useEffect(() => { loadPeople(); }, [loadPeople]);
   useEffect(() => { if (selected) loadEntries(selected); else setEntries([]); }, [selected, loadEntries]);
+
+  // Deep link from Dashboard — select the target person once their row loads.
+  useEffect(() => {
+    if (initialPersonId && !selected && people.some(p => p.person_id === initialPersonId)) {
+      setSelected(initialPersonId);
+    }
+  }, [initialPersonId, people, selected]);
 
   const selectedPerson = people.find(p => p.person_id === selected);
   const net = selectedPerson?.net_balance ?? 0;
@@ -794,6 +801,8 @@ export default function Loans() {
   const { confirm, dialogProps } = useConfirm();
 
  
+  const [deepLinkPersonId, setDeepLinkPersonId] = useState(null);
+
   useEffect(() => {
     if (location.state?.initialTab) {
       setPageTab(location.state.initialTab);
@@ -801,6 +810,9 @@ export default function Loans() {
     }
     if (location.state?.highlightId) {
       setHighlightId(String(location.state.highlightId));
+    }
+    if (location.state?.personId) {
+      setDeepLinkPersonId(location.state.personId);
     }
   }, [location.state]);
 
@@ -915,7 +927,7 @@ export default function Loans() {
       </div>
 
       {/* People Ledger tab */}
-      {pageTab === "people" && <PeopleLedger />}
+      {pageTab === "people" && <PeopleLedger initialPersonId={deepLinkPersonId} />}
       <ConfirmDialog {...dialogProps} />
 
       {/* Lent / Borrowed tabs */}
