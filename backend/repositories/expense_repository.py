@@ -8,7 +8,7 @@ def fetch_group_expenses(group_id: int, user_id: int) -> list[dict]:
     cur.execute(
         """
         SELECT e.expense_id, e.description, e.total_amount, e.split_type,
-               e.expense_date, u.name AS payer_name,
+               e.expense_date, e.created_at, u.name AS payer_name,
                c.category_name, sc.subcategory_name
         FROM   Expenses e
         JOIN   Users u             ON u.user_id         = e.payer_id
@@ -22,6 +22,8 @@ def fetch_group_expenses(group_id: int, user_id: int) -> list[dict]:
     )
     rows = cur.fetchall()
     cur.close(); conn.close()
+    for r in rows:
+        r["created_at"] = str(r["created_at"]) if r.get("created_at") else None
     return rows
 
 
@@ -31,7 +33,7 @@ def fetch_group_expenses_admin(group_id: int) -> list[dict]:
     cur.execute(
         """
         SELECT e.expense_id, e.description, e.total_amount, e.split_type,
-               e.expense_date, u.name AS payer_name,
+               e.expense_date, e.created_at, u.name AS payer_name,
                c.category_name, sc.subcategory_name
         FROM   Expenses e
         JOIN   Users u             ON u.user_id         = e.payer_id
@@ -44,6 +46,8 @@ def fetch_group_expenses_admin(group_id: int) -> list[dict]:
     )
     rows = cur.fetchall()
     cur.close(); conn.close()
+    for r in rows:
+        r["created_at"] = str(r["created_at"]) if r.get("created_at") else None
     return rows
 
 

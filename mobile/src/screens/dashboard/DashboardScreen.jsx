@@ -5,17 +5,28 @@ import { useCallback, useState } from "react";
 import {
   FlatList,
   Image,
+  LayoutAnimation,
+  Platform,
   RefreshControl,
   StyleSheet,
   Text,
   TouchableOpacity,
+  UIManager,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as expensesApi from "../../api/expenses";
 import * as groupsApi from "../../api/groups";
+import * as loansApi from "../../api/loans";
 import * as notificationsApi from "../../api/notifications";
 import * as settlementsApi from "../../api/settlements";
+
+if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
+  const isNewArch = global._IS_FABRIC === true;
+  if (!isNewArch) {
+    UIManager.setLayoutAnimationEnabledExperimental(true);
+  }
+}
 import { Avatar, EmptyState, LoadingState } from "../../components/common/Ui";
 import { Icons } from "../../components/icons";
 import { getGroupIcon } from "../../constants/groupIcons";
@@ -130,12 +141,50 @@ function HeroCard({ user, groups, accountBalance }) {
 }
 
 // ── Mini balance card ──────────────────────────────────────────────────────
-function MiniCard({ label, value, color, sub }) {
+function MiniCard({ label, value, color, sub, breakdown }) {
+  const [expanded, setExpanded] = useState(false);
+  const hasBreakdown = breakdown && breakdown.length > 0;
+
+  function toggle() {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setExpanded((p) => !p);
+  }
+
   return (
     <View style={[styles.miniCard, { borderColor: color + "33" }]}>
       <Text style={styles.miniLabel}>{label}</Text>
       <Text style={[styles.miniVal, { color }]}>₹{fmt(value)}</Text>
-      <Text style={styles.miniSub}>{sub}</Text>
+      <View style={styles.miniSubRow}>
+        <Text style={styles.miniSub}>{sub}</Text>
+        {hasBreakdown && (
+          <TouchableOpacity onPress={toggle} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Text style={styles.miniBreakdownToggle}>
+              {expanded ? "Hide" : "Breakdown"} {expanded ? "▴" : "▾"}
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
+      {hasBreakdown && expanded && (
+        <View style={styles.miniBreakdownList}>
+          {breakdown.map((b, i) => {
+            const Wrapper = b.onPress ? TouchableOpacity : View;
+            return (
+              <Wrapper
+                key={i}
+                onPress={b.onPress}
+                style={styles.miniBreakdownRow}
+                {...(b.onPress ? { activeOpacity: 0.6 } : {})}
+              >
+                <Text style={styles.miniBreakdownLabel} numberOfLines={1}>{b.label}</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                  <Text style={[styles.miniBreakdownVal, { color }]}>₹{fmt(b.value)}</Text>
+                  {b.onPress && <Text style={styles.miniBreakdownChevron}>›</Text>}
+                </View>
+              </Wrapper>
+            );
+          })}
+        </View>
+      )}
     </View>
   );
 }
@@ -199,6 +248,8 @@ export default function DashboardScreen() {
   const [owedToYou, setOwedToYou] = useState(0);
   const [youOwe, setYouOwe] = useState(0);
   const [accountBalance, setAccountBalance] = useState(0);
+  const [owedBreakdown, setOwedBreakdown] = useState([]);
+  const [oweBreakdown, setOweBreakdown] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -220,16 +271,27 @@ export default function DashboardScreen() {
 
         let owe = 0,
           owed = 0;
+        const owedList = [];
+        const oweList = [];
+
         if (groupList?.length) {
           const { data: bulkResult } = await settlementsApi.getSettlementsBulk(
             groupList.map((g) => g.group_id),
           );
-          Object.values(bulkResult).forEach((rows) => {
+          Object.entries(bulkResult).forEach(([gid, rows]) => {
             const myRow = rows.find((s) => s.user_id === user?.user_id);
             if (!myRow) return;
             const net = Number(myRow.net_balance);
-            if (net < 0) owe += Math.abs(net);
-            if (net > 0) owed += net;
+            if (net === 0) return;
+            const g = groupList.find((x) => String(x.group_id) === String(gid));
+            const label = g?.group_name || `Group #${gid}`;
+            const goToGroup = () =>
+              navigation.navigate("Groups", {
+                screen: "GroupDetail",
+                params: { groupId: Number(gid), groupName: label },
+              });
+            if (net < 0) { owe += Math.abs(net); oweList.push({ label, value: Math.abs(net), onPress: goToGroup }); }
+            if (net > 0) { owed += net;          owedList.push({ label, value: net, onPress: goToGroup }); }
           });
         }
 
@@ -242,8 +304,32 @@ export default function DashboardScreen() {
           setAccountBalance(0);
         }
 
+        const goToLoans = () => navigation.navigate("Loans");
+        try {
+          const [loansRes, borrowsRes] = await Promise.all([
+            loansApi.getLoans(),
+            loansApi.getBorrows(),
+          ]);
+          (loansRes.data || [])
+            .filter((l) => l.status === "active" && Number(l.remaining_amount) > 0)
+            .forEach((l) => owedList.push({
+              label: `Lent to ${l.borrower_name}`,
+              value: Number(l.remaining_amount),
+              onPress: goToLoans,
+            }));
+          (borrowsRes.data || [])
+            .filter((b) => b.status === "active" && Number(b.remaining_amount) > 0)
+            .forEach((b) => oweList.push({
+              label: `Borrowed from ${b.lender_name}`,
+              value: Number(b.remaining_amount),
+              onPress: goToLoans,
+            }));
+        } catch {}
+
         setOwedToYou(owed);
         setYouOwe(owe);
+        setOwedBreakdown(owedList);
+        setOweBreakdown(oweList);
 
         try {
           const { data: nc } = await notificationsApi.getUnreadCount();
@@ -314,6 +400,7 @@ export default function DashboardScreen() {
                     value={owedToYou}
                     color={COLORS.success}
                     sub={owedToYou > 0 ? "Pending" : "All clear"}
+                    breakdown={owedBreakdown}
                   />
                 </View>
                 <View style={{ flex: 1 }}>
@@ -322,6 +409,7 @@ export default function DashboardScreen() {
                     value={youOwe}
                     color={youOwe > 0 ? COLORS.danger : COLORS.text2}
                     sub={youOwe > 0 ? "Pending" : "All clear"}
+                    breakdown={oweBreakdown}
                   />
                 </View>
               </View>
@@ -600,6 +688,43 @@ const styles = StyleSheet.create({
   },
   miniVal: { fontSize: FONT_SIZE["3xl"], fontWeight: FONT_WEIGHT.extrabold },
   miniSub: { fontSize: FONT_SIZE.xs, color: COLORS.text3 },
+  miniSubRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 6,
+  },
+  miniBreakdownToggle: {
+    fontSize: 10,
+    fontWeight: FONT_WEIGHT.bold,
+    color: COLORS.text3,
+  },
+  miniBreakdownList: {
+    marginTop: SPACING.sm,
+    paddingTop: SPACING.sm,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    gap: 6,
+  },
+  miniBreakdownRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 6,
+  },
+  miniBreakdownLabel: {
+    flex: 1,
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.text2,
+  },
+  miniBreakdownVal: {
+    fontSize: FONT_SIZE.xs,
+    fontWeight: FONT_WEIGHT.semibold,
+  },
+  miniBreakdownChevron: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.text3,
+  },
 
   // ── Quick actions ──
   quickCard: {

@@ -28,6 +28,7 @@ export default function GroupDetail() {
   const [loading,     setLoading]     = useState(true);
   const [settLoading, setSettLoading] = useState(false);
   const [groupName,   setGroupName]   = useState(`Group #${id}`);
+  const [sortNewestFirst, setSortNewestFirst] = useState(true);
 
   // Invite modal
   const [inviteModal,   setInviteModal]   = useState(false);
@@ -298,6 +299,14 @@ export default function GroupDetail() {
         {/* ── LEDGER ── */}
         {tab === "ledger" && (
           <div className="group-detail-grid">
+            <div>
+              {(expenses.length > 0 || payments.length > 0) && (
+                <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
+                  <button className="btn btn-ghost btn-sm" onClick={() => setSortNewestFirst(v => !v)}>
+                    ⇅ {sortNewestFirst ? "Newest first" : "Oldest first"}
+                  </button>
+                </div>
+              )}
             <div className="card">
               {expenses.length === 0 && payments.length === 0 ? (
                 <div className="empty-state">
@@ -310,9 +319,17 @@ export default function GroupDetail() {
                 </div>
               ) : (() => {
                 const combined = [
-                  ...expenses.map(e => ({ ...e, _type: 'expense', _date: e.expense_date })),
-                  ...payments.map(p => ({ ...p, _type: 'payment', _date: p.payment_date })),
-                ].sort((a, b) => new Date(b._date) - new Date(a._date));
+                  ...expenses.map(e => ({ ...e, _type: 'expense', _date: e.expense_date, _created: e.created_at })),
+                  ...payments.map(p => ({ ...p, _type: 'payment', _date: p.payment_date, _created: p.created_at })),
+                ].sort((a, b) => {
+                  const dir = sortNewestFirst ? 1 : -1;
+                  const dateDiff = (new Date(b._date) - new Date(a._date)) * dir;
+                  if (dateDiff !== 0) return dateDiff;
+                  // Same-day tiebreaker: real creation time, so whichever was
+                  // actually logged most recently wins — not "expenses always
+                  // beat payments" from array-concat order.
+                  return (new Date(b._created || b._date) - new Date(a._created || a._date)) * dir;
+                });
                 return (
                   <div className="table-wrap">
                     <table>
@@ -373,6 +390,7 @@ export default function GroupDetail() {
                   </div>
                 );
               })()}
+            </div>
             </div>
 
             {/* Right panel */}

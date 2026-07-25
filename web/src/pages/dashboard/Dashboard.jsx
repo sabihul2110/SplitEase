@@ -6,6 +6,7 @@ import { useNavigate, useOutletContext } from "react-router-dom";
 import { getGroups } from "../../api/groups";
 import { getSettlementsBulk } from "../../api/settlements";
 import { getFinancialSummary } from "../../api/expenses";
+import { getLoans, getBorrows } from "../../api/loans";
 import { Icons } from "../../components/icons";
 import { getGroupIcon } from "../../constants/groupIcons";
 import { useAuth } from "../../context/AuthContext";
@@ -56,13 +57,62 @@ function fmtShort(dateStr) {
   if (!dateStr) return "";
   return new Date(dateStr).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 }
-function MiniCard({ label, value, color, sub, icon, iconBg, delay = 0 }) {
+function MiniCard({ label, value, color, sub, icon, iconBg, delay = 0, breakdown }) {
+  const [expanded, setExpanded] = useState(false);
+  const hasBreakdown = breakdown && breakdown.length > 0;
   return (
     <div className="db-mini" style={{ animationDelay: `${delay}s`, borderColor: `${color}22` }}>
       <div className="db-mini-icon" style={{ background: iconBg }}>{icon}</div>
       <div className="db-mini-label">{label}</div>
       <div className="db-mini-val" style={{ color }}>{value}</div>
-      <div className="db-mini-sub">{sub}</div>
+      <div className="db-mini-sub" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+        <span>{sub}</span>
+        {hasBreakdown && (
+          <button
+            onClick={() => setExpanded(v => !v)}
+            style={{
+              background: "none", border: "none", cursor: "pointer",
+              color: "var(--text3)", fontSize: 11, fontWeight: 700,
+              padding: 0, display: "flex", alignItems: "center", gap: 4,
+              fontFamily: "inherit",
+            }}
+          >
+            {expanded ? "Hide" : "Breakdown"}
+            <span style={{
+              display: "inline-flex", transform: expanded ? "rotate(180deg)" : "none",
+              transition: "transform 0.15s",
+            }}>▾</span>
+          </button>
+        )}
+      </div>
+      {hasBreakdown && (
+        <div style={{
+          maxHeight: expanded ? 240 : 0,
+          opacity: expanded ? 1 : 0,
+          overflow: "hidden",
+          transition: "max-height 0.22s ease, opacity 0.18s ease, margin-top 0.22s ease",
+          marginTop: expanded ? 12 : 0,
+          paddingTop: expanded ? 10 : 0,
+          borderTop: expanded ? "1px solid var(--border)" : "none",
+          display: "flex", flexDirection: "column", gap: 6,
+        }}>
+          {breakdown.map((b, i) => (
+            <div
+              key={i}
+              onClick={b.onClick}
+              style={{
+                display: "flex", justifyContent: "space-between", fontSize: 12.5,
+                cursor: b.onClick ? "pointer" : "default",
+              }}
+            >
+              <span style={{ color: "var(--text2)" }}>{b.label}</span>
+              <span style={{ color, fontWeight: 600, fontVariantNumeric: "tabular-nums", display: "flex", alignItems: "center", gap: 4 }}>
+                ₹{fmt(b.value)}{b.onClick && "›"}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -77,6 +127,8 @@ function MiniCard({ label, value, color, sub, icon, iconBg, delay = 0 }) {
   const [groups,         setGroups]         = useState([]);
   const [balances,       setBalances]       = useState({ youOwe: 0, owedToYou: 0 });
   const [accountBalance, setAccountBalance] = useState(0);
+  const [owedBreakdown,  setOwedBreakdown]  = useState([]);
+  const [oweBreakdown,   setOweBreakdown]   = useState([]);
   const [loading,        setLoading]        = useState(true);
 
   useEffect(() => {
@@ -86,16 +138,46 @@ function MiniCard({ label, value, color, sub, icon, iconBg, delay = 0 }) {
         setGroups(groupList || []);
 
         let youOwe = 0, owedToYou = 0;
+        const owedList = [], oweList = [];
         if (groupList?.length) {
           const groupIds = groupList.map(g => g.group_id);
           const { data: bulkResult } = await getSettlementsBulk(groupIds);
 
-          Object.values(bulkResult).forEach(rows => {
-            const myRow = rows.find(s => s.user_id === user?.user_id);
+          // Object.entries(bulkResult).forEach(([gid, rows]) => {
+          //   const myRow = rows.find(s => s.user_id === user?.user_id);
+          //   if (!myRow) return;
+          //   const net = Number(myRow.net_balance);
+          //   if (net === 0) return;
+          //   const g = groupList.find(x => String(x.group_id) === String(gid));
+          //   const label = g?.group_name || `Group #${gid}`;
+          //   if (net < 0) { youOwe    += Math.abs(net); oweList.push({ label, value: Math.abs(net) }); }
+          //   if (net > 0) { owedToYou += net;            owedList.push({ label, value: net }); }
+          // });
+
+                    Object.entries(bulkResult).forEach(([gid, rows]) => {
+            // 1. Fallback in case 'rows' isn't an array (prevents .find from crashing)
+            if (!Array.isArray(rows)) return;
+
+            // 2. Wrap in String() to fix int vs string mismatches, and check user.id as a fallback
+            const myRow = rows.find(s => String(s.user_id) === String(user?.user_id || user?.id));
+            
             if (!myRow) return;
+            
             const net = Number(myRow.net_balance);
-            if (net < 0) youOwe    += Math.abs(net);
-            if (net > 0) owedToYou += net;
+            if (net === 0) return;
+            
+            const g = groupList.find(x => String(x.group_id) === String(gid));
+            const label = g?.group_name || `Group #${gid}`;
+            const onClick = () => navigate(`/groups/${gid}`);
+            
+            if (net < 0) { 
+              youOwe += Math.abs(net); 
+              oweList.push({ label, value: Math.abs(net), onClick }); 
+            }
+            if (net > 0) { 
+              owedToYou += net;            
+              owedList.push({ label, value: net, onClick }); 
+            }
           });
         }
 
@@ -108,7 +190,27 @@ function MiniCard({ label, value, color, sub, icon, iconBg, delay = 0 }) {
           setAccountBalance(0);
         }
 
+        try {
+          const [{ data: loans }, { data: borrows }] = await Promise.all([getLoans(), getBorrows()]);
+          (loans || [])
+            .filter(l => l.status === "active" && Number(l.remaining_amount) > 0)
+            .forEach(l => owedList.push({
+              label: `Lent to ${l.borrower_name}`,
+              value: Number(l.remaining_amount),
+              onClick: () => navigate("/loans"),
+            }));
+          (borrows || [])
+            .filter(b => b.status === "active" && Number(b.remaining_amount) > 0)
+            .forEach(b => oweList.push({
+              label: `Borrowed from ${b.lender_name}`,
+              value: Number(b.remaining_amount),
+              onClick: () => navigate("/loans"),
+            }));
+        } catch {}
+
         setBalances({ youOwe, owedToYou });
+        setOwedBreakdown(owedList);
+        setOweBreakdown(oweList);
       } finally { setLoading(false); }
     }
     load();
@@ -176,9 +278,9 @@ function MiniCard({ label, value, color, sub, icon, iconBg, delay = 0 }) {
           </div>
 
           <div className="db-right">
-            <MiniCard label="You Are Owed" value={`₹${fmt(balances.owedToYou)}`} color="#34d399" iconBg="rgba(16,185,129,0.12)" sub={balances.owedToYou > 0 ? "Pending settlements" : "All clear"} delay={0.1}
+            <MiniCard label="You Are Owed" value={`₹${fmt(balances.owedToYou)}`} color="#34d399" iconBg="rgba(16,185,129,0.12)" sub={balances.owedToYou > 0 ? "Pending settlements" : "All clear"} delay={0.1} breakdown={owedBreakdown}
               icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5m0 0-7 7m7-7 7 7"/></svg>} />
-            <MiniCard label="You Owe" value={`₹${fmt(balances.youOwe)}`} color={balances.youOwe > 0 ? "#f87171" : "var(--text2)"} iconBg="rgba(239,68,68,0.12)" sub={balances.youOwe > 0 ? "Pending payments" : "All clear"} delay={0.15}
+            <MiniCard label="You Owe" value={`₹${fmt(balances.youOwe)}`} color={balances.youOwe > 0 ? "#f87171" : "var(--text2)"} iconBg="rgba(239,68,68,0.12)" sub={balances.youOwe > 0 ? "Pending payments" : "All clear"} delay={0.15} breakdown={oweBreakdown}
               icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14m0 0 7-7m-7 7-7-7"/></svg>} />
             <div className="db-mini" style={{ animationDelay: "0.2s" }}>
               <div className="db-mini-label">Quick Actions</div>

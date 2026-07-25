@@ -99,12 +99,13 @@ export const Icons = {
     </svg>
   ),
 
-  income: ({ size = 22, color = "currentColor", ...rest }) => (
+      
+        income: ({ size = 22, color = "currentColor", ...rest }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
       stroke={color} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" {...rest}>
-      <polyline points="12 3 12 15" />
-      <polyline points="7 10 12 15 17 10" />
-      <path d="M4 19 Q12 22 20 19" />
+      <path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-5" />
+      <path d="M12 3v12" />
+      <path d="M8 11l4 4 4-4" />
     </svg>
   ),
 

@@ -7,7 +7,7 @@ def fetch_group_payments(group_id: int, user_id: int) -> list[dict]:
     cur  = conn.cursor(dictionary=True)
     cur.execute(
         """
-        SELECT p.payment_id, p.amount, p.note, p.payment_date,
+        SELECT p.payment_id, p.amount, p.note, p.payment_date, p.created_at,
                payer.name AS payer_name, payee.name AS payee_name
         FROM   Payments p
         JOIN   Users payer ON payer.user_id = p.payer_id
@@ -20,6 +20,8 @@ def fetch_group_payments(group_id: int, user_id: int) -> list[dict]:
     )
     rows = cur.fetchall()
     cur.close(); conn.close()
+    for r in rows:
+        r["created_at"] = str(r["created_at"]) if r.get("created_at") else None
     return rows
 
 
