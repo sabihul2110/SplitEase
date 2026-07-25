@@ -304,7 +304,6 @@ export default function DashboardScreen() {
           setAccountBalance(0);
         }
 
-        const goToLoans = () => navigation.navigate("Loans");
         try {
           const [loansRes, borrowsRes] = await Promise.all([
             loansApi.getLoans(),
@@ -315,14 +314,14 @@ export default function DashboardScreen() {
             .forEach((l) => owedList.push({
               label: `Lent to ${l.borrower_name}`,
               value: Number(l.remaining_amount),
-              onPress: goToLoans,
+              onPress: () => navigation.navigate("Loans", { initialTab: "lent", highlightId: l.loan_id }),
             }));
           (borrowsRes.data || [])
             .filter((b) => b.status === "active" && Number(b.remaining_amount) > 0)
             .forEach((b) => oweList.push({
               label: `Borrowed from ${b.lender_name}`,
               value: Number(b.remaining_amount),
-              onPress: goToLoans,
+              onPress: () => navigation.navigate("Loans", { initialTab: "borrowed", highlightId: b.borrow_id }),
             }));
         } catch {}
 

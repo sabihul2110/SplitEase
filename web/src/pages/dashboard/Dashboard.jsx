@@ -197,14 +197,14 @@ function MiniCard({ label, value, color, sub, icon, iconBg, delay = 0, breakdown
             .forEach(l => owedList.push({
               label: `Lent to ${l.borrower_name}`,
               value: Number(l.remaining_amount),
-              onClick: () => navigate("/loans"),
+              onClick: () => navigate("/loans", { state: { initialTab: "lent", highlightId: l.loan_id } }),
             }));
           (borrows || [])
             .filter(b => b.status === "active" && Number(b.remaining_amount) > 0)
             .forEach(b => oweList.push({
               label: `Borrowed from ${b.lender_name}`,
               value: Number(b.remaining_amount),
-              onClick: () => navigate("/loans"),
+              onClick: () => navigate("/loans", { state: { initialTab: "borrowed", highlightId: b.borrow_id } }),
             }));
         } catch {}
 

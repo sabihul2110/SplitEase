@@ -90,7 +90,7 @@ function computeSummary(entries) {
     borrowed: net < 0 ? Math.abs(net) : 0,
   };
 }
-function groupByMonthAndDay(entries) {
+function groupByMonthAndDay(entries, ascending = false) {
   const monthMap = {};
   for (const e of entries) {
     const mk = e.date ? e.date.slice(0, 7) : "unknown";
@@ -99,20 +99,22 @@ function groupByMonthAndDay(entries) {
     if (!monthMap[mk][dk]) monthMap[mk][dk] = [];
     monthMap[mk][dk].push(e);
   }
-  return Object.keys(monthMap)
-    .sort().reverse()
-    .map(mk => ({
+  const monthKeys = Object.keys(monthMap).sort();
+  const orderedMonthKeys = ascending ? monthKeys : monthKeys.slice().reverse();
+  return orderedMonthKeys.map(mk => {
+    const dayKeys = Object.keys(monthMap[mk]).sort();
+    const orderedDayKeys = ascending ? dayKeys : dayKeys.slice().reverse();
+    return {
       monthKey:   mk,
       monthLabel: mk === "unknown" ? "Unknown" : fmtMonthLabel(mk),
-      days: Object.keys(monthMap[mk])
-        .sort().reverse()
-        .map(dk => ({
-          dateKey:  dk,
-          dayLabel: fmtDayHeader(dk),
-          isToday:  dk === todayStr(),
-          entries:  monthMap[mk][dk],
-        })),
-    }));
+      days: orderedDayKeys.map(dk => ({
+        dateKey:  dk,
+        dayLabel: fmtDayHeader(dk),
+        isToday:  dk === todayStr(),
+        entries:  ascending ? monthMap[mk][dk].slice().reverse() : monthMap[mk][dk],
+      })),
+    };
+  });
 }
 function fmt(n) {
   return Number(n).toLocaleString("en-IN", { minimumFractionDigits: 2 });
@@ -496,6 +498,7 @@ export default function ExpensesScreen() {
     setTimeout(() => setToast(p => ({ ...p, msg: '' })), 3000);
   }
   const [selMonth, setSelMonth] = useState(currentMonth);
+  const [sortAsc, setSortAsc] = useState(false);
   const [alertConfig, setAlertConfig] = useState(null);
 
   const load = useCallback(async () => {
@@ -539,7 +542,7 @@ export default function ExpensesScreen() {
     return true;
   }), [monthEntries, filter, search]);
 
-  const grouped = useMemo(() => groupByMonthAndDay(visible), [visible]);
+  const grouped = useMemo(() => groupByMonthAndDay(visible, sortAsc), [visible, sortAsc]);
 
   function handleLongPressEdit(entry) {
     setAlertConfig({
@@ -762,6 +765,11 @@ export default function ExpensesScreen() {
                 onChange={setSelMonth}
                 availableMonths={availableMonths}
               />
+              <TouchableOpacity style={styles.sortToggle} onPress={() => setSortAsc(v => !v)}>
+                <Text style={styles.sortToggleText}>
+                  {sortAsc ? "Oldest first" : "Newest first"}
+                </Text>
+              </TouchableOpacity>
               <Text style={styles.entryCount}>
                 {visible.length} entr{visible.length !== 1 ? "ies" : "y"}
               </Text>
@@ -979,6 +987,19 @@ const styles = StyleSheet.create({
   entryCount: {
     fontSize: 12,
     color: COLORS.text3,
+  },
+  sortToggle: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    backgroundColor: "rgba(37,99,235,0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(37,99,235,0.25)",
+  },
+  sortToggleText: {
+    fontSize: 11,
+    fontWeight: FONT_WEIGHT.bold,
+    color: COLORS.primaryH,
   },
 
   /* Timeline */

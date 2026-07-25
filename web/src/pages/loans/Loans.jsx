@@ -2,7 +2,7 @@
 
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useOutletContext, useNavigate } from "react-router-dom";
+import { useOutletContext, useNavigate, useLocation } from "react-router-dom";
 import { getLoans, deleteLoan, repayLoan, getBorrows, deleteBorrow, repayBorrow } from "../../api/loans";
 import * as peopleApi from "../../api/people";
 import * as ledgerNotifsApi from "../../api/ledgerNotifications";
@@ -645,7 +645,7 @@ function AddEntryModal2({ personName, onClose, onSuccess }) {
 }
 
 // ── LoanCard (Normal Loans tab) ───────────────────────────────────────────────
-function LoanCard({ item, onRefresh, idx, accentColor, btnColor, btnHover, isLent, confirm }) {
+function LoanCard({ item, onRefresh, idx, accentColor, btnColor, btnHover, isLent, confirm, highlighted }) {
   const [repayAmt, setRepayAmt] = useState("");
   const [repayDate, setRepayDate] = useState(todayStr());
   const [repayErr, setRepayErr] = useState("");
@@ -683,9 +683,10 @@ function LoanCard({ item, onRefresh, idx, accentColor, btnColor, btnHover, isLen
   }
 
   return (
-    <div className="card" style={{ padding: 20, display: "flex", flexDirection: "column",
-      gap: 12, transition: "border-color 0.15s, box-shadow 0.15s",
-      borderLeft: `3px solid ${item.status === "repaid" ? "var(--success)" : accentColor}` }}>
+    <div id={`loan-row-${idField}`} className="card" style={{ padding: 20, display: "flex", flexDirection: "column",
+      gap: 12, transition: "border-color 0.15s, box-shadow 0.15s, background 0.3s",
+      borderLeft: `3px solid ${item.status === "repaid" ? "var(--success)" : accentColor}`,
+      ...(highlighted ? { boxShadow: "0 0 0 2px #fbbf24, 0 8px 24px rgba(251,191,36,0.25)", background: "rgba(251,191,36,0.06)" } : {}) }}>
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <div>
@@ -785,9 +786,32 @@ export default function Loans() {
   const [loans, setLoans]       = useState([]);
   const [borrows, setBorrows]   = useState([]);
   const [loading, setLoading]   = useState(true);
-  const [pageTab, setPageTab]   = useState("people");   // people | lent | borrowed
+  const [pageTab, setPageTab]   = useState("people");
   const [filterTab, setFilterTab] = useState("all");
   const [ledgerDot, setLedgerDot] = useState(false);
+  const [highlightId, setHighlightId] = useState(null);
+  const location = useLocation();
+  const { confirm, dialogProps } = useConfirm();
+
+ 
+  useEffect(() => {
+    if (location.state?.initialTab) {
+      setPageTab(location.state.initialTab);
+      setFilterTab("all");
+    }
+    if (location.state?.highlightId) {
+      setHighlightId(String(location.state.highlightId));
+    }
+  }, [location.state]);
+
+  useEffect(() => {
+    if (!highlightId) return;
+    const scrollTimer = setTimeout(() => {
+      document.getElementById(`loan-row-${highlightId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 150);
+    const clearTimer = setTimeout(() => setHighlightId(null), 3000);
+    return () => { clearTimeout(scrollTimer); clearTimeout(clearTimer); };
+  }, [highlightId, loans, borrows, pageTab]);
 
   const fetchLedgerBadge = useCallback(async () => {
     try {
@@ -892,6 +916,7 @@ export default function Loans() {
 
       {/* People Ledger tab */}
       {pageTab === "people" && <PeopleLedger />}
+      <ConfirmDialog {...dialogProps} />
 
       {/* Lent / Borrowed tabs */}
       {pageTab !== "people" && (
@@ -961,7 +986,8 @@ export default function Loans() {
                   accentColor={pageTab === "lent" ? "#f59e0b" : "#818cf8"}
                   btnColor={pageTab === "lent" ? "#10b981" : "#6366f1"}
                   btnHover={pageTab === "lent" ? "#0d9e6e" : "#4f46e5"}
-                  confirm={confirm} />
+                  confirm={confirm}
+                  highlighted={String(pageTab === "lent" ? item.loan_id : item.borrow_id) === highlightId} />
               ))}
             </div>
           )}

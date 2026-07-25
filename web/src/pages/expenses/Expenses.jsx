@@ -397,7 +397,7 @@ function computeSummary(entries) {
  * ]
  * Sorted newest-first at both levels.
  */
-function groupByMonthAndDay(entries) {
+function groupByMonthAndDay(entries, ascending = false) {
   const monthMap = {};
   for (const e of entries) {
     const mk = e.date ? e.date.slice(0, 7) : "unknown";
@@ -407,22 +407,23 @@ function groupByMonthAndDay(entries) {
     monthMap[mk][dk].push(e);
   }
 
-  return Object.keys(monthMap)
-    .sort()
-    .reverse()
-    .map(mk => ({
+  const monthKeys = Object.keys(monthMap).sort();
+  const orderedMonthKeys = ascending ? monthKeys : monthKeys.slice().reverse();
+
+  return orderedMonthKeys.map(mk => {
+    const dayKeys = Object.keys(monthMap[mk]).sort();
+    const orderedDayKeys = ascending ? dayKeys : dayKeys.slice().reverse();
+    return {
       monthKey:   mk,
       monthLabel: mk === "unknown" ? "Unknown" : fmtMonthLabel(mk),
-      days: Object.keys(monthMap[mk])
-        .sort()
-        .reverse()
-        .map(dk => ({
-          dateKey:  dk,
-          dayLabel: fmtDayHeader(dk),
-          isToday:  dk === todayStr(),
-          entries:  monthMap[mk][dk],
-        })),
-    }));
+      days: orderedDayKeys.map(dk => ({
+        dateKey:  dk,
+        dayLabel: fmtDayHeader(dk),
+        isToday:  dk === todayStr(),
+        entries:  ascending ? monthMap[mk][dk].slice().reverse() : monthMap[mk][dk],
+      })),
+    };
+  });
 }
 
 function displayAmount(entry) {
@@ -709,8 +710,9 @@ export default function Expenses() {
   const [deleting, setDeleting] = useState(null);
   const [toast,    setToast]    = useState(null);
 
-  // Default to current month instead of "all"
+
   const [selMonth, setSelMonth] = useState(currentMonth);
+  const [sortAsc, setSortAsc] = useState(false);
 
   function showToast(msg, isErr = false) {
     setToast({ msg, isErr });
@@ -757,7 +759,7 @@ export default function Expenses() {
   }), [monthEntries, filter, search]);
 
   // ── Hierarchical grouping ──
-  const grouped = useMemo(() => groupByMonthAndDay(visible), [visible]);
+  const grouped = useMemo(() => groupByMonthAndDay(visible, sortAsc), [visible, sortAsc]);
 
   // ── Delete ──
   async function handleDelete(entry) {
@@ -856,6 +858,14 @@ export default function Expenses() {
               onChange={setSelMonth}
               availableMonths={availableMonths}
             />
+
+            <button
+              className="me-month-reset"
+              style={{ background: "var(--surface2)", color: "var(--text2)", borderColor: "var(--border)" }}
+              onClick={() => setSortAsc(v => !v)}
+            >
+              ⇅ {sortAsc ? "Oldest first" : "Newest first"}
+            </button>
 
             <div style={{ fontSize: 12, color: "var(--text3)", whiteSpace: "nowrap" }}>
               {visible.length} entr{visible.length !== 1 ? "ies" : "y"}

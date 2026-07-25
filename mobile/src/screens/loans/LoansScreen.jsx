@@ -79,7 +79,7 @@ function ProgressBar({ pct, color }) {
   );
 }
 
-function LoanCard({ item, isLent, onRefresh, idx, showToast, setAlert }) {
+function LoanCard({ item, isLent, onRefresh, idx, showToast, setAlert, highlighted }) {
   const [repayAmt, setRepayAmt] = useState("");
   const [repayDate, setRepayDate] = useState(new Date().toISOString().split("T")[0]);
   const [repayErr, setRepayErr] = useState("");
@@ -645,17 +645,32 @@ const addStyles = StyleSheet.create({
   },
 });
 
-export default function LoansScreen({ navigation }) {
+export default function LoansScreen({ navigation, route }) {
   const [loans, setLoans] = useState([]);
   const [borrows, setBorrows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [pageTab, setPageTab] = useState("lent");
+  const [pageTab, setPageTab] = useState(route?.params?.initialTab || "lent");
   const [filterTab, setFilterTab] = useState("all");
   const [showAdd, setShowAdd] = useState(false);
   const [toast, setToast]   = useState({ msg: '', type: 'success' });
   const [alert, setAlert]   = useState(null);
   const [peopleDot, setPeopleDot] = useState(false);
+  const [highlightId, setHighlightId] = useState(
+    route?.params?.highlightId ? String(route.params.highlightId) : null,
+  );
+  const listRef = useRef(null);
+
+  // Deep link from Dashboard — re-apply if navigated here again with new params
+  useEffect(() => {
+    if (route?.params?.initialTab) {
+      setPageTab(route.params.initialTab);
+      setFilterTab("all");
+    }
+    if (route?.params?.highlightId) {
+      setHighlightId(String(route.params.highlightId));
+    }
+  }, [route?.params?.initialTab, route?.params?.highlightId]);
 
   function showToast(msg, type = 'success') {
     setToast({ msg, type });
@@ -758,11 +773,20 @@ export default function LoansScreen({ navigation }) {
         },
       ];
 
-  const filterCounts = {
-    all: items.length,
-    active: items.filter((i) => i.status === "active" || i.status === "pending").length,
-    repaid: items.filter((i) => i.status === "repaid").length,
-  };
+  // Scroll to + flash the highlighted row, then clear after a few seconds.
+  useEffect(() => {
+    if (!highlightId || loading || !visible.length) return;
+    const index = visible.findIndex(
+      (i) => String(isLent ? i.loan_id : i.borrow_id) === highlightId,
+    );
+    if (index >= 0) {
+      const scrollTimer = setTimeout(() => {
+        listRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0.3 });
+      }, 200);
+      const clearTimer = setTimeout(() => setHighlightId(null), 3000);
+      return () => { clearTimeout(scrollTimer); clearTimeout(clearTimer); };
+    }
+  }, [highlightId, loading, visible, isLent]);
 
   return (
     <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
@@ -832,10 +856,19 @@ export default function LoansScreen({ navigation }) {
       </View>
 
       <FlatList
+        ref={listRef}
         data={loading ? [] : visible}
         keyExtractor={(item) => String(isLent ? item.loan_id : item.borrow_id)}
         showsVerticalScrollIndicator={false}
         removeClippedSubviews={false}
+        onScrollToIndexFailed={(info) => {
+          // Card heights vary (repay form, progress bar, etc.) so an exact
+          // index-based scroll can fail before layout settles — fall back to
+          // an estimate and retry once.
+          setTimeout(() => {
+            listRef.current?.scrollToOffset({ offset: info.averageItemLength * info.index, animated: true });
+          }, 100);
+        }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -940,6 +973,7 @@ export default function LoansScreen({ navigation }) {
             idx={index}
             showToast={showToast}
             setAlert={setAlert}
+            highlighted={String(isLent ? item.loan_id : item.borrow_id) === highlightId}
           />
         )}
         contentContainerStyle={[styles.list, { paddingBottom: TAB_BAR_HEIGHT }]}
@@ -1033,13 +1067,10 @@ const styles = StyleSheet.create({
   },
   filterTabTextActive: { color: COLORS.text },
 
-  card: {
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.xl,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    padding: SPACING.base,
-    gap: SPACING.md,
+  cardHighlighted: {
+    borderColor: "#fbbf24",
+    borderWidth: 2,
+    backgroundColor: "rgba(251,191,36,0.06)",
   },
   cardHead: {
     flexDirection: "row",
