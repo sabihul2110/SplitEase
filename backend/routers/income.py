@@ -16,15 +16,6 @@ from core.dependencies import get_current_user
 router = APIRouter()
 
 
-
-
-# class IncomeIn(BaseModel):
-#     amount:      float
-#     source_type: str  = "other"   # salary | pocket_money | stipend | other
-#     note:        str | None = None
-#     income_date: str               # YYYY-MM-DD
-
-
 @router.get("/income/")
 def list_income(current_user: dict = Depends(get_current_user)):
     return income_repository.fetch_income(current_user["user_id"])

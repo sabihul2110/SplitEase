@@ -9,7 +9,7 @@ import { Icons } from '../../components/icons';
 import ScreenHeader from '../../components/layout/ScreenHeader';
 import PendingBillsRow from '../../components/quickEntry/PendingBillsRow';
 import QuickTapRow from '../../components/quickEntry/QuickTapRow';
-import { TemplateIcon } from '../../constants/templateIcons';
+import { TemplateIcon, ICON_CHIP_BG, ICON_CHIP_COLOR } from '../../constants/templateIcons';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SPACING, TAB_BAR_HEIGHT } from '../../constants/theme';
 
 function SectionCard({ icon, iconColor, title, manageLabel, onManage, children }) {
@@ -57,15 +57,15 @@ function RoutinesSection() {
           <Text style={styles.emptyRowText}>Bundle your daily commute legs into one tap — e.g. "College Day".</Text>
         </TouchableOpacity>
       ) : (
-        <View style={{ gap: SPACING.sm }}>
-          {routines.map((r) => (
+        <View>
+          {routines.map((r, i) => (
             <TouchableOpacity
               key={r.routine_id}
-              style={styles.itemRow}
+              style={[styles.itemRow, i < routines.length - 1 && styles.itemRowDivider]}
               onPress={() => navigation.navigate('RunRoutine', { routineId: r.routine_id })}
               activeOpacity={0.75}
             >
-              <View style={styles.itemIcon}><TemplateIcon name={r.icon_name} size={18} color={COLORS.primary} /></View>
+              <View style={styles.itemIcon}><TemplateIcon name={r.icon_name} size={18} color={ICON_CHIP_COLOR} /></View>
               <Text style={styles.itemName} numberOfLines={1}>{r.name}</Text>
               <View style={styles.runPill}>
                 <Text style={styles.runPillText}>Run</Text>
@@ -83,7 +83,7 @@ export default function QuickEntryScreen() {
   const navigation = useNavigation();
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
-      <ScreenHeader title="Quick Entry" showBack />
+      <ScreenHeader title="Quick Actions" showBack />
       <ScrollView
         contentContainerStyle={{ padding: SPACING.base, paddingBottom: TAB_BAR_HEIGHT + SPACING.base, gap: SPACING.md }}
         showsVerticalScrollIndicator={false}
@@ -131,10 +131,10 @@ const styles = StyleSheet.create({
   emptyRowText: { fontSize: FONT_SIZE.sm, color: COLORS.text3, textAlign: 'center' },
   itemRow: {
     flexDirection: 'row', alignItems: 'center', gap: SPACING.sm,
-    backgroundColor: COLORS.surface2, borderRadius: RADIUS.lg,
-    borderWidth: 1, borderColor: COLORS.border, padding: SPACING.sm,
+    paddingVertical: SPACING.sm,
   },
-  itemIcon: { width: 32, height: 32, borderRadius: 9, backgroundColor: 'rgba(37,99,235,0.12)', alignItems: 'center', justifyContent: 'center' },
+  itemRowDivider: { borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  itemIcon: { width: 32, height: 32, borderRadius: 9, backgroundColor: ICON_CHIP_BG, alignItems: 'center', justifyContent: 'center' },
   itemName: { flex: 1, fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.semibold, color: COLORS.text },
   runPill: {
     flexDirection: 'row', alignItems: 'center', gap: 2,

@@ -1,10 +1,10 @@
-// SplitEase/mobile/src/components/dashboard/PendingBillsRow.jsx
+// SplitEase/mobile/src/components/quickEntry/PendingBillsRow.jsx
 
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useCallback, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import * as pendingBillsApi from '../../api/pendingBills';
-import { TemplateIcon } from '../../constants/templateIcons';
+import { TemplateIcon, ICON_CHIP_BG, ICON_CHIP_COLOR } from '../../constants/templateIcons';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SPACING } from '../../constants/theme';
 import { Icons } from '../icons';
 import EntrySheet from './EntrySheet';
@@ -40,35 +40,41 @@ export default function PendingBillsRow({ embedded = false }) {
       {!embedded && (
       <View style={styles.head}>
         <Text style={styles.title}>PENDING BILLS</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('ManageBills')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+        <TouchableOpacity
+          onPress={() => navigation.navigate('Expenses', { screen: 'ManageBills' })}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
           <Icons.settings size={16} color={COLORS.text3} />
         </TouchableOpacity>
       </View>
       )}
+
       {loaded && bills.length === 0 ? (
-        <TouchableOpacity style={styles.emptyCard} onPress={() => navigation.navigate('ManageBills')}>
+        <TouchableOpacity
+          style={styles.emptyCard}
+          onPress={() => navigation.navigate('Expenses', { screen: 'ManageBills' })}
+        >
           <Text style={styles.emptyCardText}>No recurring bills yet — tap to add rent, wifi, electricity…</Text>
         </TouchableOpacity>
       ) : (
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
-        {bills.map((b) => {
-          return (
-            <View key={b.pending_id} style={styles.card}>
-              <View style={styles.cardTop}>
-                <View style={styles.iconBox}><TemplateIcon name={b.icon_name} size={16} color={COLORS.warning} /></View>
-                <TouchableOpacity onPress={() => handleDismiss(b)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                  <Icons.close size={14} color={COLORS.text3} />
-                </TouchableOpacity>
+        <View>
+          {bills.map((b, i) => (
+            <View key={b.pending_id} style={[styles.itemRow, i < bills.length - 1 && styles.itemRowDivider]}>
+              <View style={styles.itemIcon}><TemplateIcon name={b.icon_name} size={18} color={ICON_CHIP_COLOR} /></View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.itemName} numberOfLines={1}>{b.name}</Text>
+                <Text style={styles.itemMonth}>{b.generated_for_month?.slice(0, 7)}</Text>
               </View>
-              <Text style={styles.cardName} numberOfLines={1}>{b.name}</Text>
-              <Text style={styles.cardMonth}>{b.generated_for_month?.slice(0, 7)}</Text>
-              <TouchableOpacity style={styles.payBtn} onPress={() => setActive(b)}>
-                <Text style={styles.payBtnText}>Pay →</Text>
+              <TouchableOpacity style={styles.payPill} onPress={() => setActive(b)}>
+                <Text style={styles.payPillText}>Pay</Text>
+                <Icons.chevronRight size={12} color={COLORS.warning} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => handleDismiss(b)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={{ marginLeft: 4 }}>
+                <Icons.close size={16} color={COLORS.text3} />
               </TouchableOpacity>
             </View>
-          );
-        })}
-      </ScrollView>
+          ))}
+        </View>
       )}
 
       {active && (
@@ -89,29 +95,23 @@ const styles = StyleSheet.create({
   wrap: { gap: SPACING.sm },
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: SPACING.base },
   title: { fontSize: 10, fontWeight: FONT_WEIGHT.bold, color: COLORS.text3, letterSpacing: 0.9, textTransform: 'uppercase' },
-  row: { paddingHorizontal: SPACING.base, gap: SPACING.sm },
-  card: {
-    width: 130, backgroundColor: COLORS.surface, borderRadius: RADIUS.lg,
-    borderWidth: 1, borderColor: 'rgba(245,158,11,0.3)',
-    padding: SPACING.sm, gap: 4,
-  },
-  cardTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  iconBox: {
-    width: 28, height: 28, borderRadius: 8,
-    backgroundColor: 'rgba(245,158,11,0.12)',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  cardName: { fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.semibold, color: COLORS.text, marginTop: 4 },
-  cardMonth: { fontSize: 10, color: COLORS.text3 },
   emptyCard: {
-    marginHorizontal: SPACING.base, padding: SPACING.md,
-    backgroundColor: COLORS.surface, borderRadius: RADIUS.lg,
+    padding: SPACING.md, backgroundColor: COLORS.surface2, borderRadius: RADIUS.lg,
     borderWidth: 1, borderColor: COLORS.border, borderStyle: 'dashed',
   },
   emptyCardText: { fontSize: FONT_SIZE.sm, color: COLORS.text3, textAlign: 'center' },
-  payBtn: {
-    marginTop: 6, backgroundColor: 'rgba(245,158,11,0.14)',
-    borderRadius: RADIUS.sm, paddingVertical: 6, alignItems: 'center',
+  itemRow: {
+    flexDirection: 'row', alignItems: 'center', gap: SPACING.sm,
+    paddingVertical: SPACING.sm,
   },
-  payBtnText: { fontSize: FONT_SIZE.xs, fontWeight: FONT_WEIGHT.bold, color: COLORS.warning },
+  itemRowDivider: { borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  itemIcon: { width: 32, height: 32, borderRadius: 9, backgroundColor: ICON_CHIP_BG, alignItems: 'center', justifyContent: 'center' },
+  itemName: { fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.semibold, color: COLORS.text },
+  itemMonth: { fontSize: 10, color: COLORS.text3, marginTop: 1 },
+  payPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 2,
+    backgroundColor: 'rgba(245,158,11,0.14)', borderRadius: RADIUS.full,
+    paddingHorizontal: 10, paddingVertical: 5,
+  },
+  payPillText: { fontSize: FONT_SIZE.xs, color: COLORS.warning, fontWeight: FONT_WEIGHT.bold },
 });

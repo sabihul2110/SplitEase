@@ -15,10 +15,11 @@ import { useAuth } from '../../context/AuthContext';
 import ScreenHeader from '../../components/layout/ScreenHeader';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
+import Dropdown from '../../components/common/Dropdown';
 import { Avatar } from '../../components/common/Ui';
 import { Icons } from '../../components/icons';
 import { ICON_GROUPS } from '../../constants/templateIcons';
-import IconPickerGrid from '../../components/common/IconPickerGrid';
+import IconPickerField from '../../components/common/IconPickerField';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS, TAB_BAR_HEIGHT } from '../../constants/theme';
 
 export default function EditBillScreen() {
@@ -31,6 +32,7 @@ export default function EditBillScreen() {
   const [name, setName] = useState(editing?.name || '');
   const [iconName, setIconName] = useState(editing?.icon_name || ICON_GROUPS[0].items[0].key);
   const [groupId, setGroupId] = useState(editing?.group_id || null);
+  const [scopeMode, setScopeMode] = useState(editing?.group_id ? 'group' : 'personal');
   const [groups, setGroups] = useState([]);
   const [cronDay, setCronDay] = useState(editing ? String(editing.cron_day) : '1');
   const [categories, setCategories] = useState([]);
@@ -122,6 +124,8 @@ export default function EditBillScreen() {
     }
   }
 
+  const selectedCategoryName = categories.find((c) => c.category_id === categoryId)?.category_name || null;
+
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       <ScreenHeader title={isEdit ? 'Edit Recurring Bill' : 'New Recurring Bill'} showBack />
@@ -134,69 +138,68 @@ export default function EditBillScreen() {
           <Input label="Name" value={name} onChangeText={setName} placeholder="e.g. Rent, WiFi, Electricity" />
 
           <View style={styles.field}>
-            <Text style={styles.label}>ICON</Text>
-            <IconPickerGrid value={iconName} onChange={setIconName} activeColor={COLORS.warning} />
+            <Text style={styles.label}>SCOPE</Text>
+            <Dropdown
+              value={scopeMode}
+              options={[{ id: 'personal', label: 'Personal' }, { id: 'group', label: 'Group' }]}
+              onSelect={(id) => {
+                setScopeMode(id);
+                if (id === 'personal') setGroupId(null);
+              }}
+              placeholder="Select scope"
+              activeColor={COLORS.warning}
+            />
           </View>
 
-          <View style={styles.field}>
-            <Text style={styles.label}>SCOPE</Text>
-            <View style={styles.chipsRow}>
-              <TouchableOpacity style={[styles.chip, !groupId && styles.chipActive]} onPress={() => setGroupId(null)}>
-                <Text style={[styles.chipText, !groupId && styles.chipTextActive]}>Personal</Text>
-              </TouchableOpacity>
-              {groups.map((g) => (
-                <TouchableOpacity
-                  key={g.group_id}
-                  style={[styles.chip, groupId === g.group_id && styles.chipActive]}
-                  onPress={() => setGroupId(g.group_id)}
-                >
-                  <Text style={[styles.chipText, groupId === g.group_id && styles.chipTextActive]}>{g.group_name}</Text>
-                </TouchableOpacity>
-              ))}
+          {scopeMode === 'group' && (
+            <View style={styles.field}>
+              <Text style={styles.label}>GROUP</Text>
+              <Dropdown
+                value={groupId}
+                options={groups.map((g) => ({ id: g.group_id, label: g.group_name }))}
+                onSelect={setGroupId}
+                placeholder="Select group"
+                activeColor={COLORS.warning}
+              />
             </View>
-          </View>
+          )}
 
           <View style={styles.field}>
             <Text style={styles.label}>CATEGORY</Text>
-            <View style={styles.chipsRow}>
-              {categories.map((cat) => (
-                <TouchableOpacity
-                  key={cat.category_id}
-                  style={[styles.chip, categoryId === cat.category_id && styles.chipActive]}
-                  onPress={() => handlePickCategory(cat)}
-                >
-                  <Text style={[styles.chipText, categoryId === cat.category_id && styles.chipTextActive]}>
-                    {cat.category_name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+            <Dropdown
+              value={categoryId}
+              options={categories.map((c) => ({ id: c.category_id, label: c.category_name }))}
+              onSelect={(id) => handlePickCategory(categories.find((c) => c.category_id === id))}
+              placeholder="Select category"
+              activeColor={COLORS.warning}
+            />
           </View>
 
           {subcats.length > 0 && (
             <View style={styles.field}>
               <Text style={styles.label}>SUBCATEGORY</Text>
-              <View style={styles.chipsRow}>
-                <TouchableOpacity
-                  style={[styles.chip, subcategoryId === null && styles.chipActive]}
-                  onPress={() => setSubcategoryId(null)}
-                >
-                  <Text style={[styles.chipText, subcategoryId === null && styles.chipTextActive]}>None</Text>
-                </TouchableOpacity>
-                {subcats.map((s) => (
-                  <TouchableOpacity
-                    key={s.subcategory_id}
-                    style={[styles.chip, subcategoryId === s.subcategory_id && styles.chipActive]}
-                    onPress={() => setSubcategoryId(s.subcategory_id)}
-                  >
-                    <Text style={[styles.chipText, subcategoryId === s.subcategory_id && styles.chipTextActive]}>
-                      {s.subcategory_name}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+              <Dropdown
+                value={subcategoryId}
+                options={[
+                  { id: null, label: 'None' },
+                  ...subcats.map((s) => ({ id: s.subcategory_id, label: s.subcategory_name })),
+                ]}
+                onSelect={setSubcategoryId}
+                placeholder="Select subcategory"
+                activeColor={COLORS.warning}
+              />
             </View>
           )}
+
+          <View style={styles.field}>
+            <Text style={styles.label}>ICON</Text>
+            <IconPickerField
+              value={iconName}
+              onChange={setIconName}
+              activeColor={COLORS.warning}
+              categoryName={selectedCategoryName}
+            />
+          </View>
 
           <View style={styles.field}>
             <Text style={styles.label}>DUE DAY OF MONTH (1-31)</Text>
@@ -215,14 +218,16 @@ export default function EditBillScreen() {
           {groupId && (
             <View style={styles.field}>
               <Text style={styles.label}>SPLIT</Text>
-              <View style={styles.chipsRow}>
-                <TouchableOpacity style={[styles.chip, splitType === 'equal' && styles.chipActive]} onPress={() => setSplitType('equal')}>
-                  <Text style={[styles.chipText, splitType === 'equal' && styles.chipTextActive]}>Equal</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.chip, splitType === 'custom' && styles.chipActive]} onPress={() => setSplitType('custom')}>
-                  <Text style={[styles.chipText, splitType === 'custom' && styles.chipTextActive]}>Custom %</Text>
-                </TouchableOpacity>
-              </View>
+              <Dropdown
+                value={splitType}
+                options={[
+                  { id: 'equal', label: 'Equal split' },
+                  { id: 'custom', label: 'Custom %' },
+                ]}
+                onSelect={setSplitType}
+                placeholder="Select split type"
+                activeColor={COLORS.warning}
+              />
 
               {splitType === 'custom' && members.map((m) => (
                 <View key={m.user_id} style={styles.splitRow}>

@@ -31,3 +31,5 @@ class PendingBillOut(BaseModel):
     group_id:                int | None
     category_id:              int
     subcategory_id:            int | None
+    cron_day:                  int
+    due_date:                   str

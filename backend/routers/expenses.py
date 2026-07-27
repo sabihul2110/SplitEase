@@ -18,17 +18,6 @@ from core.dependencies import get_current_user
 router = APIRouter()
 
 
-# class UpdateExpenseRequest(BaseModel):
-#     payer_id:       int
-#     category_id:    int
-#     subcategory_id: int | None = None
-#     total_amount:   float
-#     description:    str
-#     split_type:     str = "equal"
-#     expense_date:   date
-#     splits:         list[SplitItem]
-
-
 @router.get("/{group_id}")
 def list_expenses(group_id: int, current_user: dict = Depends(get_current_user)):
     """

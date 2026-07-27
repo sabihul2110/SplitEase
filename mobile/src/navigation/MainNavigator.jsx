@@ -10,6 +10,7 @@ import { Icons } from "../components/icons";
 
 // Screens
 import DashboardScreen from "../screens/dashboard/DashboardScreen";
+import PayBillScreen from "../screens/bills/PayBillScreen";
 import VerifyEmailScreen from "../screens/auth/VerifyEmailScreen";
 import GroupsScreen from "../screens/groups/GroupsScreen";
 import GroupDetailScreen from "../screens/groups/GroupDetailScreen";
@@ -69,6 +70,7 @@ function DashboardStack() {
   return (
     <DashStack.Navigator screenOptions={{ headerShown: false }}>
       <DashStack.Screen name="DashboardHome"  component={DashboardScreen} />
+      <DashStack.Screen name="PayBill"        component={PayBillScreen} />
       <DashStack.Screen name="Account"        component={AccountScreen} />
       <DashStack.Screen name="Settings"       component={SettingsScreen} />
       <DashStack.Screen name="Notifications"  component={NotificationsScreen} />

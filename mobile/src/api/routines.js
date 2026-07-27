@@ -8,4 +8,7 @@ export const getRoutine        = (id)          => client.get(ENDPOINTS.routineBy
 export const createRoutine     = (payload)     => client.post(ENDPOINTS.routines, payload);
 export const updateRoutine     = (id, payload) => client.put(ENDPOINTS.routineById(id), payload);
 export const deleteRoutine     = (id)          => client.delete(ENDPOINTS.routineById(id));
-export const executeRoutine    = (id, payload) => client.post(ENDPOINTS.routineExecute(id), payload);
+export const executeRoutine = (id, payload) => client.post(ENDPOINTS.routineExecute(id), payload);
+export const getRoutinesStatus = ()               => client.get(ENDPOINTS.routineStatus);
+export const skipRoutineDay    = (id, date)       => client.post(ENDPOINTS.routineSkip(id), { date });
+export const unskipRoutineDay  = (id, date)       => client.delete(ENDPOINTS.routineUnskip(id, date));

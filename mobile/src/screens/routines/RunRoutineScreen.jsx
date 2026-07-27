@@ -26,10 +26,16 @@ export default function RunRoutineScreen() {
   const route = useRoute();
   const { routineId } = route.params;
 
+  const initialDate = route.params?.initialDate || todayStr();
+  // If the dashboard deep-linked in with a specific missed catch-up date
+  // (neither today nor yesterday), skip straight to the full date picker
+  // pre-filled with that date instead of showing the Today/Yesterday chips.
+  const initialShowFullDate = initialDate !== todayStr() && initialDate !== yesterdayStr();
+
   const [routine, setRoutine] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [date, setDate] = useState(todayStr());
-  const [showFullDate, setShowFullDate] = useState(false);
+  const [date, setDate] = useState(initialDate);
+  const [showFullDate, setShowFullDate] = useState(initialShowFullDate);
   const [state, setState] = useState({}); // { [template_id]: { include, amount } }
   const [saving, setSaving] = useState(false);
   const [result, setResult] = useState(null);

@@ -1,10 +1,12 @@
 # SplitEase/backend/routers/routines.py
 
 
+from datetime import date as date_cls
+
 from fastapi import APIRouter, Depends, HTTPException, status
-from schemas.routines import RoutineCreate, RoutineUpdate, RoutineExecuteRequest
+from schemas.routines import RoutineCreate, RoutineUpdate, RoutineExecuteRequest, RoutineSkipRequest
 from repositories import routine_repository, group_repository
-from services import quick_entry_service
+from services import quick_entry_service, routine_status_service
 from core.dependencies import get_current_user
 
 router = APIRouter()
@@ -13,6 +15,40 @@ router = APIRouter()
 @router.get("/")
 def list_routines(current_user: dict = Depends(get_current_user)):
     return routine_repository.fetch_routines(current_user["user_id"])
+
+
+# NOTE: must be registered before GET /{routine_id} — FastAPI matches routes
+# in registration order, and /{routine_id} would otherwise swallow "/status"
+# as its int path param and 422 before this route is ever reached.
+@router.get("/status")
+def routines_status(current_user: dict = Depends(get_current_user)):
+    return routine_status_service.compute_routine_status(current_user["user_id"])
+
+
+@router.post("/{routine_id}/skip", status_code=status.HTTP_201_CREATED)
+def skip_routine_day(routine_id: int, body: RoutineSkipRequest, current_user: dict = Depends(get_current_user)):
+    existing = routine_repository.fetch_routine_detail(routine_id, current_user["user_id"])
+    if existing is None:
+        raise HTTPException(status_code=404, detail="Routine not found.")
+    try:
+        skip_date = date_cls.fromisoformat(body.date)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="date must be YYYY-MM-DD.")
+    routine_repository.insert_skip(routine_id, skip_date)
+    return {"message": "Day marked as not required."}
+
+
+@router.delete("/{routine_id}/skip/{skip_date}")
+def unskip_routine_day(routine_id: int, skip_date: str, current_user: dict = Depends(get_current_user)):
+    existing = routine_repository.fetch_routine_detail(routine_id, current_user["user_id"])
+    if existing is None:
+        raise HTTPException(status_code=404, detail="Routine not found.")
+    try:
+        parsed = date_cls.fromisoformat(skip_date)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="skip_date must be YYYY-MM-DD.")
+    routine_repository.delete_skip(routine_id, parsed)
+    return {"message": "Skip removed."}
 
 
 @router.get("/{routine_id}")

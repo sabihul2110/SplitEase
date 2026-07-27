@@ -42,10 +42,15 @@ api.interceptors.request.use(config => {
 
 api.interceptors.response.use(
   response => response,
-  error => {
-    // Network-level failure (no response at all) — backend unreachable,
-    // Render cold-start timeout, DNS failure, or offline.
+  async error => {
     if (!error.response && error.code !== "ERR_CANCELED") {
+      const config = error.config;
+      if (!config._retried) {
+        config._retried = true;
+        await new Promise(r => setTimeout(r, 3000));
+        return api(config);
+      }
+
       const isAuthPage = window.location.pathname === "/login" ||
                          window.location.pathname === "/signup";
       if (!isAuthPage && window.location.pathname !== "/down") {

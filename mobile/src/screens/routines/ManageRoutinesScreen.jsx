@@ -8,7 +8,7 @@ import * as routinesApi from '../../api/routines';
 import ScreenHeader from '../../components/layout/ScreenHeader';
 import { LoadingState, EmptyState } from '../../components/common/Ui';
 import { Icons } from '../../components/icons';
-import { TemplateIcon } from '../../constants/templateIcons';
+import { TemplateIcon, ICON_CHIP_BG, ICON_CHIP_COLOR } from '../../constants/templateIcons';
 import AppAlert from '../../components/common/AppAlert';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS, TAB_BAR_HEIGHT } from '../../constants/theme';
 
@@ -84,7 +84,7 @@ export default function ManageRoutinesScreen() {
             onLongPress={() => confirmDelete(item)}
             activeOpacity={0.7}
           >
-            <View style={styles.iconBox}><TemplateIcon name={item.icon_name} size={18} color={COLORS.primary} /></View>
+            <View style={styles.iconBox}><TemplateIcon name={item.icon_name} size={18} color={ICON_CHIP_COLOR} /></View>
             <View style={{ flex: 1 }}>
               <Text style={styles.name}>{item.name}</Text>
               <Text style={styles.meta}>{daysLabel(item.active_days)}</Text>
@@ -109,7 +109,7 @@ const styles = StyleSheet.create({
   },
   iconBox: {
     width: 36, height: 36, borderRadius: 10,
-    backgroundColor: 'rgba(37,99,235,0.12)', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: ICON_CHIP_BG, alignItems: 'center', justifyContent: 'center',
   },
   name: { fontSize: FONT_SIZE.md, fontWeight: FONT_WEIGHT.semibold, color: COLORS.text },
   meta: { fontSize: FONT_SIZE.xs, color: COLORS.text3, marginTop: 2 },

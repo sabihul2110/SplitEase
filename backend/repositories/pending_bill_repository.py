@@ -1,8 +1,14 @@
 # SplitEase/backend/repositories/pending_bill_repository.py
 
 
+import calendar
 from datetime import date
 from core.database import get_connection
+
+
+def _clamp_day(year: int, month: int, cron_day: int) -> int:
+    last_day = calendar.monthrange(year, month)[1]
+    return min(cron_day, last_day)
 
 
 def fetch_pending_bills(user_id: int) -> list[dict]:
@@ -12,7 +18,8 @@ def fetch_pending_bills(user_id: int) -> list[dict]:
         """
         SELECT pb.pending_id, pb.bill_id, pb.status, pb.generated_for_month,
                pb.created_at, pb.paid_at,
-               rb.name, rb.icon_name, rb.group_id, rb.category_id, rb.subcategory_id
+               rb.name, rb.icon_name, rb.group_id, rb.category_id, rb.subcategory_id,
+               rb.cron_day
         FROM   Pending_Bills pb
         JOIN   Recurring_Bills rb ON rb.bill_id = pb.bill_id
         WHERE  pb.user_id = %s AND pb.status = 'pending'
@@ -26,6 +33,9 @@ def fetch_pending_bills(user_id: int) -> list[dict]:
         r["generated_for_month"] = str(r["generated_for_month"])
         r["created_at"] = str(r["created_at"])
         r["paid_at"] = str(r["paid_at"]) if r["paid_at"] else None
+        month_start = date.fromisoformat(r["generated_for_month"])
+        due_day = _clamp_day(month_start.year, month_start.month, r["cron_day"])
+        r["due_date"] = date(month_start.year, month_start.month, due_day).isoformat()
     return rows
 
 

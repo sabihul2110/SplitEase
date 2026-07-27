@@ -3,11 +3,11 @@
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { useCallback, useState } from "react";
 import {
-  FlatList,
   Image,
   LayoutAnimation,
   Platform,
   RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -20,6 +20,8 @@ import * as groupsApi from "../../api/groups";
 import * as peopleApi from "../../api/people";
 import * as notificationsApi from "../../api/notifications";
 import * as settlementsApi from "../../api/settlements";
+import * as pendingBillsApi from "../../api/pendingBills";
+import * as routinesApi from "../../api/routines";
 
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
   const isNewArch = global._IS_FABRIC === true;
@@ -27,9 +29,9 @@ if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental
     UIManager.setLayoutAnimationEnabledExperimental(true);
   }
 }
-import { Avatar, EmptyState, LoadingState } from "../../components/common/Ui";
+import { LoadingState } from "../../components/common/Ui";
 import { Icons } from "../../components/icons";
-import { getGroupIcon } from "../../constants/groupIcons";
+import { TemplateIcon, ICON_CHIP_BG, ICON_CHIP_COLOR } from "../../constants/templateIcons";
 import {
   COLORS,
   FONT_SIZE,
@@ -45,6 +47,32 @@ function fmt(n) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
+}
+
+function todayStr() {
+  return new Date().toISOString().split("T")[0];
+}
+function yesterdayStr() {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return d.toISOString().split("T")[0];
+}
+
+function dueDateInfo(dueDateStr) {
+  const due = new Date(dueDateStr + "T00:00:00");
+  const today = new Date(todayStr() + "T00:00:00");
+  const diffDays = Math.round((due - today) / 86400000);
+  const label = due.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+  if (diffDays < 0) return { text: `Overdue · ${label}`, color: COLORS.danger };
+  if (diffDays === 0) return { text: `Due today`, color: COLORS.warning };
+  if (diffDays === 1) return { text: `Due tomorrow`, color: COLORS.warning };
+  return { text: `Due ${label}`, color: COLORS.text2 };
+}
+
+function catchupDateLabel(dateStr) {
+  if (dateStr === yesterdayStr()) return "Yesterday";
+  const d = new Date(dateStr + "T00:00:00");
+  return d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
 }
 
 // ── Top bar (Avatar → Account, Bell → Notifications) ───────────────────────
@@ -67,14 +95,13 @@ function VerifyBanner({ onPress }) {
   );
 }
 
-
 function TopBar({ initials, unreadCount = 0, onAvatar, onBell }) {
   return (
     <View style={styles.topBar}>
       <View style={styles.brandWrap}>
-        <Image 
-          source={require('../../../assets/adaptive-icon.png')} 
-          style={styles.brandLogo} 
+        <Image
+          source={require('../../../assets/adaptive-icon.png')}
+          style={styles.brandLogo}
           resizeMode="contain"
         />
         <Text style={styles.topBarBrand}>
@@ -109,8 +136,8 @@ function TopBar({ initials, unreadCount = 0, onAvatar, onBell }) {
   );
 }
 
-// ── Hero card ──────────────────────────────────────────────────────────────
-function HeroCard({ user, groups, accountBalance }) {
+// ── Hero card (unchanged) ───────────────────────────────────────────────────
+function HeroCard({ user, groupCount, accountBalance }) {
   const isPositive = accountBalance >= 0;
   const balColor = isPositive ? COLORS.success : COLORS.danger;
   const firstName = user?.name?.split(" ")[0] || "You";
@@ -125,7 +152,7 @@ function HeroCard({ user, groups, accountBalance }) {
         </View>
         <View style={styles.heroGroupsPill}>
           <Text style={styles.heroGroupsPillText}>
-            {groups.length} group{groups.length !== 1 ? "s" : ""}
+            {groupCount} group{groupCount !== 1 ? "s" : ""}
           </Text>
         </View>
       </View>
@@ -140,45 +167,39 @@ function HeroCard({ user, groups, accountBalance }) {
   );
 }
 
-// ── Mini balance card ──────────────────────────────────────────────────────
-function MiniCard({ label, value, color, sub, breakdown }) {
-  const [expanded, setExpanded] = useState(false);
+// ── Balance summary — tight list-style card with two expandable rows ───────
+function BalanceRow({ label, value, color, breakdown, expanded, onToggle }) {
   const hasBreakdown = breakdown && breakdown.length > 0;
-
-  function toggle() {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setExpanded((p) => !p);
-  }
-
   return (
-    <View style={[styles.miniCard, { borderColor: color + "33" }]}>
-      <Text style={styles.miniLabel}>{label}</Text>
-      <Text style={[styles.miniVal, { color }]}>₹{fmt(value)}</Text>
-      <View style={styles.miniSubRow}>
-        <Text style={styles.miniSub}>{sub}</Text>
-        {hasBreakdown && (
-          <TouchableOpacity onPress={toggle} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Text style={styles.miniBreakdownToggle}>
-              {expanded ? "Hide" : "Breakdown"} {expanded ? "▴" : "▾"}
-            </Text>
-          </TouchableOpacity>
-        )}
-      </View>
+    <View>
+      <TouchableOpacity
+        style={styles.balRow}
+        activeOpacity={hasBreakdown ? 0.6 : 1}
+        onPress={hasBreakdown ? onToggle : undefined}
+      >
+        <Text style={styles.balLabel}>{label}</Text>
+        <View style={styles.balRight}>
+          <Text style={[styles.balValue, { color }]}>₹{fmt(value)}</Text>
+          {hasBreakdown && (
+            <Text style={styles.balChevron}>{expanded ? "▴" : "▾"}</Text>
+          )}
+        </View>
+      </TouchableOpacity>
       {hasBreakdown && expanded && (
-        <View style={styles.miniBreakdownList}>
+        <View style={styles.balBreakdownList}>
           {breakdown.map((b, i) => {
             const Wrapper = b.onPress ? TouchableOpacity : View;
             return (
               <Wrapper
                 key={i}
                 onPress={b.onPress}
-                style={styles.miniBreakdownRow}
+                style={styles.balBreakdownRow}
                 {...(b.onPress ? { activeOpacity: 0.6 } : {})}
               >
-                <Text style={styles.miniBreakdownLabel} numberOfLines={1}>{b.label}</Text>
+                <Text style={styles.balBreakdownLabel} numberOfLines={1}>{b.label}</Text>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                  <Text style={[styles.miniBreakdownVal, { color }]}>₹{fmt(b.value)}</Text>
-                  {b.onPress && <Text style={styles.miniBreakdownChevron}>›</Text>}
+                  <Text style={[styles.balBreakdownVal, { color }]}>₹{fmt(b.value)}</Text>
+                  {b.onPress && <Text style={styles.balBreakdownChevron}>›</Text>}
                 </View>
               </Wrapper>
             );
@@ -189,52 +210,148 @@ function MiniCard({ label, value, color, sub, breakdown }) {
   );
 }
 
-// ── Quick action button ────────────────────────────────────────────────────
-function QuickAction({ label, color, onPress }) {
+function BalanceSummaryCard({ owedToYou, youOwe, owedBreakdown, oweBreakdown }) {
+  const [expandedRow, setExpandedRow] = useState(null); // 'owed' | 'owe' | null
+
+  function toggle(row) {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setExpandedRow((p) => (p === row ? null : row));
+  }
+
   return (
-    <TouchableOpacity
-      style={[
-        styles.qaBtn,
-        { backgroundColor: color + "14", borderColor: color + "30" },
-      ]}
-      onPress={onPress}
-      activeOpacity={0.7}
-    >
-      <Text style={[styles.qaLabel, { color }]}>→ {label}</Text>
+    <View style={styles.balCard}>
+      <BalanceRow
+        label="You are owed"
+        value={owedToYou}
+        color={COLORS.success}
+        breakdown={owedBreakdown}
+        expanded={expandedRow === "owed"}
+        onToggle={() => toggle("owed")}
+      />
+      <View style={styles.balDivider} />
+      <BalanceRow
+        label="You owe"
+        value={youOwe}
+        color={youOwe > 0 ? COLORS.danger : COLORS.text2}
+        breakdown={oweBreakdown}
+        expanded={expandedRow === "owe"}
+        onToggle={() => toggle("owe")}
+      />
+    </View>
+  );
+}
+
+// ── Quick actions — slim 4-icon row, no boxes ───────────────────────────────
+function QuickActionIcon({ label, color, icon: IconComp, onPress }) {
+  return (
+    <TouchableOpacity style={styles.qaItem} onPress={onPress} activeOpacity={0.7}>
+      <View style={[styles.qaCircle, { backgroundColor: color + "16" }]}>
+        <IconComp size={20} color={color} />
+      </View>
+      <Text style={styles.qaItemLabel}>{label}</Text>
     </TouchableOpacity>
   );
 }
 
-// ── Group row ──────────────────────────────────────────────────────────────
-function GroupRow({ group, onPress }) {
-  const date = group.created_at
-    ? new Date(group.created_at).toLocaleDateString("en-IN", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      })
-    : "";
-  const { IconComponent, bg, color, matched } = getGroupIcon(group.group_name);
+// ── Section wrapper (Routines / Bills) ──────────────────────────────────────
+function SectionCard({ title, count, children }) {
+  return (
+    <View style={styles.sectionCard}>
+      <View style={styles.sectionCardHead}>
+        <Text style={styles.sectionCardTitle}>{title}</Text>
+        {count > 0 && (
+          <View style={styles.sectionCountPill}>
+            <Text style={styles.sectionCountText}>{count}</Text>
+          </View>
+        )}
+      </View>
+      {children}
+    </View>
+  );
+}
+
+// ── Routine row ──────────────────────────────────────────────────────────
+const ROUTINE_STATUS_META = {
+  done:           { label: "Done today",   color: COLORS.success },
+  pending:        { label: "Log today",    color: COLORS.warning },
+  skipped:        { label: "Skipped",      color: COLORS.text3 },
+  inactive_today: { label: "Not due today", color: COLORS.text3 },
+};
+
+function RoutineRow({ routine, onLogToday, onLogDate, onSkipDate, isLast }) {
+  const [expanded, setExpanded] = useState(false);
+  const meta = ROUTINE_STATUS_META[routine.today_status] || ROUTINE_STATUS_META.pending;
+  const hasCatchup = routine.pending_catchup_dates.length > 0;
+
+  function toggle() {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setExpanded((p) => !p);
+  }
+
+  return (
+    <View style={!isLast && styles.rowDivider}>
+      <TouchableOpacity
+        style={styles.routineRow}
+        activeOpacity={0.75}
+        onPress={() => {
+          if (routine.today_status === "pending") onLogToday(routine);
+          else if (hasCatchup) toggle();
+        }}
+      >
+        <View style={styles.routineIcon}>
+          <TemplateIcon name={routine.icon_name} size={16} color={ICON_CHIP_COLOR} />
+        </View>
+        <Text style={styles.routineName} numberOfLines={1}>{routine.name}</Text>
+        <View style={[styles.routineBadge, { backgroundColor: meta.color + "18" }]}>
+          <Text style={[styles.routineBadgeText, { color: meta.color }]}>{meta.label}</Text>
+        </View>
+        {hasCatchup && (
+          <TouchableOpacity onPress={toggle} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Text style={styles.routineCatchupToggle}>
+              {routine.pending_catchup_dates.length} missed {expanded ? "▴" : "▾"}
+            </Text>
+          </TouchableOpacity>
+        )}
+      </TouchableOpacity>
+
+      {hasCatchup && expanded && (
+        <View style={styles.catchupList}>
+          {routine.pending_catchup_dates.map((d) => (
+            <View key={d} style={styles.catchupRow}>
+              <Text style={styles.catchupDate}>{catchupDateLabel(d)}</Text>
+              <View style={{ flexDirection: "row", gap: SPACING.sm }}>
+                <TouchableOpacity style={styles.catchupLogBtn} onPress={() => onLogDate(routine, d)}>
+                  <Text style={styles.catchupLogText}>Log</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.catchupSkipBtn} onPress={() => onSkipDate(routine, d)}>
+                  <Text style={styles.catchupSkipText}>Not required</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
+// ── Bill row — deep-links straight to PayBillScreen ─────────────────────────
+function BillRow({ bill, onPress, isLast }) {
+  const due = dueDateInfo(bill.due_date);
   return (
     <TouchableOpacity
-      style={styles.groupRow}
+      style={[styles.billRow, !isLast && styles.rowDivider]}
       onPress={onPress}
-      activeOpacity={0.7}
+      activeOpacity={0.75}
     >
-      {matched ? (
-        <View style={[styles.groupIconBox, { backgroundColor: bg }]}>
-          <IconComponent size={19} color={color} strokeWidth={2} />
-        </View>
-      ) : (
-        <Avatar name={group.group_name} size={38} />
-      )}
-      <View style={styles.groupInfo}>
-        <Text style={styles.groupName} numberOfLines={1}>
-          {group.group_name}
-        </Text>
-        <Text style={styles.groupDate}>{date}</Text>
+      <View style={styles.billIcon}>
+        <TemplateIcon name={bill.icon_name} size={16} color={ICON_CHIP_COLOR} />
       </View>
-      <Text style={styles.groupChevron}>›</Text>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.billName} numberOfLines={1}>{bill.name}</Text>
+        <Text style={[styles.billDue, { color: due.color }]}>{due.text}</Text>
+      </View>
+      <Text style={styles.rowChevron}>›</Text>
     </TouchableOpacity>
   );
 }
@@ -244,12 +361,14 @@ export default function DashboardScreen() {
   const { user } = useAuth();
   const navigation = useNavigation();
   const isUnverified = user && user.email_verified === false;
-  const [groups, setGroups] = useState([]);
+  const [groupCount, setGroupCount] = useState(0);
   const [owedToYou, setOwedToYou] = useState(0);
   const [youOwe, setYouOwe] = useState(0);
   const [accountBalance, setAccountBalance] = useState(0);
   const [owedBreakdown, setOwedBreakdown] = useState([]);
   const [oweBreakdown, setOweBreakdown] = useState([]);
+  const [pendingBills, setPendingBills] = useState([]);
+  const [routines, setRoutines] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -267,7 +386,7 @@ export default function DashboardScreen() {
       else setLoading(true);
       try {
         const { data: groupList } = await groupsApi.getGroups();
-        setGroups(groupList || []);
+        setGroupCount((groupList || []).length);
 
         let owe = 0,
           owed = 0;
@@ -332,6 +451,21 @@ export default function DashboardScreen() {
           const { data: nc } = await notificationsApi.getUnreadCount();
           setUnreadCount(nc?.count || 0);
         } catch {}
+
+        try {
+          const { data: bills } = await pendingBillsApi.getPendingBills();
+          const sorted = [...(bills || [])].sort((a, b) => a.due_date.localeCompare(b.due_date));
+          setPendingBills(sorted);
+        } catch {
+          setPendingBills([]);
+        }
+
+        try {
+          const { data: routineStatus } = await routinesApi.getRoutinesStatus();
+          setRoutines(routineStatus || []);
+        } catch {
+          setRoutines([]);
+        }
       } catch (err) {
         console.error("Dashboard load error:", err);
       } finally {
@@ -348,13 +482,36 @@ export default function DashboardScreen() {
     }, [load]),
   );
 
+  async function handleSkipDate(routine, dateStr) {
+    try {
+      await routinesApi.skipRoutineDay(routine.routine_id, dateStr);
+      load(true);
+    } catch (err) {
+      console.error("Skip routine day failed:", err);
+    }
+  }
+
+  function goToPendingBill(bill) {
+    navigation.navigate("PayBill", { bill });
+  }
+
+  function goToRunRoutine(routine, initialDate) {
+    navigation.navigate("Expenses", {
+      screen: "RunRoutine",
+      params: { routineId: routine.routine_id, initialDate },
+    });
+  }
+
   if (loading) return <LoadingState label="Loading dashboard…" />;
+
+  const visibleRoutines = routines.filter(
+    (r) => r.today_status !== "inactive_today" || r.pending_catchup_dates.length > 0,
+  );
+  const totalCatchups = visibleRoutines.reduce((s, r) => s + r.pending_catchup_dates.length, 0);
 
   return (
     <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
-      <FlatList
-        data={groups.slice(0, 6)}
-        keyExtractor={(g) => String(g.group_id)}
+      <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -364,134 +521,101 @@ export default function DashboardScreen() {
             colors={[COLORS.primary]}
           />
         }
-        ListHeaderComponent={() => (
-          <View style={styles.header}>
-            {/* ── Global header bar ── */}
-            {isUnverified && (
-              <VerifyBanner onPress={() => navigation.navigate("VerifyEmail")} />
-            )}
-
-            <TopBar
-              initials={initials}
-              unreadCount={unreadCount}
-              onAvatar={() => navigation.navigate("Account")}
-              onBell={() => {
-                setUnreadCount(0);
-                navigation.navigate("Notifications");
-              }}
-            />
-
-            <View style={styles.grid}>
-              {/* Hero */}
-              <HeroCard
-                user={user}
-                groups={groups}
-                accountBalance={accountBalance}
-              />
-
-              {/* Mini cards */}
-              <View style={{ flexDirection: "row", gap: SPACING.sm }}>
-                <View style={{ flex: 1 }}>
-                  <MiniCard
-                    label="YOU ARE OWED"
-                    value={owedToYou}
-                    color={COLORS.success}
-                    sub={owedToYou > 0 ? "Pending" : "All clear"}
-                    breakdown={owedBreakdown}
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <MiniCard
-                    label="YOU OWE"
-                    value={youOwe}
-                    color={youOwe > 0 ? COLORS.danger : COLORS.text2}
-                    sub={youOwe > 0 ? "Pending" : "All clear"}
-                    breakdown={oweBreakdown}
-                  />
-                </View>
-              </View>
-
-              {/* Quick actions */}
-              <View style={styles.quickCard}>
-                <Text style={styles.miniLabel}>QUICK ACTIONS</Text>
-                <View style={styles.quickList}>
-                  <QuickAction
-                    label="Expenses"
-                    color="#10b981"
-                    onPress={() => navigation.navigate("Expenses")}
-                  />
-                  <QuickAction
-                    label="View Groups"
-                    color="#3b82f6"
-                    onPress={() => navigation.navigate("Groups")}
-                  />
-                  <QuickAction
-                    label="Loans"
-                    color="#10b981"
-                    onPress={() => navigation.navigate("Loans")}
-                  />
-                  <QuickAction
-                    label="Activity"
-                    color="#f59e0b"
-                    onPress={() =>
-                      navigation.navigate("More", { screen: "Activity" })
-                    }
-                  />
-                  <QuickAction
-                    label="Settle Up"
-                    color="#8b5cf6"
-                    onPress={() =>
-                      navigation.navigate("More", { screen: "Settlements" })
-                    }
-                  />
-                </View>
-              </View>
-            </View>
-
-
-            {/* Recent groups heading */}
-            <View style={styles.sectionHead}>
-              <Text style={styles.sectionTitle}>Recent Groups</Text>
-              <TouchableOpacity onPress={() => navigation.navigate("Groups")}>
-                <Text style={styles.viewAll}>View all</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-        ListEmptyComponent={() => (
-          <View style={{ padding: SPACING.base }}>
-            <EmptyState
-              icon="usersPlus"
-              title="No groups yet"
-              subtitle="Create a group to start splitting."
-            />
-          </View>
-        )}
-        renderItem={({ item: group }) => (
-          <GroupRow
-            group={group}
-            onPress={() =>
-              navigation.navigate("Groups", {
-                screen: "GroupDetail",
-                params: {
-                  groupId: group.group_id,
-                  groupName: group.group_name,
-                },
-              })
-            }
-          />
-        )}
         contentContainerStyle={[styles.list, { paddingBottom: TAB_BAR_HEIGHT }]}
-      />
+      >
+        {isUnverified && (
+          <VerifyBanner onPress={() => navigation.navigate("VerifyEmail")} />
+        )}
+
+        <TopBar
+          initials={initials}
+          unreadCount={unreadCount}
+          onAvatar={() => navigation.navigate("Account")}
+          onBell={() => {
+            setUnreadCount(0);
+            navigation.navigate("Notifications");
+          }}
+        />
+
+        <View style={styles.grid}>
+          <HeroCard user={user} groupCount={groupCount} accountBalance={accountBalance} />
+
+          <BalanceSummaryCard
+            owedToYou={owedToYou}
+            youOwe={youOwe}
+            owedBreakdown={owedBreakdown}
+            oweBreakdown={oweBreakdown}
+          />
+
+          {/* Quick actions — slim 4-icon row, strict count */}
+          <View style={styles.qaRow}>
+            <QuickActionIcon
+              label="Quick Entry"
+              color={COLORS.success}
+              icon={Icons.zap}
+              onPress={() => navigation.navigate("Expenses", { screen: "QuickEntry" })}
+            />
+            <QuickActionIcon
+              label="Groups"
+              color={COLORS.primary}
+              icon={Icons.groups}
+              onPress={() => navigation.navigate("Groups")}
+            />
+            <QuickActionIcon
+              label="Settle Up"
+              color="#8b5cf6"
+              icon={Icons.loansRupee}
+              onPress={() => navigation.navigate("More", { screen: "Settlements" })}
+            />
+            <QuickActionIcon
+              label="More"
+              color={COLORS.warning}
+              icon={Icons.more}
+              onPress={() => navigation.navigate("More")}
+            />
+          </View>
+
+          {visibleRoutines.length > 0 && (
+            <SectionCard title="Routines" count={totalCatchups}>
+              <View>
+                {visibleRoutines.map((r, i) => (
+                  <RoutineRow
+                    key={r.routine_id}
+                    routine={r}
+                    isLast={i === visibleRoutines.length - 1}
+                    onLogToday={(routine) => goToRunRoutine(routine, todayStr())}
+                    onLogDate={(routine, d) => goToRunRoutine(routine, d)}
+                    onSkipDate={(routine, d) => handleSkipDate(routine, d)}
+                  />
+                ))}
+              </View>
+            </SectionCard>
+          )}
+
+          {pendingBills.length > 0 && (
+            <SectionCard title="Upcoming Bills" count={pendingBills.length}>
+              <View>
+                {pendingBills.map((b, i) => (
+                  <BillRow
+                    key={b.pending_id}
+                    bill={b}
+                    isLast={i === pendingBills.length - 1}
+                    onPress={() => goToPendingBill(b)}
+                  />
+                ))}
+              </View>
+            </SectionCard>
+          )}
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg },
-  list: { paddingBottom: SPACING["2xl"] },
-  header: { gap: SPACING.md, paddingTop: SPACING.sm },
-  
+  list: { paddingBottom: SPACING["2xl"], gap: SPACING.md },
+
   topBar: {
     flexDirection: "row",
     alignItems: "center",
@@ -499,20 +623,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.base,
     paddingVertical: SPACING.sm,
   },
-  brandWrap: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  brandLogo: {
-    width: 28,
-    height: 28,
-  },
+  brandWrap: { flexDirection: "row", alignItems: "center", gap: 8 },
+  brandLogo: { width: 28, height: 28 },
   verifyBanner: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
     marginHorizontal: SPACING.base,
+    marginTop: SPACING.sm,
     backgroundColor: "rgba(245,158,11,0.08)",
     borderWidth: 1,
     borderColor: "rgba(245,158,11,0.25)",
@@ -520,11 +638,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.base,
     paddingVertical: 10,
   },
-  verifyBannerText: {
-    fontSize: FONT_SIZE.sm,
-    color: "rgba(245,158,11,0.85)",
-    flex: 1,
-  },
+  verifyBannerText: { fontSize: FONT_SIZE.sm, color: "rgba(245,158,11,0.85)", flex: 1 },
   topBarBrand: {
     fontSize: FONT_SIZE.lg,
     fontWeight: FONT_WEIGHT.extrabold,
@@ -533,77 +647,26 @@ const styles = StyleSheet.create({
   },
   topBarRight: { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
   topBarIconBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    alignItems: "center",
-    justifyContent: "center",
+    width: 38, height: 38, borderRadius: 10,
+    backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border,
+    alignItems: "center", justifyContent: "center",
   },
   topBarAvatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    backgroundColor: COLORS.primary,
-    alignItems: "center",
-    justifyContent: "center",
+    width: 38, height: 38, borderRadius: 10,
+    backgroundColor: COLORS.primary, alignItems: "center", justifyContent: "center",
   },
   bellBadge: {
-    position: "absolute",
-    top: -4,
-    right: -4,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: COLORS.danger,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 3,
-    borderWidth: 1.5,
-    borderColor: COLORS.bg,
+    position: "absolute", top: -4, right: -4,
+    minWidth: 16, height: 16, borderRadius: 8,
+    backgroundColor: COLORS.danger, alignItems: "center", justifyContent: "center",
+    paddingHorizontal: 3, borderWidth: 1.5, borderColor: COLORS.bg,
   },
-  bellBadgeText: {
-    fontSize: 9,
-    fontWeight: FONT_WEIGHT.bold,
-    color: "#fff",
-  },
-
-  topBarAvatarText: {
-    fontSize: FONT_SIZE.sm,
-    fontWeight: FONT_WEIGHT.extrabold,
-    color: COLORS.white,
-  },
-
-  // ── Chips ──
-  chips: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: SPACING.sm,
-    paddingHorizontal: SPACING.base,
-  },
-  chip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 7,
-    paddingHorizontal: 13,
-    paddingVertical: 7,
-    borderRadius: RADIUS.full,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.surface,
-  },
-  chipDot: { width: 7, height: 7, borderRadius: 4 },
-  chipText: {
-    fontSize: FONT_SIZE.xs,
-    color: COLORS.text2,
-    fontWeight: FONT_WEIGHT.medium,
-  },
+  bellBadgeText: { fontSize: 9, fontWeight: FONT_WEIGHT.bold, color: "#fff" },
+  topBarAvatarText: { fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.extrabold, color: COLORS.white },
 
   grid: { gap: SPACING.sm, paddingHorizontal: SPACING.base },
 
-  // ── Hero ──
+  // ── Hero (unchanged) ──
   hero: {
     backgroundColor: COLORS.surface,
     borderRadius: RADIUS.xl,
@@ -617,173 +680,112 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
   },
-  heroTopRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: SPACING.sm,
-  },
-  heroLabel: {
-    fontSize: FONT_SIZE.xs,
-    fontWeight: FONT_WEIGHT.bold,
-    color: "rgba(147,197,253,0.65)",
-    letterSpacing: 1,
-  },
-  heroName: {
-    fontSize: FONT_SIZE["2xl"],
-    fontWeight: FONT_WEIGHT.extrabold,
-    color: "#93c5fd",
-    marginTop: 2,
-  },
+  heroTopRow: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: SPACING.sm },
+  heroLabel: { fontSize: FONT_SIZE.xs, fontWeight: FONT_WEIGHT.bold, color: "rgba(147,197,253,0.65)", letterSpacing: 1 },
+  heroName: { fontSize: FONT_SIZE["2xl"], fontWeight: FONT_WEIGHT.extrabold, color: "#93c5fd", marginTop: 2 },
   heroEmail: { fontSize: FONT_SIZE.sm, color: "rgba(147,197,253,0.55)", marginTop: 2 },
   heroGroupsPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: RADIUS.full,
-    backgroundColor: "rgba(37,99,235,0.14)",
-    borderWidth: 1,
-    borderColor: "rgba(37,99,235,0.3)",
+    paddingHorizontal: 12, paddingVertical: 6, borderRadius: RADIUS.full,
+    backgroundColor: "rgba(37,99,235,0.14)", borderWidth: 1, borderColor: "rgba(37,99,235,0.3)",
   },
-  heroGroupsPillText: {
-    fontSize: FONT_SIZE.xs,
-    fontWeight: FONT_WEIGHT.bold,
-    color: "#93c5fd",
-  },
+  heroGroupsPillText: { fontSize: FONT_SIZE.xs, fontWeight: FONT_WEIGHT.bold, color: "#93c5fd" },
   heroBalanceBlock: {
-    marginTop: SPACING.sm,
-    paddingTop: SPACING.md,
-    borderTopWidth: 1,
-    borderTopColor: "rgba(37,99,235,0.2)",
-    gap: 4,
+    marginTop: SPACING.sm, paddingTop: SPACING.md,
+    borderTopWidth: 1, borderTopColor: "rgba(37,99,235,0.2)", gap: 4,
   },
-  heroBalanceLabel: {
-    fontSize: 10,
-    fontWeight: FONT_WEIGHT.bold,
-    color: COLORS.text3,
-    letterSpacing: 0.8,
-  },
-  heroBalanceVal: {
-    fontSize: FONT_SIZE["4xl"],
-    fontWeight: FONT_WEIGHT.extrabold,
-    letterSpacing: -0.5,
-  },
+  heroBalanceLabel: { fontSize: 10, fontWeight: FONT_WEIGHT.bold, color: COLORS.text3, letterSpacing: 0.8 },
+  heroBalanceVal: { fontSize: FONT_SIZE["4xl"], fontWeight: FONT_WEIGHT.extrabold, letterSpacing: -0.5 },
 
-  // ── Mini cards ──
-  miniCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    padding: SPACING.base,
-    gap: 4,
-  },
-  miniLabel: {
-    fontSize: 10,
-    fontWeight: FONT_WEIGHT.bold,
-    color: COLORS.text3,
-    letterSpacing: 0.9,
-    textTransform: "uppercase",
-  },
-  miniVal: { fontSize: FONT_SIZE["3xl"], fontWeight: FONT_WEIGHT.extrabold },
-  miniSub: { fontSize: FONT_SIZE.xs, color: COLORS.text3 },
-  miniSubRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 6,
-  },
-  miniBreakdownToggle: {
-    fontSize: 10,
-    fontWeight: FONT_WEIGHT.bold,
-    color: COLORS.text3,
-  },
-  miniBreakdownList: {
-    marginTop: SPACING.sm,
-    paddingTop: SPACING.sm,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    gap: 6,
-  },
-  miniBreakdownRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 6,
-  },
-  miniBreakdownLabel: {
-    flex: 1,
-    fontSize: FONT_SIZE.xs,
-    color: COLORS.text2,
-  },
-  miniBreakdownVal: {
-    fontSize: FONT_SIZE.xs,
-    fontWeight: FONT_WEIGHT.semibold,
-  },
-  miniBreakdownChevron: {
-    fontSize: FONT_SIZE.sm,
-    color: COLORS.text3,
-  },
-
-  // ── Quick actions ──
-  quickCard: {
+  // ── Balance summary card ──
+  balCard: {
     backgroundColor: COLORS.surface,
     borderRadius: RADIUS.lg,
     borderWidth: 1,
     borderColor: COLORS.border,
-    padding: SPACING.base,
-    gap: SPACING.md,
-  },
-  quickList: { gap: SPACING.sm },
-  qaBtn: {
-    paddingVertical: 9,
-    paddingHorizontal: 14,
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-  },
-  qaLabel: { fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.semibold },
-
-  // ── Section head ──
-  sectionHead: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
     paddingHorizontal: SPACING.base,
-    paddingTop: SPACING.sm,
   },
-  sectionTitle: {
-    fontSize: FONT_SIZE.md,
-    fontWeight: FONT_WEIGHT.bold,
-    color: COLORS.text,
-  },
-  viewAll: {
-    fontSize: FONT_SIZE.sm,
-    fontWeight: FONT_WEIGHT.semibold,
-    color: COLORS.primary,
-  },
-
-  // ── Group rows ──
-  groupRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.md,
-    paddingHorizontal: SPACING.base,
+  balRow: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     paddingVertical: SPACING.md,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
   },
-  groupIconBox: {
-    width: 38,
-    height: 38,
-    borderRadius: 11,
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
+  balLabel: { fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.medium, color: COLORS.text2 },
+  balRight: { flexDirection: "row", alignItems: "center", gap: 8 },
+  balValue: { fontSize: FONT_SIZE.lg, fontWeight: FONT_WEIGHT.extrabold },
+  balChevron: { fontSize: 10, color: COLORS.text3, fontWeight: FONT_WEIGHT.bold },
+  balDivider: { height: 1, backgroundColor: COLORS.border },
+  balBreakdownList: { paddingBottom: SPACING.md, gap: 6 },
+  balBreakdownRow: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 6,
   },
-  groupInfo: { flex: 1 },
-  groupName: {
-    fontSize: FONT_SIZE.md,
-    fontWeight: FONT_WEIGHT.semibold,
-    color: COLORS.text,
+  balBreakdownLabel: { flex: 1, fontSize: FONT_SIZE.xs, color: COLORS.text2 },
+  balBreakdownVal: { fontSize: FONT_SIZE.xs, fontWeight: FONT_WEIGHT.semibold },
+  balBreakdownChevron: { fontSize: FONT_SIZE.sm, color: COLORS.text3 },
+
+  // ── Quick actions — slim icon row ──
+  qaRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: SPACING.xs,
   },
-  groupDate: { fontSize: FONT_SIZE.xs, color: COLORS.text3, marginTop: 2 },
-  groupChevron: { fontSize: FONT_SIZE.lg, color: COLORS.text3 },
+  qaItem: { alignItems: "center", gap: 6, flex: 1 },
+  qaCircle: {
+    width: 46, height: 46, borderRadius: 23,
+    alignItems: "center", justifyContent: "center",
+  },
+  qaItemLabel: { fontSize: 11, fontWeight: FONT_WEIGHT.semibold, color: COLORS.text2, textAlign: "center" },
+
+  // ── Section card (Routines / Bills) ──
+  sectionCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: SPACING.sm,
+    gap: SPACING.sm,
+  },
+  sectionCardHead: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, paddingHorizontal: SPACING.xs },
+  sectionCardTitle: { fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.bold, color: COLORS.text },
+  sectionCountPill: {
+    minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 6,
+    backgroundColor: "rgba(239,68,68,0.14)", alignItems: "center", justifyContent: "center",
+  },
+  sectionCountText: { fontSize: 10, fontWeight: FONT_WEIGHT.bold, color: COLORS.danger },
+
+  // ── Routine rows ──
+  rowDivider: { borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  routineRow: {
+    flexDirection: "row", alignItems: "center", gap: SPACING.sm,
+    paddingVertical: SPACING.sm, paddingHorizontal: SPACING.xs,
+  },
+  routineIcon: {
+    width: 30, height: 30, borderRadius: 9,
+    backgroundColor: ICON_CHIP_BG, alignItems: "center", justifyContent: "center",
+  },
+  routineName: { flex: 1, fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.semibold, color: COLORS.text },
+  routineBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: RADIUS.full },
+  routineBadgeText: { fontSize: 10, fontWeight: FONT_WEIGHT.bold },
+  routineCatchupToggle: { fontSize: 10, fontWeight: FONT_WEIGHT.bold, color: COLORS.danger },
+  catchupList: { paddingHorizontal: SPACING.xs, paddingBottom: SPACING.sm, gap: SPACING.sm },
+  catchupRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  catchupDate: { fontSize: FONT_SIZE.xs, color: COLORS.text2, fontWeight: FONT_WEIGHT.semibold },
+  catchupLogBtn: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: RADIUS.full, backgroundColor: "rgba(37,99,235,0.14)" },
+  catchupLogText: { fontSize: 10, fontWeight: FONT_WEIGHT.bold, color: COLORS.primary },
+  catchupSkipBtn: {
+    paddingHorizontal: 10, paddingVertical: 5, borderRadius: RADIUS.full,
+    backgroundColor: COLORS.surface2, borderWidth: 1, borderColor: COLORS.border2,
+  },
+  catchupSkipText: { fontSize: 10, fontWeight: FONT_WEIGHT.bold, color: COLORS.text2 },
+
+  // ── Bill rows ──
+  billRow: {
+    flexDirection: "row", alignItems: "center", gap: SPACING.sm,
+    paddingVertical: SPACING.sm, paddingHorizontal: SPACING.xs,
+  },
+  billIcon: {
+    width: 30, height: 30, borderRadius: 9,
+    backgroundColor: ICON_CHIP_BG, alignItems: "center", justifyContent: "center",
+  },
+  billName: { fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.semibold, color: COLORS.text },
+  billDue: { fontSize: FONT_SIZE.xs, fontWeight: FONT_WEIGHT.semibold, marginTop: 2 },
+  rowChevron: { fontSize: FONT_SIZE.lg, color: COLORS.text3 },
 });

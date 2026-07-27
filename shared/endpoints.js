@@ -143,6 +143,9 @@ export const ENDPOINT_PATHS = {
   routines:        '/routines/',
   routineById:     (id) => `/routines/${id}`,
   routineExecute:  (id) => `/routines/${id}/execute`,
+  routineStatus:   '/routines/status',
+  routineSkip:     (id) => `/routines/${id}/skip`,
+  routineUnskip:   (id, skipDate) => `/routines/${id}/skip/${skipDate}`,
 
   // AI (web-only feature today)
   scanReceipt: '/ai/scan-receipt',

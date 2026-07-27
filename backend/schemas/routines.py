@@ -31,3 +31,16 @@ class RoutineRunItem(BaseModel):
 class RoutineExecuteRequest(BaseModel):
     expense_date: str
     items: list[RoutineRunItem]
+
+
+class RoutineSkipRequest(BaseModel):
+    date: str  # YYYY-MM-DD — the active day being marked "not required"
+
+
+class RoutineStatusOut(BaseModel):
+    routine_id: int
+    name: str
+    icon_name: str
+    active_days: str
+    today_status: str               # 'done' | 'pending' | 'skipped' | 'inactive_today'
+    pending_catchup_dates: list[str]

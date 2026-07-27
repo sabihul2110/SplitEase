@@ -5,37 +5,54 @@
 // several lucide glyphs look near-identical at 18px (train vs metro,
 // auto vs cab-taxi), the label is the real disambiguator.
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { TemplateIcon, ICON_GROUPS } from '../../constants/templateIcons';
+import { TemplateIcon, ICON_GROUPS, CATEGORY_ICON_GROUPS, ICON_CHIP_BG } from '../../constants/templateIcons';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS } from '../../constants/theme';
 
 function IconCell({ itemKey, label, active, activeColor, onPress }) {
-  const [showTip, setShowTip] = useState(false);
   return (
-    <View style={styles.cellWrap}>
-      {showTip && (
-        <View style={styles.tooltip} pointerEvents="none">
-          <Text style={styles.tooltipText} numberOfLines={1}>{label}</Text>
-        </View>
-      )}
-      <TouchableOpacity
-        style={[styles.iconOpt, active && { borderColor: activeColor, backgroundColor: activeColor + '1f' }]}
-        onPress={onPress}
-        onLongPress={() => setShowTip(true)}
-        onPressOut={() => setShowTip(false)}
-        delayLongPress={280}
+    <TouchableOpacity style={styles.cell} onPress={onPress} activeOpacity={0.75}>
+      <View
+        style={[
+          styles.iconCircle,
+          active
+            ? { backgroundColor: activeColor + '22', borderColor: activeColor }
+            : { backgroundColor: ICON_CHIP_BG, borderColor: 'transparent' },
+        ]}
       >
-        <TemplateIcon name={itemKey} size={18} color={active ? activeColor : COLORS.text3} />
-      </TouchableOpacity>
-    </View>
+        <TemplateIcon name={itemKey} size={20} color={active ? activeColor : COLORS.text2} />
+      </View>
+      <Text style={[styles.cellLabel, active && { color: activeColor, fontWeight: FONT_WEIGHT.semibold }]} numberOfLines={1}>
+        {label}
+      </Text>
+    </TouchableOpacity>
   );
 }
 
-export default function IconPickerGrid({ value, onChange, activeColor = COLORS.primary }) {
+export default function IconPickerGrid({ value, onChange, activeColor = COLORS.primary, categoryName = null }) { // eslint-disable-line
+  const relevantTitles = categoryName ? CATEGORY_ICON_GROUPS[categoryName] : null;
+  const hasFilter = !!(relevantTitles && relevantTitles.length);
+
+  const primaryGroups = hasFilter
+    ? ICON_GROUPS.filter((g) => relevantTitles.includes(g.title))
+    : ICON_GROUPS;
+  const restGroups = hasFilter
+    ? ICON_GROUPS.filter((g) => !relevantTitles.includes(g.title))
+    : [];
+
+  const [showAll, setShowAll] = useState(!hasFilter);
+
+  // Re-collapse to the filtered view whenever the category changes —
+  // otherwise switching from "Utilities" to "Travel" after tapping
+  // "Show all" would leave every group open for the new category too.
+  useEffect(() => { setShowAll(!hasFilter); }, [categoryName]);
+
+  const groupsToRender = showAll ? ICON_GROUPS : primaryGroups;
+
   return (
     <View style={{ gap: SPACING.md }}>
-      {ICON_GROUPS.map((group) => (
+      {groupsToRender.map((group) => (
         <View key={group.title} style={{ gap: SPACING.sm }}>
           <Text style={styles.groupLabel}>{group.title}</Text>
           <View style={styles.grid}>
@@ -52,7 +69,17 @@ export default function IconPickerGrid({ value, onChange, activeColor = COLORS.p
           </View>
         </View>
       ))}
-      <Text style={styles.hint}>Hold an icon to see its name</Text>
+
+      {restGroups.length > 0 && (
+        <TouchableOpacity
+          onPress={() => setShowAll((v) => !v)}
+          style={[styles.toggle, { borderColor: activeColor + '55' }]}
+        >
+          <Text style={[styles.toggleText, { color: activeColor }]}>
+            {showAll ? 'Show fewer icons' : 'Show all icons'}
+          </Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -63,18 +90,17 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8, textTransform: 'uppercase',
   },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
-  cellWrap: { position: 'relative' },
-  iconOpt: {
-    width: 40, height: 40, borderRadius: RADIUS.md,
-    backgroundColor: COLORS.surface2, borderWidth: 1, borderColor: COLORS.border,
+  cell: { width: 64, alignItems: 'center', gap: 4 },
+  iconCircle: {
+    width: 48, height: 48, borderRadius: 24,
+    borderWidth: 1.5,
     alignItems: 'center', justifyContent: 'center',
   },
-  tooltip: {
-    position: 'absolute', top: -30, left: -10, zIndex: 10,
-    backgroundColor: '#000', borderRadius: RADIUS.sm,
-    paddingHorizontal: 8, paddingVertical: 4,
-    minWidth: 60, alignItems: 'center',
+  cellLabel: { fontSize: 10.5, color: COLORS.text2, textAlign: 'center' },
+  toggle: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12, paddingVertical: 6,
+    borderRadius: RADIUS.full, borderWidth: 1,
   },
-  tooltipText: { color: '#fff', fontSize: FONT_SIZE.xs, fontWeight: FONT_WEIGHT.semibold },
-  hint: { fontSize: FONT_SIZE.xs, color: COLORS.text3, fontStyle: 'italic' },
+  toggleText: { fontSize: FONT_SIZE.xs, fontWeight: FONT_WEIGHT.bold },
 });

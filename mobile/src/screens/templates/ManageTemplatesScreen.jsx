@@ -8,8 +8,9 @@ import * as quickTemplatesApi from '../../api/quickTemplates';
 import ScreenHeader from '../../components/layout/ScreenHeader';
 import { LoadingState, EmptyState } from '../../components/common/Ui';
 import { Icons } from '../../components/icons';
-import { TemplateIcon } from '../../constants/templateIcons';
+import { TemplateIcon, ICON_CHIP_BG, ICON_CHIP_COLOR } from '../../constants/templateIcons';
 import AppAlert from '../../components/common/AppAlert';
+import EntrySheet from '../../components/quickEntry/EntrySheet';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS, TAB_BAR_HEIGHT } from '../../constants/theme';
 
 export default function ManageTemplatesScreen() {
@@ -17,6 +18,12 @@ export default function ManageTemplatesScreen() {
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [alertConfig, setAlertConfig] = useState(null);
+  const [active, setActive] = useState(null);
+
+  async function handleRunSubmit(payload) {
+    await quickTemplatesApi.executeTemplate(active.template_id, payload);
+    setActive(null);
+  }
 
   const load = useCallback(async () => {
     try {
@@ -72,7 +79,7 @@ export default function ManageTemplatesScreen() {
               onLongPress={() => confirmDelete(item)}
               activeOpacity={0.7}
             >
-              <View style={styles.iconBox}><TemplateIcon name={item.icon_name} size={18} color={COLORS.primary} /></View>
+              <View style={styles.iconBox}><TemplateIcon name={item.icon_name} size={18} color={ICON_CHIP_COLOR} /></View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.name}>{item.name}</Text>
                 <Text style={styles.meta}>
@@ -81,6 +88,13 @@ export default function ManageTemplatesScreen() {
                   {' · '}{item.default_time?.slice(0, 5)}
                 </Text>
               </View>
+              <TouchableOpacity
+                style={styles.runPill}
+                onPress={() => setActive(item)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Text style={styles.runPillText}>Run</Text>
+              </TouchableOpacity>
               <TouchableOpacity onPress={() => confirmDelete(item)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                 <Icons.trash size={18} color={COLORS.text3} />
               </TouchableOpacity>
@@ -88,6 +102,18 @@ export default function ManageTemplatesScreen() {
           );
         }}
       />
+      {active && (
+        <EntrySheet
+          title={active.name}
+          requireAmount={active.default_amount == null}
+          defaultAmount={active.default_amount}
+          defaultTime={active.default_time}
+          isGroup={!!active.group_id}
+          groupId={active.group_id}
+          onClose={() => setActive(null)}
+          onSubmit={handleRunSubmit}
+        />
+      )}
       <AppAlert config={alertConfig} />
     </SafeAreaView>
   );
@@ -102,8 +128,13 @@ const styles = StyleSheet.create({
   },
   iconBox: {
     width: 36, height: 36, borderRadius: 10,
-    backgroundColor: 'rgba(37,99,235,0.12)', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: ICON_CHIP_BG, alignItems: 'center', justifyContent: 'center',
   },
   name: { fontSize: FONT_SIZE.md, fontWeight: FONT_WEIGHT.semibold, color: COLORS.text },
   meta: { fontSize: FONT_SIZE.xs, color: COLORS.text3, marginTop: 2 },
+  runPill: {
+    backgroundColor: 'rgba(37,99,235,0.12)', borderRadius: RADIUS.full,
+    paddingHorizontal: 10, paddingVertical: 5, marginRight: 4,
+  },
+  runPillText: { fontSize: FONT_SIZE.xs, color: COLORS.primary, fontWeight: FONT_WEIGHT.bold },
 });

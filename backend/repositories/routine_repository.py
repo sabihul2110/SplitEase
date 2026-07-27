@@ -15,6 +15,70 @@ def fetch_routines(user_id: int) -> list[dict]:
     cur.close(); conn.close()
     return rows
 
+def fetch_run_dates(routine_id: int, since_date) -> set:
+    """All Routine_Runs dates for this routine on/after since_date, as ISO strings."""
+    conn = get_connection()
+    cur  = conn.cursor()
+    cur.execute(
+        "SELECT run_date FROM Routine_Runs WHERE routine_id = %s AND run_date >= %s",
+        (routine_id, since_date),
+    )
+    dates = {str(row[0]) for row in cur.fetchall()}
+    cur.close(); conn.close()
+    return dates
+
+
+def fetch_skipped_dates(routine_id: int, since_date) -> set:
+    """All Routine_Skips dates for this routine on/after since_date, as ISO strings."""
+    conn = get_connection()
+    cur  = conn.cursor()
+    cur.execute(
+        "SELECT skip_date FROM Routine_Skips WHERE routine_id = %s AND skip_date >= %s",
+        (routine_id, since_date),
+    )
+    dates = {str(row[0]) for row in cur.fetchall()}
+    cur.close(); conn.close()
+    return dates
+
+
+def insert_skip(routine_id: int, skip_date) -> bool:
+    """Idempotent via uq_rskip_routine_date. Returns False if already skipped."""
+    conn = get_connection()
+    cur  = conn.cursor()
+    try:
+        conn.start_transaction()
+        cur.execute(
+            "INSERT INTO Routine_Skips (routine_id, skip_date) VALUES (%s, %s)",
+            (routine_id, skip_date),
+        )
+        conn.commit()
+        return True
+    except Exception as exc:
+        conn.rollback()
+        if "Duplicate entry" in str(exc):
+            return False
+        raise
+    finally:
+        cur.close(); conn.close()
+
+
+def delete_skip(routine_id: int, skip_date) -> None:
+    conn = get_connection()
+    cur  = conn.cursor()
+    try:
+        conn.start_transaction()
+        cur.execute(
+            "DELETE FROM Routine_Skips WHERE routine_id = %s AND skip_date = %s",
+            (routine_id, skip_date),
+        )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close(); conn.close()
+
+
 def fetch_reminder_candidates() -> list[dict]:
     """
     All routines whose owner has a push token. active_days / last_reminded_date
