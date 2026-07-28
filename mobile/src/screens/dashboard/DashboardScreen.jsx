@@ -140,20 +140,20 @@ function TopBar({ initials, unreadCount = 0, onAvatar, onBell }) {
 function HeroCard({ user, groupCount, accountBalance }) {
   const isPositive = accountBalance >= 0;
   const balColor = isPositive ? COLORS.success : COLORS.danger;
-  const firstName = user?.name?.split(" ")[0] || "You";
 
   return (
     <View style={styles.hero}>
-      <View style={styles.heroTopRow}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.heroLabel}>YOUR ACCOUNT</Text>
-          <Text style={styles.heroName}>{firstName}'s SplitEase</Text>
-          <Text style={styles.heroEmail}>{user?.email}</Text>
+      <View style={styles.cardHeaderRow}>
+        <View style={styles.cardHeaderLeft}>
+          <Text style={styles.greetingText}>{getGreeting()}</Text>
+          <Text style={styles.userName}>Sabihul</Text>
         </View>
-        <View style={styles.heroGroupsPill}>
-          <Text style={styles.heroGroupsPillText}>
-            {groupCount} group{groupCount !== 1 ? "s" : ""}
-          </Text>
+        <View style={styles.cardHeaderRight}>
+          <View style={styles.heroGroupsPill}>
+            <Text style={styles.heroGroupsPillText}>
+              {groupCount} group{groupCount !== 1 ? "s" : ""}
+            </Text>
+          </View>
         </View>
       </View>
 
@@ -254,15 +254,23 @@ function QuickActionIcon({ label, color, icon: IconComp, onPress }) {
 }
 
 // ── Section wrapper (Routines / Bills) ──────────────────────────────────────
-function SectionCard({ title, count, children }) {
+function SectionCard({ title, count, actionLabel, onAction, children }) {
   return (
     <View style={styles.sectionCard}>
       <View style={styles.sectionCardHead}>
-        <Text style={styles.sectionCardTitle}>{title}</Text>
-        {count > 0 && (
-          <View style={styles.sectionCountPill}>
-            <Text style={styles.sectionCountText}>{count}</Text>
-          </View>
+        <View style={styles.sectionCardTitleWrap}>
+          <Text style={styles.sectionCardTitle}>{title}</Text>
+          {count > 0 && !actionLabel && (
+            <View style={styles.sectionCountPill}>
+              <Text style={styles.sectionCountText}>{count}</Text>
+            </View>
+          )}
+        </View>
+        
+        {actionLabel && (
+          <TouchableOpacity onPress={onAction} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Text style={styles.sectionActionText}>{actionLabel}</Text>
+          </TouchableOpacity>
         )}
       </View>
       {children}
@@ -338,6 +346,12 @@ function RoutineRow({ routine, onLogToday, onLogDate, onSkipDate, isLast }) {
 // ── Bill row — deep-links straight to PayBillScreen ─────────────────────────
 function BillRow({ bill, onPress, isLast }) {
   const due = dueDateInfo(bill.due_date);
+  const totalAmount = bill.total_amount || bill.amount || 0;
+  const isShared = bill.is_shared;
+  const yourShare = bill.your_share || 0;
+  const groupSize = bill.group_size || 0;
+  const subTitleType = isShared ? "Shared" : "Auto-pay";
+
   return (
     <TouchableOpacity
       style={[styles.billRow, !isLast && styles.rowDivider]}
@@ -347,14 +361,34 @@ function BillRow({ bill, onPress, isLast }) {
       <View style={styles.billIcon}>
         <TemplateIcon name={bill.icon_name} size={16} color={ICON_CHIP_COLOR} />
       </View>
+      
       <View style={{ flex: 1 }}>
         <Text style={styles.billName} numberOfLines={1}>{bill.name}</Text>
-        <Text style={[styles.billDue, { color: due.color }]}>{due.text}</Text>
+        <Text style={[styles.billDue, { color: due.color }]}>
+          {due.text} <Text style={{ color: COLORS.text3 }}>• {subTitleType}</Text>
+        </Text>
       </View>
-      <Text style={styles.rowChevron}>›</Text>
+      
+      <View style={{ alignItems: "flex-end" }}>
+        <Text style={styles.billAmountText}>₹{fmt(totalAmount)}</Text>
+        
+        {isShared && yourShare > 0 ? (
+          <Text style={styles.billSubAmountRed}>You owe ₹{fmt(yourShare)}</Text>
+        ) : groupSize > 0 ? (
+          <Text style={styles.billSubAmountGray}>Group of {groupSize}</Text>
+        ) : null}
+      </View>
     </TouchableOpacity>
   );
 }
+
+const getGreeting = () => {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning,';
+  if (hour < 18) return 'Good afternoon,';
+  return 'Good evening,';
+};
+
 
 // ── Main screen ────────────────────────────────────────────────────────────
 export default function DashboardScreen() {
@@ -538,7 +572,11 @@ export default function DashboardScreen() {
         />
 
         <View style={styles.grid}>
-          <HeroCard user={user} groupCount={groupCount} accountBalance={accountBalance} />
+          <HeroCard 
+            user={user} 
+            groupCount={groupCount} 
+            accountBalance={accountBalance} 
+          />
 
           <BalanceSummaryCard
             owedToYou={owedToYou}
@@ -593,7 +631,11 @@ export default function DashboardScreen() {
           )}
 
           {pendingBills.length > 0 && (
-            <SectionCard title="Upcoming Bills" count={pendingBills.length}>
+            <SectionCard 
+              title="Upcoming Bills" 
+              actionLabel="See all"
+              onAction={() => navigation.navigate("Expenses", { screen: "ManageBills" })}
+            >
               <View>
                 {pendingBills.map((b, i) => (
                   <BillRow
@@ -680,10 +722,31 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
   },
-  heroTopRow: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: SPACING.sm },
-  heroLabel: { fontSize: FONT_SIZE.xs, fontWeight: FONT_WEIGHT.bold, color: "rgba(147,197,253,0.65)", letterSpacing: 1 },
-  heroName: { fontSize: FONT_SIZE["2xl"], fontWeight: FONT_WEIGHT.extrabold, color: "#93c5fd", marginTop: 2 },
-  heroEmail: { fontSize: FONT_SIZE.sm, color: "rgba(147,197,253,0.55)", marginTop: 2 },
+  cardHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: SPACING.xs,
+  },
+  cardHeaderLeft: {
+    flex: 1,
+    gap: 2,
+  },
+  cardHeaderRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
+  },
+  greetingText: {
+    fontSize: FONT_SIZE.sm,
+    color: "rgba(147,197,253,0.75)",
+    fontWeight: FONT_WEIGHT.medium,
+  },
+  userName: {
+    fontSize: FONT_SIZE["2xl"],
+    fontWeight: FONT_WEIGHT.bold,
+    color: "#93c5fd",
+  },
   heroGroupsPill: {
     paddingHorizontal: 12, paddingVertical: 6, borderRadius: RADIUS.full,
     backgroundColor: "rgba(37,99,235,0.14)", borderWidth: 1, borderColor: "rgba(37,99,235,0.3)",
@@ -743,8 +806,10 @@ const styles = StyleSheet.create({
     padding: SPACING.sm,
     gap: SPACING.sm,
   },
-  sectionCardHead: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, paddingHorizontal: SPACING.xs },
+  sectionCardHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: SPACING.xs, paddingBottom: SPACING.xs },
   sectionCardTitle: { fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.bold, color: COLORS.text },
+    sectionCardTitleWrap: { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
+  sectionActionText: { fontSize: FONT_SIZE.sm, color: COLORS.primary, fontWeight: FONT_WEIGHT.medium },
   sectionCountPill: {
     minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 6,
     backgroundColor: "rgba(239,68,68,0.14)", alignItems: "center", justifyContent: "center",
@@ -787,5 +852,7 @@ const styles = StyleSheet.create({
   },
   billName: { fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.semibold, color: COLORS.text },
   billDue: { fontSize: FONT_SIZE.xs, fontWeight: FONT_WEIGHT.semibold, marginTop: 2 },
-  rowChevron: { fontSize: FONT_SIZE.lg, color: COLORS.text3 },
+  billAmountText: { fontSize: FONT_SIZE.base, fontWeight: FONT_WEIGHT.semibold, color: COLORS.text },
+  billSubAmountRed: { fontSize: FONT_SIZE.xs, fontWeight: FONT_WEIGHT.medium, color: COLORS.danger, marginTop: 2 },
+  billSubAmountGray: { fontSize: FONT_SIZE.xs, fontWeight: FONT_WEIGHT.medium, color: COLORS.text3, marginTop: 2 },
 });
