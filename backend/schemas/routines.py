@@ -8,6 +8,7 @@ class RoutineItemIn(BaseModel):
     template_id: int
     sort_order: int = 0
     default_included: bool = True
+    modifier_schema: list[dict] | None = None
 
 
 class RoutineCreate(BaseModel):
@@ -26,6 +27,7 @@ class RoutineRunItem(BaseModel):
     include: bool
     amount: float | None = None
     note: str | None = None
+    modifier_answers: dict | None = None
 
 
 class RoutineExecuteRequest(BaseModel):

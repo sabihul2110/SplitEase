@@ -10,6 +10,8 @@ in Expenses+Expense_Splits (bypassing personal loans entirely, per spec)
 or Personal_Expenses.
 """
 
+from datetime import date as date_cls
+
 from repositories import (
     quick_template_repository,
     recurring_bill_repository,
@@ -23,6 +25,7 @@ from repositories import (
 from schemas.quick_templates import QuickTemplateExecuteRequest
 from schemas.pending_bills import PendingBillPayRequest
 from schemas.routines import RoutineExecuteRequest
+from services import routine_modifier_engine
 
 
 def _compute_equal_splits(total_amount: float, member_ids: list[int]) -> list[dict]:
@@ -175,7 +178,20 @@ def execute_routine(routine_id: int, user_id: int, body: RoutineExecuteRequest) 
             errors.append(f"Template {run_item.template_id} is not part of this routine.")
             continue
 
-        amount = run_item.amount if run_item.amount is not None else tpl.get("default_amount")
+        modifier_schema = tpl.get("modifier_schema")
+        if modifier_schema:
+            day_of_week = date_cls.fromisoformat(body.expense_date).isoweekday()
+            amount = routine_modifier_engine.apply_modifiers(
+                base_amount     = tpl.get("default_amount") or 0,
+                modifier_schema = modifier_schema,
+                answers         = run_item.modifier_answers,
+                day_of_week     = day_of_week,
+            )
+            if run_item.amount is not None:
+                amount = run_item.amount
+        else:
+            amount = run_item.amount if run_item.amount is not None else tpl.get("default_amount")
+
         if amount is None or amount <= 0:
             errors.append(f"'{tpl['name']}' needs an amount.")
             continue

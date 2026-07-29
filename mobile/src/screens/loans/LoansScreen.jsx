@@ -1,5 +1,6 @@
 // mobile/src/screens/loans/LoansScreen.jsx
 
+
 import { useFocusEffect } from "@react-navigation/native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -188,7 +189,7 @@ function LoanCard({ item, isLent, onRefresh, idx, showToast, setAlert, highlight
   }
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, highlighted && styles.cardHighlighted]}>
       <View style={styles.cardHead}>
         <View>
           <Text style={styles.cardDir}>{dirLabel}</Text>
@@ -661,7 +662,7 @@ export default function LoansScreen({ navigation, route }) {
   );
   const listRef = useRef(null);
 
-  // Deep link from Dashboard — re-apply if navigated here again with new params
+
   useEffect(() => {
     if (route?.params?.initialTab) {
       setPageTab(route.params.initialTab);
@@ -779,7 +780,6 @@ export default function LoansScreen({ navigation, route }) {
         },
       ];
 
-  // Scroll to + flash the highlighted row, then clear after a few seconds.
   useEffect(() => {
     if (!highlightId || loading || !visible.length) return;
     const index = visible.findIndex(
@@ -868,9 +868,6 @@ export default function LoansScreen({ navigation, route }) {
         showsVerticalScrollIndicator={false}
         removeClippedSubviews={false}
         onScrollToIndexFailed={(info) => {
-          // Card heights vary (repay form, progress bar, etc.) so an exact
-          // index-based scroll can fail before layout settles — fall back to
-          // an estimate and retry once.
           setTimeout(() => {
             listRef.current?.scrollToOffset({ offset: info.averageItemLength * info.index, animated: true });
           }, 100);
@@ -1073,6 +1070,14 @@ const styles = StyleSheet.create({
   },
   filterTabTextActive: { color: COLORS.text },
 
+  card: {
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.xl,
+    padding: SPACING.base,
+    gap: SPACING.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
   cardHighlighted: {
     borderColor: "#fbbf24",
     borderWidth: 2,
@@ -1168,7 +1173,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     borderRadius: RADIUS.sm,
     borderWidth: 1,
-    borderColor: 'rgba(255,69,58,0.3)', // Faint red border
+    borderColor: 'rgba(255,69,58,0.3)',
     backgroundColor: 'rgba(255,69,58,0.05)',
   },
   delText: { 

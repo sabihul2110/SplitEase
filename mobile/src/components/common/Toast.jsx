@@ -2,7 +2,7 @@
 //
 // Notch-emerge animated toast. Animates from the Dynamic Island / notch
 // downward on show, and collapses back up into it on hide.
-// Uses expo-blur for the frosted glass pill effect.
+// Uses expo-blur for the frosted glass pill effect on iOS, standard View on Android.
 //
 // Usage:
 //   const [toast, setToast] = useState({ msg: '', type: 'success' });
@@ -12,35 +12,49 @@
 //   }
 //   <Toast config={toast} />
 
-import React from 'react';
-import { Animated, Text, View, StyleSheet } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { Animated, Text, View, StyleSheet, Platform } from 'react-native';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Circle, Path } from 'react-native-svg';
 import { Icons } from '../icons';
 
 const AnimatedBlurView = Animated.createAnimatedComponent(BlurView);
+// Android's rendering engine chokes on animated BlurViews with borders. We use a standard View instead.
+const AnimatedContainer = Platform.OS === 'ios' ? AnimatedBlurView : Animated.View;
+const AnimatedPath = Animated.createAnimatedComponent(Path);
+
+const CHECK_LENGTH = 90;
 
 const C = {
   success: '#10b981',
-  danger:  '#E53935',
+  danger: '#E53935',
   warning: '#f59e0b',
-  text:    '#f0f4ff',
-  surface2:'#171c2c',
+  text: '#f0f4ff',
+  surface2: '#171c2c',
 };
 
 export default function Toast({ config }) {
   const insets = useSafeAreaInsets();
-  const [display, setDisplay] = React.useState({ msg: '', type: 'success' });
+  const [display, setDisplay] = useState({ msg: '', type: 'success' });
 
-  const translateY = React.useRef(new Animated.Value(-40)).current;
-  const scale      = React.useRef(new Animated.Value(0.8)).current;
-  const opacity    = React.useRef(new Animated.Value(0)).current;
+  // Toast Layout Animations
+  const translateY = useRef(new Animated.Value(-100)).current;
+  const scale = useRef(new Animated.Value(0.8)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
+  
+  // SVG Checkmark Animation
+  const checkOffset = useRef(new Animated.Value(CHECK_LENGTH)).current;
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (config.msg) {
       setDisplay(config);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      
+      // Reset the checkmark before animating in
+      checkOffset.setValue(CHECK_LENGTH);
+
       Animated.parallel([
         Animated.spring(translateY, {
           toValue: 0,
@@ -55,11 +69,20 @@ export default function Toast({ config }) {
         Animated.timing(opacity, {
           toValue: 1, duration: 150, useNativeDriver: true,
         }),
+        // Draw the checkmark (only if it's a success toast)
+        ...(config.type === 'success' || !config.type ? [
+          Animated.timing(checkOffset, {
+            toValue: 0,
+            duration: 320,
+            delay: 150, // Wait for the toast to mostly appear first
+            useNativeDriver: false, // SVG stroke dash cannot use native driver
+          })
+        ] : [])
       ]).start();
     } else {
       Animated.parallel([
         Animated.spring(translateY, {
-          toValue: -30,
+          toValue: -100,
           useNativeDriver: true,
           stiffness: 300, damping: 25, mass: 1,
         }),
@@ -77,61 +100,80 @@ export default function Toast({ config }) {
 
   if (!display.msg) return null;
 
-  const isErr  = display.type === 'error';
+  const isErr = display.type === 'error';
   const isWarn = display.type === 'warning';
-  const color  = isErr ? C.danger : isWarn ? C.warning : C.success;
-  const Icon   = isErr ? Icons.info : isWarn ? Icons.info : Icons.check;
+  const isSuccess = !isErr && !isWarn;
+  
+  const color = isErr ? C.danger : isWarn ? C.warning : C.success;
+  const Icon = isErr ? Icons.info : isWarn ? Icons.info : null;
 
   return (
-    <AnimatedBlurView
-      tint="dark"
-      intensity={100} // changed
+    <AnimatedContainer
+      tint={Platform.OS === 'ios' ? "dark" : undefined}
+      intensity={Platform.OS === 'ios' ? 100 : undefined}
       style={[
         styles.toast,
         {
           opacity,
           transform: [{ translateY }, { scale }],
           borderColor: color + '40',
+          // Drops slightly below the system status bar cutouts
           top: insets.top + 10,
-          overflow: 'hidden',
-          backgroundColor: 'rgba(23,28,44,0.9)',
+          backgroundColor: Platform.OS === 'ios' ? '#000000' : 'rgba(23, 28, 44, 0.98)',
+          borderWidth: Platform.OS === 'ios' ? 0 : 1,
+          shadowColor: color,
+          shadowOpacity: 0.4,
+          elevation: Platform.OS === 'android' ? 10 : 0, 
         },
       ]}
       pointerEvents="none"
     >
       <View style={[styles.iconBox, { backgroundColor: color + '20' }]}>
-        <Icon size={12} color={color} />
+        {isSuccess ? (
+          <Svg width={16} height={16} viewBox="0 0 100 100">
+            {/* Optional subtle background circle */}
+            <Circle cx={50} cy={50} r={44} fill={color + '1a'} />
+            <AnimatedPath
+              d="M28,52 L43,66 L74,34"
+              fill="none"
+              stroke={color}
+              strokeWidth={12} 
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeDasharray={CHECK_LENGTH}
+              strokeDashoffset={checkOffset}
+            />
+          </Svg>
+        ) : (
+          <Icon size={12} color={color} />
+        )}
       </View>
       <Text style={styles.text}>{display.msg}</Text>
-    </AnimatedBlurView>
+    </AnimatedContainer>
   );
 }
 
 const styles = StyleSheet.create({
   toast: {
-    position:    'absolute',
-    alignSelf:   'center',
+    position: 'absolute',
+    alignSelf: 'center',
     flexDirection: 'row',
-    alignItems:  'center',
-    gap:         12, // was 10
+    alignItems: 'center',
+    gap: 12,
     borderRadius: 999,
-    borderWidth:  1,
-    paddingVertical:   12, // was 10
-    paddingHorizontal: 16, // was 16
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 }, // was 8
-    shadowOpacity: 0.5,
-    shadowRadius:  16,
-    elevation: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    shadowOffset: { width: 0, height: 10 },
+    shadowRadius: 16,
     zIndex: 9999,
-    overflow: 'hidden', // added
+    overflow: 'hidden',
   },
   iconBox: {
     width: 24, height: 24, borderRadius: 12,
     alignItems: 'center', justifyContent: 'center',
   },
   text: {
-    fontSize: 13, // was 12
+    fontSize: 13,
     color: '#f0f4ff',
     fontWeight: '600',
     letterSpacing: 0.2,

@@ -1,7 +1,23 @@
 # SplitEase/backend/repositories/routine_repository.py
 
 
+import json
+
 from core.database import get_connection
+
+
+def _decode_modifier_schema(raw):
+    """Routine_Items.modifier_schema comes back from mysql-connector as a
+    JSON string, not a parsed object — decode it once here so every caller
+    (repository and service layer) gets a plain list[dict]."""
+    if not raw:
+        return []
+    if isinstance(raw, str):
+        try:
+            return json.loads(raw) or []
+        except (TypeError, ValueError):
+            return []
+    return raw
 
 
 def fetch_routines(user_id: int) -> list[dict]:
@@ -166,6 +182,7 @@ def fetch_routine_detail(routine_id: int, user_id: int) -> dict | None:
     cur.execute(
         """
         SELECT ri.item_id, ri.template_id, ri.sort_order, ri.default_included,
+               ri.modifier_schema,
                qt.name, qt.icon_name, qt.default_amount, qt.default_time,
                qt.group_id, qt.category_id, qt.subcategory_id,
                qt.split_type, qt.split_config
@@ -176,7 +193,10 @@ def fetch_routine_detail(routine_id: int, user_id: int) -> dict | None:
         """,
         (routine_id,),
     )
-    routine["items"] = cur.fetchall()
+    items = cur.fetchall()
+    for item in items:
+        item["modifier_schema"] = _decode_modifier_schema(item["modifier_schema"])
+    routine["items"] = items
     cur.close(); conn.close()
     return routine
 
@@ -192,8 +212,14 @@ def insert_routine(user_id: int, name: str, icon_name: str, active_days: str, it
         )
         routine_id = cur.lastrowid
         cur.executemany(
-            "INSERT INTO Routine_Items (routine_id, template_id, sort_order, default_included) VALUES (%s, %s, %s, %s)",
-            [(routine_id, i["template_id"], i["sort_order"], i["default_included"]) for i in items],
+            "INSERT INTO Routine_Items (routine_id, template_id, sort_order, default_included, modifier_schema) VALUES (%s, %s, %s, %s, %s)",
+            [
+                (
+                    routine_id, i["template_id"], i["sort_order"], i["default_included"],
+                    json.dumps(i["modifier_schema"]) if i.get("modifier_schema") else None,
+                )
+                for i in items
+            ],
         )
         conn.commit()
         return routine_id
@@ -215,8 +241,14 @@ def update_routine(routine_id: int, user_id: int, name: str, icon_name: str, act
         )
         cur.execute("DELETE FROM Routine_Items WHERE routine_id = %s", (routine_id,))
         cur.executemany(
-            "INSERT INTO Routine_Items (routine_id, template_id, sort_order, default_included) VALUES (%s, %s, %s, %s)",
-            [(routine_id, i["template_id"], i["sort_order"], i["default_included"]) for i in items],
+            "INSERT INTO Routine_Items (routine_id, template_id, sort_order, default_included, modifier_schema) VALUES (%s, %s, %s, %s, %s)",
+            [
+                (
+                    routine_id, i["template_id"], i["sort_order"], i["default_included"],
+                    json.dumps(i["modifier_schema"]) if i.get("modifier_schema") else None,
+                )
+                for i in items
+            ],
         )
         conn.commit()
     except Exception:

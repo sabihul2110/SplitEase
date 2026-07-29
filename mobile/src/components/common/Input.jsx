@@ -1,15 +1,5 @@
 // SplitEase/mobile/src/components/common/Input.jsx
-//
-// Fixes:
-//   - Yellow/olive autofill highlight from Android Google Password Manager
-//     → selectionColor set to brand blue
-//     → autoComplete values tightened (only "email" / "current-password" / "new-password" / "off")
-//     → underlineColorAndroid="transparent" removes Android's default underline
-//     → textContentType kept for iOS keychain
-//   The yellow comes from Android's WebView autofill overlay injecting its own
-//   background onto the TextInput. There's no 100% guaranteed fix in RN, but
-//   setting the right autoComplete + importantForAutofill="yes" on the correct
-//   fields (and "no" on everything else) suppresses it in most cases.
+
 
 import React, { useState } from "react";
 import {

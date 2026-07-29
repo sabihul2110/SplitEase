@@ -74,10 +74,6 @@ function computeSummary(entries) {
     if (e.type === "group_expense_owed")     net -= (e.amount ?? 0);
     if (e.type === "loan_given")             net += (e.receivable ?? 0);
     if (e.type === "loan_taken")             net -= (e.receivable ?? 0);
-    // Settlements/repayments accrue nothing new (excluded from spent/received
-    // above to avoid double-counting) but they DO cancel out the receivable/
-    // payable that group_expense/group_expense_owed/loans already added —
-    // without this, a paid-off balance keeps showing as owed forever.
     if (e.type === "settlement_sent")        net += (e.amount ?? 0);
     if (e.type === "settlement_received")    net -= (e.amount ?? 0);
     if (e.type === "loan_repayment_paid")    net += (e.amount ?? 0);
@@ -148,7 +144,6 @@ function MonthNavigator({ value, onChange, availableMonths }) {
   const canGoBack = true; 
   const canGoForward = value < cur || availableMonths.some(m => m > value);
   
-  // 🔥 Prevent advancing the year past the current calendar year
   const canGoNextYear = pickerYear < curYear;
 
   const MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -201,10 +196,8 @@ function MonthNavigator({ value, onChange, availableMonths }) {
       </View>
 
       <Modal visible={showPicker} transparent animationType="fade" onRequestClose={() => setShowPicker(false)}>
-        {/* 🔥 Fix 2: Pressable background that closes the modal */}
         <Pressable style={styles.pickerOverlay} onPress={() => setShowPicker(false)}>
           
-          {/* 🔥 Stop propagation so tapping inside the box doesn't close it */}
           <Pressable style={styles.pickerBox} onPress={(e) => e.stopPropagation()}>
             <View style={styles.pickerYearHeader}>
               <TouchableOpacity onPress={() => setPickerYear(y => y - 1)} hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
@@ -229,8 +222,6 @@ function MonthNavigator({ value, onChange, availableMonths }) {
                 const thisMonthStr = `${pickerYear}-${paddedMonth}`;
                 const isSelected = thisMonthStr === value;
                 const hasData = availableMonths.includes(thisMonthStr);
-                
-                // 🔥 Fix 1: Prevent selecting future months
                 const isFuture = thisMonthStr > cur;
 
                 return (
@@ -249,7 +240,7 @@ function MonthNavigator({ value, onChange, availableMonths }) {
                       styles.pickerMonthText,
                       isSelected && styles.pickerMonthTextSelected,
                       !isSelected && hasData && { color: COLORS.primaryH },
-                      isFuture && { color: COLORS.text3 } // Fade out text for future months
+                      isFuture && { color: COLORS.text3 }
                     ]}>
                       {m}
                     </Text>
@@ -339,7 +330,10 @@ function InlineRepay({ entry, onSuccess, onToast }) {
 // ─────────────────────────────────────────────
 //  Single Entry Row
 // ─────────────────────────────────────────────
-function EntryRow({ entry, deleting, onDelete, onNavigateGroup, onToast, onLongPressEdit }) {
+function EntryRow({
+  entry, deleting, onDelete, onNavigateGroup, onToast, onEdit,
+  selectionMode, selected, onToggleSelect, onLongPressSelect,
+}) {
   const cfg     = TYPE_CFG[entry.type];
   const iconCfg = TYPE_ICONS[entry.type];
   if (!cfg || !iconCfg) return null;
@@ -372,15 +366,22 @@ function EntryRow({ entry, deleting, onDelete, onNavigateGroup, onToast, onLongP
 
   return (
     <TouchableOpacity
-      style={styles.entry}
-      activeOpacity={canEdit ? 0.7 : 1}
-      onLongPress={canEdit ? () => onLongPressEdit?.(entry) : undefined}
+      style={[styles.entry, selected && styles.entrySelected]}
+      activeOpacity={0.7}
+      onPress={() => { if (selectionMode && isDeletable) onToggleSelect?.(entry); }}
+      onLongPress={() => { if (isDeletable) onLongPressSelect?.(entry); }}
       delayLongPress={350}
     >
-      {/* Icon */}
-      <View style={[styles.entryIcon, { backgroundColor: iconBg }]}>
-        {isBrand ? <BrandIcon brand={resolved.brand} size={18} /> : <Icon size={18} color={iconGlyphColor} />}
-      </View>
+      {/* Icon / selection checkbox */}
+      {selectionMode && isDeletable ? (
+        <View style={[styles.selectCheck, selected && styles.selectCheckOn]}>
+          {selected && <Icons.check size={14} color="#fff" />}
+        </View>
+      ) : (
+        <View style={[styles.entryIcon, { backgroundColor: iconBg }]}>
+          {isBrand ? <BrandIcon brand={resolved.brand} size={18} /> : <Icon size={18} color={iconGlyphColor} />}
+        </View>
+      )}
 
       {/* Body */}
       <View style={styles.entryBody}>
@@ -414,7 +415,7 @@ function EntryRow({ entry, deleting, onDelete, onNavigateGroup, onToast, onLongP
         )}
 
         {/* Loan given — inline repay */}
-        {isLoanGiven && (
+        {isLoanGiven && !selectionMode && (
           <InlineRepay
             entry={entry}
             onSuccess={onDelete ? () => onDelete(entry, "refresh") : () => {}}
@@ -441,33 +442,52 @@ function EntryRow({ entry, deleting, onDelete, onNavigateGroup, onToast, onLongP
         })()}
 
         {/* Group link */}
-        {!!entry.group_id && (
+        {!!entry.group_id && !selectionMode && (
           <TouchableOpacity onPress={() => onNavigateGroup?.(entry.group_id)}>
             <Text style={styles.groupLink}>→ {entry.group_name}</Text>
           </TouchableOpacity>
         )}
       </View>
 
-      {/* Right: amount + delete */}
+      {/* Right: amount + edit/delete */}
       <View style={styles.entryRight}>
         <Text style={[styles.entryAmount, { color: moneyColor }]}>
           {cfg.sign}₹{fmt(disp)}
         </Text>
-        {isDeletable && (
-          <TouchableOpacity
-            style={styles.delBtn}
-            onPress={() => onDelete?.(entry, "confirm")}
-            disabled={isDeleting}
-          >
-            {isDeleting
-              ? <ActivityIndicator size="small" color={COLORS.danger} />
-              : <Icons.trash size={14} color={COLORS.text3} />}
-          </TouchableOpacity>
+        {!selectionMode && (
+          <View style={{ flexDirection: "row", gap: 4 }}>
+            {canEdit && (
+              <TouchableOpacity style={styles.delBtn} onPress={() => onEdit?.(entry)}>
+                <Icons.edit size={14} color={COLORS.text3} />
+              </TouchableOpacity>
+            )}
+            {isDeletable && (
+              <TouchableOpacity
+                style={styles.delBtn}
+                onPress={() => onDelete?.(entry, "confirm")}
+                disabled={isDeleting}
+              >
+                {isDeleting
+                  ? <ActivityIndicator size="small" color={COLORS.danger} />
+                  : <Icons.trash size={14} color={COLORS.text3} />}
+              </TouchableOpacity>
+            )}
+          </View>
         )}
       </View>
     </TouchableOpacity>
   );
 }
+
+
+const MemoEntryRow = React.memo(EntryRow, (prev, next) => {
+  return (
+    prev.entry === next.entry &&
+    prev.selected === next.selected &&
+    prev.selectionMode === next.selectionMode &&
+    prev.deleting === next.deleting
+  );
+});
 
 // ─────────────────────────────────────────────
 //  Tab bar
@@ -500,6 +520,69 @@ export default function ExpensesScreen() {
   const [selMonth, setSelMonth] = useState(currentMonth);
   const [sortAsc, setSortAsc] = useState(false);
   const [alertConfig, setAlertConfig] = useState(null);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+
+  function entryKey(e) {
+    return `${e.type}:${e.ref_id}`;
+  }
+
+  function enterSelection(entry) {
+    setSelectionMode(true);
+    setSelectedIds(new Set([entryKey(entry)]));
+  }
+
+  function toggleSelect(entry) {
+    const k = entryKey(entry);
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(k)) next.delete(k); else next.add(k);
+      if (next.size === 0) setSelectionMode(false);
+      return next;
+    });
+  }
+
+  function cancelSelection() {
+    setSelectionMode(false);
+    setSelectedIds(new Set());
+  }
+
+  function confirmBatchDelete() {
+    const items = entries.filter(e => selectedIds.has(entryKey(e)));
+    if (items.length === 0) return;
+    setAlertConfig({
+      title: `Delete ${items.length} ${items.length === 1 ? "entry" : "entries"}`,
+      message: "This cannot be undone.",
+      buttons: [
+        { text: "Cancel", style: "cancel", onPress: () => setAlertConfig(null) },
+        { text: "Delete", style: "destructive", onPress: () => { setAlertConfig(null); executeBatchDelete(items); } },
+      ],
+    });
+  }
+
+  async function executeBatchDelete(items) {
+    const keys = new Set(items.map(entryKey));
+    const snapshot = entries;
+    setEntries(prev => prev.filter(e => !keys.has(entryKey(e))));
+    cancelSelection();
+    try {
+      await Promise.all(items.map(e => {
+        if (e.type === "personal_expense") return expensesApi.deletePersonalExpense(e.ref_id);
+        if (e.type === "income")           return expensesApi.deleteIncome(e.ref_id);
+        if (e.type === "loan_given")       return expensesApi.deleteLoan(e.ref_id);
+        if (e.type === "loan_taken")       return expensesApi.deleteBorrow(e.ref_id);
+        return Promise.resolve();
+      }));
+      showToast(`Deleted ${items.length} ${items.length === 1 ? "entry" : "entries"}`);
+    } catch (err) {
+      setEntries(snapshot);
+      setAlertConfig({
+        title: "Delete Failed",
+        message: err?.response?.data?.detail || "Some deletions failed.",
+        buttons: [{ text: "OK", onPress: () => setAlertConfig(null) }],
+      });
+    }
+  }
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -544,30 +627,17 @@ export default function ExpensesScreen() {
 
   const grouped = useMemo(() => groupByMonthAndDay(visible, sortAsc), [visible, sortAsc]);
 
-  function handleLongPressEdit(entry) {
-    setAlertConfig({
-      title: entry.label,
-      message: "What would you like to do?",
-      buttons: [
-        { text: "Cancel", style: "cancel", onPress: () => setAlertConfig(null) },
-        {
-          text: "Edit", onPress: () => {
-            setAlertConfig(null);
-            navigation.navigate("AddEntry", {
-              tab: "personal",
-              editPersonalExpense: {
-                expense_id: entry.ref_id,
-                category: extractLabelCategory(entry.label),
-                subcategory_name: entry.subcategory_name,
-                amount: entry.amount,
-                expense_date: entry.date,
-                note: entry.sub,
-              },
-            });
-          },
-        },
-        { text: "Delete", style: "destructive", onPress: () => { setAlertConfig(null); handleDelete(entry, "confirm"); } },
-      ],
+  function handleEditEntry(entry) {
+    navigation.navigate("AddEntry", {
+      tab: "personal",
+      editPersonalExpense: {
+        expense_id: entry.ref_id,
+        category: extractLabelCategory(entry.label),
+        subcategory_name: entry.subcategory_name,
+        amount: entry.amount,
+        expense_date: entry.date,
+        note: entry.sub,
+      },
     });
   }
 
@@ -620,7 +690,6 @@ export default function ExpensesScreen() {
 
   const monthDisplayLabel = fmtMonthLabel(selMonth);
 
-  // Build flat list data from grouped structure
   const listData = useMemo(() => {
     const rows = [];
     for (const { monthKey, monthLabel, days } of grouped) {
@@ -663,13 +732,18 @@ export default function ExpensesScreen() {
         </Text>
       );
     }
+    const key = entryKey(item.entry);
     return (
-      <EntryRow
+      <MemoEntryRow
         entry={item.entry}
         deleting={deleting}
         onDelete={handleDelete}
         onToast={showToast}
-        onLongPressEdit={handleLongPressEdit}
+        onEdit={handleEditEntry}
+        selectionMode={selectionMode}
+        selected={selectedIds.has(key)}
+        onToggleSelect={toggleSelect}
+        onLongPressSelect={enterSelection}
         onNavigateGroup={(gid) =>
           navigation.navigate("Groups", {
             screen: "GroupDetail",
@@ -683,31 +757,47 @@ export default function ExpensesScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
       <ScreenHeader
-        title="Expenses"
+        title={selectionMode ? `${selectedIds.size} selected` : "Expenses"}
         actions={
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            <TouchableOpacity style={styles.quickEntryBtn} onPress={() => navigation.navigate("QuickEntry")}>
-              <IconLib.zap size={16} color={COLORS.primary} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.addBtn}
-              onPress={() => navigation.navigate("AddEntry")}
-            >
-              <Icons.plus size={16} color="#fff" />
-              <Text style={styles.addBtnText}>Add</Text>
-            </TouchableOpacity>
-          </View>
+          selectionMode ? (
+            <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center' }}>
+              <TouchableOpacity onPress={cancelSelection}>
+                <Text style={styles.selCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={confirmBatchDelete} disabled={selectedIds.size === 0}>
+                <Icons.trash size={20} color={selectedIds.size ? COLORS.danger : COLORS.text3} />
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <TouchableOpacity style={styles.quickEntryBtn} onPress={() => navigation.navigate("QuickEntry")}>
+                <IconLib.zap size={16} color={COLORS.primary} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.addBtn}
+                onPress={() => navigation.navigate("AddEntry")}
+              >
+                <Icons.plus size={16} color="#fff" />
+                <Text style={styles.addBtnText}>Add</Text>
+              </TouchableOpacity>
+            </View>
+          )
         }
       />
 
       <FlatList
         data={listData}
+        extraData={selectedIds}
         keyExtractor={item => item.key}
         renderItem={renderItem}
         contentContainerStyle={[styles.listContent, { paddingBottom: TAB_BAR_HEIGHT }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         stickyHeaderIndices={[]}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={8}
+        windowSize={5}
+        initialNumToRender={10}
         ListHeaderComponent={
           <>
             <View style={{ marginBottom: 20, marginTop: 4 }}>
@@ -1047,6 +1137,24 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: COLORS.border,
   },
+  entrySelected: {
+    backgroundColor: "rgba(37,99,235,0.08)",
+  },
+  selectCheck: {
+    width: 24, height: 24, borderRadius: 12,
+    borderWidth: 2, borderColor: COLORS.border2,
+    alignItems: "center", justifyContent: "center",
+    marginTop: 6, flexShrink: 0,
+  },
+  selectCheckOn: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  selCancelText: {
+    fontSize: FONT_SIZE.sm,
+    fontWeight: FONT_WEIGHT.semibold,
+    color: COLORS.text2,
+  },
   entryIcon: {
     width: 36,
     height: 36,
@@ -1223,13 +1331,13 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.6)', // Integrated bg color directly into overlay
+    backgroundColor: 'rgba(0,0,0,0.6)',
   },
   pickerBox: {
-    width: 300, // 🔥 Fix 3: Fixed compact width instead of 100% screen stretch
+    width: 300,
     backgroundColor: COLORS.surface,
     borderRadius: RADIUS.xl,
-    padding: SPACING.base, // Tighter padding
+    padding: SPACING.base,
     borderWidth: 1,
     borderColor: COLORS.border,
     shadowColor: '#000',
@@ -1242,7 +1350,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: SPACING.base, // Tighter margin
+    marginBottom: SPACING.base,
     paddingHorizontal: SPACING.xs,
   },
   pickerYearText: {
