@@ -18,7 +18,7 @@ import ScreenHeader from '../../components/layout/ScreenHeader';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import { TemplateIcon, ICON_GROUPS } from '../../constants/templateIcons';
-import IconPickerGrid from '../../components/common/IconPickerGrid';
+import IconPickerField from '../../components/common/IconPickerField';
 import { LoadingState } from '../../components/common/Ui';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS, TAB_BAR_HEIGHT } from '../../constants/theme';
 
@@ -237,7 +237,12 @@ export default function EditRoutineScreen() {
 
           <View style={styles.field}>
             <Text style={styles.label}>ICON</Text>
-            <IconPickerGrid value={iconName} onChange={setIconName} activeColor={COLORS.primary} />
+            <IconPickerField
+              value={iconName}
+              onChange={setIconName}
+              activeColor={COLORS.primary}
+              requireCategory={false}
+            />
           </View>
 
           <View style={styles.field}>

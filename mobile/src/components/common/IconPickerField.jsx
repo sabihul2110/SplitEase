@@ -13,9 +13,9 @@ import IconPickerGrid from './IconPickerGrid';
 import { Icons } from '../icons';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS } from '../../constants/theme';
 
-export default function IconPickerField({ value, onChange, categoryName, activeColor = COLORS.primary }) {
+export default function IconPickerField({ value, onChange, categoryName, activeColor = COLORS.primary, requireCategory = true }) {
   const [open, setOpen] = useState(false);
-  const disabled = !categoryName;
+  const disabled = requireCategory && !categoryName;
 
   return (
     <>

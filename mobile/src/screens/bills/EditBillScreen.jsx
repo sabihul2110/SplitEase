@@ -147,7 +147,7 @@ export default function EditBillScreen() {
                 if (id === 'personal') setGroupId(null);
               }}
               placeholder="Select scope"
-              activeColor={COLORS.warning}
+              activeColor={COLORS.primary}
             />
           </View>
 
@@ -159,7 +159,7 @@ export default function EditBillScreen() {
                 options={groups.map((g) => ({ id: g.group_id, label: g.group_name }))}
                 onSelect={setGroupId}
                 placeholder="Select group"
-                activeColor={COLORS.warning}
+                activeColor={COLORS.primary}
               />
             </View>
           )}
@@ -171,7 +171,7 @@ export default function EditBillScreen() {
               options={categories.map((c) => ({ id: c.category_id, label: c.category_name }))}
               onSelect={(id) => handlePickCategory(categories.find((c) => c.category_id === id))}
               placeholder="Select category"
-              activeColor={COLORS.warning}
+              activeColor={COLORS.primary}
             />
           </View>
 
@@ -186,7 +186,7 @@ export default function EditBillScreen() {
                 ]}
                 onSelect={setSubcategoryId}
                 placeholder="Select subcategory"
-                activeColor={COLORS.warning}
+                activeColor={COLORS.primary}
               />
             </View>
           )}
@@ -196,7 +196,7 @@ export default function EditBillScreen() {
             <IconPickerField
               value={iconName}
               onChange={setIconName}
-              activeColor={COLORS.warning}
+              activeColor={COLORS.primary}
               categoryName={selectedCategoryName}
             />
           </View>
@@ -226,7 +226,7 @@ export default function EditBillScreen() {
                 ]}
                 onSelect={setSplitType}
                 placeholder="Select split type"
-                activeColor={COLORS.warning}
+                activeColor={COLORS.primary}
               />
 
               {splitType === 'custom' && members.map((m) => (
