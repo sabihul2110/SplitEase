@@ -9,6 +9,7 @@ class RoutineItemIn(BaseModel):
     sort_order: int = 0
     default_included: bool = True
     modifier_schema: list[dict] | None = None
+    visible_days: list[int] | None = None
 
 
 class RoutineCreate(BaseModel):

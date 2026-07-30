@@ -45,7 +45,12 @@ export default function RunRoutineScreen() {
   const [toast, setToast] = useState({ msg: '', type: 'success' });
 
   useEffect(() => {
-    routinesApi.getRoutine(routineId).then(({ data }) => {
+    routinesApi.getRoutine(routineId).then(({ data: fetched }) => {
+      const visibleItems = fetched.items.filter((it) => {
+        const days = it.visible_days;
+        return !days || days.length === 0 || days.includes(dayOfWeekFromDateStr(initialDate));
+      });
+      const data = { ...fetched, items: visibleItems };
       setRoutine(data);
       const init = {};
       data.items.forEach((it) => {

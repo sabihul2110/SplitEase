@@ -266,21 +266,6 @@ const styles = StyleSheet.create({
   scroll: { padding: SPACING.base, gap: SPACING.md, paddingBottom: 60 + TAB_BAR_HEIGHT },
   field: { gap: SPACING.sm },
   label: { fontSize: FONT_SIZE.xs, fontWeight: FONT_WEIGHT.semibold, color: COLORS.text3, letterSpacing: 0.8 },
-  iconGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
-  iconOpt: {
-    width: 40, height: 40, borderRadius: RADIUS.md,
-    backgroundColor: COLORS.surface2, borderWidth: 1, borderColor: COLORS.border,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  iconOptActive: { borderColor: COLORS.warning, backgroundColor: 'rgba(245,158,11,0.12)' },
-  chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
-  chip: {
-    paddingHorizontal: 12, paddingVertical: 8, borderRadius: RADIUS.full,
-    borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.surface2,
-  },
-  chipActive: { borderColor: COLORS.warning, backgroundColor: 'rgba(245,158,11,0.12)' },
-  chipText: { fontSize: FONT_SIZE.sm, color: COLORS.text2 },
-  chipTextActive: { color: COLORS.warning, fontWeight: FONT_WEIGHT.semibold },
   dayInput: {
     backgroundColor: COLORS.surface2, borderWidth: 1, borderColor: COLORS.border2,
     borderRadius: RADIUS.md, paddingHorizontal: SPACING.md, paddingVertical: 12,

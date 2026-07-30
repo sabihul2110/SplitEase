@@ -112,6 +112,15 @@ export default function EditRoutineScreen() {
     )));
   }
 
+  function toggleItemVisibleDay(templateId, day) {
+    setSelected((p) => p.map((s) => {
+      if (s.template_id !== templateId) return s;
+      const days = s.visible_days || [];
+      const nextDays = days.includes(day) ? days.filter((d) => d !== day) : [...days, day].sort();
+      return { ...s, visible_days: nextDays };
+    }));
+  }
+
   function toggleModifierDay(templateId, modId, day) {
     setSelected((p) => p.map((s) => {
       if (s.template_id !== templateId) return s;
@@ -141,6 +150,7 @@ export default function EditRoutineScreen() {
               template_id: it.template_id,
               default_included: !!it.default_included,
               modifier_schema: it.modifier_schema || [],
+              visible_days: it.visible_days || [],
             }))
         );
       }
@@ -162,7 +172,7 @@ export default function EditRoutineScreen() {
       if (p.some((s) => s.template_id === templateId)) {
         return p.filter((s) => s.template_id !== templateId);
       }
-      return [...p, { template_id: templateId, default_included: true, modifier_schema: [] }];
+      return [...p, { template_id: templateId, default_included: true, modifier_schema: [], visible_days: [] }];
     });
   }
 
@@ -203,6 +213,7 @@ export default function EditRoutineScreen() {
           sort_order: i,
           default_included: s.default_included,
           modifier_schema: s.modifier_schema && s.modifier_schema.length ? s.modifier_schema : null,
+          visible_days: s.visible_days && s.visible_days.length ? s.visible_days : null,
         })),
       };
       if (isEdit) {
@@ -287,6 +298,24 @@ export default function EditRoutineScreen() {
                     <TouchableOpacity onPress={() => toggleTemplate(s.template_id)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                       <Text style={styles.removeX}>✕</Text>
                     </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.itemVisibleDaysRow}>
+                    <Text style={styles.modBranchLabel}>ONLY ON — leave all off to show every day</Text>
+                    <View style={styles.chipsRow}>
+                      {DAYS.map((d) => {
+                        const active = (s.visible_days || []).includes(d.key);
+                        return (
+                          <TouchableOpacity
+                            key={d.key}
+                            style={[styles.daySmallChip, active && styles.dayChipActive]}
+                            onPress={() => toggleItemVisibleDay(s.template_id, d.key)}
+                          >
+                            <Text style={[styles.dayChipText, active && styles.dayChipTextActive]}>{d.label}</Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
                   </View>
 
                   <TouchableOpacity style={styles.modifierToggleBtn} onPress={() => toggleModifierEditor(s.template_id)}>
@@ -468,13 +497,6 @@ const styles = StyleSheet.create({
   scroll: { padding: SPACING.base, gap: SPACING.md, paddingBottom: 60 + TAB_BAR_HEIGHT },
   field: { gap: SPACING.sm },
   label: { fontSize: FONT_SIZE.xs, fontWeight: FONT_WEIGHT.semibold, color: COLORS.text3, letterSpacing: 0.5, lineHeight: 16 },
-  iconGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
-  iconOpt: {
-    width: 40, height: 40, borderRadius: RADIUS.md,
-    backgroundColor: COLORS.surface2, borderWidth: 1, borderColor: COLORS.border,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  iconOptActive: { borderColor: COLORS.primary, backgroundColor: 'rgba(59,130,246,0.12)' },
   chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
   dayChip: {
     width: 44, paddingVertical: 8, borderRadius: RADIUS.full, alignItems: 'center',
@@ -490,6 +512,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: COLORS.border, padding: SPACING.sm,
   },
   modifierToggleBtn: { paddingHorizontal: SPACING.sm },
+  itemVisibleDaysRow: { paddingHorizontal: SPACING.sm, gap: 6 },
   modifierToggleText: { fontSize: FONT_SIZE.xs, color: COLORS.primary, fontWeight: FONT_WEIGHT.semibold },
   modifierCard: {
     backgroundColor: COLORS.surface2, borderRadius: RADIUS.md,

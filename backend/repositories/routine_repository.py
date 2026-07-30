@@ -182,7 +182,7 @@ def fetch_routine_detail(routine_id: int, user_id: int) -> dict | None:
     cur.execute(
         """
         SELECT ri.item_id, ri.template_id, ri.sort_order, ri.default_included,
-               ri.modifier_schema,
+               ri.modifier_schema, ri.visible_days,
                qt.name, qt.icon_name, qt.default_amount, qt.default_time,
                qt.group_id, qt.category_id, qt.subcategory_id,
                qt.split_type, qt.split_config
@@ -196,6 +196,7 @@ def fetch_routine_detail(routine_id: int, user_id: int) -> dict | None:
     items = cur.fetchall()
     for item in items:
         item["modifier_schema"] = _decode_modifier_schema(item["modifier_schema"])
+        item["visible_days"] = _decode_modifier_schema(item["visible_days"])  # same JSON-decode shape, reused
     routine["items"] = items
     cur.close(); conn.close()
     return routine
@@ -212,11 +213,12 @@ def insert_routine(user_id: int, name: str, icon_name: str, active_days: str, it
         )
         routine_id = cur.lastrowid
         cur.executemany(
-            "INSERT INTO Routine_Items (routine_id, template_id, sort_order, default_included, modifier_schema) VALUES (%s, %s, %s, %s, %s)",
+            "INSERT INTO Routine_Items (routine_id, template_id, sort_order, default_included, modifier_schema, visible_days) VALUES (%s, %s, %s, %s, %s, %s)",
             [
                 (
                     routine_id, i["template_id"], i["sort_order"], i["default_included"],
                     json.dumps(i["modifier_schema"]) if i.get("modifier_schema") else None,
+                    json.dumps(i["visible_days"]) if i.get("visible_days") else None,
                 )
                 for i in items
             ],
@@ -241,11 +243,12 @@ def update_routine(routine_id: int, user_id: int, name: str, icon_name: str, act
         )
         cur.execute("DELETE FROM Routine_Items WHERE routine_id = %s", (routine_id,))
         cur.executemany(
-            "INSERT INTO Routine_Items (routine_id, template_id, sort_order, default_included, modifier_schema) VALUES (%s, %s, %s, %s, %s)",
+            "INSERT INTO Routine_Items (routine_id, template_id, sort_order, default_included, modifier_schema, visible_days) VALUES (%s, %s, %s, %s, %s, %s)",
             [
                 (
                     routine_id, i["template_id"], i["sort_order"], i["default_included"],
                     json.dumps(i["modifier_schema"]) if i.get("modifier_schema") else None,
+                    json.dumps(i["visible_days"]) if i.get("visible_days") else None,
                 )
                 for i in items
             ],
