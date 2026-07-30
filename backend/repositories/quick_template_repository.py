@@ -2,14 +2,24 @@
 
 
 import json
+import datetime
 from core.database import get_connection
 
 
 def _hydrate(row: dict) -> dict:
     if row.get("split_config"):
         row["split_config"] = json.loads(row["split_config"]) if isinstance(row["split_config"], str) else row["split_config"]
+    
     if row.get("default_time") is not None:
-        row["default_time"] = str(row["default_time"])
+        dt = row["default_time"]
+        if isinstance(dt, datetime.timedelta):
+            secs = int(dt.total_seconds())
+            h, rem = divmod(secs, 3600)
+            m, s = divmod(rem, 60)
+            row["default_time"] = f"{h:02d}:{m:02d}:{s:02d}"
+        else:
+            row["default_time"] = str(dt)
+            
     return row
 
 

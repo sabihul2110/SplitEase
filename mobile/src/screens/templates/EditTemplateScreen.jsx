@@ -36,7 +36,7 @@ export default function EditTemplateScreen() {
   const [groups, setGroups] = useState([]);
   const [isFixed, setIsFixed] = useState(editing ? editing.default_amount != null : true);
   const [amount, setAmount] = useState(editing?.default_amount != null ? String(editing.default_amount) : '');
-  const [time, setTime] = useState(editing?.default_time?.slice(0, 5) || '09:00');
+  const [time, setTime] = useState(editing?.default_time ? editing.default_time.split(':').slice(0, 2).join(':') : '09:00');
   const [categories, setCategories] = useState([]);
   const [categoryId, setCategoryId] = useState(editing?.category_id || null);
   const [subcats, setSubcats] = useState([]);
@@ -98,6 +98,13 @@ export default function EditTemplateScreen() {
     if (!categoryId) e.category = 'Pick a category';
     if (isFixed && (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0)) e.amount = 'Enter a valid amount';
     if (groupId && splitType === 'custom' && Math.abs(customTotal() - 100) > 0.5) e.split = 'Percentages must sum to 100';
+    
+    let formattedTime = time;
+    if (time && time.includes(':')) {
+      const [h, m] = time.split(':');
+      formattedTime = `${h.padStart(2, '0')}:${m.padStart(2, '0')}:00`;
+    }
+
     if (Object.keys(e).length) {
       setErr(Object.values(e)[0]);
       return;
@@ -109,7 +116,7 @@ export default function EditTemplateScreen() {
         name: name.trim(),
         icon_name: iconName,
         default_amount: isFixed ? parseFloat(amount) : null,
-        default_time: time.length === 5 ? `${time}:00` : time,
+        default_time: formattedTime,
         group_id: groupId,
         category_id: categoryId,
         subcategory_id: subcategoryId,

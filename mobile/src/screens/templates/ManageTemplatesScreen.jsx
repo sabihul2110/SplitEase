@@ -85,7 +85,7 @@ export default function ManageTemplatesScreen() {
                 <Text style={styles.meta}>
                   {item.group_id ? 'Group' : 'Personal'}
                   {item.default_amount != null ? ` · ₹${item.default_amount}` : ' · Variable'}
-                  {' · '}{item.default_time?.slice(0, 5)}
+                  {' · '}{item.default_time ? item.default_time.split(':').slice(0, 2).join(':') : ''}
                 </Text>
               </View>
               <TouchableOpacity

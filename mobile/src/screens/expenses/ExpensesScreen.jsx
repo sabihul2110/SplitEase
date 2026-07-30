@@ -103,12 +103,22 @@ function groupByMonthAndDay(entries, ascending = false) {
     return {
       monthKey:   mk,
       monthLabel: mk === "unknown" ? "Unknown" : fmtMonthLabel(mk),
-      days: orderedDayKeys.map(dk => ({
-        dateKey:  dk,
-        dayLabel: fmtDayHeader(dk),
-        isToday:  dk === todayStr(),
-        entries:  ascending ? monthMap[mk][dk].slice().reverse() : monthMap[mk][dk],
-      })),
+                    days: orderedDayKeys.map(dk => {
+                const dayEntries = monthMap[mk][dk];
+                dayEntries.sort((a, b) => {
+                  const tA = a.time || a.expense_time || a.created_at || "";
+                  const tB = b.time || b.expense_time || b.created_at || "";
+                  if (tA > tB) return -1;
+                  if (tA < tB) return 1;
+                  return (b.ref_id || 0) - (a.ref_id || 0);
+                });
+                return {
+                  dateKey:  dk,
+                  dayLabel: fmtDayHeader(dk),
+                  isToday:  dk === todayStr(),
+                  entries:  ascending ? dayEntries.slice().reverse() : dayEntries,
+                };
+              }),
     };
   });
 }
