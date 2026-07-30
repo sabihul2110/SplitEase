@@ -8,7 +8,7 @@ def fetch_group_expenses(group_id: int, user_id: int) -> list[dict]:
     cur.execute(
         """
         SELECT e.expense_id, e.description, e.total_amount, e.split_type,
-               e.expense_date, e.created_at, u.name AS payer_name,
+               e.expense_date, e.expense_time, e.created_at, u.name AS payer_name,
                c.category_name, sc.subcategory_name
         FROM   Expenses e
         JOIN   Users u             ON u.user_id         = e.payer_id
@@ -16,7 +16,7 @@ def fetch_group_expenses(group_id: int, user_id: int) -> list[dict]:
         LEFT JOIN Subcategories sc ON sc.subcategory_id = e.subcategory_id
         JOIN   Group_Members gm ON gm.group_id = e.group_id AND gm.user_id = %s
         WHERE  e.group_id = %s
-        ORDER  BY e.expense_date DESC, e.expense_id DESC
+        ORDER  BY e.expense_date DESC, COALESCE(e.expense_time, '23:59:59') DESC, e.expense_id DESC
         """,
         (user_id, group_id),
     )
@@ -24,6 +24,8 @@ def fetch_group_expenses(group_id: int, user_id: int) -> list[dict]:
     cur.close(); conn.close()
     for r in rows:
         r["created_at"] = str(r["created_at"]) if r.get("created_at") else None
+        if r.get("expense_time") is not None:
+            r["expense_time"] = str(r["expense_time"])
     return rows
 
 
@@ -33,14 +35,14 @@ def fetch_group_expenses_admin(group_id: int) -> list[dict]:
     cur.execute(
         """
         SELECT e.expense_id, e.description, e.total_amount, e.split_type,
-               e.expense_date, e.created_at, u.name AS payer_name,
+               e.expense_date, e.expense_time, e.created_at, u.name AS payer_name,
                c.category_name, sc.subcategory_name
         FROM   Expenses e
         JOIN   Users u             ON u.user_id         = e.payer_id
         JOIN   Categories c        ON c.category_id     = e.category_id
         LEFT JOIN Subcategories sc ON sc.subcategory_id = e.subcategory_id
         WHERE  e.group_id = %s
-        ORDER  BY e.expense_date DESC, e.expense_id DESC
+        ORDER  BY e.expense_date DESC, COALESCE(e.expense_time, '23:59:59') DESC, e.expense_id DESC
         """,
         (group_id,),
     )
@@ -48,6 +50,8 @@ def fetch_group_expenses_admin(group_id: int) -> list[dict]:
     cur.close(); conn.close()
     for r in rows:
         r["created_at"] = str(r["created_at"]) if r.get("created_at") else None
+        if r.get("expense_time") is not None:
+            r["expense_time"] = str(r["expense_time"])
     return rows
 
 
@@ -198,14 +202,14 @@ def fetch_expenses_bulk(group_ids: list[int]) -> dict[int, list[dict]]:
     cur.execute(
         f"""
         SELECT e.group_id, e.expense_id, e.description, e.total_amount,
-               e.split_type, e.expense_date, u.name AS payer_name,
+               e.split_type, e.expense_date, e.expense_time, u.name AS payer_name,
                c.category_name, sc.subcategory_name
         FROM   Expenses e
         JOIN   Users u             ON u.user_id         = e.payer_id
         JOIN   Categories c        ON c.category_id     = e.category_id
         LEFT JOIN Subcategories sc ON sc.subcategory_id = e.subcategory_id
         WHERE  e.group_id IN ({placeholders})
-        ORDER  BY e.group_id, e.expense_date DESC, e.expense_id DESC
+        ORDER  BY e.group_id, e.expense_date DESC, COALESCE(e.expense_time, '23:59:59') DESC, e.expense_id DESC
         """,
         group_ids,
     )
@@ -214,5 +218,7 @@ def fetch_expenses_bulk(group_ids: list[int]) -> dict[int, list[dict]]:
     result: dict[int, list[dict]] = {gid: [] for gid in group_ids}
     for r in rows:
         gid = r.pop("group_id")
+        if r.get("expense_time") is not None:
+            r["expense_time"] = str(r["expense_time"])
         result[gid].append(r)
     return result

@@ -14,7 +14,7 @@ def fetch_personal_expenses(user_id: int) -> list[dict]:
         FROM   Personal_Expenses pe
         LEFT JOIN Subcategories sc ON sc.subcategory_id = pe.subcategory_id
         WHERE  pe.user_id = %s
-        ORDER  BY pe.expense_date DESC, pe.expense_id DESC
+        ORDER  BY pe.expense_date DESC, COALESCE(pe.expense_time, '23:59:59') DESC, pe.expense_id DESC
         """,
         (user_id,),
     )
