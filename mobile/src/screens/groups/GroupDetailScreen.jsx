@@ -22,6 +22,7 @@ import * as expensesApi from "../../api/expenses";
 import * as settlementsApi from "../../api/settlements";
 import { useAuth } from '../../context/AuthContext';
 import { Icons } from '../../components/icons';
+import BrandIcon from '../../components/icons/BrandIcon';
 import { getExpenseIcon } from '../../constants/categoryIcons';
 import { TAB_BAR_HEIGHT } from '../../constants/theme';
 import AppAlert from "../../components/common/AppAlert";
@@ -137,10 +138,13 @@ function SectionHead({ title, right }) {
 
 // ─── Category icon for expense rows ──────────────────────────────────────────
 function CategoryIcon({ category, subcategory, description, size = 40 }) {
-  const { Icon, color } = getExpenseIcon({ category, subcategory, description });
+  const resolved = getExpenseIcon({ category, subcategory, description });
+  const Icon = resolved.Icon;
+  const isBrand = !!resolved.brand;
+  
   return (
-    <View style={[styles.ledgerIcon, { backgroundColor: color + '18' }]}>
-      <Icon size={20} color={color} />
+    <View style={[styles.ledgerIcon, { backgroundColor: C.surface2 }]}>
+      {isBrand ? <BrandIcon brand={resolved.brand} size={20} /> : <Icon size={20} color={C.text2} />}
     </View>
   );
 }
