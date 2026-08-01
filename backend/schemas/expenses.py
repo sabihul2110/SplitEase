@@ -17,6 +17,7 @@ class AddExpenseRequest(BaseModel):
     description:    str
     split_type:     str = "equal"
     expense_date:   date
+    icon_name:      str | None = None
     splits:         list[SplitItem]
 
 
@@ -28,4 +29,5 @@ class UpdateExpenseRequest(BaseModel):
     description:    str
     split_type:     str = "equal"
     expense_date:   date
+    icon_name:      str | None = None
     splits:         list[SplitItem]

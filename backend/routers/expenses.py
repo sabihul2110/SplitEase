@@ -60,6 +60,7 @@ def add_expense(group_id: int, body: AddExpenseRequest, current_user: dict = Dep
         split_type     = body.split_type,
         expense_date   = str(body.expense_date),
         splits         = [s.model_dump() for s in body.splits],
+        icon_name      = body.icon_name,
     )
     return {"expense_id": expense_id, "message": "Expense added."}
 
@@ -110,5 +111,6 @@ def update_expense(expense_id: int, body: UpdateExpenseRequest, current_user: di
         split_type     = body.split_type,
         expense_date   = str(body.expense_date),
         splits         = [s.model_dump() for s in body.splits],
+        icon_name      = body.icon_name,
     )
     return {"message": "Expense updated."}

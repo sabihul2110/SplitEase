@@ -29,8 +29,8 @@ export default function AppAlert({ config }) {
                 <Text
                   style={[
                     s.btnText,
-                    btn.style === "destructive" && { color: COLORS.white },
-                    btn.style === "cancel" && { color: COLORS.text2 },
+                    btn.style === "destructive" && { color: "#ff453a", fontWeight: FONT_WEIGHT.bold },
+                    btn.style === "cancel" && { color: COLORS.text },
                     !btn.style && { color: COLORS.white },
                   ]}
                 >
@@ -54,29 +54,28 @@ const s = StyleSheet.create({
     paddingHorizontal: SPACING.xl,
   },
   box: {
-    backgroundColor: "#171c2c",
+    backgroundColor: "#0c0c10",
     borderRadius: RADIUS.xl,
     borderWidth: 1,
     borderColor: "#242a3d",
     padding: SPACING.xl,
     width: "100%",
     gap: SPACING.sm,
-    alignItems: "center",
+    alignItems: "flex-start",
   },
   title: {
     fontSize: FONT_SIZE.lg,
     fontWeight: FONT_WEIGHT.bold,
     color: COLORS.text,
-    textAlign: "center",
+    textAlign: "left",
     letterSpacing: -0.2,
   },
   message: {
-    fontSize: FONT_SIZE.sm,
-    color: "#8892b0",
-    textAlign: "center",
-    lineHeight: 20,
-    paddingHorizontal: SPACING.sm,
-    marginTop: 4,
+    fontSize: FONT_SIZE.base,
+    color: "#c2c6d4",
+    textAlign: "left",
+    lineHeight: 21,
+    marginTop: 2,
   },
   btnRow: {
     flexDirection: "row",
@@ -86,21 +85,17 @@ const s = StyleSheet.create({
   },
   btn: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: RADIUS.lg,
+    paddingVertical: 14,
+    borderRadius: RADIUS.full,
     alignItems: "center",
     justifyContent: "center",
   },
   btnPrimary: { backgroundColor: COLORS.primary },
   btnDanger: {
-    backgroundColor: "rgba(255, 69, 58, 1)",
-    borderWidth: 1,
-    borderColor: "rgba(255, 69, 58, 1)",
+    backgroundColor: "rgba(255, 69, 58, 0.16)",
   },
   btnGhost: {
-    backgroundColor: "#1e2438",
-    borderWidth: 1,
-    borderColor: "#2e3650",
+    backgroundColor: "rgba(255, 255, 255, 0.10)",
   },
   btnText: {
     fontSize: FONT_SIZE.base,

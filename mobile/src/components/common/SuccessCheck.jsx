@@ -6,14 +6,12 @@
 
 import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, Modal } from 'react-native';
-import Svg, { Circle, Path } from 'react-native-svg';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONT_SIZE, FONT_WEIGHT } from '../../constants/theme';
+import AnimatedCheckmark, { CHECK_PATH_LENGTH } from './AnimatedCheckmark';
 
-const AnimatedPath = Animated.createAnimatedComponent(Path);
-
-const CHECK_LENGTH = 90;
+const CHECK_LENGTH = CHECK_PATH_LENGTH;
 const HOLD_MS = 550;
 
 export default function SuccessCheck({ visible, label, onDone }) {
@@ -62,19 +60,7 @@ export default function SuccessCheck({ visible, label, onDone }) {
       <Animated.View style={[styles.overlay, { opacity: backdropOpacity }]} pointerEvents="none">
         <BlurView tint="dark" intensity={40} style={StyleSheet.absoluteFill} />
         <Animated.View style={[styles.circleWrap, { transform: [{ scale: circleScale }] }]}>
-          <Svg width={88} height={88} viewBox="0 0 100 100">
-            <Circle cx={50} cy={50} r={44} fill={COLORS.success + '1a'} stroke={COLORS.success} strokeWidth={3} />
-            <AnimatedPath
-              d="M28,52 L43,66 L74,34"
-              fill="none"
-              stroke={COLORS.success}
-              strokeWidth={7}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeDasharray={CHECK_LENGTH}
-              strokeDashoffset={checkOffset}
-            />
-          </Svg>
+          <AnimatedCheckmark size={88} color={COLORS.success} strokeWidth={7} offset={checkOffset} circleStroke />
         </Animated.View>
         {!!label && (
           <Animated.Text style={[styles.label, { opacity: labelOpacity }]}>{label}</Animated.Text>

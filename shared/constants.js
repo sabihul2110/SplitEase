@@ -240,6 +240,11 @@ export const BRAND_SLUGS = {
   zomato:     'zomato',
   swiggy:     'swiggy',
   uber:       'uber',
+  blinkit:    'blinkit', // unverified Simple Icons slug — BrandIcon's
+                         // onError already falls back to a letter badge,
+                         // so worst case it just shows a "B" badge instead
+                         // of the real logo. Test it once and swap/remove
+                         // if the CDN doesn't have it.
 };
 
 // Approximate brand tints for background chips only — not the logo itself
@@ -253,6 +258,7 @@ export const BRAND_TINTS = {
   zomato:     '#E23744',
   swiggy:     '#FC8019',
   uber:       '#000000',
+  blinkit:    '#F8CB46',
 };
 
 export function isBrandSupported(key) {
@@ -273,9 +279,9 @@ export const EXPENSE_CATEGORY_ICON_MAP = {
   "Utilities":     { icon: "Zap",             color: "#fde047" },
   "Groceries":     { icon: "ShoppingBasket",  color: "#4ade80" },
   "Shopping":      { icon: "ShoppingBag",     color: "#f472b6" },
-  "Transport":     { icon: "Car",             color: "#38bdf8" },
-  "Entertainment": { icon: "Film",            color: "#c084fc" },
-  "Health":        { icon: "HeartPulse",      color: "#f87171" },
+  "Transport":       { icon: "Car",             color: "#38bdf8" },
+  "Entertainment":   { icon: "Film",            color: "#c084fc" },
+  "Health & Medical":{ icon: "HeartPulse",      color: "#f87171" },
 };
 
 // Tier 0: brand keywords, matched against note OR category text.
@@ -294,6 +300,7 @@ export const EXPENSE_BRAND_KEYWORDS = [
   { keywords: ["amazon"], brand: "amazon" },
   { keywords: ["zomato"], brand: "zomato" },
   { keywords: ["swiggy"], brand: "swiggy" },
+  { keywords: ["blinkit"], brand: "blinkit" },
   { keywords: ["uber"], brand: "uber" },
 ];
 
@@ -311,8 +318,10 @@ export const EXPENSE_SPECIFIC_KEYWORDS = [
   { keywords: ["flight", "airport", "airline"], icon: "Plane", color: "#60a5fa" },
   { keywords: ["ship", "ferry", "cruise", "boat"], icon: "Ship", color: "#38bdf8" },
   { keywords: ["cab", "taxi", "uber", "ola", "rapido", "auto", "fuel", "petrol", "diesel", "parking", "toll"], icon: "Car", color: "#38bdf8" },
-  { keywords: ["amazon", "flipkart", "myntra", "bigbasket", "zepto", "blinkit"], icon: "ShoppingBag", color: "#f472b6" },
-  { keywords: ["doctor", "medical", "medicine", "pharmacy", "hospital", "clinic"], icon: "HeartPulse", color: "#f87171" },
+  { keywords: ["amazon", "flipkart", "myntra", "bigbasket", "zepto"], icon: "ShoppingBag", color: "#f472b6" },
+  { keywords: ["doctor", "clinic", "checkup", "consultation"], icon: "Stethoscope", color: "#f87171" },
+  { keywords: ["medicine", "tablet", "tablets", "syrup", "syringe", "injection", "pharmacy", "chemist", "medical store"], icon: "Pill", color: "#fb7185" },
+  { keywords: ["hospital", "admission", "surgery", "nursing home"], icon: "Hospital", color: "#ef4444" },
   { keywords: ["gym", "workout", "fitness", "yoga"], icon: "Dumbbell", color: "#f87171" },
 ];
 

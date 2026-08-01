@@ -360,73 +360,7 @@ export const Icons = {
       <Line x1="10" y1="14" x2="21" y2="3" />
     </Svg>
   ),
-
-  // ─── §CATEGORY — Expense categories ─────────────────────────────────────
-  travel: ({ size = 20, color = "currentColor" }) => (
-    <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
-      <Path d="M17.8 19.2 16 11l3.5-3.5C21 6 21 4 21 4s-2 0-3.5 1.5L14 9 5.8 7.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 3.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z" />
-    </Svg>
-  ),
-  accommodation: ({ size = 20, color = "currentColor" }) => (
-    <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
-      <Path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-      <Polyline points="9 22 9 12 15 12 15 22" />
-    </Svg>
-  ),
-  foodDining: ({ size = 20, color = "currentColor" }) => (
-    <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
-      <Path d="M18 8h1a4 4 0 0 1 0 8h-1" />
-      <Path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z" />
-      <Line x1="6" y1="1" x2="6" y2="4" />
-      <Line x1="10" y1="1" x2="10" y2="4" />
-      <Line x1="14" y1="1" x2="14" y2="4" />
-    </Svg>
-  ),
-  activities: ({ size = 20, color = "currentColor" }) => (
-    <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
-      <Polyline points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-    </Svg>
-  ),
-  utilities: ({ size = 20, color = "currentColor" }) => (
-    <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
-      <Line x1="9" y1="18" x2="15" y2="18" />
-      <Line x1="10" y1="22" x2="14" y2="22" />
-      <Path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14" />
-    </Svg>
-  ),
-  groceries: ({ size = 20, color = "currentColor" }) => (
-    <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
-      <Path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-      <Line x1="3" y1="6" x2="21" y2="6" />
-      <Path d="M16 10a4 4 0 0 1-8 0" />
-    </Svg>
-  ),
-  shopping: ({ size = 20, color = "currentColor" }) => (
-    <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
-      <Path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
-      <Line x1="7" y1="7" x2="7.01" y2="7" />
-    </Svg>
-  ),
-  transport: ({ size = 20, color = "currentColor" }) => (
-    <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
-      <Rect x="1" y="3" width="15" height="13" rx="2" />
-      <Path d="M16 8h4l3 3v5h-7V8z" />
-      <Circle cx="5.5" cy="18.5" r="2.5" />
-      <Circle cx="18.5" cy="18.5" r="2.5" />
-    </Svg>
-  ),
-  entertainment: ({ size = 20, color = "currentColor" }) => (
-    <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
-      <Rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18" />
-      <Line x1="7" y1="2" x2="7" y2="22" />
-      <Line x1="17" y1="2" x2="17" y2="22" />
-      <Line x1="2" y1="12" x2="22" y2="12" />
-      <Line x1="2" y1="7" x2="7" y2="7" />
-      <Line x1="2" y1="17" x2="7" y2="17" />
-      <Line x1="17" y1="17" x2="22" y2="17" />
-      <Line x1="17" y1="7" x2="22" y2="7" />
-    </Svg>
-  ),
+  
 
   // ─── §MISC — Everything else ─────────────────────────────────────────────
 
@@ -456,12 +390,6 @@ export const Icons = {
       <Line x1="16" y1="2" x2="16" y2="6" />
       <Line x1="8" y1="2" x2="8" y2="6" />
       <Line x1="3" y1="10" x2="21" y2="10" />
-    </Svg>
-  ),
-  
-  health: ({ size = 20, color = "currentColor" }) => (
-    <Svg width={size} height={size} viewBox="0 0 24 24" {...S(color)}>
-      <Polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
     </Svg>
   ),
 

@@ -17,15 +17,13 @@ import { Animated, Text, View, StyleSheet, Platform } from 'react-native';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Circle, Path } from 'react-native-svg';
 import { Icons } from '../icons';
+import AnimatedCheckmark, { CHECK_PATH_LENGTH } from './AnimatedCheckmark';
 
 const AnimatedBlurView = Animated.createAnimatedComponent(BlurView);
-// Android's rendering engine chokes on animated BlurViews with borders. We use a standard View instead.
 const AnimatedContainer = Platform.OS === 'ios' ? AnimatedBlurView : Animated.View;
-const AnimatedPath = Animated.createAnimatedComponent(Path);
 
-const CHECK_LENGTH = 90;
+const CHECK_LENGTH = CHECK_PATH_LENGTH;
 
 const C = {
   success: '#10b981',
@@ -130,20 +128,7 @@ export default function Toast({ config }) {
     >
       <View style={[styles.iconBox, { backgroundColor: color + '20' }]}>
         {isSuccess ? (
-          <Svg width={16} height={16} viewBox="0 0 100 100">
-            {/* Optional subtle background circle */}
-            <Circle cx={50} cy={50} r={44} fill={color + '1a'} />
-            <AnimatedPath
-              d="M28,52 L43,66 L74,34"
-              fill="none"
-              stroke={color}
-              strokeWidth={12} 
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeDasharray={CHECK_LENGTH}
-              strokeDashoffset={checkOffset}
-            />
-          </Svg>
+          <AnimatedCheckmark size={16} color={color} strokeWidth={12} offset={checkOffset} />
         ) : (
           <Icon size={12} color={color} />
         )}

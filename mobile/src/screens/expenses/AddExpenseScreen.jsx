@@ -16,7 +16,11 @@ import { useAuth } from '../../context/AuthContext';
 import { Icons } from '../../components/icons';
 import DatePickerInput from '../../components/common/DatePickerInput';
 import PersonSearchField from '../../components/common/PersonSearchField';
+import Dropdown from '../../components/common/Dropdown';
+import IconPickerField from '../../components/common/IconPickerField';
+import { suggestTemplateIconKey } from '../../constants/templateIcons';
 import { TAB_BAR_HEIGHT } from "../../constants/theme";
+
 
 // ─── Design tokens (same as GroupDetailScreen) ────────────────────────────────
 const C = {
@@ -145,6 +149,8 @@ function PersonalForm({ onSuccess, editing }) {
   const [amount, setAmount] = useState(editing ? String(editing.amount) : '');
   const [date,   setDate]   = useState(editing?.expense_date || today());
   const [note,   setNote]   = useState(editing?.note || '');
+  const [iconName, setIconName] = useState(editing?.icon_name || null);
+  const [iconManual, setIconManual] = useState(!!editing?.icon_name);
   const [errs,   setErrs]   = useState({});
   const [saving, setSaving] = useState(false);
 
@@ -173,6 +179,15 @@ function PersonalForm({ onSuccess, editing }) {
       .finally(() => setCatsLoading(false));
   }, []);
 
+  // Auto-suggest an icon whenever category/subcategory/note changes —
+  // but never overwrite it once the user has picked one manually via
+  // the icon field below.
+  useEffect(() => {
+    if (iconManual || !categoryName) return;
+    const subName = subcats.find(s => s.subcategory_id === subcategoryId)?.subcategory_name;
+    setIconName(suggestTemplateIconKey({ category: categoryName, subcategory: subName, description: note }));
+  }, [categoryName, subcategoryId, note, iconManual]);
+
   async function handlePickCategory(cat) {
     setCategoryId(cat.category_id);
     setCategoryName(cat.category_name);
@@ -196,14 +211,13 @@ function PersonalForm({ onSuccess, editing }) {
 
     setSaving(true);
     try {
-      // Personal_Expenses stores category as free text (no category_id FK)
-      // but subcategory_id as a real FK — see schema.sql table 11 note.
       const payload = {
         category: categoryName.trim(),
         subcategory_id: subcategoryId || null,
         amount: parseFloat(amount),
         expense_date: date,
         note: note.trim() || null,
+        icon_name: iconName || null,
       };
       if (isEdit) {
         await expensesApi.editPersonalExpense(editing.expense_id, payload);
@@ -222,64 +236,40 @@ function PersonalForm({ onSuccess, editing }) {
         {catsLoading ? (
           <ActivityIndicator color={C.danger} />
         ) : (
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-            {categories.map(cat => {
-              const isActive = categoryId === cat.category_id;
-              return (
-                <TouchableOpacity
-                  key={cat.category_id}
-                  style={{
-                    paddingHorizontal: 12, paddingVertical: 7,
-                    borderRadius: R.full, borderWidth: 1,
-                    borderColor: isActive ? C.danger + '80' : C.border,
-                    backgroundColor: isActive ? C.dangerLo : C.surface2,
-                  }}
-                  onPress={() => handlePickCategory(cat)}
-                >
-                  <Text style={{ fontSize: F.sm, color: isActive ? C.danger : C.text2, fontWeight: isActive ? W.bold : W.regular }}>
-                    {cat.category_name}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+          <Dropdown
+            value={categoryId}
+            options={categories.map(c => ({ id: c.category_id, label: c.category_name }))}
+            onSelect={(id) => {
+              const cat = categories.find(c => c.category_id === id);
+              if (cat) handlePickCategory(cat);
+            }}
+            placeholder="Choose a category"
+            activeColor={C.danger}
+          />
         )}
       </Field>
 
       {subcats.length > 0 && (
         <Field label="Subcategory" optional>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-            <TouchableOpacity
-              style={{
-                paddingHorizontal: 12, paddingVertical: 7,
-                borderRadius: R.full, borderWidth: 1,
-                borderColor: subcategoryId === null ? C.danger + '80' : C.border,
-                backgroundColor: subcategoryId === null ? C.dangerLo : C.surface2,
-              }}
-              onPress={() => setSubcategoryId(null)}
-            >
-              <Text style={{ fontSize: F.sm, color: subcategoryId === null ? C.danger : C.text2 }}>None</Text>
-            </TouchableOpacity>
-            {subcats.map(s => {
-              const isActive = subcategoryId === s.subcategory_id;
-              return (
-                <TouchableOpacity
-                  key={s.subcategory_id}
-                  style={{
-                    paddingHorizontal: 12, paddingVertical: 7,
-                    borderRadius: R.full, borderWidth: 1,
-                    borderColor: isActive ? C.danger + '80' : C.border,
-                    backgroundColor: isActive ? C.dangerLo : C.surface2,
-                  }}
-                  onPress={() => setSubcategoryId(s.subcategory_id)}
-                >
-                  <Text style={{ fontSize: F.sm, color: isActive ? C.danger : C.text2, fontWeight: isActive ? W.bold : W.regular }}>
-                    {s.subcategory_name}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+          <Dropdown
+            value={subcategoryId}
+            options={[{ id: null, label: 'None' }, ...subcats.map(s => ({ id: s.subcategory_id, label: s.subcategory_name }))]}
+            onSelect={setSubcategoryId}
+            placeholder="None"
+            activeColor={C.danger}
+          />
+        </Field>
+      )}
+
+      {!!categoryName && (
+        <Field label="Icon" optional>
+          <IconPickerField
+            value={iconName}
+            onChange={(k) => { setIconName(k); setIconManual(true); }}
+            categoryName={categoryName}
+            activeColor={C.danger}
+            requireCategory={false}
+          />
         </Field>
       )}
 

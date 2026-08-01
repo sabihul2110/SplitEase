@@ -17,8 +17,8 @@ import {
 
 export const TYPE_ICONS = {
   personal_expense:        { Icon: Receipt,      bg: "rgba(239,68,68,0.12)",  color: "#f87171" },
-  group_expense:           { Icon: Users,        bg: "rgba(37,99,235,0.12)",  color: "#f87171" },
-  group_expense_owed:      { Icon: Users,        bg: "rgba(37,99,235,0.12)",  color: "#f87171" },
+  group_expense:           { Icon: Users,        bg: "rgba(37,99,235,0.12)",  color: "#60a5fa" },
+  group_expense_owed:      { Icon: Users,        bg: "rgba(37,99,235,0.12)",  color: "#60a5fa" },
   settlement_sent:         { Icon: CheckCircle2, bg: "rgba(239,68,68,0.10)",  color: "#f87171" },
   income:                  { Icon: TrendingUp,   bg: "rgba(16,185,129,0.12)", color: "#10b981" },
   settlement_received:     { Icon: CheckCircle2, bg: "rgba(99,102,241,0.12)", color: "#10b981" },

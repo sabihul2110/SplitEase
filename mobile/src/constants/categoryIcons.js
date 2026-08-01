@@ -28,7 +28,8 @@
 import {
   Plane, Building2, UtensilsCrossed, Ticket, Zap, ShoppingBasket,
   ShoppingBag, Car, Film, HeartPulse, Wifi, Droplet, Home,
-  Sparkles, Bus, TrainFront, GraduationCap, Dumbbell, Receipt, Ship
+  Sparkles, Bus, TrainFront, GraduationCap, Dumbbell, Receipt, Ship,
+  Stethoscope, Pill, Hospital,
 } from "lucide-react-native";
 import { resolveExpenseIcon, extractCategoryFromLabel } from "@splitease/shared";
 
@@ -38,6 +39,7 @@ const ICON_COMPONENTS = {
   Plane, Building2, UtensilsCrossed, Ticket, Zap, ShoppingBasket,
   ShoppingBag, Car, Film, HeartPulse, Wifi, Droplet, Home,
   Sparkles, Bus, TrainFront, GraduationCap, Dumbbell, Receipt, Ship,
+  Stethoscope, Pill, Hospital,
 };
 
 export { extractCategoryFromLabel };
@@ -46,14 +48,18 @@ export { extractCategoryFromLabel };
 // category-picker chips (icon + color per category name), independent
 // of the per-line-item resolveExpenseIcon() logic above.
 export const CATEGORY_ICONS = {
-  "Travel":        { Icon: Plane,           color: "#3b82f6" },
-  "Accommodation": { Icon: Building2,       color: "#8b5cf6" },
-  "Food & Dining": { Icon: UtensilsCrossed, color: "#f59e0b" },
-  "Activities":    { Icon: Ticket,          color: "#ec4899" },
-  "Utilities":     { Icon: Zap,             color: "#eab308" },
-  "Groceries":     { Icon: ShoppingBasket,  color: "#10b981" },
-  "Shopping":      { Icon: ShoppingBag,     color: "#f97316" },
-  "Transport":     { Icon: Car,             color: "#06b6d4" },
+  "Travel":          { Icon: Plane,           color: "#3b82f6" },
+  "Accommodation":   { Icon: Building2,       color: "#8b5cf6" },
+  "Food & Dining":   { Icon: UtensilsCrossed, color: "#f59e0b" },
+  "Activities":      { Icon: Ticket,          color: "#ec4899" },
+  "Utilities":       { Icon: Zap,             color: "#eab308" },
+  "Groceries":       { Icon: ShoppingBasket,  color: "#10b981" },
+  "Shopping":        { Icon: ShoppingBag,     color: "#f97316" },
+  "Transport":       { Icon: Car,             color: "#06b6d4" },
+  "Entertainment":   { Icon: Film,            color: "#c084fc" },
+  "Health & Medical":{ Icon: HeartPulse,      color: "#f87171" },
+  "Education":       { Icon: GraduationCap,   color: "#818cf8" },
+  "Miscellaneous":   { Icon: Receipt,         color: "#9ca3af" },
 };
 
 /**

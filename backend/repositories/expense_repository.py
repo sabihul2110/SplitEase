@@ -8,7 +8,7 @@ def fetch_group_expenses(group_id: int, user_id: int) -> list[dict]:
     cur.execute(
         """
         SELECT e.expense_id, e.description, e.total_amount, e.split_type,
-               e.expense_date, e.expense_time, e.created_at, u.name AS payer_name,
+               e.expense_date, e.expense_time, e.created_at, e.icon_name, u.name AS payer_name,
                c.category_name, sc.subcategory_name
         FROM   Expenses e
         JOIN   Users u             ON u.user_id         = e.payer_id
@@ -35,7 +35,7 @@ def fetch_group_expenses_admin(group_id: int) -> list[dict]:
     cur.execute(
         """
         SELECT e.expense_id, e.description, e.total_amount, e.split_type,
-               e.expense_date, e.expense_time, e.created_at, u.name AS payer_name,
+               e.expense_date, e.expense_time, e.created_at, e.icon_name, u.name AS payer_name,
                c.category_name, sc.subcategory_name
         FROM   Expenses e
         JOIN   Users u             ON u.user_id         = e.payer_id
@@ -117,6 +117,7 @@ def insert_expense(
     subcategory_id: int | None, total_amount: float,
     description: str, split_type: str, expense_date: str,
     splits: list[dict], expense_time: str | None = None,
+    icon_name: str | None = None,
 ) -> int:
     conn = get_connection()
     cur  = conn.cursor()
@@ -126,11 +127,11 @@ def insert_expense(
             """
             INSERT INTO Expenses
                 (group_id, payer_id, category_id, subcategory_id,
-                 total_amount, description, split_type, expense_date, expense_time)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                 total_amount, description, split_type, expense_date, expense_time, icon_name)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """,
             (group_id, payer_id, category_id, subcategory_id,
-             total_amount, description, split_type, expense_date, expense_time),
+             total_amount, description, split_type, expense_date, expense_time, icon_name),
         )
         expense_id = cur.lastrowid
         cur.executemany(
@@ -151,6 +152,7 @@ def update_expense(
     subcategory_id: int | None, total_amount: float,
     description: str, split_type: str, expense_date: str,
     splits: list[dict], expense_time: str | None = None,
+    icon_name: str | None = None,
 ) -> None:
     conn = get_connection()
     cur  = conn.cursor()
@@ -160,11 +162,11 @@ def update_expense(
             """
             UPDATE Expenses
             SET payer_id=%s, category_id=%s, subcategory_id=%s,
-                total_amount=%s, description=%s, split_type=%s, expense_date=%s, expense_time=%s
+                total_amount=%s, description=%s, split_type=%s, expense_date=%s, expense_time=%s, icon_name=%s
             WHERE expense_id=%s
             """,
             (payer_id, category_id, subcategory_id,
-             total_amount, description, split_type, expense_date, expense_time, expense_id),
+             total_amount, description, split_type, expense_date, expense_time, icon_name, expense_id),
         )
         cur.execute("DELETE FROM Expense_Splits WHERE expense_id = %s", (expense_id,))
         cur.executemany(
@@ -202,7 +204,7 @@ def fetch_expenses_bulk(group_ids: list[int]) -> dict[int, list[dict]]:
     cur.execute(
         f"""
         SELECT e.group_id, e.expense_id, e.description, e.total_amount,
-               e.split_type, e.expense_date, e.expense_time, u.name AS payer_name,
+               e.split_type, e.expense_date, e.expense_time, e.icon_name, u.name AS payer_name,
                c.category_name, sc.subcategory_name
         FROM   Expenses e
         JOIN   Users u             ON u.user_id         = e.payer_id

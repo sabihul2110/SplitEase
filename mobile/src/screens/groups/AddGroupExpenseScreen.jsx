@@ -22,6 +22,9 @@ import DatePickerInput from '../../components/common/DatePickerInput';
 import { useAuth } from '../../context/AuthContext';
 import { Icons } from '../../components/icons';
 import { CATEGORY_ICONS } from '../../constants/categoryIcons';
+import Dropdown from '../../components/common/Dropdown';
+import IconPickerField from '../../components/common/IconPickerField';
+import { suggestTemplateIconKey } from '../../constants/templateIcons';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, RADIUS, TAB_BAR_HEIGHT } from '../../constants/theme';
 import { Avatar } from '../../components/common/Ui';
 import Input  from '../../components/common/Input';
@@ -29,16 +32,20 @@ import Button from '../../components/common/Button';
 import ScreenHeader from '../../components/layout/ScreenHeader';
 import AppAlert from "../../components/common/AppAlert";
 
-// Fallback categories if API unavailable
+// Fallback categories if API unavailable — kept in sync with
+// shared/constants.js CATEGORIES (all 11 DB rows, not a partial list).
 const FALLBACK_CATEGORIES = [
-  { category_id: 1, category_name: 'Travel',        emoji: '✈️' },
-  { category_id: 2, category_name: 'Accommodation', emoji: '🏨' },
-  { category_id: 3, category_name: 'Food & Dining', emoji: '🍽️' },
-  { category_id: 4, category_name: 'Activities',    emoji: '🎉' },
-  { category_id: 5, category_name: 'Utilities',     emoji: '💡' },
-  { category_id: 6, category_name: 'Groceries',     emoji: '🛒' },
-  { category_id: 7, category_name: 'Shopping',      emoji: '🛍️' },
-  { category_id: 8, category_name: 'Transport',     emoji: '🚗' },
+  { category_id: 1,  category_name: 'Travel' },
+  { category_id: 2,  category_name: 'Accommodation' },
+  { category_id: 3,  category_name: 'Food & Dining' },
+  { category_id: 4,  category_name: 'Activities' },
+  { category_id: 5,  category_name: 'Utilities' },
+  { category_id: 6,  category_name: 'Groceries' },
+  { category_id: 7,  category_name: 'Shopping' },
+  { category_id: 8,  category_name: 'Entertainment' },
+  { category_id: 9,  category_name: 'Health & Medical' },
+  { category_id: 10, category_name: 'Education' },
+  { category_id: 11, category_name: 'Miscellaneous' },
 ];
 
 // Fallback icon color for unknown categories
@@ -63,6 +70,8 @@ export default function AddGroupExpenseScreen() {
   const [subcategoryId, setSubcategoryId] = useState(null);
   const [splitType,     setSplitType]     = useState(editExpense?.split_type    || 'equal');
   const [expenseDate,   setExpenseDate]   = useState(editExpense?.expense_date  || todayStr());
+  const [iconName,      setIconName]      = useState(editExpense?.icon_name || null);
+  const [iconManual,    setIconManual]    = useState(!!editExpense?.icon_name);
   const editSplits = editExpense?.splits || [];
   const initialParticipants = editSplits.length > 0
     ? editSplits.map(s => s.user_id)
@@ -123,6 +132,19 @@ export default function AddGroupExpenseScreen() {
       setSubcats(data || []);
     } catch {}
   }
+
+  const activeCategoryName = categories.find(c => (c.category_id || c.id) === categoryId)?.category_name
+    || categories.find(c => (c.category_id || c.id) === categoryId)?.name;
+
+  // Auto-suggest an icon on category/subcategory/description change —
+  // same pattern as AddExpenseScreen.jsx and EditTemplateScreen.jsx:
+  // never overwrites a manual pick from the field below.
+  useEffect(() => {
+    if (iconManual || !activeCategoryName) return;
+    const subName = subcats.find(s => s.subcategory_id === subcategoryId)?.subcategory_name;
+    setIconName(suggestTemplateIconKey({ category: activeCategoryName, subcategory: subName, description }));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeCategoryName, subcategoryId, description, iconManual]);
 
   // Auto-fill custom amounts when switching to custom
   useEffect(() => {
@@ -195,6 +217,7 @@ export default function AddGroupExpenseScreen() {
         description:    description.trim(),
         split_type:     splitType,
         expense_date:   expenseDate,
+        icon_name:      iconName || null,
         splits,
       };
       if (isEdit) {
@@ -304,89 +327,39 @@ export default function AddGroupExpenseScreen() {
           {/* Category */}
           <View style={styles.field}>
             <Text style={styles.fieldLabel}>CATEGORY</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <View style={styles.catRow}>
-                {categories.map((cat) => {
-                  const isActive = categoryId === (cat.category_id || cat.id);
-                  const id = cat.category_id || cat.id;
-                  const name = cat.category_name || cat.name;
-                  const catCfg = CATEGORY_ICONS[name];
-                  const iconColor = isActive
-                    ? catCfg?.color || DEFAULT_CAT_COLOR
-                    : COLORS.text3;
-                  return (
-                    <TouchableOpacity
-                      key={id}
-                      style={[styles.catChip, isActive && styles.catChipActive]}
-                      onPress={() => handleCategoryChange(id)}
-                    >
-                      {catCfg ? (
-                        <catCfg.Icon size={20} color={iconColor} />
-                      ) : (
-                        <Icons.expenses size={20} color={iconColor} />
-                      )}
-                      <Text
-                        style={[
-                          styles.catName,
-                          isActive && {
-                            color: catCfg?.color || DEFAULT_CAT_COLOR,
-                          },
-                        ]}
-                      >
-                        {name}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </ScrollView>
+            <Dropdown
+              value={categoryId}
+              options={categories.map(c => ({ id: c.category_id || c.id, label: c.category_name || c.name }))}
+              onSelect={(id) => handleCategoryChange(id)}
+              placeholder="Choose a category"
+              activeColor={COLORS.primary}
+            />
           </View>
 
           {/* Subcategory */}
           {subcats.length > 0 && (
             <View style={styles.field}>
               <Text style={styles.fieldLabel}>SUBCATEGORY</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <View style={styles.catRow}>
-                  <TouchableOpacity
-                    style={[
-                      styles.subChip,
-                      subcategoryId === null && styles.subChipActive,
-                    ]}
-                    onPress={() => setSubcategoryId(null)}
-                  >
-                    <Text
-                      style={[
-                        styles.subChipText,
-                        subcategoryId === null && styles.subChipTextActive,
-                      ]}
-                    >
-                      None
-                    </Text>
-                  </TouchableOpacity>
-                  {subcats.map((s) => (
-                    <TouchableOpacity
-                      key={s.subcategory_id}
-                      style={[
-                        styles.subChip,
-                        subcategoryId === s.subcategory_id &&
-                          styles.subChipActive,
-                      ]}
-                      onPress={() => setSubcategoryId(s.subcategory_id)}
-                    >
-                      <Text
-                        style={[
-                          styles.subChipText,
-                          subcategoryId === s.subcategory_id &&
-                            styles.subChipTextActive,
-                        ]}
-                      >
-                        {s.subcategory_name}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </ScrollView>
+              <Dropdown
+                value={subcategoryId}
+                options={[{ id: null, label: 'None' }, ...subcats.map(s => ({ id: s.subcategory_id, label: s.subcategory_name }))]}
+                onSelect={setSubcategoryId}
+                placeholder="None"
+                activeColor={COLORS.primary}
+              />
+            </View>
+          )}
+
+          {!!activeCategoryName && (
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>ICON</Text>
+              <IconPickerField
+                value={iconName}
+                onChange={(k) => { setIconName(k); setIconManual(true); }}
+                categoryName={activeCategoryName}
+                activeColor={COLORS.primary}
+                requireCategory={false}
+              />
             </View>
           )}
 
@@ -679,28 +652,6 @@ const styles = StyleSheet.create({
   chipActive:     { borderColor: COLORS.primary, backgroundColor: 'rgba(59,130,246,0.12)' },
   chipText:       { fontSize: FONT_SIZE.sm, color: COLORS.text2, fontWeight: FONT_WEIGHT.medium },
   chipTextActive: { color: COLORS.primary, fontWeight: FONT_WEIGHT.semibold },
-
-  // Categories
-  catRow: { flexDirection: 'row', gap: SPACING.sm },
-  catChip: {
-    alignItems: 'center', gap: 4, paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm,
-    backgroundColor: COLORS.surface2, borderRadius: RADIUS.md,
-    borderWidth: 1, borderColor: COLORS.border, minWidth: 72,
-  },
-  catChipActive: { borderColor: COLORS.primary, backgroundColor: 'rgba(59,130,246,0.12)' },
-  catEmoji:      { /* removed — using SVG icons */ },
-  catName:       { fontSize: FONT_SIZE.xs, color: COLORS.text2, fontWeight: FONT_WEIGHT.medium, textAlign: 'center' },
-  catNameActive: { color: COLORS.primary },
-
-  // Subcategory
-  subChip: {
-    paddingHorizontal: 12, paddingVertical: 6,
-    backgroundColor: COLORS.surface2, borderRadius: RADIUS.full,
-    borderWidth: 1, borderColor: COLORS.border,
-  },
-  subChipActive:     { borderColor: COLORS.primary, backgroundColor: 'rgba(59,130,246,0.12)' },
-  subChipText:       { fontSize: FONT_SIZE.sm, color: COLORS.text2 },
-  subChipTextActive: { color: COLORS.primary, fontWeight: FONT_WEIGHT.semibold },
 
   // Split toggle
   splitToggle:        { flexDirection: 'row', backgroundColor: COLORS.surface2, borderRadius: RADIUS.md, padding: 3 },
