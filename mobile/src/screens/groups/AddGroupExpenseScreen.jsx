@@ -1,12 +1,5 @@
 // SplitEase/mobile/src/screens/groups/AddGroupExpenseScreen.jsx
-//
-// Fixed vs original:
-//   • Endpoint: client.post(`/expenses/${groupId}`, ...) — matches web exactly
-//   • Categories + subcategories fetched from API (/groups/categories,
-//     /groups/subcategories/:id), with hardcoded fallback if API unavailable
-//   • payer_id defaults to current user but is selectable (matches web)
-//   • expense_date field added (missing from original)
-//   • Removed dependency on ENDPOINTS helper for this call
+
 
 import React, { useState, useEffect } from 'react';
 import {
@@ -32,8 +25,7 @@ import Button from '../../components/common/Button';
 import ScreenHeader from '../../components/layout/ScreenHeader';
 import AppAlert from "../../components/common/AppAlert";
 
-// Fallback categories if API unavailable — kept in sync with
-// shared/constants.js CATEGORIES (all 11 DB rows, not a partial list).
+
 const FALLBACK_CATEGORIES = [
   { category_id: 1,  category_name: 'Travel' },
   { category_id: 2,  category_name: 'Accommodation' },
@@ -66,7 +58,7 @@ export default function AddGroupExpenseScreen() {
   const [description,   setDescription]   = useState(editExpense?.description   || '');
   const [amount,        setAmount]        = useState(editExpense ? String(editExpense.total_amount) : '');
   const [payerId,       setPayerId]       = useState(editExpense ? (members.find(m => m.name === editExpense.payer_name)?.user_id ?? user.user_id) : user.user_id);
-  const [categoryId,    setCategoryId]    = useState(3);   // will be refined below
+  const [categoryId,    setCategoryId]    = useState(3);
   const [subcategoryId, setSubcategoryId] = useState(null);
   const [splitType,     setSplitType]     = useState(editExpense?.split_type    || 'equal');
   const [expenseDate,   setExpenseDate]   = useState(editExpense?.expense_date  || todayStr());
@@ -143,7 +135,6 @@ export default function AddGroupExpenseScreen() {
     if (iconManual || !activeCategoryName) return;
     const subName = subcats.find(s => s.subcategory_id === subcategoryId)?.subcategory_name;
     setIconName(suggestTemplateIconKey({ category: activeCategoryName, subcategory: subName, description }));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeCategoryName, subcategoryId, description, iconManual]);
 
   // Auto-fill custom amounts when switching to custom
@@ -155,7 +146,6 @@ export default function AddGroupExpenseScreen() {
     const map = {};
     participants.forEach(id => { map[id] = customAmounts[id] || share; });
     setCustomAmounts(map);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [splitType]);
 
   function toggleParticipant(userId) {
@@ -208,7 +198,6 @@ export default function AddGroupExpenseScreen() {
               : null,
           }));
 
-      // Matches web: api.post(`/expenses/${id}`, { payer_id, category_id, subcategory_id, total_amount, description, split_type, expense_date, splits })
       const payload = {
         payer_id:       payerId,
         category_id:    categoryId,
@@ -226,7 +215,7 @@ export default function AddGroupExpenseScreen() {
         await expensesApi.addExpense(groupId, payload);
       }
 
-      // navigation.goBack();
+
       navigation.navigate('GroupDetail', { 
         groupId, 
         groupName, 

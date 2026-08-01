@@ -160,8 +160,16 @@ export default function Dropdown({
 
   function openMenu() {
     if (isDisabled) return;
-    triggerRef.current?.measureInWindow((x, y, width, height) => {
-      setLayout({ x, y, width, height });
+    triggerRef.current?.measure((x, y, width, height, pageX, pageY) => {
+      const screenH = Dimensions.get('screen').height;
+      const desiredMenuH = Math.min(ROW_HEIGHT * MAX_VISIBLE_ROWS, options.length * ROW_HEIGHT);
+      
+      const spaceBelow = screenH - (pageY + height) - SCREEN_MARGIN;
+      const spaceAbove = pageY - SCREEN_MARGIN;
+      
+      const openUp = spaceBelow < desiredMenuH && spaceAbove > spaceBelow;
+      
+      setLayout({ x: pageX, y: pageY, width, height, openUp });
       setOpen(true);
     });
   }
@@ -171,24 +179,13 @@ export default function Dropdown({
     setOpen(false);
   }
 
-  const screenH = Dimensions.get('window').height;
-  let menuTop = 0;
-  let menuHeight = 0;
-  if (layout) {
-    menuTop = layout.y + layout.height;
-    menuHeight = Math.min(ROW_HEIGHT * MAX_VISIBLE_ROWS, options.length * ROW_HEIGHT);
-    if (menuTop + menuHeight > screenH - SCREEN_MARGIN) {
-      menuHeight = Math.max(ROW_HEIGHT * 2, screenH - SCREEN_MARGIN - menuTop);
-    }
-  }
-
   return (
     <View collapsable={false}>
       <TouchableOpacity
         ref={triggerRef}
         style={[
           styles.trigger,
-          open && { borderColor: activeColor, borderBottomLeftRadius: 0, borderBottomRightRadius: 0 },
+          open && { borderColor: activeColor },
           isDisabled && styles.triggerDisabled,
         ]}
         onPress={openMenu}
@@ -200,23 +197,30 @@ export default function Dropdown({
         </Text>
         <Icons.chevronRight
           size={16}
-          color={COLORS.text3}
+          color={open ? activeColor : COLORS.text3}
           style={{ transform: [{ rotate: open ? '-90deg' : '90deg' }] }}
         />
       </TouchableOpacity>
 
-      {/* animationType="none" — this opens instantly, attached, like a
-          native form <select>, not a floating menu that fades/slides in. */}
-      <Modal visible={open} transparent animationType="none" onRequestClose={() => setOpen(false)}>
+      {/* statusBarTranslucent fixes the Android coordinate offset bug */}
+      <Modal visible={open} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setOpen(false)}>
         <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => setOpen(false)} />
         {layout && (
           <View
             style={[
               styles.menu,
-              { left: layout.x, width: layout.width, top: menuTop, maxHeight: menuHeight, borderColor: activeColor },
+              { 
+                left: layout.x, 
+                width: layout.width, 
+                borderColor: activeColor,
+                ...(layout.openUp 
+                  ? { bottom: Dimensions.get('screen').height - layout.y + 6, maxHeight: Math.min(ROW_HEIGHT * MAX_VISIBLE_ROWS, layout.y - SCREEN_MARGIN) } 
+                  : { top: layout.y + layout.height + 6, maxHeight: Math.min(ROW_HEIGHT * MAX_VISIBLE_ROWS, Dimensions.get('screen').height - (layout.y + layout.height) - SCREEN_MARGIN) })
+              },
             ]}
           >
-            <ScrollView bounces={false} showsVerticalScrollIndicator={options.length > 5}>
+            {/* Moved border radius & overflow here so the inner rows clip, but the outer shadow survives */}
+            <ScrollView bounces={false} showsVerticalScrollIndicator={options.length > MAX_VISIBLE_ROWS} style={{ borderRadius: RADIUS.lg, overflow: 'hidden' }}>
               {options.map((opt, i) => {
                 const isActive = opt.id === value;
                 return (
@@ -224,7 +228,7 @@ export default function Dropdown({
                     key={String(opt.id)}
                     style={[
                       styles.option,
-                      i % 2 === 1 && styles.optionAlt,
+                      i === options.length - 1 && { borderBottomWidth: 0 },
                       isActive && { backgroundColor: activeColor + '1c' },
                     ]}
                     onPress={() => handleSelect(opt.id)}
@@ -259,15 +263,14 @@ const styles = StyleSheet.create({
   menu: {
     position: 'absolute',
     backgroundColor: COLORS.surface2,
-    borderWidth: 1, borderTopWidth: 0,
-    borderBottomLeftRadius: RADIUS.lg, borderBottomRightRadius: RADIUS.lg,
-    overflow: 'hidden',
+    borderWidth: 1, borderRadius: RADIUS.lg,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, 
+    shadowOpacity: 0.45, shadowRadius: 12, elevation: 8,
   },
   option: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: SPACING.md, paddingVertical: 13,
-    borderTopWidth: 1, borderTopColor: COLORS.border,
+    borderBottomWidth: 1, borderBottomColor: COLORS.border,
   },
-  optionAlt: { backgroundColor: COLORS.surface3 },
   optionText: { fontSize: FONT_SIZE.md, color: COLORS.text, flex: 1 },
 });

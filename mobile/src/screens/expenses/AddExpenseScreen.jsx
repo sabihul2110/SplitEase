@@ -52,10 +52,10 @@ const S = { xs: 4, sm: 8, md: 12, base: 16, lg: 20, xl: 28 };
 
 // ─── Tab config ───────────────────────────────────────────────────────────────
 const TABS = [
-  { id: 'personal', label: 'Expense', Icon: Icons.personalExpense, color: C.danger,   colorLo: C.dangerLo  },
-  { id: 'income',   label: 'Income',  Icon: Icons.income,          color: C.success,  colorLo: C.successLo },
-  { id: 'lend',     label: 'Lend',    Icon: Icons.lendMoney,       color: C.warning,  colorLo: C.warningLo },
-  { id: 'borrow',   label: 'Borrow',  Icon: Icons.borrowMoney,     color: C.purple,   colorLo: C.purpleLo  },
+  { id: 'personal', label: 'Expense', Icon: Icons.personalExpense, color: C.primary, colorLo: C.primaryLo },
+  { id: 'income',   label: 'Income',  Icon: Icons.income,          color: C.primary, colorLo: C.primaryLo },
+  { id: 'lend',     label: 'Lend',    Icon: Icons.lendMoney,       color: C.primary, colorLo: C.primaryLo },
+  { id: 'borrow',   label: 'Borrow',  Icon: Icons.borrowMoney,     color: C.primary, colorLo: C.primaryLo },
 ];
 
 // ─── Reusable field components ────────────────────────────────────────────────
@@ -94,16 +94,16 @@ function StyledInput({ value, onChangeText, placeholder, keyboardType = 'default
   );
 }
 
-function AmountInput({ value, onChangeText, placeholder = '0.00' }) {
+function AmountInput({ value, onChangeText, placeholder = '0.00', color }) {
   return (
-    <View style={styles.amountWrap}>
-      <Text style={styles.amountSymbol}>₹</Text>
+    <View style={[styles.amountWrap, color && { borderColor: color + '40', backgroundColor: color + '15' }]}>
+      <Text style={[styles.amountSymbol, color && { color }]}>₹</Text>
       <TextInput
-        style={styles.amountInput}
+        style={[styles.amountInput, color && { color }]}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor={C.text3}
+        placeholderTextColor={color ? color + '70' : C.text3}
         keyboardType="decimal-pad"
       />
     </View>
@@ -232,9 +232,13 @@ function PersonalForm({ onSuccess, editing }) {
 
   return (
     <View style={styles.form}>
+      <View style={styles.infoBox}>
+        <Icons.info size={14} color={C.primary} />
+        <Text style={styles.infoText}>Track a personal expense not linked to a group.</Text>
+      </View>
       <Field label="Category" error={errs.category}>
         {catsLoading ? (
-          <ActivityIndicator color={C.danger} />
+          <ActivityIndicator color={C.primary} />
         ) : (
           <Dropdown
             value={categoryId}
@@ -244,7 +248,7 @@ function PersonalForm({ onSuccess, editing }) {
               if (cat) handlePickCategory(cat);
             }}
             placeholder="Choose a category"
-            activeColor={C.danger}
+            activeColor={C.primary}
           />
         )}
       </Field>
@@ -256,7 +260,7 @@ function PersonalForm({ onSuccess, editing }) {
             options={[{ id: null, label: 'None' }, ...subcats.map(s => ({ id: s.subcategory_id, label: s.subcategory_name }))]}
             onSelect={setSubcategoryId}
             placeholder="None"
-            activeColor={C.danger}
+            activeColor={C.primary}
           />
         </Field>
       )}
@@ -267,22 +271,22 @@ function PersonalForm({ onSuccess, editing }) {
             value={iconName}
             onChange={(k) => { setIconName(k); setIconManual(true); }}
             categoryName={categoryName}
-            activeColor={C.danger}
+            activeColor={C.primary}
             requireCategory={false}
           />
         </Field>
       )}
 
       <Field label="Amount" error={errs.amount}>
-        <AmountInput value={amount} onChangeText={v => { setAmount(v); setErrs(p => ({...p, amount: null})); }} />
+        <AmountInput color={C.danger} value={amount} onChangeText={v => { setAmount(v); setErrs(p => ({...p, amount: null})); }} />
       </Field>
       <Field label="Date" error={errs.date}>
-        <DatePickerInput value={date} onChange={v => { setDate(v); setErrs(p => ({...p, date: null})); }} accentColor={C.danger} />
+        <DatePickerInput value={date} onChange={v => { setDate(v); setErrs(p => ({...p, date: null})); }} accentColor={C.primary} />
       </Field>
       <Field label="Note" optional>
         <StyledInput value={note} onChangeText={setNote} placeholder="Any extra details…" multiline />
       </Field>
-      <SubmitBtn label={isEdit ? "Save Changes →" : "Add Expense →"} color={C.danger} loading={saving} onPress={submit} />
+      <SubmitBtn label={isEdit ? "Save Changes →" : "Add Expense →"} color={C.primary} loading={saving} onPress={submit} />
     </View>
   );
 }
@@ -324,36 +328,34 @@ function IncomeForm({ onSuccess }) {
 
   return (
     <View style={styles.form}>
+      <View style={styles.infoBox}>
+        <Icons.info size={14} color={C.primary} />
+        <Text style={styles.infoText}>Record salary, freelance, or any money received.</Text>
+      </View>
       <Field label="Source Type" error={errs.source}>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 }}>
-          {['salary', 'pocket_money', 'stipend', 'other'].map(opt => (
-            <TouchableOpacity
-              key={opt}
-              style={{
-                paddingHorizontal: 14, paddingVertical: 7,
-                borderRadius: R.full, borderWidth: 1,
-                borderColor: source === opt ? C.success + '80' : C.border,
-                backgroundColor: source === opt ? C.successLo : C.surface2,
-              }}
-              onPress={() => { setSource(opt); setErrs(p => ({...p, source: null})); }}
-            >
-              <Text style={{ fontSize: F.sm, color: source === opt ? C.success : C.text2, fontWeight: source === opt ? W.bold : W.regular }}>
-                {opt === 'pocket_money' ? 'Pocket Money' : opt.charAt(0).toUpperCase() + opt.slice(1)}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        <Dropdown
+          value={source}
+          options={[
+            { id: 'salary', label: 'Salary' },
+            { id: 'pocket_money', label: 'Pocket Money' },
+            { id: 'stipend', label: 'Stipend' },
+            { id: 'other', label: 'Other' }
+          ]}
+          onSelect={(id) => { setSource(id); setErrs(p => ({...p, source: null})); }}
+          placeholder="Select source"
+          activeColor={C.primary}
+        />
       </Field>
       <Field label="Amount" error={errs.amount}>
-        <AmountInput value={amount} onChangeText={v => { setAmount(v); setErrs(p => ({...p, amount: null})); }} />
+        <AmountInput color={C.success} value={amount} onChangeText={v => { setAmount(v); setErrs(p => ({...p, amount: null})); }} />
       </Field>
       <Field label="Date" error={errs.date}>
-        <DatePickerInput value={date} onChange={v => { setDate(v); setErrs(p => ({...p, date: null})); }} accentColor={C.success} />
+        <DatePickerInput value={date} onChange={v => { setDate(v); setErrs(p => ({...p, date: null})); }} accentColor={C.primary} />
       </Field>
       <Field label="Note" optional>
         <StyledInput value={note} onChangeText={setNote} placeholder="Any extra details…" multiline />
       </Field>
-      <SubmitBtn label="Add Income →" color={C.success} loading={saving} onPress={submit} />
+      <SubmitBtn label="Add Income →" color={C.primary} loading={saving} onPress={submit} />
     </View>
   );
 }
@@ -394,7 +396,7 @@ function LendForm({ onSuccess }) {
   return (
     <View style={styles.form}>
       <View style={styles.infoBox}>
-        <Icons.info size={14} color={C.warning} />
+        <Icons.info size={14} color={C.primary} />
         <Text style={styles.infoText}>Record money you lent to someone. Track repayments from the Expenses timeline.</Text>
       </View>
       <PersonSearchField
@@ -408,15 +410,15 @@ function LendForm({ onSuccess }) {
         error={errs.borrower}
       />
       <Field label="Amount Lent" error={errs.amount}>
-        <AmountInput value={amount} onChangeText={v => { setAmount(v); setErrs(p => ({...p, amount: null})); }} />
+        <AmountInput color={C.warning} value={amount} onChangeText={v => { setAmount(v); setErrs(p => ({...p, amount: null})); }} />
       </Field>
       <Field label="Date" error={errs.date}>
-        <DatePickerInput value={date} onChange={v => { setDate(v); setErrs(p => ({...p, date: null})); }} accentColor={C.warning} />
+        <DatePickerInput value={date} onChange={v => { setDate(v); setErrs(p => ({...p, date: null})); }} accentColor={C.primary} />
       </Field>
       <Field label="Note" optional>
         <StyledInput value={note} onChangeText={setNote} placeholder="Purpose, terms…" multiline />
       </Field>
-      <SubmitBtn label="Record Loan →" color={C.warning} loading={saving} onPress={submit} />
+      <SubmitBtn label="Record Loan →" color={C.primary} loading={saving} onPress={submit} />
     </View>
   );
 }
@@ -457,7 +459,7 @@ function BorrowForm({ onSuccess }) {
   return (
     <View style={styles.form}>
       <View style={styles.infoBox}>
-        <Icons.info size={14} color={C.purple} />
+        <Icons.info size={14} color={C.primary} />
         <Text style={styles.infoText}>Record money you borrowed from someone. Mark it repaid when you pay them back.</Text>
       </View>
       <PersonSearchField
@@ -471,15 +473,15 @@ function BorrowForm({ onSuccess }) {
         error={errs.lender}
       />
       <Field label="Amount Borrowed" error={errs.amount}>
-        <AmountInput value={amount} onChangeText={v => { setAmount(v); setErrs(p => ({...p, amount: null})); }} />
+        <AmountInput color={C.purple} value={amount} onChangeText={v => { setAmount(v); setErrs(p => ({...p, amount: null})); }} />
       </Field>
       <Field label="Date" error={errs.date}>
-        <DatePickerInput value={date} onChange={v => { setDate(v); setErrs(p => ({...p, date: null})); }} accentColor={C.purple} />
+        <DatePickerInput value={date} onChange={v => { setDate(v); setErrs(p => ({...p, date: null})); }} accentColor={C.primary} />
       </Field>
       <Field label="Note" optional>
         <StyledInput value={note} onChangeText={setNote} placeholder="Purpose, terms…" multiline />
       </Field>
-      <SubmitBtn label="Record Borrow →" color={C.purple} loading={saving} onPress={submit} />
+      <SubmitBtn label="Record Borrow →" color={C.primary} loading={saving} onPress={submit} />
     </View>
   );
 }
@@ -488,9 +490,6 @@ function BorrowForm({ onSuccess }) {
 export default function AddExpenseScreen() {
   const navigation = useNavigation();
   const route      = useRoute();
-
-  // Allow pre-selecting a tab via navigation params
-  // e.g. navigation.navigate('AddEntry', { tab: 'income' })
   const initialTab = route.params?.tab || 'personal';
   const [activeTab, setActiveTab] = useState(initialTab);
   const editingPersonal = route.params?.editPersonalExpense || null;
@@ -550,18 +549,6 @@ export default function AddExpenseScreen() {
       </View>
       )}
 
-      {/* Active tab description */}
-      {!isEditMode && (
-      <View style={[styles.tabDesc, { backgroundColor: activeCfg.colorLo, borderColor: activeCfg.color + '40' }]}>
-        <Text style={[styles.tabDescText, { color: activeCfg.color }]}>
-          {activeTab === 'personal' && 'Track a personal expense not linked to a group'}
-          {activeTab === 'income'   && 'Record salary, freelance, or any money received'}
-          {activeTab === 'lend'     && 'Record money you lent to someone'}
-          {activeTab === 'borrow'   && 'Record money you borrowed from someone'}
-        </Text>
-      </View>
-      )}
-
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -596,10 +583,10 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   headerTitle: { 
-    fontSize: F.xl,           // was F.lg (16) → now 20
-    fontWeight: W.heavy,      // was bold → now heavy
+    fontSize: F.xl,
+    fontWeight: W.heavy,
     color: C.text, 
-    textAlign: 'left',        // left-aligned
+    textAlign: 'left',
     lineHeight: 24,
   },
   headerSub: {
@@ -630,7 +617,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: S.md, paddingVertical: 7,
     borderRadius: R.full,
     borderWidth: 1,
-    alignSelf: 'flex-start',      // pill hugs content width
+    alignSelf: 'flex-start',
     },
   tabDescText: { fontSize: F.xs, fontWeight: W.semibold },
 
@@ -655,7 +642,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: C.surface2,
     borderWidth: 1, borderColor: C.border2,
-    borderRadius: R.lg,              // slightly more rounded — feels premium
+    borderRadius: R.lg,
     paddingHorizontal: S.base,
     paddingVertical: 4,
     marginBottom: 2,
