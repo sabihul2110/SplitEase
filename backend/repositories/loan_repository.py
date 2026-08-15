@@ -82,29 +82,6 @@ def fetch_borrows_with_pending(user_id: int) -> list[dict]:
     return rows
 
 
-def fetch_loans(user_id: int) -> list[dict]:
-    conn = get_connection()
-    cur  = conn.cursor(dictionary=True)
-    cur.execute(
-        """
-        SELECT loan_id, borrower_name, amount, remaining_amount,
-               note, loan_date, status, created_at
-        FROM   Loans
-        WHERE  lender_user_id = %s
-        ORDER  BY loan_date DESC, loan_id DESC
-        """,
-        (user_id,),
-    )
-    rows = cur.fetchall()
-    cur.close(); conn.close()
-    for r in rows:
-        r["loan_date"]        = str(r["loan_date"]) if r.get("loan_date") else ""
-        r["created_at"]       = str(r["created_at"]) if r.get("created_at") else ""
-        r["amount"]           = float(r["amount"])
-        r["remaining_amount"] = float(r["remaining_amount"])
-    return rows
-
-
 def _find_registered_user_by_name(cur, name: str) -> int | None:
     """Return user_id if exactly one registered user matches the name (case-insensitive)."""
     cur.execute(
@@ -171,9 +148,14 @@ def insert_loan(
     linked_user_id:  int | None = None,
 ) -> dict:
     """
-    Creates Ledger_Entry (source of truth) and Loans row (only if active).
-    If linked_user_id is set, entry is pending and Loans row waits for accept_entry.
-    Returns dict with new_id, status, and entry_id for the router to use.
+    Creates the Ledger_Entry — the single source of truth for this loan.
+    If linked_user_id is set, the entry starts 'pending' until the other
+    user accepts it via people_repository.accept_entry.
+
+    NOTE: Loans/Borrows are no longer written here. Ledger_Entries +
+    People is the only storage; "loan_id" in the response is the
+    Ledger_Entries.entry_id, kept under this key name for API
+    compatibility with existing frontend callers.
     """
     conn = get_connection()
     cur  = conn.cursor()
@@ -181,18 +163,6 @@ def insert_loan(
         conn.start_transaction()
         amt    = round(float(amount), 2)
         status = 'pending' if linked_user_id else 'active'
-        new_id = 0
-
-        if status == 'active':
-            cur.execute(
-                """
-                INSERT INTO Loans
-                    (lender_user_id, borrower_name, amount, remaining_amount, note, loan_date, status)
-                VALUES (%s, %s, %s, %s, %s, %s, 'active')
-                """,
-                (lender_user_id, borrower_name.strip(), amt, amt, note or None, loan_date),
-            )
-            new_id = cur.lastrowid
 
         entry_id = _upsert_person_and_entry(
             cur,
@@ -207,7 +177,7 @@ def insert_loan(
         )
 
         conn.commit()
-        return {"loan_id": new_id, "entry_id": entry_id, "status": status}
+        return {"loan_id": entry_id, "entry_id": entry_id, "status": status}
     except Exception:
         conn.rollback()
         raise
@@ -237,69 +207,17 @@ def record_loan_repayment(loan_id: int, user_id: int, repayment_amount: float, r
 
 def delete_loan(loan_id: int, user_id: int) -> dict:
     """
-    Deletes a Loans row AND cascades to the matching Ledger_Entry + mirror,
-    keeping Normal tab and People ledger in sync.
-    Returns info for notification routing.
+    Deletes the Ledger_Entry backing this loan. `loan_id` is actually
+    Ledger_Entries.entry_id (see fetch_loans_with_pending, which aliases
+    entry_id AS loan_id) — this delegates to the canonical entry-deletion
+    path in people_repository, so there is exactly one deletion rule and
+    one authorisation check shared by the Normal and People tabs, instead
+    of a second table kept in sync by name/amount/date matching.
+
+    The old implementation queried `Loans WHERE loan_id = %s`, but the
+    caller only ever has Ledger_Entries.entry_id (a different, shared
+    AUTO_INCREMENT sequence) — that mismatch meant this endpoint could
+    silently fail or hit the wrong row once the two ID sequences diverged.
     """
-    conn = get_connection()
-    cur  = conn.cursor(dictionary=True)
-    try:
-        conn.start_transaction()
-        cur.execute(
-            "SELECT loan_id, borrower_name, amount, loan_date FROM Loans WHERE loan_id = %s AND lender_user_id = %s",
-            (loan_id, user_id),
-        )
-        loan = cur.fetchone()
-        if not loan:
-            return {"deleted": False, "linked_user_id": None}
-
-        cur.execute("DELETE FROM Loans WHERE loan_id = %s", (loan_id,))
-
-        # Find matching Ledger_Entry to cascade-delete + check for linked user
-        cur.execute(
-            """
-            SELECT le.entry_id, p.linked_user_id, p.person_id
-            FROM   Ledger_Entries le
-            JOIN   People p ON p.person_id = le.person_id
-            WHERE  p.owner_user_id = %s AND p.display_name = %s
-              AND  le.direction = 'lent' AND le.amount = %s AND le.entry_date = %s
-            LIMIT 1
-            """,
-            (user_id, loan["borrower_name"], float(loan["amount"]), str(loan["loan_date"])),
-        )
-        entry = cur.fetchone()
-        linked_user_id = None
-        if entry:
-            linked_user_id = entry["linked_user_id"]
-            cur.execute("DELETE FROM Ledger_Entries WHERE entry_id = %s", (entry["entry_id"],))
-            if linked_user_id:
-                # Delete mirror on linked user's side + their Borrows row
-                cur.execute(
-                    """
-                    DELETE le FROM Ledger_Entries le
-                    JOIN   People p ON p.person_id = le.person_id
-                    WHERE  p.owner_user_id = %s AND p.linked_user_id = %s
-                      AND  le.direction = 'borrowed' AND le.amount = %s AND le.entry_date = %s
-                    """,
-                    (linked_user_id, user_id, float(loan["amount"]), str(loan["loan_date"])),
-                )
-                cur.execute("SELECT name FROM Users WHERE user_id = %s", (user_id,))
-                lender_row = cur.fetchone()
-                lender_name = lender_row["name"] if lender_row else loan["borrower_name"]
-                cur.execute(
-                    "DELETE FROM Borrows WHERE borrower_user_id = %s AND lender_name = %s AND amount = %s AND borrow_date = %s",
-                    (linked_user_id, lender_name, float(loan["amount"]), str(loan["loan_date"])),
-                )
-
-        conn.commit()
-        return {
-            "deleted": True,
-            "linked_user_id": linked_user_id,
-            "amount": float(loan["amount"]),
-            "borrower_name": loan["borrower_name"],
-        }
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        cur.close(); conn.close()
+    from repositories.people_repository import delete_entry
+    return delete_entry(loan_id, user_id)

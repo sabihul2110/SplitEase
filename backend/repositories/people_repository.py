@@ -164,39 +164,6 @@ def insert_entry(
         )
         new_id = cur.lastrowid
 
-        # Fetch person to get display_name for the Loans/Borrows row
-        cur.execute(
-            "SELECT display_name, linked_user_id FROM People WHERE person_id = %s",
-            (person_id,),
-        )
-        person = cur.fetchone()
-        person_name = person["display_name"] if person else "Unknown"
-        is_linked   = person["linked_user_id"] is not None if person else False
-
-        # Only sync to Loans/Borrows immediately if NOT pending (custom person or no link)
-        # If pending, the sync happens in accept_entry when the other user accepts
-        if not is_pending:
-            if direction == "lent":
-                # Creator lent money → create a Loans row
-                cur.execute(
-                    """
-                    INSERT INTO Loans
-                        (lender_user_id, borrower_name, amount, remaining_amount, note, loan_date, status)
-                    VALUES (%s, %s, %s, %s, %s, %s, 'active')
-                    """,
-                    (created_by, person_name, amt, amt, note or None, entry_date),
-                )
-            else:
-                # Creator borrowed money → create a Borrows row
-                cur.execute(
-                    """
-                    INSERT INTO Borrows
-                        (borrower_user_id, lender_name, amount, remaining_amount, note, borrow_date, status)
-                    VALUES (%s, %s, %s, %s, %s, %s, 'active')
-                    """,
-                    (created_by, person_name, amt, amt, note or None, entry_date),
-                )
-
         conn.commit()
         return new_id
     except Exception:
@@ -366,109 +333,6 @@ def accept_entry(entry_id: int, recipient_user_id: int) -> dict:
                 ),
             )
 
-        # 5. Sync to Loans / Borrows tables for the accepting user (user 2)
-        #    direction='lent' by user 1 means user 2 borrowed
-        #    direction='borrowed' by user 1 means user 2 lent
-        amt = float(row["amount"])
-        note = row["note"]
-        entry_date = str(row["entry_date"])
-        creator_id = row["created_by"]
-
-        # creator_name was already fetched above — reuse it
-        creator_display = creator_name
-
-        # --- Sync Loans/Borrows for the ACCEPTOR (User 2) ---
-        if row["direction"] == "lent":
-            # User 1 lent → User 2 borrowed → User 2 needs a Borrows row
-            cur.execute(
-                """
-                SELECT borrow_id FROM Borrows
-                WHERE borrower_user_id = %s AND lender_name = %s
-                  AND amount = %s AND borrow_date = %s
-                LIMIT 1
-                """,
-                (recipient_user_id, creator_display, amt, entry_date),
-            )
-            if not cur.fetchone():
-                cur.execute(
-                    """
-                    INSERT INTO Borrows
-                        (borrower_user_id, lender_name, amount, remaining_amount,
-                         note, borrow_date, status)
-                    VALUES (%s, %s, %s, %s, %s, %s, 'active')
-                    """,
-                    (recipient_user_id, creator_display, amt, amt, note, entry_date),
-                )
-        else:
-            # User 1 borrowed → User 2 lent → User 2 needs a Loans row
-            cur.execute(
-                """
-                SELECT loan_id FROM Loans
-                WHERE lender_user_id = %s AND borrower_name = %s
-                  AND amount = %s AND loan_date = %s
-                LIMIT 1
-                """,
-                (recipient_user_id, creator_display, amt, entry_date),
-            )
-            if not cur.fetchone():
-                cur.execute(
-                    """
-                    INSERT INTO Loans
-                        (lender_user_id, borrower_name, amount, remaining_amount,
-                         note, loan_date, status)
-                    VALUES (%s, %s, %s, %s, %s, %s, 'active')
-                    """,
-                    (recipient_user_id, creator_display, amt, amt, note, entry_date),
-                )
-
-        # --- Sync Loans/Borrows for the CREATOR ---
-        cur.execute("SELECT name FROM Users WHERE user_id = %s", (recipient_user_id,))
-        acceptor_user = cur.fetchone()
-        acceptor_display = acceptor_user["name"] if acceptor_user else row["display_name"]
-
-        if row["direction"] == "lent":
-            # User 1 lent → User 1 needs a Loans row
-            cur.execute(
-                """
-                SELECT loan_id FROM Loans
-                WHERE lender_user_id = %s AND borrower_name = %s
-                  AND amount = %s AND loan_date = %s
-                LIMIT 1
-                """,
-                (creator_id, acceptor_display, amt, entry_date),
-            )
-            if not cur.fetchone():
-                cur.execute(
-                    """
-                    INSERT INTO Loans
-                        (lender_user_id, borrower_name, amount, remaining_amount,
-                         note, loan_date, status)
-                    VALUES (%s, %s, %s, %s, %s, %s, 'active')
-                    """,
-                    (creator_id, acceptor_display, amt, amt, note, entry_date),
-                )
-        else:
-            # User 1 borrowed → User 1 needs a Borrows row
-            cur.execute(
-                """
-                SELECT borrow_id FROM Borrows
-                WHERE borrower_user_id = %s AND lender_name = %s
-                  AND amount = %s AND borrow_date = %s
-                LIMIT 1
-                """,
-                (creator_id, acceptor_display, amt, entry_date),
-            )
-            if not cur.fetchone():
-                cur.execute(
-                    """
-                    INSERT INTO Borrows
-                        (borrower_user_id, lender_name, amount, remaining_amount,
-                         note, borrow_date, status)
-                    VALUES (%s, %s, %s, %s, %s, %s, 'active')
-                    """,
-                    (creator_id, acceptor_display, amt, amt, note, entry_date),
-                )
-
         conn.commit()
         return row
     except Exception:
@@ -600,23 +464,6 @@ def _find_mirror_entry_id(cur, owner_user_id, linked_user_id, direction, amount,
     return row["entry_id"] if row else None
 
 
-def _sync_legacy_repayment(cur, owner_user_id, display_name, direction, amount, entry_date, new_remaining, new_status):
-    """Best-effort sync of the legacy Loans/Borrows mirror row, matched the same
-    way delete_loan/delete_borrow do (by name + amount + date)."""
-    if direction == "lent":
-        cur.execute(
-            "UPDATE Loans SET remaining_amount = %s, status = %s "
-            "WHERE lender_user_id = %s AND borrower_name = %s AND amount = %s AND loan_date = %s",
-            (new_remaining, new_status, owner_user_id, display_name, amount, entry_date),
-        )
-    elif direction == "borrowed":
-        cur.execute(
-            "UPDATE Borrows SET remaining_amount = %s, status = %s "
-            "WHERE borrower_user_id = %s AND lender_name = %s AND amount = %s AND borrow_date = %s",
-            (new_remaining, new_status, owner_user_id, display_name, amount, entry_date),
-        )
-
-
 def propose_or_apply_repayment(
     entry_id: int,
     requester_user_id: int,
@@ -685,10 +532,6 @@ def propose_or_apply_repayment(
                 "UPDATE Ledger_Entries SET remaining_amount = %s, status = %s WHERE entry_id = %s",
                 (new_remaining, new_status, entry_id),
             )
-            _sync_legacy_repayment(
-                cur, row["owner_user_id"], row["display_name"], row["direction"],
-                float(row["amount"]), str(row["entry_date"]), new_remaining, new_status,
-            )
 
             mirror_id = None
             if is_linked:
@@ -700,14 +543,6 @@ def propose_or_apply_repayment(
                     cur.execute(
                         "UPDATE Ledger_Entries SET remaining_amount = %s, status = %s WHERE entry_id = %s",
                         (new_remaining, new_status, mirror_id),
-                    )
-                    cur.execute("SELECT name FROM Users WHERE user_id = %s", (row["owner_user_id"],))
-                    owner_name_row = cur.fetchone()
-                    owner_name = owner_name_row["name"] if owner_name_row else row["display_name"]
-                    mirror_direction = "borrowed" if row["direction"] == "lent" else "lent"
-                    _sync_legacy_repayment(
-                        cur, row["linked_user_id"], owner_name, mirror_direction,
-                        float(row["amount"]), str(row["entry_date"]), new_remaining, new_status,
                     )
 
             # Log this applied repayment so it shows up on the timeline/statement.
@@ -882,26 +717,6 @@ def accept_repayment(repayment_id: int, recipient_user_id: int) -> dict:
                 "VALUES (%s, %s, %s, 'accepted', %s, NOW())",
                 (mirror_id, row["proposed_by"], repay, resolved_date),
             )
-
-        cur.execute("SELECT name FROM Users WHERE user_id = %s", (debtor_id,))
-        debtor_name_row = cur.fetchone()
-        debtor_name = debtor_name_row["name"] if debtor_name_row else "Unknown"
-        cur.execute("SELECT name FROM Users WHERE user_id = %s", (creditor_id,))
-        creditor_name_row = cur.fetchone()
-        creditor_name = creditor_name_row["name"] if creditor_name_row else "Unknown"
-
-        amt        = float(row["entry_amount"])
-        entry_date = str(row["entry_date"])
-        cur.execute(
-            "UPDATE Borrows SET remaining_amount = %s, status = %s "
-            "WHERE borrower_user_id = %s AND lender_name = %s AND amount = %s AND borrow_date = %s",
-            (new_remaining, new_status, debtor_id, creditor_name, amt, entry_date),
-        )
-        cur.execute(
-            "UPDATE Loans SET remaining_amount = %s, status = %s "
-            "WHERE lender_user_id = %s AND borrower_name = %s AND amount = %s AND loan_date = %s",
-            (new_remaining, new_status, creditor_id, debtor_name, amt, entry_date),
-        )
 
         conn.commit()
         return {
@@ -1533,40 +1348,6 @@ def delete_entry(entry_id: int, owner_user_id: int) -> dict:
                 """,
                 (linked_user_id, owner_user_id, mirror_direction, amt, entry_date),
             )
-
-        # If this was an accepted (active) linked entry, also clean up
-        # the synced Loans/Borrows rows for both users
-        if linked_user_id and row["status"] == "active":
-            # Fetch creator's display name for matching Borrows row on linked user's side
-            cur.execute("SELECT name FROM Users WHERE user_id = %s", (owner_user_id,))
-            creator_user = cur.fetchone()
-            creator_name = creator_user["name"] if creator_user else row["display_name"]
-
-            # Fetch linked user's display name for matching creator's Loans/Borrows row
-            cur.execute("SELECT name FROM Users WHERE user_id = %s", (linked_user_id,))
-            linked_user = cur.fetchone()
-            linked_name = linked_user["name"] if linked_user else "Unknown"
-
-            if direction == "lent":
-                # Creator had a Loans row (they lent), linked user had a Borrows row
-                cur.execute(
-                    "DELETE FROM Loans WHERE lender_user_id = %s AND borrower_name = %s AND amount = %s AND loan_date = %s",
-                    (owner_user_id, linked_name, amt, entry_date),
-                )
-                cur.execute(
-                    "DELETE FROM Borrows WHERE borrower_user_id = %s AND lender_name = %s AND amount = %s AND borrow_date = %s",
-                    (linked_user_id, creator_name, amt, entry_date),
-                )
-            else:
-                # Creator had a Borrows row, linked user had a Loans row
-                cur.execute(
-                    "DELETE FROM Borrows WHERE borrower_user_id = %s AND lender_name = %s AND amount = %s AND borrow_date = %s",
-                    (owner_user_id, linked_name, amt, entry_date),
-                )
-                cur.execute(
-                    "DELETE FROM Loans WHERE lender_user_id = %s AND borrower_name = %s AND amount = %s AND loan_date = %s",
-                    (linked_user_id, creator_name, amt, entry_date),
-                )
 
         conn.commit()
         return {

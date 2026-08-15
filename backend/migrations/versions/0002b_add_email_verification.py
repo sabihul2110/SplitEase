@@ -1,4 +1,4 @@
-# SplitEase/backend/migrations/versions/2219c371a0af_add_email_verification.py
+# SplitEase/backend/migrations/versions/0002b_add_email_verification.py
 
 
 """add_email_verification

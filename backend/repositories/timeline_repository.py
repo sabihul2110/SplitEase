@@ -510,10 +510,12 @@ def fetch_financial_summary(user_id: int) -> dict:
       buckets already used by ExpensesScreen's computeSummary — expense
       includes your share of group bills whether you paid or owed it.
 
-    loans_receivable / borrows_payable: outstanding principal on the
-      standalone Loans/Borrows tables (status='active'). Combine these
-      with the existing group-settlement net balances on the client to
-      get the full "You Are Owed" / "You Owe" totals across both systems.
+    loans_receivable / borrows_payable: outstanding principal across all
+      of this user's active Ledger_Entries, by direction (Ledger_Entries
+      + People is the single source of truth — see get_user_pending_settlements
+      in user_repository.py for the same convention). Combine these with
+      the existing group-settlement net balances on the client to get the
+      full "You Are Owed" / "You Owe" totals across both systems.
     """
     with get_db() as (conn, cur):
         cur.execute(
@@ -570,9 +572,17 @@ def fetch_financial_summary(user_id: int) -> dict:
                 )
                     AS account_balance,
 
-                IFNULL((SELECT SUM(remaining_amount) FROM Loans   WHERE lender_user_id   = %s AND status = 'active'), 0)
+                IFNULL((
+                    SELECT SUM(le.remaining_amount)
+                    FROM Ledger_Entries le JOIN People p ON p.person_id = le.person_id
+                    WHERE p.owner_user_id = %s AND le.direction = 'lent' AND le.status = 'active'
+                ), 0)
                     AS loans_receivable,
-                IFNULL((SELECT SUM(remaining_amount) FROM Borrows WHERE borrower_user_id = %s AND status = 'active'), 0)
+                IFNULL((
+                    SELECT SUM(le.remaining_amount)
+                    FROM Ledger_Entries le JOIN People p ON p.person_id = le.person_id
+                    WHERE p.owner_user_id = %s AND le.direction = 'borrowed' AND le.status = 'active'
+                ), 0)
                     AS borrows_payable
             """,
             (user_id,) * 16,

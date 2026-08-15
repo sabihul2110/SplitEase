@@ -121,12 +121,15 @@ def delete_loan(
     background_tasks:  BackgroundTasks,
     current_user:      dict = Depends(get_current_user),
 ):
-    result = loan_repository.delete_loan(loan_id, current_user["user_id"])
+    try:
+        result = loan_repository.delete_loan(loan_id, current_user["user_id"])
+    except ValueError as exc:
+        raise HTTPException(status_code=403, detail=str(exc))
     if not result.get("deleted"):
         raise HTTPException(status_code=404, detail="Loan not found.")
 
     linked_user_id = result.get("linked_user_id")
-    if linked_user_id:
+    if linked_user_id and result.get("was_active"):
         sender_name = notification_repository.get_user_name(current_user["user_id"])
         msg = f"{sender_name} removed the shared ledger entry of ₹{result['amount']:,.0f} (lent you)."
         ledger_notification_repository.create_ledger_notif(

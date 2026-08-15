@@ -2,29 +2,6 @@
 from core.database import get_connection
 
 
-def fetch_borrows(user_id: int) -> list[dict]:
-    conn = get_connection()
-    cur  = conn.cursor(dictionary=True)
-    cur.execute(
-        """
-        SELECT borrow_id, lender_name, amount, remaining_amount,
-               note, borrow_date, status, created_at
-        FROM   Borrows
-        WHERE  borrower_user_id = %s
-        ORDER  BY borrow_date DESC, borrow_id DESC
-        """,
-        (user_id,),
-    )
-    rows = cur.fetchall()
-    cur.close(); conn.close()
-    for r in rows:
-        r["borrow_date"]      = str(r["borrow_date"]) if r.get("borrow_date") else ""
-        r["created_at"]       = str(r["created_at"])  if r.get("created_at")  else ""
-        r["amount"]           = float(r["amount"])
-        r["remaining_amount"] = float(r["remaining_amount"])
-    return rows
-
-
 def insert_borrow(
     borrower_user_id: int,
     lender_name:      str,
@@ -34,9 +11,14 @@ def insert_borrow(
     linked_user_id:   int | None = None,
 ) -> dict:
     """
-    Creates Ledger_Entry (source of truth) and Borrows row (only if active).
-    If linked_user_id is set, entry is pending — the lender must accept,
-    and the Borrows row is created by accept_entry on acceptance.
+    Creates the Ledger_Entry — the single source of truth for this borrow.
+    If linked_user_id is set, the entry starts 'pending' until the lender
+    accepts it via people_repository.accept_entry.
+
+    NOTE: Loans/Borrows are no longer written here. Ledger_Entries +
+    People is the only storage; "borrow_id" in the response is the
+    Ledger_Entries.entry_id, kept under this key name for API
+    compatibility with existing frontend callers.
     """
     from repositories.loan_repository import _upsert_person_and_entry
     conn = get_connection()
@@ -45,18 +27,6 @@ def insert_borrow(
         conn.start_transaction()
         amt    = round(float(amount), 2)
         status = 'pending' if linked_user_id else 'active'
-        new_id = 0
-
-        if status == 'active':
-            cur.execute(
-                """
-                INSERT INTO Borrows
-                    (borrower_user_id, lender_name, amount, remaining_amount, note, borrow_date, status)
-                VALUES (%s, %s, %s, %s, %s, %s, 'active')
-                """,
-                (borrower_user_id, lender_name.strip(), amt, amt, note or None, borrow_date),
-            )
-            new_id = cur.lastrowid
 
         entry_id = _upsert_person_and_entry(
             cur,
@@ -71,7 +41,7 @@ def insert_borrow(
         )
 
         conn.commit()
-        return {"borrow_id": new_id, "entry_id": entry_id, "status": status}
+        return {"borrow_id": entry_id, "entry_id": entry_id, "status": status}
     except Exception:
         conn.rollback()
         raise
@@ -101,53 +71,21 @@ def record_borrow_repayment(borrow_id: int, user_id: int, repayment_amount: floa
 
 def delete_borrow(borrow_id: int, user_id: int) -> dict:
     """
-    Blocks deletion if this borrow is linked to a registered lender —
-    a borrower can NEVER delete/forgive their own debt. Only unlinked
-    (custom lender) borrows can be deleted by the borrower, since there's
-    no other party being protected.
+    Deletes the Ledger_Entry backing this borrow. `borrow_id` is actually
+    Ledger_Entries.entry_id (see fetch_borrows_with_pending, which aliases
+    entry_id AS borrow_id) — delegates to the canonical entry-deletion path
+    in people_repository, the same one the People tab already uses.
+
+    Behavior note: people_repository.delete_entry's unlinked-person rule
+    only allows deleting direction='lent' entries (no counterparty to
+    protect otherwise a borrower could unilaterally erase their own debt).
+    A Borrows-sourced entry is always direction='borrowed', so an unlinked
+    borrow is no longer deletable through this endpoint at all. This is
+    not a behavior change for any user: neither LoansScreen.jsx (mobile)
+    nor Loans.jsx (web) ever rendered a delete button for a borrow item
+    (both gate the button on `isLent`), and the People tab's own
+    `can_delete` column has always been `direction = 'lent'` regardless
+    of link status. The old permissive path here was unreachable dead code.
     """
-    conn = get_connection()
-    cur  = conn.cursor(dictionary=True)
-    try:
-        conn.start_transaction()
-        cur.execute(
-            "SELECT borrow_id, lender_name, amount, borrow_date FROM Borrows WHERE borrow_id = %s AND borrower_user_id = %s",
-            (borrow_id, user_id),
-        )
-        borrow = cur.fetchone()
-        if not borrow:
-            return {"deleted": False}
-
-        cur.execute(
-            """
-            SELECT p.linked_user_id FROM People p
-            WHERE p.owner_user_id = %s AND p.display_name = %s
-            """,
-            (user_id, borrow["lender_name"]),
-        )
-        person = cur.fetchone()
-        if person and person["linked_user_id"]:
-            raise ValueError("Only the lender can delete this entry. You cannot forgive your own debt.")
-
-        cur.execute("DELETE FROM Borrows WHERE borrow_id = %s", (borrow_id,))
-
-        cur.execute(
-            """
-            DELETE le FROM Ledger_Entries le
-            JOIN   People p ON p.person_id = le.person_id
-            WHERE  p.owner_user_id = %s AND p.display_name = %s
-              AND  le.direction = 'borrowed' AND le.amount = %s AND le.entry_date = %s
-            """,
-            (user_id, borrow["lender_name"], float(borrow["amount"]), str(borrow["borrow_date"])),
-        )
-
-        conn.commit()
-        return {"deleted": True}
-    except ValueError:
-        conn.rollback()
-        raise
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        cur.close(); conn.close()
+    from repositories.people_repository import delete_entry
+    return delete_entry(borrow_id, user_id)

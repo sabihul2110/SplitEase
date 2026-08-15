@@ -122,6 +122,7 @@ def repay_borrow(
 @router.delete("/borrows/{borrow_id}", status_code=status.HTTP_200_OK)
 def delete_borrow(
     borrow_id:         int,
+    background_tasks:  BackgroundTasks,
     current_user:      dict = Depends(get_current_user),
 ):
     try:
@@ -130,4 +131,24 @@ def delete_borrow(
         raise HTTPException(status_code=403, detail=str(exc))
     if not result.get("deleted"):
         raise HTTPException(status_code=404, detail="Borrow not found.")
+
+    linked_user_id = result.get("linked_user_id")
+    if linked_user_id and result.get("was_active"):
+        sender_name = notification_repository.get_user_name(current_user["user_id"])
+        msg = f"{sender_name} removed the shared ledger entry of ₹{result['amount']:,.0f} (you lent them)."
+        ledger_notification_repository.create_ledger_notif(
+            recipient_id = linked_user_id,
+            sender_id    = current_user["user_id"],
+            notif_type   = "entry_deleted",
+            message      = msg,
+            entry_id     = None,
+        )
+        notification_repository.create_ledger_outcome_notification(
+            recipient_id = linked_user_id,
+            sender_id    = current_user["user_id"],
+            message      = msg,
+        )
+        token = push_repository.get_push_token(linked_user_id)
+        background_tasks.add_task(send_push, token, "Entry Removed", msg, {}, channel_id=CHANNEL_LEDGER)
+
     return {"message": "Borrow record deleted."}

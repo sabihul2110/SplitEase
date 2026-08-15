@@ -208,10 +208,6 @@ def reset_user_data(user_id: int) -> dict:
             pe = cur.rowcount
             cur.execute("DELETE FROM Income WHERE user_id = %s", (user_id,))
             inc = cur.rowcount
-            cur.execute("DELETE FROM Loans WHERE lender_user_id = %s", (user_id,))
-            loans = cur.rowcount
-            cur.execute("DELETE FROM Borrows WHERE borrower_user_id = %s", (user_id,))
-            borrows = cur.rowcount
             cur.execute("DELETE FROM Notifications WHERE user_id = %s", (user_id,))
             cur.execute("DELETE FROM Ledger_Notifications WHERE recipient_id = %s OR sender_id = %s", (user_id, user_id))
 
@@ -282,7 +278,7 @@ def reset_user_data(user_id: int) -> dict:
             cur.execute("DELETE FROM Group_Members WHERE user_id = %s", (user_id,))
 
             conn.commit()
-            return {"personal_expenses": pe, "income": inc, "loans": loans, "borrows": borrows, "group_expenses": exp}
+            return {"personal_expenses": pe, "income": inc, "loans": 0, "borrows": 0, "group_expenses": exp}
         except Exception:
             conn.rollback()
             raise
@@ -313,8 +309,6 @@ def admin_wipe_app(admin_user_id: int) -> dict:
             cur.execute("DELETE FROM `Groups`")
             cur.execute("DELETE FROM Personal_Expenses")
             cur.execute("DELETE FROM Income")
-            cur.execute("DELETE FROM Loans")
-            cur.execute("DELETE FROM Borrows")
             cur.execute("DELETE FROM Ledger_Entries")
             cur.execute("DELETE FROM People")
             cur.execute(
@@ -330,7 +324,7 @@ def admin_wipe_app(admin_user_id: int) -> dict:
             reset_tables = [
                 "Users", "`Groups`", "Group_Members", "Expenses", "Expense_Splits",
                 "Payments", "Payment_Allocations", "Invites", "Notifications", "Ledger_Notifications",
-                "Personal_Expenses", "Income", "Loans", "Borrows",
+                "Personal_Expenses", "Income",
                 "Ledger_Entries", "People", "Ledger_Repayments", "Ledger_Settlement_Requests",
                 "Quick_Templates", "Recurring_Bills", "Pending_Bills",
                 "Routines", "Routine_Items", "Routine_Runs",
