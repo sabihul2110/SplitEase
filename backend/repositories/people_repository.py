@@ -440,6 +440,63 @@ def fetch_sent_pending_entries(creator_user_id: int) -> list[dict]:
     return rows
 
 
+def fetch_pending_action_counts(linked_user_id: int) -> dict:
+    """
+    True pending-action counts for the badge cascade (Loans tab -> People
+    button -> Requests button). Counts rows that are actually unresolved
+    (status = 'pending') across Ledger_Entries, Ledger_Repayments, and
+    Ledger_Settlement_Requests — NOT Ledger_Notifications.is_read.
+
+    A notification's read state answers "has the person looked at this,"
+    not "is this still waiting on a decision." Driving the badges off
+    is_read meant merely opening the Confirmations sub-tab cleared the
+    dot even if the person backed out without accepting or declining
+    anything — the dot could show zero while a real repayment or
+    settle-up request sat unresolved. Every count here only changes when
+    the underlying row's status actually changes.
+    """
+    conn = get_connection()
+    cur  = conn.cursor(dictionary=True)
+
+    cur.execute(
+        """
+        SELECT COUNT(*) AS n
+        FROM   Ledger_Entries le
+        JOIN   People p ON p.person_id = le.person_id
+        WHERE  p.linked_user_id = %s AND le.status = 'pending'
+        """,
+        (linked_user_id,),
+    )
+    entries = cur.fetchone()["n"]
+
+    cur.execute(
+        """
+        SELECT COUNT(*) AS n
+        FROM   Ledger_Repayments lr
+        JOIN   Ledger_Entries le ON le.entry_id = lr.entry_id
+        JOIN   People p ON p.person_id = le.person_id
+        WHERE  p.linked_user_id = %s AND lr.status = 'pending'
+        """,
+        (linked_user_id,),
+    )
+    pending_repayments = cur.fetchone()["n"]
+
+    cur.execute(
+        """
+        SELECT COUNT(*) AS n
+        FROM   Ledger_Settlement_Requests lsr
+        JOIN   People p ON p.person_id = lsr.person_id
+        WHERE  p.linked_user_id = %s AND lsr.status = 'pending'
+        """,
+        (linked_user_id,),
+    )
+    pending_settlements = cur.fetchone()["n"]
+
+    cur.close(); conn.close()
+    confirmations = pending_repayments + pending_settlements
+    return {"entries": entries, "confirmations": confirmations, "count": entries + confirmations}
+
+
 def _find_mirror_entry_id(cur, owner_user_id, linked_user_id, direction, amount, entry_date):
     """
     Finds the reciprocal Ledger_Entries row on the linked user's side — same

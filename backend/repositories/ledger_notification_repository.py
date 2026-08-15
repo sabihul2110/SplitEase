@@ -83,10 +83,13 @@ def get_unread_count(user_id: int) -> int:
     return count
 
 
-# Categorizes unread notifications the same way PendingRequestsScreen's
-# Entries / Confirmations sub-tabs do, so each level of the badge cascade
-# (Loans tab -> People button -> Requests button -> sub-tab) can show a dot
-# for exactly what's unread beneath it, not just "something happened".
+# SUPERSEDED for badge purposes: routers/ledger_notifications.py's
+# unread-count endpoint now calls people_repository.fetch_pending_action_counts
+# instead, since is_read reflects "viewed" not "unresolved" — opening a
+# sub-tab shouldn't clear a badge for a request nobody has acted on yet.
+# This function and mark_category_read below are no longer wired into any
+# badge. Grep for get_unread_counts_by_category before deleting, in case
+# something else in the app still reads it.
 _CATEGORY_TYPES = {
     "entries":       ["entry_request"],
     "confirmations": ["repayment_request", "settlement_request"],

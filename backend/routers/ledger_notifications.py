@@ -11,7 +11,7 @@ POST /ledger-notifications/read-all      → mark all read
 """
 
 from fastapi import APIRouter, Depends
-from repositories import ledger_notification_repository
+from repositories import ledger_notification_repository, people_repository
 from core.dependencies import get_current_user
 
 router = APIRouter()
@@ -19,7 +19,13 @@ router = APIRouter()
 
 @router.get("/ledger-notifications/unread-count")
 def ledger_unread_count(current_user: dict = Depends(get_current_user)):
-    return ledger_notification_repository.get_unread_counts_by_category(current_user["user_id"])
+    # NOTE: despite the route/function name (kept for API compatibility —
+    # every frontend badge already calls this exact endpoint), this now
+    # returns real pending-action counts (Ledger_Entries/Repayments/
+    # Settlement_Requests still status='pending'), not Ledger_Notifications
+    # is_read counts. See fetch_pending_action_counts's docstring in
+    # people_repository.py for why.
+    return people_repository.fetch_pending_action_counts(current_user["user_id"])
 
 
 @router.post("/ledger-notifications/read-category/{category}")

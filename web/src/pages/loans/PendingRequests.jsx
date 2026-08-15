@@ -213,17 +213,11 @@ export default function PendingRequests() {
 
   useEffect(() => { load(); }, [load]);
 
-  // Mark read ONLY for the category currently being viewed — matches
-  // mobile's PendingRequestsScreen. If the person closes the tab before
-  // switching to the other sub-tab, that category stays unread and the
-  // dot reappears next visit.
-  useEffect(() => {
-    if (loading || tab !== "received") return;
-    const category = subTab === "entries" ? "entries" : "confirmations";
-    ledgerNotifsApi.markCategoryRead(category)
-      .then(() => window.__refreshLedgerBadge?.())
-      .catch(() => {});
-  }, [subTab, tab, loading]);
+  // Badges are now driven by real pending status (see
+  // people_repository.fetch_pending_action_counts), not by
+  // Ledger_Notifications.is_read, so there is nothing to mark read here
+  // just from viewing a sub-tab — the dot only clears once the item is
+  // actually accepted, rejected, confirmed, declined, or cancelled below.
 
   async function handleAccept(entryId) {
     try {

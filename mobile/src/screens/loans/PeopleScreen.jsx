@@ -264,12 +264,15 @@ export default function PeopleScreen({ navigation }) {
   const load = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true); else setLoading(true);
     try {
-      const [peopleRes, requestsRes] = await Promise.all([
+      const [peopleRes, pendingRes] = await Promise.all([
         peopleApi.getPeople(),
-        peopleApi.getPendingRequests(),
+        ledgerNotifsApi.getLedgerUnread(),
       ]);
       setPeople(peopleRes.data || []);
-      setPendingCount((requestsRes.data || []).length);
+      // Same endpoint the Loans tab dot already reads — entries + pending
+      // repayments/settlements combined — so this button can never
+      // disagree with the dot that led the user here.
+      setPendingCount(pendingRes.data?.count || 0);
     } catch {
       setPeople([]);
     } finally {
