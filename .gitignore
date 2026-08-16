@@ -85,3 +85,6 @@ docs/
 .claude/
 CLAUDE.md
 AGENTS.md
+
+mobile/google-services.json
+mobile/google-services.dev.json
