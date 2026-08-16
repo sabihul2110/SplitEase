@@ -104,14 +104,12 @@ function groupByMonthAndDay(entries, ascending = false) {
       monthKey:   mk,
       monthLabel: mk === "unknown" ? "Unknown" : fmtMonthLabel(mk),
                     days: orderedDayKeys.map(dk => {
+                // Trust the order the timeline API already returned (same
+                // as web's groupByMonthAndDay) — do NOT re-sort here.
+                // Re-sorting by ref_id was comparing unrelated ID spaces
+                // (loan borrow_id vs repayment_id), which could shuffle a
+                // loan entry in between its own repayments.
                 const dayEntries = monthMap[mk][dk];
-                dayEntries.sort((a, b) => {
-                  const tA = a.time || a.expense_time || a.created_at || "";
-                  const tB = b.time || b.expense_time || b.created_at || "";
-                  if (tA > tB) return -1;
-                  if (tA < tB) return 1;
-                  return (b.ref_id || 0) - (a.ref_id || 0);
-                });
                 return {
                   dateKey:  dk,
                   dayLabel: fmtDayHeader(dk),

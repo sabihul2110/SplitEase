@@ -53,9 +53,12 @@ function PeopleLedger({ initialPersonId } = {}) {
   const loadPeople = useCallback(async () => {
     setLoading(true);
     try {
-      const [pr, rr] = await Promise.allSettled([peopleApi.getPeople(), peopleApi.getPendingRequests()]);
+      const [pr, cr] = await Promise.allSettled([peopleApi.getPeople(), ledgerNotifsApi.getLedgerUnread()]);
       setPeople(pr.status === "fulfilled" ? pr.value.data || [] : []);
-      setPendingCount(rr.status === "fulfilled" ? (rr.value.data || []).length : 0);
+      // Same endpoint that drives the People Ledger tab dot — entries +
+      // pending repayments/settlements combined — so this button can
+      // never disagree with the dot that led the user here.
+      setPendingCount(cr.status === "fulfilled" ? (cr.value.data?.count || 0) : 0);
     } catch { setPeople([]); }
     finally { setLoading(false); }
   }, []);
@@ -164,17 +167,30 @@ function PeopleLedger({ initialPersonId } = {}) {
               style={{ flex: 1, fontSize: 13, padding: "8px 12px",
                 borderRadius: 8, border: "1px solid var(--border)",
                 background: "var(--surface2)", color: "var(--text)", outline: "none" }} />
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={() => navigate("/people/pending")}
+              style={{
+                position: "relative", display: "inline-flex", alignItems: "center", gap: 6,
+                color: pendingCount > 0 ? "var(--warning)" : "var(--text)",
+                borderColor: pendingCount > 0 ? "rgba(245,158,11,0.3)" : "var(--border)",
+              }}
+              title="View pending entries, repayments and settle-ups"
+            >
+              <Icons.clockPending size={14} />
+              {pendingCount > 0 ? `Requests (${pendingCount})` : "Requests"}
+            </button>
             <button className="btn btn-primary btn-sm" onClick={() => setShowAddPerson(true)}>+ Add</button>
           </div>
 
-          {/* Pending requests banner */}
+          {/* Pending requests banner — extra nudge when something needs review */}
           {pendingCount > 0 && (
             <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "10px 14px", background: "rgba(245,158,11,0.08)",
               borderBottom: "1px solid rgba(245,158,11,0.2)", fontSize: 13,
               color: "var(--warning)", fontWeight: 600, cursor: "pointer" }}
               onClick={() => navigate("/people/pending")}>
               <Icons.clockPending size={14} />
-              {pendingCount} pending request{pendingCount > 1 ? "s" : ""} awaiting your review →
+              {pendingCount} pending item{pendingCount > 1 ? "s" : ""} awaiting your review →
             </div>
           )}
 
