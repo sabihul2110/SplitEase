@@ -21,6 +21,7 @@ from services.auth_service import (
 from core.dependencies import get_current_user
 from core.database import get_connection, get_db
 from infrastructure.email_service import send_reset_email, send_verification_email
+from repositories import push_repository
 
 logger = logging.getLogger("splitease.auth")
 router = APIRouter(tags=["Auth"])
@@ -123,6 +124,23 @@ def login(body: LoginRequest, request: Request):
     if not result:
         raise HTTPException(401, "Invalid email or password.")
     return AuthResponse(**result)
+
+
+@router.post("/logout", status_code=status.HTTP_200_OK)
+def logout(current_user: dict = Depends(get_current_user)):
+    """
+    Clears this account's stored Expo push token.
+
+    Required because the token is tied to the device/app-install, not the
+    account — on a shared device, logging out without clearing it leaves
+    the next user who logs in able to "inherit" the token via the
+    clear-on-claim logic in save_push_token, but until they do, this
+    account's row still holds a token for a device it's no longer active
+    on. Explicitly nulling it here closes that window immediately instead
+    of waiting for the next login elsewhere.
+    """
+    push_repository.clear_push_token(current_user["user_id"])
+    return {"message": "Logged out."}
 
 
 @router.get("/me")

@@ -79,6 +79,19 @@ export function AuthProvider({ children }) {
   }
 
   async function logout() {
+    // Must fire while the access token is still valid/attached — this
+    // tells the backend to null out THIS account's push token before we
+    // wipe local session state. Skipping this (or doing it after clearing
+    // storage) is exactly what caused notifications to cross accounts on
+    // a shared device: the next user to log in would silently reuse a
+    // token still associated with the previous account's row.
+    try {
+      await client.post(ENDPOINTS.logout);
+    } catch {
+      // Best-effort — local logout must proceed either way. Worst case,
+      // the next login's save_push_token() reassignment (which strips the
+      // token off any other account) still closes the gap.
+    }
     setUser(null);
     await AsyncStorage.removeItem(STORAGE_KEY);
   }
