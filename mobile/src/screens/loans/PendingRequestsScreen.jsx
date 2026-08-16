@@ -501,7 +501,11 @@ export default function PendingRequestsScreen({ navigation, route }) {
         showBack
         onBack={() => {
           route.params?.onReturn?.();
-          navigation.goBack();
+          if (navigation.canGoBack()) {
+            navigation.goBack();
+          } else {
+            navigation.navigate('LoansHome');
+          }
         }}
       />
 

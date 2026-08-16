@@ -456,6 +456,7 @@ export default function NotificationsScreen() {
                 navigation.navigate("Loans", {
                   screen: "PendingRequests",
                   params: { initialTab: "received", initialSubTab: "entries" },
+                  initial: false,
                 });
                 return;
               }
@@ -463,6 +464,7 @@ export default function NotificationsScreen() {
                 navigation.navigate("Loans", {
                   screen: "PendingRequests",
                   params: { initialTab: "received", initialSubTab: "confirmations" },
+                  initial: false,
                 });
               }
             }}
