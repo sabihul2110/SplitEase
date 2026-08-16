@@ -53,6 +53,14 @@ def add_borrow(
             message      = msg,
             entry_id     = result["entry_id"],
         )
+        notification_repository.create_notification(
+            user_id       = body.linked_user_id,
+            from_user_id  = current_user["user_id"],
+            notification_type = "entry_request",
+            message       = msg,
+            ref_type      = "entry",
+            ref_id        = result["entry_id"],
+        )
         token = push_repository.get_push_token(body.linked_user_id)
         background_tasks.add_task(
             send_push, token, "New Ledger Request", msg,
@@ -98,6 +106,14 @@ def repay_borrow(
                 notif_type   = "repayment_request",
                 message      = msg,
                 entry_id     = borrow_id,
+            )
+            notification_repository.create_notification(
+                user_id       = linked_user_id,
+                from_user_id  = current_user["user_id"],
+                notification_type = "repayment_request",
+                message       = msg,
+                ref_type      = "repayment",
+                ref_id        = result.get("repayment_id"),
             )
             token = push_repository.get_push_token(linked_user_id)
             background_tasks.add_task(

@@ -65,6 +65,14 @@ def add_loan(
             message      = msg,
             entry_id     = result["entry_id"],
         )
+        notification_repository.create_notification(
+            user_id       = body.linked_user_id,
+            from_user_id  = current_user["user_id"],
+            notification_type = "entry_request",
+            message       = msg,
+            ref_type      = "entry",
+            ref_id        = result["entry_id"],
+        )
         token = push_repository.get_push_token(body.linked_user_id)
         background_tasks.add_task(
             send_push, token, "New Ledger Request", msg,

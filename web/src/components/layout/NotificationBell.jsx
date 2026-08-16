@@ -114,7 +114,13 @@ export default function NotificationBell() {
       setNotifs(prev => prev.map(x => x.notification_id === n.notification_id ? { ...x, is_read: 1 } : x));
       setCount(c => Math.max(0, c - 1));
     }
-    if (n.group_id) navigate(`/groups/${n.group_id}`);
+    if (n.group_id) {
+      navigate(`/groups/${n.group_id}`);
+    } else if (n.ref_type === "entry") {
+      navigate("/loans", { state: { initialTab: "received", initialSubTab: "entries" } });
+    } else if (n.ref_type === "repayment" || n.ref_type === "settlement") {
+      navigate("/loans", { state: { initialTab: "received", initialSubTab: "confirmations" } });
+    }
     setOpen(false);
   }
 
@@ -213,7 +219,7 @@ export default function NotificationBell() {
                     onMouseLeave={() => setHoveredId(null)}
                     style={{
                       padding: "12px 16px",
-                      cursor: n.group_id ? "pointer" : "default",
+                      cursor: (n.group_id || n.ref_type) ? "pointer" : "default",
                       background: hoveredId === n.notification_id
                         ? "rgba(255,255,255,0.03)"
                         : n.is_read ? "transparent" : "rgba(37,99,235,0.05)",

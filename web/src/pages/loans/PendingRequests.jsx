@@ -312,8 +312,8 @@ export default function PendingRequests() {
       {/* Received / Sent */}
       <div style={{ display: "flex", gap: 0, borderBottom: "2px solid var(--border)", marginBottom: 16 }}>
         {[
-          { id: "received", label: `Received ${received.length + receivedConfirms.length > 0 ? `(${received.length + receivedConfirms.length})` : ""}` },
-          { id: "sent",     label: `Sent ${sent.length + sentConfirms.length > 0 ? `(${sent.length + sentConfirms.length})` : ""}` },
+          { id: "received", label: "Received", count: received.length + receivedConfirms.length, tone: "warning" },
+          { id: "sent",     label: "Sent",     count: sent.length + sentConfirms.length,         tone: "neutral" },
         ].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             style={{
@@ -322,8 +322,20 @@ export default function PendingRequests() {
               color: tab === t.id ? "var(--text)" : "var(--text2)",
               borderBottom: `2px solid ${tab === t.id ? "var(--primary-h)" : "transparent"}`,
               marginBottom: -2, transition: "all 0.14s",
+              display: "inline-flex", alignItems: "center", gap: 6,
             }}>
             {t.label}
+            {t.count > 0 && (
+              <span style={{
+                display: "inline-flex", alignItems: "center", justifyContent: "center",
+                minWidth: 18, height: 18, padding: "0 5px", borderRadius: 9,
+                fontSize: 11, fontWeight: 700,
+                background: t.tone === "warning" ? "rgba(245,158,11,0.18)" : "rgba(150,150,150,0.16)",
+                color: t.tone === "warning" ? "var(--warning)" : "var(--text3)",
+              }}>
+                {t.count}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -332,8 +344,8 @@ export default function PendingRequests() {
       <div style={{ display: "flex", gap: 4, background: "var(--surface2)", padding: 4, borderRadius: 8,
         border: "1px solid var(--border)", marginBottom: 20, width: "fit-content" }}>
         {[
-          { id: "entries",       label: `Entries ${entryData.length > 0 ? `(${entryData.length})` : ""}` },
-          { id: "confirmations", label: `Repayments ${confirmData.length > 0 ? `(${confirmData.length})` : ""}` },
+          { id: "entries",       label: "Entries",     count: entryData.length },
+          { id: "confirmations", label: "Repayments",  count: confirmData.length },
         ].map(t => (
           <button key={t.id} onClick={() => setSubTab(t.id)}
             style={{
@@ -343,8 +355,20 @@ export default function PendingRequests() {
               color: subTab === t.id ? "var(--text)" : "var(--text2)",
               boxShadow: subTab === t.id ? "0 1px 4px rgba(0,0,0,0.25)" : "none",
               transition: "all 0.12s",
+              display: "inline-flex", alignItems: "center", gap: 6,
             }}>
             {t.label}
+            {t.count > 0 && (
+              <span style={{
+                display: "inline-flex", alignItems: "center", justifyContent: "center",
+                minWidth: 18, height: 18, padding: "0 5px", borderRadius: 9,
+                fontSize: 11, fontWeight: 700,
+                background: tab === "received" ? "rgba(245,158,11,0.18)" : "rgba(150,150,150,0.16)",
+                color: tab === "received" ? "var(--warning)" : "var(--text3)",
+              }}>
+                {t.count}
+              </span>
+            )}
           </button>
         ))}
       </div>

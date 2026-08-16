@@ -126,7 +126,7 @@ def delete_user(user_id: int) -> None:
     drift out of sync — one cleanup routine, two entry points — then
     removes the account row itself.
     """
-    reset_user_data(user_id)
+    reset_user_data(user_id)  # write-off targets not notified here — see note below
     conn = get_connection()
     cur  = conn.cursor()
     try:
@@ -191,14 +191,30 @@ def get_user_pending_settlements(user_id: int) -> list[dict]:
         return all_rows
 
 
-def reset_user_data(user_id: int) -> dict:
+def reset_user_data(user_id: int) -> tuple[dict, list[dict]]:
     """
     Deletes all personal data for a user:
-    - Personal expenses, income, loans, borrows, notifications
+    - Personal expenses, income, notifications
     - Removes from all groups (deletes groups where they're sole member)
     - Deletes their group expenses/splits
-    Returns summary of what was deleted.
+    Returns (summary of what was deleted, list of counterparties whose
+    ledger balance with this user was just written off — for the router
+    to notify).
+
+    Group balances need no special write-off step here: Calculate_Settlements
+    and the settlements screen compute balances LIVE from Expenses/
+    Expense_Splits/Payments on every read (nothing is pre-aggregated), and
+    this function already deletes this user's Expenses rows below, which
+    cascades to Expense_Splits — so once those rows are gone, no other
+    member's calculated balance can reference them. The 1-on-1 ledger side
+    has no such live-recompute — Ledger_Entries are persisted, independently
+    owned rows on both sides of a relationship — so it needs the explicit
+    write_off_ledger_for_user() step below before this user's own rows
+    are cascade-deleted.
     """
+    from repositories.people_repository import write_off_ledger_for_user
+    write_off_targets = write_off_ledger_for_user(user_id)
+
     with get_db() as (conn, cur):
         try:
             conn.start_transaction()
@@ -278,7 +294,8 @@ def reset_user_data(user_id: int) -> dict:
             cur.execute("DELETE FROM Group_Members WHERE user_id = %s", (user_id,))
 
             conn.commit()
-            return {"personal_expenses": pe, "income": inc, "loans": 0, "borrows": 0, "group_expenses": exp}
+            summary = {"personal_expenses": pe, "income": inc, "loans": 0, "borrows": 0, "group_expenses": exp}
+            return summary, write_off_targets
         except Exception:
             conn.rollback()
             raise

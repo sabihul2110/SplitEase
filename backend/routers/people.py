@@ -50,6 +50,14 @@ def settle_up(
             message      = msg,
             entry_id     = None,
         )
+        notification_repository.create_notification(
+            user_id       = linked_user_id,
+            from_user_id  = current_user["user_id"],
+            notification_type = "settlement_request",
+            message       = msg,
+            ref_type      = "settlement",
+            ref_id        = result.get("request_id"),
+        )
         token = push_repository.get_push_token(linked_user_id)
         background_tasks.add_task(
             send_push, token, "Settle Up — Confirmation Needed", msg,
@@ -363,6 +371,14 @@ def repay_entry(
                 message      = msg,
                 entry_id     = entry_id,
             )
+            notification_repository.create_notification(
+                user_id       = linked_user_id,
+                from_user_id  = current_user["user_id"],
+                notification_type = "repayment_request",
+                message       = msg,
+                ref_type      = "repayment",
+                ref_id        = result.get("repayment_id"),
+            )
             token = push_repository.get_push_token(linked_user_id)
             background_tasks.add_task(
                 send_push, token, "Repayment Awaiting Confirmation", msg,
@@ -499,6 +515,14 @@ def add_entry(
             notif_type   = "entry_request",
             message      = msg,
             entry_id     = new_id,
+        )
+        notification_repository.create_notification(
+            user_id       = linked_user_id,
+            from_user_id  = current_user["user_id"],
+            notification_type = "entry_request",
+            message       = msg,
+            ref_type      = "entry",
+            ref_id        = new_id,
         )
         recipient_token = push_repository.get_push_token(linked_user_id)
         background_tasks.add_task(

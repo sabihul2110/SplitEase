@@ -13,11 +13,11 @@ FIX S5: DELETE now prevents an admin from deleting themselves if they are
         the last admin in the system. Orphaning all admin access is blocked.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, BackgroundTasks
 from schemas.users import UpdateUserRequest
 import mysql.connector
 
-from repositories import user_repository
+from repositories import user_repository, notification_repository
 from core.database import get_connection, get_db
 from core.dependencies import get_current_user, require_admin
 
@@ -130,8 +130,41 @@ def delete_user(user_id: int, current_user: dict = Depends(require_admin)):
 
 
 
+def _notify_write_offs(sender_id: int, sender_name: str, targets: list[dict], background_tasks: BackgroundTasks):
+    """Tells each affected counterparty their ledger balance with this user
+    was just resolved by an account reset — otherwise the balance silently
+    changing to ₹0 in their People screen would have no explanation."""
+    from repositories import ledger_notification_repository, push_repository
+    from services.push_service import send_push
+    from core.push_channels import CHANNEL_LEDGER
+
+    for t in targets:
+        msg = (
+            f"{sender_name} reset their account. Your ₹{t['net_amount']:,.0f} balance "
+            f"with them has been {'written off' if t['they_were_owed'] else 'cleared'} — "
+            f"it no longer needs to be settled."
+        )
+        notification_repository.create_notification(
+            user_id       = t["linked_user_id"],
+            from_user_id  = sender_id,
+            notification_type = "entry_outcome",
+            message       = msg,
+        )
+        ledger_notification_repository.create_ledger_notif(
+            recipient_id = t["linked_user_id"],
+            sender_id    = sender_id,
+            notif_type   = "entry_deleted",
+            message      = msg,
+        )
+        token = push_repository.get_push_token(t["linked_user_id"])
+        background_tasks.add_task(send_push, token, "Ledger Balance Cleared", msg, {}, channel_id=CHANNEL_LEDGER)
+
+
 @router.post("/reset-my-data")
-def reset_my_data(current_user: dict = Depends(get_current_user)):
+def reset_my_data(
+    background_tasks: BackgroundTasks,
+    current_user: dict = Depends(get_current_user),
+):
     user_id = current_user["user_id"]
     pending = user_repository.get_user_pending_settlements(user_id)
     if pending:
@@ -146,15 +179,42 @@ def reset_my_data(current_user: dict = Depends(get_current_user)):
             "pending": pending,
             "has_debts": has_debts,
         }
-    result = user_repository.reset_user_data(user_id)
-    return {"status": "ok", "deleted": result}
+    summary, write_off_targets = user_repository.reset_user_data(user_id)
+    if write_off_targets:
+        sender_name = notification_repository.get_user_name(user_id)
+        _notify_write_offs(user_id, sender_name, write_off_targets, background_tasks)
+    return {"status": "ok", "deleted": summary}
 
 
 @router.post("/reset-my-data/force")
-def reset_my_data_force(current_user: dict = Depends(get_current_user)):
-    """Reset even with pending settlements."""
-    result = user_repository.reset_user_data(current_user["user_id"])
-    return {"status": "ok", "deleted": result}
+def reset_my_data_force(
+    background_tasks: BackgroundTasks,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Reset even with pending settlements — but ONLY the creditor case.
+    Owing money is a hard, non-bypassable block: "force" exists to skip
+    past the *warning* shown when the user is owed money, not to skip
+    past a genuine debt. Re-validates server-side rather than trusting
+    the client already showed the right confirmation dialog — the plain
+    /reset-my-data endpoint above never actually blocks with an HTTP
+    error, it just returns info, so without this check here, calling
+    /force directly (bypassing the UI entirely) let a user with real
+    debts wipe their account with zero enforcement.
+    """
+    user_id = current_user["user_id"]
+    pending = user_repository.get_user_pending_settlements(user_id)
+    has_debts = any(float(p["net_balance"]) < -0.005 for p in pending)
+    if has_debts:
+        raise HTTPException(
+            status_code=400,
+            detail="You owe money to someone — this cannot be forced. Settle up first.",
+        )
+    summary, write_off_targets = user_repository.reset_user_data(user_id)
+    if write_off_targets:
+        sender_name = notification_repository.get_user_name(user_id)
+        _notify_write_offs(user_id, sender_name, write_off_targets, background_tasks)
+    return {"status": "ok", "deleted": summary}
 
 
 @router.post("/admin-wipe")

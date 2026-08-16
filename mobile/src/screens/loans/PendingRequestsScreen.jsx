@@ -229,6 +229,35 @@ function ConfirmationCard({ item, direction, onAccept, onReject, onCancel }) {
   );
 }
 
+function CountPill({ count, tone = 'warning' }) {
+  if (!count) return null;
+  const isWarning = tone === 'warning';
+  return (
+    <View style={[pillStyles.pill, isWarning ? pillStyles.pillWarning : pillStyles.pillNeutral]}>
+      <Text style={[pillStyles.pillText, isWarning ? pillStyles.pillTextWarning : pillStyles.pillTextNeutral]}>
+        {count}
+      </Text>
+    </View>
+  );
+}
+
+const pillStyles = StyleSheet.create({
+  pill: {
+    minWidth: 18,
+    height: 18,
+    paddingHorizontal: 5,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 6,
+  },
+  pillWarning: { backgroundColor: 'rgba(245,158,11,0.18)' },
+  pillNeutral: { backgroundColor: 'rgba(150,150,150,0.16)' },
+  pillText: { fontSize: 11, fontWeight: '700' },
+  pillTextWarning: { color: COLORS.warning },
+  pillTextNeutral: { color: COLORS.text3 },
+});
+
 export default function PendingRequestsScreen({ navigation, route }) {
   const [tab, setTab]         = useState(route.params?.initialTab || 'received');    // 'received' | 'sent'
   const [subTab, setSubTab]   = useState(route.params?.initialSubTab || 'entries');   // 'entries' | 'confirmations'
@@ -479,15 +508,17 @@ export default function PendingRequestsScreen({ navigation, route }) {
       {/* Received / Sent */}
       <View style={styles.tabBar}>
         <TouchableOpacity style={[styles.tabItem, tab === 'received' && styles.tabItemActive]} onPress={() => setTab('received')}>
-          <Text style={[styles.tabText, tab === 'received' && styles.tabTextActive]}>
-            Received {received.length + receivedConfirms.length > 0 ? `(${received.length + receivedConfirms.length})` : ''}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={[styles.tabText, tab === 'received' && styles.tabTextActive]}>Received</Text>
+            <CountPill count={received.length + receivedConfirms.length} tone="warning" />
+          </View>
           {tab === 'received' && <View style={styles.tabIndicator} />}
         </TouchableOpacity>
         <TouchableOpacity style={[styles.tabItem, tab === 'sent' && styles.tabItemActive]} onPress={() => setTab('sent')}>
-          <Text style={[styles.tabText, tab === 'sent' && styles.tabTextActive]}>
-            Sent {sent.length + sentConfirms.length > 0 ? `(${sent.length + sentConfirms.length})` : ''}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={[styles.tabText, tab === 'sent' && styles.tabTextActive]}>Sent</Text>
+            <CountPill count={sent.length + sentConfirms.length} tone="neutral" />
+          </View>
           {tab === 'sent' && <View style={styles.tabIndicator} />}
         </TouchableOpacity>
       </View>
@@ -495,14 +526,16 @@ export default function PendingRequestsScreen({ navigation, route }) {
       {/* Entries / Repayments */}
       <View style={styles.subTabRow}>
         <TouchableOpacity style={[styles.subTabBtn, subTab === 'entries' && styles.subTabBtnActive]} onPress={() => setSubTab('entries')}>
-          <Text style={[styles.subTabText, subTab === 'entries' && styles.subTabTextActive]}>
-            Entries {entryData.length > 0 ? `(${entryData.length})` : ''}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={[styles.subTabText, subTab === 'entries' && styles.subTabTextActive]}>Entries</Text>
+            <CountPill count={entryData.length} tone={tab === 'received' ? 'warning' : 'neutral'} />
+          </View>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.subTabBtn, subTab === 'confirmations' && styles.subTabBtnActive]} onPress={() => setSubTab('confirmations')}>
-          <Text style={[styles.subTabText, subTab === 'confirmations' && styles.subTabTextActive]}>
-            Repayments {confirmData.length > 0 ? `(${confirmData.length})` : ''}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={[styles.subTabText, subTab === 'confirmations' && styles.subTabTextActive]}>Repayments</Text>
+            <CountPill count={confirmData.length} tone={tab === 'received' ? 'warning' : 'neutral'} />
+          </View>
         </TouchableOpacity>
       </View>
 

@@ -20,7 +20,7 @@ def fetch_notifications(user_id: int, limit: int, offset: int) -> list[dict]:
     cur.execute(
         """
         SELECT n.notification_id, n.type, n.message, n.is_read,
-               n.group_id, n.created_at,
+               n.group_id, n.ref_type, n.ref_id, n.created_at,
                u.name AS from_name, g.group_name
         FROM   Notifications n
         LEFT JOIN Users u ON u.user_id = n.from_user_id
@@ -88,13 +88,16 @@ def create_notification(
     notification_type: str = "reminder",
     from_user_id: int | None = None,
     group_id: int | None = None,
+    ref_type: str | None = None,
+    ref_id: int | None = None,
 ) -> None:
     conn = get_connection()
     cur  = conn.cursor()
     try:
         cur.execute(
-            "INSERT INTO Notifications (user_id, from_user_id, type, message, group_id) VALUES (%s, %s, %s, %s, %s)",
-            (user_id, from_user_id, notification_type, message, group_id),
+            "INSERT INTO Notifications (user_id, from_user_id, type, message, group_id, ref_type, ref_id) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s)",
+            (user_id, from_user_id, notification_type, message, group_id, ref_type, ref_id),
         )
         conn.commit()
     finally:

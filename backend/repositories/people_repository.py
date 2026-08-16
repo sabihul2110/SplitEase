@@ -1222,6 +1222,121 @@ def cancel_settlement(request_id: int, proposer_user_id: int) -> dict:
         cur.close(); conn.close()
 
 
+def write_off_ledger_for_user(owner_user_id: int) -> list[dict]:
+    """
+    Called before reset_user_data wipes this user's own rows. For every
+    person this user has an active balance with, resolves it properly —
+    marks entries repaid on BOTH sides (not just this user's own copy) and
+    inserts a 'settlement' audit entry, same mechanism _apply_settlement
+    already uses for a normal Settle Up.
+
+    Without this, reset_user_data's cascade-delete of this user's own
+    People/Ledger_Entries rows leaves the OTHER party's mirror row
+    (owned by them, created_by them — see accept_entry) completely
+    untouched: still active, still showing a real balance, now pointing
+    at a "custom person" that used to be a real account. If that other
+    party was the borrower on that entry, delete_entry's unlinked-person
+    rule ("only the lender can delete") means they can never clear it
+    themselves either — a permanently stuck, unresolvable debt.
+
+    Returns a list of {linked_user_id, person_name, net_amount, direction}
+    for the router to notify affected users — 'direction' is from the
+    AFFECTED USER'S perspective: 'they_were_owed' or 'they_owed'.
+    """
+    conn = get_connection()
+    cur  = conn.cursor(dictionary=True)
+    try:
+        conn.start_transaction()
+
+        cur.execute(
+            """
+            SELECT p.person_id, p.display_name, p.linked_user_id,
+                   SUM(
+                       CASE
+                           WHEN le.direction = 'lent'     THEN  le.remaining_amount
+                           WHEN le.direction = 'borrowed' THEN -le.remaining_amount
+                           ELSE 0
+                       END
+                   ) AS net_balance
+            FROM   People p
+            JOIN   Ledger_Entries le ON le.person_id = p.person_id
+            WHERE  p.owner_user_id = %s AND le.status = 'active'
+            GROUP  BY p.person_id, p.display_name, p.linked_user_id
+            HAVING ABS(net_balance) > 0.005
+            """,
+            (owner_user_id,),
+        )
+        balances = cur.fetchall()
+
+        notify_targets = []
+
+        for row in balances:
+            person_id      = row["person_id"]
+            linked_user_id = row["linked_user_id"]
+            net            = float(row["net_balance"])
+            amount         = round(abs(net), 2)
+
+            # Resolve this user's own side
+            cur.execute(
+                "UPDATE Ledger_Entries SET status = 'repaid', remaining_amount = 0 "
+                "WHERE person_id = %s AND status = 'active'",
+                (person_id,),
+            )
+            cur.execute(
+                """
+                INSERT INTO Ledger_Entries
+                    (person_id, created_by, direction, amount, remaining_amount, note, entry_date, status)
+                VALUES (%s, %s, 'settlement', %s, 0, %s, CURDATE(), 'repaid')
+                """,
+                (person_id, owner_user_id, amount,
+                 f"Written off — account reset ({'received' if net < 0 else 'forgave'} ₹{amount:,.0f})"),
+            )
+
+            if linked_user_id:
+                # Resolve the mirror on the counterparty's side too — this
+                # is the actual fix, since reset_user_data never reaches here.
+                cur.execute(
+                    "SELECT person_id FROM People WHERE owner_user_id = %s AND linked_user_id = %s",
+                    (linked_user_id, owner_user_id),
+                )
+                mirror_person = cur.fetchone()
+                if mirror_person:
+                    mirror_person_id = mirror_person["person_id"]
+                    cur.execute(
+                        "UPDATE Ledger_Entries SET status = 'repaid', remaining_amount = 0 "
+                        "WHERE person_id = %s AND status = 'active'",
+                        (mirror_person_id,),
+                    )
+                    cur.execute(
+                        """
+                        INSERT INTO Ledger_Entries
+                            (person_id, created_by, direction, amount, remaining_amount, note, entry_date, status)
+                        VALUES (%s, %s, 'settlement', %s, 0, %s, CURDATE(), 'repaid')
+                        """,
+                        (mirror_person_id, owner_user_id, amount,
+                         f"Written off — the other party reset their account ({'forgave' if net < 0 else 'received'} ₹{amount:,.0f})"),
+                    )
+                    notify_targets.append({
+                        "linked_user_id": linked_user_id,
+                        "person_name":    row["display_name"],
+                        "net_amount":     amount,
+                        # From the AFFECTED user's perspective: if net > 0
+                        # here (owner_user_id was owed), the affected user
+                        # OWED that amount and it's now forgiven for them
+                        # too (net was symmetric — they were also net
+                        # negative from their own side).
+                        "they_were_owed": net < 0,
+                    })
+
+        conn.commit()
+        return notify_targets
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close(); conn.close()
+
+
 def repair_duplicate_people_for_user(owner_user_id: int) -> dict:
     """
     One-time repair: finds People rows for owner_user_id that share the same

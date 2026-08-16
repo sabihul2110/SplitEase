@@ -88,6 +88,12 @@ function getNotifMeta(type) {
       color: COLORS.primary,
       bg: "rgba(37,99,235,0.12)",
     };
+  if (type === "entry_request" || type === "repayment_request" || type === "settlement_request")
+    return {
+      Icon: Icons.clockPending,
+      color: COLORS.warning,
+      bg: "rgba(245,158,11,0.12)",
+    };
   if (type === "entry_outcome" || type === "entry_deleted")
     return {
       Icon: Icons.users,
@@ -148,7 +154,7 @@ function NotifItem({
       return;
     }
     if (isUnread) onRead(item.notification_id);
-    if (item.group_id) onNavigate(item.group_id, item.group_name);
+    onNavigate(item);
   }
 
   function handleLongPress() {
@@ -216,7 +222,7 @@ function NotifItem({
         </View>
 
         {/* Chevron (only when navigable and not in selection mode) */}
-        {!selectionMode && item.group_id && (
+        {!selectionMode && (item.group_id || item.ref_type) && (
           <Icons.chevronRight size={14} color={COLORS.text3} />
         )}
       </TouchableOpacity>
@@ -438,12 +444,28 @@ export default function NotificationsScreen() {
             onRead={markRead}
             onDelete={deleteOne}
             onToggleSelect={toggleSelect}
-            onNavigate={(gid, gname) =>
-              navigation.navigate("Groups", {
-                screen: "GroupDetail",
-                params: { groupId: gid, groupName: gname || "Group" },
-              })
-            }
+            onNavigate={(item) => {
+              if (item.group_id) {
+                navigation.navigate("Groups", {
+                  screen: "GroupDetail",
+                  params: { groupId: item.group_id, groupName: item.group_name || "Group" },
+                });
+                return;
+              }
+              if (item.ref_type === "entry") {
+                navigation.navigate("Loans", {
+                  screen: "PendingRequests",
+                  params: { initialTab: "received", initialSubTab: "entries" },
+                });
+                return;
+              }
+              if (item.ref_type === "repayment" || item.ref_type === "settlement") {
+                navigation.navigate("Loans", {
+                  screen: "PendingRequests",
+                  params: { initialTab: "received", initialSubTab: "confirmations" },
+                });
+              }
+            }}
             selected={selectedIds.has(item.notification_id)}
             selectionMode={selectionMode}
           />
