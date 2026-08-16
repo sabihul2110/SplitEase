@@ -41,7 +41,12 @@ client.interceptors.request.use(async (config) => {
 client.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (error.response?.status === 401) {
+    // A 401 from the logout call itself is expected once the session is
+    // already gone — must NOT re-trigger logout here, or
+    // logout() -> this 401 -> logout() again loops forever.
+    const isLogoutCall = error.config?.url?.includes('/auth/logout');
+
+    if (error.response?.status === 401 && !isLogoutCall) {
       try {
         await AsyncStorage.removeItem(STORAGE_KEY);
       } catch {}

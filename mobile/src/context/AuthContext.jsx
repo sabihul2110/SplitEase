@@ -32,6 +32,12 @@ export function AuthProvider({ children }) {
   const [authChecked, setAuthChecked] = useState(false);
 
   const fadeIn = useRef(new Animated.Value(0)).current;
+  // Guards against logout() being re-entered while a prior call is still
+  // in flight — e.g. two concurrent requests (dashboard + push token) both
+  // 401 around the same time, each independently triggering
+  // global.__authLogout(). Without this, logout()'s own POST /auth/logout
+  // call can pile up and race with itself.
+  const isLoggingOutRef = useRef(false);
 
   useEffect(() => {
     Animated.timing(fadeIn, {
@@ -79,21 +85,27 @@ export function AuthProvider({ children }) {
   }
 
   async function logout() {
-    // Must fire while the access token is still valid/attached — this
-    // tells the backend to null out THIS account's push token before we
-    // wipe local session state. Skipping this (or doing it after clearing
-    // storage) is exactly what caused notifications to cross accounts on
-    // a shared device: the next user to log in would silently reuse a
-    // token still associated with the previous account's row.
+    if (isLoggingOutRef.current) return;
+    isLoggingOutRef.current = true;
     try {
-      await client.post(ENDPOINTS.logout);
-    } catch {
-      // Best-effort — local logout must proceed either way. Worst case,
-      // the next login's save_push_token() reassignment (which strips the
-      // token off any other account) still closes the gap.
+      // Must fire while the access token is still valid/attached — this
+      // tells the backend to null out THIS account's push token before we
+      // wipe local session state. Skipping this (or doing it after clearing
+      // storage) is exactly what caused notifications to cross accounts on
+      // a shared device: the next user to log in would silently reuse a
+      // token still associated with the previous account's row.
+      try {
+        await client.post(ENDPOINTS.logout);
+      } catch {
+        // Best-effort — local logout must proceed either way. Worst case,
+        // the next login's save_push_token() reassignment (which strips the
+        // token off any other account) still closes the gap.
+      }
+      setUser(null);
+      await AsyncStorage.removeItem(STORAGE_KEY);
+    } finally {
+      isLoggingOutRef.current = false;
     }
-    setUser(null);
-    await AsyncStorage.removeItem(STORAGE_KEY);
   }
 
   React.useEffect(() => {
