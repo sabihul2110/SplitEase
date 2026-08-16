@@ -194,6 +194,32 @@ def fetch_timeline_for_period(user_id: int, start_date: str, end_date: str) -> l
               AND lr.status = 'accepted'
               AND lr.repayment_date BETWEEN %s AND %s
 
+            UNION ALL
+
+            -- 10. Personal ledger settlements & write-offs within this period.
+            SELECT
+                CONVERT('loan_settlement' USING utf8mb4)                       AS type,
+                le.entry_date                                                  AS date,
+                le.amount,
+                NULL                                                           AS my_share,
+                NULL                                                           AS receivable,
+                CONVERT(
+                    CASE WHEN le.note LIKE 'Written off%'
+                         THEN CONCAT('Balance Written Off — ', p.display_name)
+                         ELSE CONCAT('Settled — ', p.display_name)
+                    END USING utf8mb4
+                )                                                              AS label,
+                CONVERT(le.note USING utf8mb4)                                 AS sub,
+                le.entry_id                                                    AS ref_id,
+                NULL                                                           AS group_id,
+                CONVERT(NULL USING utf8mb4)                                    AS group_name,
+                le.created_at
+            FROM Ledger_Entries le
+            JOIN People p ON p.person_id = le.person_id
+            WHERE p.owner_user_id = %s
+              AND le.direction = 'settlement'
+              AND le.entry_date BETWEEN %s AND %s
+
         ) AS feed
         ORDER BY date ASC, created_at ASC
         """,
@@ -207,6 +233,7 @@ def fetch_timeline_for_period(user_id: int, start_date: str, end_date: str) -> l
             user_id, start_date, end_date,                    # settlement received
             user_id, start_date, end_date,                    # settlement sent
             user_id, start_date, end_date,                    # loan repayments
+            user_id, start_date, end_date,                    # ledger settlements / write-offs
         ),
     )
 
@@ -451,6 +478,38 @@ def fetch_unified_timeline(user_id: int, limit: int = 100, offset: int = 0) -> l
             WHERE p.owner_user_id = %s
               AND lr.status = 'accepted'
 
+            UNION ALL
+
+            -- 10. Personal ledger settlements & write-offs (Settle Up, or the
+            -- other party resetting their account). Purely informational:
+            -- receivable/my_share are NULL, so this never feeds a summary
+            -- total on its own — the live remaining_amount on whichever
+            -- loan_given/loan_taken row it resolved already reflects the
+            -- ₹0 outcome, which is what net balance math reads from.
+            SELECT
+                CONVERT('loan_settlement' USING utf8mb4)                       AS type,
+                le.entry_date                                                  AS date,
+                le.amount,
+                NULL                                                           AS my_share,
+                NULL                                                           AS receivable,
+                CONVERT(
+                    CASE WHEN le.note LIKE 'Written off%'
+                         THEN CONCAT('Balance Written Off — ', p.display_name)
+                         ELSE CONCAT('Settled — ', p.display_name)
+                    END USING utf8mb4
+                )                                                              AS label,
+                CONVERT(le.note USING utf8mb4)                                 AS sub,
+                le.entry_id                                                    AS ref_id,
+                NULL                                                           AS group_id,
+                CONVERT(NULL USING utf8mb4)                                    AS group_name,
+                CONVERT(NULL USING utf8mb4)                                    AS category_name,
+                CONVERT(NULL USING utf8mb4)                                    AS subcategory_name,
+                le.created_at
+            FROM Ledger_Entries le
+            JOIN People p ON p.person_id = le.person_id
+            WHERE p.owner_user_id = %s
+              AND le.direction = 'settlement'
+
         ) AS feed
         ORDER BY date DESC, created_at DESC
         LIMIT %s OFFSET %s
@@ -468,6 +527,7 @@ def fetch_unified_timeline(user_id: int, limit: int = 100, offset: int = 0) -> l
             user_id,           # settlement received
             user_id,           # settlement sent
             user_id,           # loan repayments
+            user_id,           # ledger settlements / write-offs
             limit,
             offset,
         ),

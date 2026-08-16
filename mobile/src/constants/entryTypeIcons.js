@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   HandCoins,
   Wallet,
+  Handshake,
 } from "lucide-react-native";
 
 export const TYPE_ICONS = {
@@ -26,4 +27,9 @@ export const TYPE_ICONS = {
   loan_taken:               { Icon: Wallet,       bg: "rgba(99,102,241,0.12)", color: "#818cf8" },
   loan_repayment_received:  { Icon: CheckCircle2, bg: "rgba(16,185,129,0.12)", color: "#10b981" },
   loan_repayment_paid:      { Icon: CheckCircle2, bg: "rgba(239,68,68,0.10)",  color: "#f87171" },
+  // Distinct from settlement_sent/received's CheckCircle2 — a handshake
+  // reads as "resolved between two parties" rather than "payment made",
+  // which fits both a mutual Settle Up and a one-sided forgiveness.
+  // Neutral gray (not green/red) since no money actually moved here.
+  loan_settlement:          { Icon: Handshake,    bg: "rgba(148,163,184,0.12)", color: "#94a3b8" },
 };

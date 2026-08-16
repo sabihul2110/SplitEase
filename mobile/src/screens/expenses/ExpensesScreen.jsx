@@ -76,8 +76,11 @@ function computeSummary(entries) {
     if (e.type === "loan_taken")             net -= (e.receivable ?? 0);
     if (e.type === "settlement_sent")        net += (e.amount ?? 0);
     if (e.type === "settlement_received")    net -= (e.amount ?? 0);
-    if (e.type === "loan_repayment_paid")    net += (e.amount ?? 0);
-    if (e.type === "loan_repayment_received") net -= (e.amount ?? 0);
+    // loan_repayment_paid/received are intentionally excluded here.
+    // loan_taken/loan_given already use the LIVE remaining_amount as
+    // `receivable`, which already reflects every repayment made against
+    // it — counting the repayment rows again here double-counted them
+    // and inflated/deflated net by the repaid amount a second time.
   }
   return {
     spent,

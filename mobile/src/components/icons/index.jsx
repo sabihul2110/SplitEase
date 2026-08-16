@@ -599,4 +599,10 @@ export const TYPE_CFG = {
   settlement_received:      { sign: "+", bucket: "repayment" },
   loan_repayment_received:  { sign: "+", bucket: "repayment" },
   loan_repayment_paid:      { sign: "-", bucket: "repayment" },
+  // Settle Up / account-reset write-off audit rows. No sign prefix (money
+  // didn't move in either direction here — the original loan_given/
+  // loan_taken row's live receivable already dropped to 0, which is what
+  // computeSummary() reads). bucket: "repayment" so it's grouped with the
+  // other resolution events in the "All" view, filterable the same way.
+  loan_settlement:          { sign: "", bucket: "repayment" },
 };
