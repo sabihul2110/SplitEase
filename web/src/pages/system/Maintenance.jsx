@@ -40,7 +40,17 @@ export default function Maintenance({ reason = "down" }) {
           {copy.body}
         </p>
 
-        <button className="btn btn-primary btn-sm" onClick={() => window.location.reload()} style={{ marginBottom: 24 }}>
+        <button 
+          className="btn btn-primary btn-sm" 
+          onClick={() => {
+            if (window.location.pathname === "/down" || window.location.pathname === "/maintenance") {
+              window.location.href = "/";
+            } else {
+              window.location.reload();
+            }
+          }} 
+          style={{ marginBottom: 24 }}
+        >
           <Icons.refresh size={13} /> Try again
         </button>
 
