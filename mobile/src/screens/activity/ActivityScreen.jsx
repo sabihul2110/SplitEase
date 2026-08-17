@@ -84,6 +84,11 @@ const TYPE_META = {
     color: "#f87171",
     label: "Repayment paid",
   },
+  loan_settlement: {
+    bg: "rgba(148,163,184,0.12)",
+    color: "#94a3b8",
+    label: "Ledger Resolved",
+  },
 };
 
 // const TYPE_ICON = {
@@ -120,7 +125,8 @@ function tabMatches(tab, type) {
       type === "loan_given" ||
       type === "loan_taken" ||
       type === "loan_repayment_received" ||
-      type === "loan_repayment_paid"
+      type === "loan_repayment_paid" ||
+      type === "loan_settlement"
     );
   return true;
 }

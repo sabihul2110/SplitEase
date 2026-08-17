@@ -250,19 +250,21 @@ const STYLES = `
 // ─────────────────────────────────────────────
 //  SVG icons — replaces all emojis
 // ─────────────────────────────────────────────
+// Matches mobile's constants/entryTypeIcons.js exactly — plain lucide
+// glyphs (Receipt/Users/TrendingUp/HandCoins/Wallet), and repayments +
+// settlements all render as a plain check-circle badge, colored by
+// direction, not the hand-drawn scalloped "paymentSettled" icon.
 const TYPE_ICONS = {
-  personal_expense:        { Icon: Icons.personalExpense, bg: "rgba(239,68,68,0.12)",   color: "var(--danger)"  },
-  group_expense:           { Icon: Icons.groupExpense,    bg: "rgba(37,99,235,0.12)",   color: "var(--danger)"  },
-  group_expense_owed:      { Icon: Icons.groupExpense,    bg: "rgba(37,99,235,0.12)",   color: "var(--danger)"  },
-  settlement_sent:         { Icon: Icons.paymentSettled,  bg: "rgba(239,68,68,0.10)",   color: "var(--danger)"  },
-  income:                  { Icon: Icons.income,          bg: "rgba(16,185,129,0.12)",  color: "var(--success)" },
-  settlement_received:     { Icon: Icons.paymentSettled,  bg: "rgba(99,102,241,0.12)",  color: "var(--success)" },
-  loan_given:               { Icon: Icons.lendMoney,       bg: "rgba(245,158,11,0.12)",  color: "#f59e0b"        },
-  loan_taken:               { Icon: Icons.borrowMoney,     bg: "rgba(99,102,241,0.12)",  color: "#818cf8"        },
-  // Matches mobile: repayments use the scalloped "paymentSettled" badge,
-  // not the plain settlement arrows icon.
-  loan_repayment_received: { Icon: Icons.paymentSettled,  bg: "rgba(16,185,129,0.12)",  color: "var(--success)" },
-  loan_repayment_paid:     { Icon: Icons.paymentSettled,  bg: "rgba(239,68,68,0.10)",   color: "var(--danger)"  },
+  personal_expense:        { Icon: Icons.receipt,     bg: "rgba(239,68,68,0.12)",   color: "#f87171" },
+  group_expense:           { Icon: Icons.users,        bg: "rgba(37,99,235,0.12)",   color: "#60a5fa" },
+  group_expense_owed:      { Icon: Icons.users,        bg: "rgba(37,99,235,0.12)",   color: "#60a5fa" },
+  settlement_sent:         { Icon: Icons.checkCircle,  bg: "rgba(239,68,68,0.10)",   color: "#f87171" },
+  income:                  { Icon: Icons.trendingUp,   bg: "rgba(16,185,129,0.12)",  color: "#10b981" },
+  settlement_received:     { Icon: Icons.checkCircle,  bg: "rgba(99,102,241,0.12)",  color: "#10b981" },
+  loan_given:               { Icon: Icons.handCoins,   bg: "rgba(245,158,11,0.12)",  color: "#f59e0b" },
+  loan_taken:               { Icon: Icons.wallet,      bg: "rgba(99,102,241,0.12)",  color: "#818cf8" },
+  loan_repayment_received: { Icon: Icons.checkCircle,  bg: "rgba(16,185,129,0.12)",  color: "#10b981" },
+  loan_repayment_paid:     { Icon: Icons.checkCircle,  bg: "rgba(239,68,68,0.10)",   color: "#f87171" },
 };
 
 const TYPE_CFG = {
