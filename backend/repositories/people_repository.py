@@ -1313,7 +1313,7 @@ def write_off_ledger_for_user(owner_user_id: int) -> list[dict]:
                             (person_id, created_by, direction, amount, remaining_amount, note, entry_date, status)
                         VALUES (%s, %s, 'settlement', %s, 0, %s, CURDATE(), 'repaid')
                         """,
-                        (mirror_person_id, owner_user_id, amount,
+                        (mirror_person_id, linked_user_id, amount,
                          f"Written off — the other party reset their account ({'forgave' if net < 0 else 'received'} ₹{amount:,.0f})"),
                     )
                     notify_targets.append({
