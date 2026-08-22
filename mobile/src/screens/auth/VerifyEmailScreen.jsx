@@ -46,7 +46,7 @@ function OtpBoxes({ value, onChange }) {
 }
 
 export default function VerifyEmailScreen() {
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, logout } = useAuth();
   const [otp,       setOtp]       = useState("");
   const [error,     setError]     = useState("");
   const [verifying, setVerifying] = useState(false);
@@ -103,6 +103,11 @@ export default function VerifyEmailScreen() {
       setError(err.response?.data?.detail || "Invalid or expired code.");
     } finally { setVerifying(false); }
   }
+
+    async function handleSignOut() {
+    await logout();
+  }
+
 
   async function handleResend() {
     setResending(true); setError("");
@@ -188,6 +193,10 @@ export default function VerifyEmailScreen() {
               </Text>
             </TouchableOpacity>
 
+            <TouchableOpacity onPress={handleSignOut} style={s.backBtn}>
+              <Text style={s.backText}>Wrong email? Sign out and try again</Text>
+            </TouchableOpacity>
+
           </View>
 
         </ScrollView>
@@ -228,6 +237,8 @@ const s = StyleSheet.create({
   errorText:   { fontSize: FONT_SIZE.sm, color: COLORS.danger },
   resendBtn:   { alignItems: "center", paddingVertical: SPACING.sm },
   resendText:  { fontSize: FONT_SIZE.sm, color: COLORS.text2 },
+  backBtn:     { alignItems: "center", paddingVertical: SPACING.xs },
+  backText:    { fontSize: FONT_SIZE.xs, color: COLORS.text3 },
   otpBox: {
     width: 46, height: 54,
     borderRadius: RADIUS.md,

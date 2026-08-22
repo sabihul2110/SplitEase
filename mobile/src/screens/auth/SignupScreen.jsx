@@ -27,7 +27,7 @@ import {
 import { useAuth } from "../../context/AuthContext";
 
 export default function SignupScreen({ navigation }) {
-  const { login } = useAuth();
+  const { login, logout } = useAuth();
   const [form, setForm] = useState({
     name: "", email: "", password: "", confirmPassword: "", upi_id: "",
   });
@@ -57,6 +57,13 @@ export default function SignupScreen({ navigation }) {
     } catch (err) {
       setOtpError(err.response?.data?.detail || "Invalid or expired code.");
     } finally { setVerifying(false); }
+  }
+
+    async function handleGoBack() {
+    await logout();
+    setStep("form");
+    setOtp("");
+    setOtpError("");
   }
 
   async function handleResend() {
@@ -168,9 +175,11 @@ export default function SignupScreen({ navigation }) {
                   </Text>
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => navigation.replace("Main")}
-                style={{ alignItems: "center" }}>
-                <Text style={{ fontSize: FONT_SIZE.xs, color: COLORS.text3 }}>Skip for now</Text>
+              <TouchableOpacity onPress={handleGoBack}
+                style={{ alignItems: "center", paddingVertical: SPACING.xs }}>
+                <Text style={{ fontSize: FONT_SIZE.xs, color: COLORS.text3 }}>
+                  ← Wrong email? Go back
+                </Text>
               </TouchableOpacity>
             </View>
           </ScrollView>

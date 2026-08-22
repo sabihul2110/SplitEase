@@ -9,7 +9,7 @@ import { Icons } from "../../components/icons";
 
 export default function VerifyEmail() {
   const navigate = useNavigate();
-  const { refreshUser, login, user } = useAuth();
+  const { refreshUser, login, user, logout } = useAuth();
   const [otp,       setOtp]       = useState("");
   const [error,     setError]     = useState("");
   const [success,   setSuccess]   = useState("");
@@ -49,6 +49,12 @@ export default function VerifyEmail() {
       setError(err.response?.data?.detail || "Invalid or expired code.");
     } finally { setVerifying(false); }
   }
+
+    function handleSignOut() {
+    logout();
+    navigate("/login", { replace: true });
+  }
+
 
   async function onResend(e) {
     e.preventDefault(); setError(""); setSuccess(""); setResending(true);
@@ -200,6 +206,16 @@ export default function VerifyEmail() {
               style={{ background: "none", border: "none", color: "var(--primary-h)",
                        fontWeight: 600, cursor: "pointer", fontSize: 13, padding: 0 }}>
               {resending ? "Sending…" : "Resend code"}
+            </button>
+          </div>
+
+          <div style={{ textAlign: "center", marginTop: 14 }}>
+            <button
+              type="button"
+              onClick={handleSignOut}
+              style={{ background: "none", border: "none", color: "var(--text3)",
+                       fontSize: 12, cursor: "pointer", padding: 0 }}>
+              Wrong email? Sign out and try again
             </button>
           </div>
 

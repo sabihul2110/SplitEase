@@ -154,6 +154,12 @@ def get_me(current_user: dict = Depends(get_current_user)):
         user = cur.fetchone()
     if not user:
         raise HTTPException(401, "User no longer exists.")
+    # MySQL TINYINT(1) comes back as a Python int (0/1), not bool. Left
+    # uncoerced, this serializes as JSON 0/1 — which breaks any client-side
+    # `=== false` / `=== true` strict check (0 !== false in JS). Every other
+    # place that returns this field (login_user, register_user) already
+    # coerces; this was the one gap.
+    user["email_verified"] = bool(user["email_verified"])
     return user
 
 

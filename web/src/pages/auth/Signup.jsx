@@ -9,7 +9,7 @@ import { useAuth } from "../../context/AuthContext";
 import { Icons } from "../../components/icons";
 
 export default function Signup() {
-  const { login } = useAuth();
+  const { login, logout } = useAuth();
   const navigate  = useNavigate();
   const [params]  = useSearchParams();
   const next      = params.get("next") || "/dashboard";
@@ -58,6 +58,13 @@ export default function Signup() {
     } catch (err) {
       setError(err.response?.data?.detail || "Invalid or expired code.");
     } finally { setVerifying(false); }
+  }
+
+    function goBack() {
+    logout();
+    setStep("form");
+    setOtp("");
+    setError("");
   }
 
   async function onResend(e) {
@@ -124,11 +131,11 @@ export default function Signup() {
                 {resending ? "Sending…" : "Resend code"}
               </button>
             </div>
-            <div style={{ textAlign: "center", marginTop: 12 }}>
-              <button onClick={() => { navigate(next, { replace: true }); }}
+            <div style={{ textAlign: "center", marginTop: 10 }}>
+              <button onClick={goBack}
                 style={{ background: "none", border: "none", color: "var(--text3)",
                          fontSize: 13, cursor: "pointer" }}>
-                Skip for now
+                ← Wrong email? Go back
               </button>
             </div>
           </div>
