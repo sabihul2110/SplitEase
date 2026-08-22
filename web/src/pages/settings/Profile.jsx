@@ -364,24 +364,11 @@ export default function Profile() {
                 <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, color: "var(--text2)" }}>
                   <span style={{ color: "var(--text3)", display: "flex" }}>{Icon.mail(14)}</span>
                   {user?.email}
-                  {user?.email_verified === false && (
-                    <button
-                      onClick={() => navigate("/verify-email")}
-                      style={{
-                        background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.3)",
-                        color: "#f59e0b", borderRadius: 5, padding: "2px 8px",
-                        fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
-                      }}>
-                      Verify →
-                    </button>
-                  )}
-                  {user?.email_verified === true && (
-                    <span style={{
-                      background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.2)",
-                      color: "var(--success)", borderRadius: 5, padding: "2px 8px",
-                      fontSize: 11, fontWeight: 600,
-                    }}>✓ Verified</span>
-                  )}
+                  <span style={{
+                    background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.2)",
+                    color: "var(--success)", borderRadius: 5, padding: "2px 8px",
+                    fontSize: 11, fontWeight: 600,
+                  }}>✓ Verified</span>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, color: user?.upi_id ? "var(--text2)" : "var(--text3)" }}>
                   <span style={{ color: "var(--text3)", display: "flex" }}>{Icon.upi(14)}</span>

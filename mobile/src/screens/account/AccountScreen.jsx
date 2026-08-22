@@ -917,24 +917,6 @@ export default function AccountScreen() {
           </View>
         </View>
 
-        {/* ── Email verification banner ── */}
-        {user?.email_verified === false && (
-          <>
-            <SectionLabel title="ACTION REQUIRED" />
-            <Group danger>
-              <Row
-                IconComp={Icons.info}
-                iconBg="rgba(245,158,11,0.10)"
-                iconColor="#f59e0b"
-                label="Verify your email"
-                sub="Tap to complete email verification"
-                onPress={() => navigation.navigate("VerifyEmail")}
-                last
-              />
-            </Group>
-          </>
-        )}
-
         {/* ── Profile ── */}
         <SectionLabel title="PROFILE" />
         <Group>

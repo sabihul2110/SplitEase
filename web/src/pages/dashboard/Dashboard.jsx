@@ -120,9 +120,6 @@ function MiniCard({ label, value, color, sub, icon, iconBg, delay = 0, breakdown
 
   export default function Dashboard() {
   const { user } = useAuth();
-  const [verifyBannerDismissed, setVerifyBannerDismissed] = useState(
-    () => localStorage.getItem("verifyBannerDismissed") === "true"
-  );
   const navigate  = useNavigate();
   const [groups,         setGroups]         = useState([]);
   const [balances,       setBalances]       = useState({ youOwe: 0, owedToYou: 0 });
@@ -223,29 +220,6 @@ function MiniCard({ label, value, color, sub, icon, iconBg, delay = 0, breakdown
   return (
     <>
       <style>{STYLES}</style>
-
-        {!user?.email_verified && !verifyBannerDismissed && (
-          <div style={{
-            background: "var(--warning-bg, #2a1f0a)", color: "var(--warning, #fbbf24)",
-            borderBottom: "1px solid var(--warning-border, #78350f)",
-            padding: "10px 20px", fontSize: 13, display: "flex",
-            alignItems: "center", justifyContent: "space-between", gap: 12,
-          }}>
-            <span style={{ display: "flex", alignItems: "center", gap: 7 }}>
-              <Icons.mail size={15} />
-              Your email isn't verified yet.{" "}
-              <button onClick={() => navigate("/verify-email")}
-                style={{ background: "none", border: "none", color: "var(--warning)",
-                        fontWeight: 700, cursor: "pointer", textDecoration: "underline", padding: 0 }}>
-                Verify now
-              </button>
-            </span>
-            <button onClick={() => { setVerifyBannerDismissed(true); localStorage.setItem("verifyBannerDismissed", "true"); }}
-              style={{ background: "none", border: "none", color: "var(--warning)", cursor: "pointer", display: "flex" }}>
-              <Icons.close size={15} />
-            </button>
-          </div>
-        )}
 
         <div className="db-wrap">
           <div className="db-hero">

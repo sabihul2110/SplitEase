@@ -62,11 +62,6 @@ export default function VerifyEmail() {
     } finally { setResending(false); }
   }
 
-  async function onSkip() {
-    // Stay logged in, go to dashboard — banner will show
-    navigate("/dashboard", { replace: true });
-  }
-
   return (
     <div className="auth-wrap">
       <div style={{ width: "100%", maxWidth: 380 }} className="fade-up">
@@ -208,15 +203,6 @@ export default function VerifyEmail() {
             </button>
           </div>
 
-          <div style={{ textAlign: "center", marginTop: 10 }}>
-            <button
-              type="button"
-              onClick={onSkip}
-              style={{ background: "none", border: "none", color: "var(--text3)",
-                       fontSize: 12, cursor: "pointer", padding: 0 }}>
-              Skip for now
-            </button>
-          </div>
         </div>
       </div>
     </div>

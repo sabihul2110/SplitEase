@@ -77,23 +77,6 @@ function catchupDateLabel(dateStr) {
 
 // ── Top bar (Avatar → Account, Bell → Notifications) ───────────────────────
 
-function VerifyBanner({ onPress }) {
-  return (
-    <TouchableOpacity
-      style={styles.verifyBanner}
-      onPress={onPress}
-      activeOpacity={0.8}
-    >
-      <Icons.info size={14} color="#f59e0b" />
-      <Text style={styles.verifyBannerText}>
-        Your email isn't verified.{" "}
-        <Text style={{ fontWeight: FONT_WEIGHT.semibold, color: "#f59e0b" }}>
-          Tap to verify →
-        </Text>
-      </Text>
-    </TouchableOpacity>
-  );
-}
 
 function TopBar({ initials, unreadCount = 0, onAvatar, onBell }) {
   return (
@@ -394,7 +377,6 @@ const getGreeting = () => {
 export default function DashboardScreen() {
   const { user } = useAuth();
   const navigation = useNavigation();
-  const isUnverified = user && user.email_verified === false;
   const [groupCount, setGroupCount] = useState(0);
   const [owedToYou, setOwedToYou] = useState(0);
   const [youOwe, setYouOwe] = useState(0);
@@ -557,9 +539,6 @@ export default function DashboardScreen() {
         }
         contentContainerStyle={[styles.list, { paddingBottom: TAB_BAR_HEIGHT }]}
       >
-        {isUnverified && (
-          <VerifyBanner onPress={() => navigation.navigate("VerifyEmail")} />
-        )}
 
         <TopBar
           initials={initials}
@@ -667,20 +646,6 @@ const styles = StyleSheet.create({
   },
   brandWrap: { flexDirection: "row", alignItems: "center", gap: 8 },
   brandLogo: { width: 28, height: 28 },
-  verifyBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginHorizontal: SPACING.base,
-    marginTop: SPACING.sm,
-    backgroundColor: "rgba(245,158,11,0.08)",
-    borderWidth: 1,
-    borderColor: "rgba(245,158,11,0.25)",
-    borderRadius: RADIUS.lg,
-    paddingHorizontal: SPACING.base,
-    paddingVertical: 10,
-  },
-  verifyBannerText: { fontSize: FONT_SIZE.sm, color: "rgba(245,158,11,0.85)", flex: 1 },
   topBarBrand: {
     fontSize: FONT_SIZE.lg,
     fontWeight: FONT_WEIGHT.extrabold,

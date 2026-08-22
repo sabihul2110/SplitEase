@@ -115,6 +115,20 @@ def use_verification_token(token_hash: str, user_id: int) -> None:
             raise
 
 
+def mark_email_verified(user_id: int) -> None:
+    """
+    Directly sets email_verified=1, bypassing the OTP token flow entirely.
+    Used only for the dev auto-verify allowlist — never called from the
+    normal signup/verify path.
+    """
+    with get_db() as (conn, cur):
+        cur.execute(
+            "UPDATE Users SET email_verified=1 WHERE user_id=%s",
+            (user_id,),
+        )
+        conn.commit()
+
+
 def update_password_and_bump_version(user_id: int, new_password_hash: str) -> None:
     """
     Updates password hash and bumps token_version atomically.

@@ -12,6 +12,7 @@ from datetime import datetime, timedelta, timezone
 
 from repositories import auth_repository, user_repository
 from core.security import hash_password, verify_password, create_access_token
+from core.config import DEV_AUTO_VERIFY_EMAILS
 
 
 def _hash_token(raw: str) -> str:
@@ -55,7 +56,14 @@ def register_user(name: str, email: str, password: str, upi_id: str | None = Non
         upi_id=upi_id,
         role=role,
     )
-    token_data = generate_verification_token(user_id, email)
+    auto_verified = email.strip().lower() in DEV_AUTO_VERIFY_EMAILS
+    raw_token = None
+    if auto_verified:
+        auth_repository.mark_email_verified(user_id)
+    else:
+        token_data = generate_verification_token(user_id, email)
+        raw_token = token_data["raw_token"]
+
     return {
         "access_token": create_access_token({
             "user_id":       user_id,
@@ -68,8 +76,8 @@ def register_user(name: str, email: str, password: str, upi_id: str | None = Non
         "name":                    name,
         "role":                    role,
         "email":                   email,
-        "email_verified":          False,  # always False on fresh signup
-        "raw_verification_token":  token_data["raw_token"],
+        "email_verified":          auto_verified,
+        "raw_verification_token":  raw_token,
     }
 
 

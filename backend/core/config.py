@@ -48,6 +48,12 @@ class Settings(BaseSettings):
     # ── Env ────────────────────────────────────────────────────────────────
     TESTING: bool = False
 
+    # ── Dev-only OTP bypass ────────────────────────────────────────────────
+    # Comma-separated list of emails that get auto-verified on signup,
+    # skipping the OTP mail entirely. Leave empty in real production —
+    # this is for your own test accounts during dev/preview builds only.
+    DEV_AUTO_VERIFY_EMAILS: str = ""
+
     # ── Cron / scheduled sweeps (hit by UptimeRobot) ─────────────────────────
     CRON_SECRET: str = ""
 
@@ -102,6 +108,12 @@ BREVO_API_KEY: str = settings.BREVO_API_KEY
 BREVO_SENDER_EMAIL: str = settings.BREVO_SENDER_EMAIL
 APP_BASE_URL:        str       = settings.APP_BASE_URL
 CRON_SECRET:         str       = settings.CRON_SECRET
+
+DEV_AUTO_VERIFY_EMAILS: frozenset[str] = frozenset(
+    e.strip().lower()
+    for e in settings.DEV_AUTO_VERIFY_EMAILS.split(",")
+    if e.strip()
+)
 
 VALID_SOURCE_TYPES: frozenset[str] = frozenset({
     "salary", "pocket_money", "stipend", "other"

@@ -99,18 +99,19 @@ def signup(body: SignupRequest, request: Request):
     except mysql.connector.IntegrityError:
         raise HTTPException(409, "An account with this email already exists.")
 
-    sent = send_verification_email(
-        result["email"],
-        result["name"],
-        result["raw_verification_token"],
-    )
-    if not sent:
-        # Account created successfully but email failed — inform the caller.
-        # The client should show a warning and offer a resend button.
-        raise HTTPException(
-            status_code=status.HTTP_207_MULTI_STATUS,
-            detail="Account created, but we could not send the verification email. Use 'Resend verification' to try again.",
+    if not result["email_verified"]:
+        sent = send_verification_email(
+            result["email"],
+            result["name"],
+            result["raw_verification_token"],
         )
+        if not sent:
+            # Account created successfully but email failed — inform the caller.
+            # The client should show a warning and offer a resend button.
+            raise HTTPException(
+                status_code=status.HTTP_207_MULTI_STATUS,
+                detail="Account created, but we could not send the verification email. Use 'Resend verification' to try again.",
+            )
 
     return AuthResponse(**result)
 

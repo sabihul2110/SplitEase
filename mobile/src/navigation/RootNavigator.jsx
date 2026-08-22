@@ -53,7 +53,7 @@ export default function RootNavigator() {
       theme={NAV_THEME}
     >
       <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {user && user.email_verified === false && !user.skip_verify ? (
+        {user && user.email_verified === false ? (
           <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} />
         ) : user ? (
           // Fully authenticated

@@ -118,10 +118,6 @@ export default function VerifyEmailScreen() {
     } finally { setResending(false); }
   }
 
-  async function handleSkip() {
-    await updateUser({ skip_verify: true });
-  }
-
   return (
     <SafeAreaView style={s.safe}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
@@ -192,9 +188,6 @@ export default function VerifyEmailScreen() {
               </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={handleSkip} style={s.skipBtn}>
-              <Text style={s.skipText}>Skip for now</Text>
-            </TouchableOpacity>
           </View>
 
         </ScrollView>
@@ -235,8 +228,6 @@ const s = StyleSheet.create({
   errorText:   { fontSize: FONT_SIZE.sm, color: COLORS.danger },
   resendBtn:   { alignItems: "center", paddingVertical: SPACING.sm },
   resendText:  { fontSize: FONT_SIZE.sm, color: COLORS.text2 },
-  skipBtn:     { alignItems: "center" },
-  skipText:    { fontSize: FONT_SIZE.xs, color: COLORS.text3 },
   otpBox: {
     width: 46, height: 54,
     borderRadius: RADIUS.md,
