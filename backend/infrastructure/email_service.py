@@ -112,3 +112,36 @@ def send_verification_email(to_email: str, name: str, token: str) -> bool:
         sender_name="SplitEase Onboarding",
         html_content=html
     )
+
+
+
+
+def send_admin_new_user_email(admin_email: str, name: str, email: str, signup_time: str,
+                               ip: str, location: str | None) -> bool:
+    """Notifies the admin inbox of a new signup. Best-effort — failures are
+    logged, never raised, so a Brevo hiccup can't break someone's signup."""
+    location_row = (
+        f'<tr><td style="padding:6px 0;color:#8892b0;">Approx. location</td>'
+        f'<td style="padding:6px 0;color:#f0f4ff;">{location}</td></tr>'
+        if location else ""
+    )
+    html = f"""
+    <div style="font-family:sans-serif;max-width:460px;margin:0 auto;padding:32px 24px;
+                background:#0a0d14;color:#f0f4ff;border-radius:12px;border:1px solid #242a3d;">
+      <h2 style="color:#f0f4ff;margin:0 0 20px;font-size:18px;font-weight:600;">New SplitEase signup</h2>
+      <table style="width:100%;border-collapse:collapse;font-size:14px;">
+        <tr><td style="padding:6px 0;color:#8892b0;">Name</td><td style="padding:6px 0;color:#f0f4ff;">{name}</td></tr>
+        <tr><td style="padding:6px 0;color:#8892b0;">Email</td><td style="padding:6px 0;color:#f0f4ff;">{email}</td></tr>
+        <tr><td style="padding:6px 0;color:#8892b0;">Signed up</td><td style="padding:6px 0;color:#f0f4ff;">{signup_time}</td></tr>
+        <tr><td style="padding:6px 0;color:#8892b0;">IP address</td><td style="padding:6px 0;color:#f0f4ff;">{ip}</td></tr>
+        {location_row}
+      </table>
+    </div>
+    """
+    return _send_brevo_email(
+        to_email=admin_email,
+        name="Admin",
+        subject=f"[SplitEase] New signup: {name}",
+        sender_name="SplitEase System",
+        html_content=html
+    )

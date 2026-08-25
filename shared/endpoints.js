@@ -19,6 +19,7 @@ export const ENDPOINT_PATHS = {
   verifyEmail:         '/auth/verify-email',
   resendVerification:  '/auth/resend-verification',
   changePass:          '/auth/change-password',
+  acceptTerms:         '/auth/accept-terms',
 
   // Groups
   groups:            '/groups/',

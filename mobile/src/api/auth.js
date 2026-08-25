@@ -26,3 +26,5 @@ export const resetPassword = (payload) =>
 
 export const updateMe = (payload) =>
   client.put(ENDPOINTS.updateMe, payload);
+
+export const acceptTerms   = () => client.post(ENDPOINTS.acceptTerms);

@@ -13,6 +13,7 @@ import LoginScreen    from '../screens/auth/LoginScreen';
 import SignupScreen   from '../screens/auth/SignupScreen';
 
 import VerifyEmailScreen from '../screens/auth/VerifyEmailScreen';
+import AcceptTermsScreen from '../screens/auth/AcceptTermsScreen';
 import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
 import ResetPasswordScreen  from '../screens/auth/ResetPasswordScreen';
 
@@ -55,6 +56,8 @@ export default function RootNavigator() {
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {user && user.email_verified === false ? (
           <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} />
+        ) : user && !user.terms_accepted ? (
+          <Stack.Screen name="AcceptTerms" component={AcceptTermsScreen} />
         ) : user ? (
           // Fully authenticated
           <Stack.Group>

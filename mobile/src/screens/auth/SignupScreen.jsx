@@ -5,6 +5,7 @@ import { useState } from "react";
 import {
   Image,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   ScrollView,
   StyleSheet,
@@ -38,6 +39,7 @@ export default function SignupScreen({ navigation }) {
   const [otpError,   setOtpError]   = useState("");
   const [verifying,  setVerifying]  = useState(false);
   const [resending, setResending] = useState(false);
+  const [agreed, setAgreed] = useState(false);
   const [alertConfig, setAlertConfig] = useState(null);
 
   function showAlert(title, message) {
@@ -98,12 +100,14 @@ export default function SignupScreen({ navigation }) {
 
   async function handleSignup() {
     if (!validate()) return;
+    if (!agreed) { showAlert("Almost there", "Please agree to the Terms of Service and Privacy Policy to continue."); return; }
     setLoading(true);
     try {
       const payload = {
         name: form.name.trim(),
         email: form.email.trim().toLowerCase(),
         password: form.password,
+        agreed_to_terms: agreed,
       };
       if (form.upi_id.trim()) payload.upi_id = form.upi_id.trim();
 
@@ -262,10 +266,37 @@ export default function SignupScreen({ navigation }) {
               />
             </View>
 
+            <TouchableOpacity
+              onPress={() => setAgreed(a => !a)}
+              style={{ flexDirection: "row", alignItems: "flex-start", gap: 8, marginTop: 4 }}
+            >
+              <View style={{
+                width: 18, height: 18, borderRadius: 4, marginTop: 1,
+                borderWidth: 1.5, borderColor: agreed ? COLORS.primary : COLORS.border2,
+                backgroundColor: agreed ? COLORS.primary : "transparent",
+                alignItems: "center", justifyContent: "center",
+              }}>
+                {agreed && <Text style={{ color: "#fff", fontSize: 12, fontWeight: FONT_WEIGHT.bold }}>✓</Text>}
+              </View>
+              <Text style={{ fontSize: FONT_SIZE.sm, color: COLORS.text2, flex: 1 }}>
+                I agree to the{" "}
+                <Text style={{ color: COLORS.primary, fontWeight: FONT_WEIGHT.semibold }}
+                  onPress={() => Linking.openURL("https://splitease-pied-nine.vercel.app/terms")}>
+                  Terms of Service
+                </Text>
+                {" "}and{" "}
+                <Text style={{ color: COLORS.primary, fontWeight: FONT_WEIGHT.semibold }}
+                  onPress={() => Linking.openURL("https://splitease-pied-nine.vercel.app/privacy")}>
+                  Privacy Policy
+                </Text>
+              </Text>
+            </TouchableOpacity>
+
             <Button
               title={loading ? "Creating account…" : "Create Account"}
               onPress={handleSignup}
               loading={loading}
+              disabled={!agreed}
               fullWidth
               size="lg"
               style={styles.submitBtn}

@@ -48,6 +48,15 @@ class Settings(BaseSettings):
     # ── Env ────────────────────────────────────────────────────────────────
     TESTING: bool = False
 
+        # ── Legal ──────────────────────────────────────────────────────────────
+    # Bump this string whenever PRIVACY_POLICY.md / TERMS_OF_SERVICE.md
+    # change in a way that matters. Existing users aren't retroactively
+    # re-prompted — this is just a record of what they agreed to and when.
+    CURRENT_TERMS_VERSION: str = "2026-08-25"
+
+        # ── Admin notifications ─────────────────────────────────────────────────
+    ADMIN_EMAIL: str = "sabihul2005@gmail.com"
+
     # ── Dev-only OTP bypass ────────────────────────────────────────────────
     # Comma-separated list of emails that get auto-verified on signup,
     # skipping the OTP mail entirely. Leave empty in real production —
@@ -114,6 +123,11 @@ DEV_AUTO_VERIFY_EMAILS: frozenset[str] = frozenset(
     for e in settings.DEV_AUTO_VERIFY_EMAILS.split(",")
     if e.strip()
 )
+
+
+ADMIN_EMAIL: str = settings.ADMIN_EMAIL
+
+CURRENT_TERMS_VERSION: str = settings.CURRENT_TERMS_VERSION
 
 VALID_SOURCE_TYPES: frozenset[str] = frozenset({
     "salary", "pocket_money", "stipend", "other"

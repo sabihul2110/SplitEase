@@ -15,6 +15,7 @@ export default function Signup() {
   const next      = params.get("next") || "/dashboard";
 
   const [form, setForm] = useState({ name: "", email: "", password: "", upi_id: "" });
+  const [agreed, setAgreed] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState("form");
@@ -26,9 +27,10 @@ export default function Signup() {
   async function onSubmit(e) {
     e.preventDefault(); setError("");
     if (form.password.length < 8) { setError("Password must be at least 8 characters."); return; }
+    if (!agreed) { setError("Please agree to the Terms of Service and Privacy Policy to continue."); return; }
     setLoading(true);
     try {
-      const { data } = await signup({ ...form, upi_id: form.upi_id.trim() || null });
+      const { data } = await signup({ ...form, upi_id: form.upi_id.trim() || null, agreed_to_terms: agreed });
       login(data);
       setPendingData(data);
       setStep("verify");
@@ -205,7 +207,19 @@ export default function Signup() {
               <input placeholder="name@upi"
                 value={form.upi_id} onChange={e => setForm(f => ({ ...f, upi_id: e.target.value }))} />
             </div>
-            <button className="btn btn-primary btn-lg" style={{ width: "100%" }} disabled={loading}>
+            <label style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: 13,
+                            color: "var(--text2)", marginBottom: 16, cursor: "pointer" }}>
+              <input type="checkbox" checked={agreed}
+                onChange={e => setAgreed(e.target.checked)}
+                style={{ marginTop: 2 }} />
+              <span>
+                I agree to the{" "}
+                <Link to="/terms" target="_blank" style={{ color: "var(--primary-h)" }}>Terms of Service</Link>
+                {" "}and{" "}
+                <Link to="/privacy" target="_blank" style={{ color: "var(--primary-h)" }}>Privacy Policy</Link>
+              </span>
+            </label>
+            <button className="btn btn-primary btn-lg" style={{ width: "100%" }} disabled={loading || !agreed}>
               {loading ? "Creating…" : "Create account →"}
             </button>
           </form>

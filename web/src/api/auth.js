@@ -12,3 +12,4 @@ export const resendVerification = ()      => api.post(ENDPOINTS.resendVerificati
 export const resetPassword = (data)  => api.post(ENDPOINTS.resetPassword, data);
 export const getMe         = ()      => api.get(ENDPOINTS.me);
 export const changePassword = (data) => api.post(ENDPOINTS.changePass, data);
+export const acceptTerms   = () => api.post(ENDPOINTS.acceptTerms);

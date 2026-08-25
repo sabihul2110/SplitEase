@@ -3,10 +3,11 @@ from pydantic import BaseModel, EmailStr
 
 
 class SignupRequest(BaseModel):
-    name:     str
-    email:    EmailStr
-    password: str
-    upi_id:   str | None = None
+    name:            str
+    email:           EmailStr
+    password:        str
+    upi_id:          str | None = None
+    agreed_to_terms: bool = False
 
 
 class LoginRequest(BaseModel):
@@ -23,6 +24,7 @@ class AuthResponse(BaseModel):
     email:                    str
     raw_verification_token:   str | None = None
     email_verified: bool = False
+    terms_accepted: bool = False
 
 
 class ChangePasswordRequest(BaseModel):

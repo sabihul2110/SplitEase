@@ -12,7 +12,7 @@ from datetime import datetime, timedelta, timezone
 
 from repositories import auth_repository, user_repository
 from core.security import hash_password, verify_password, create_access_token
-from core.config import DEV_AUTO_VERIFY_EMAILS
+from core.config import DEV_AUTO_VERIFY_EMAILS, CURRENT_TERMS_VERSION
 
 
 def _hash_token(raw: str) -> str:
@@ -40,13 +40,21 @@ def login_user(email: str, password: str) -> dict | None:
         "role":          user["role"],
         "email":         user["email"],
         "email_verified": bool(user.get("email_verified", False)),
+        # NULL for every account created before this feature shipped, and
+        # for anyone still on an older version after a future terms update.
+        # Both cases are treated identically: not yet agreed to the current terms.
+        "terms_accepted": user.get("tos_version") == CURRENT_TERMS_VERSION,
     }
 
 
-def register_user(name: str, email: str, password: str, upi_id: str | None = None) -> dict:
+def register_user(name: str, email: str, password: str, upi_id: str | None = None,
+                   tos_version: str | None = None) -> dict:
     """
     Create account. Assigns admin role to first user.
     Returns same shape as login_user, plus raw_verification_token for email dispatch.
+    tos_version is only set when the caller has already confirmed the user
+    checked "I agree" — this function doesn't enforce that itself, the
+    router does, so this stays a straightforward record-writer.
     """
     role = "admin" if user_repository.count_users() == 0 else "user"
     user_id = user_repository.insert_user_with_auth(
@@ -55,6 +63,8 @@ def register_user(name: str, email: str, password: str, upi_id: str | None = Non
         password_hash=hash_password(password),
         upi_id=upi_id,
         role=role,
+        tos_accepted_at=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S") if tos_version else None,
+        tos_version=tos_version,
     )
     auto_verified = email.strip().lower() in DEV_AUTO_VERIFY_EMAILS
     raw_token = None
@@ -78,7 +88,15 @@ def register_user(name: str, email: str, password: str, upi_id: str | None = Non
         "email":                   email,
         "email_verified":          auto_verified,
         "raw_verification_token":  raw_token,
+        # Signup always requires agreed_to_terms=True (enforced in the
+        # router before register_user is ever called), so a fresh account
+        # is always on the current version.
+        "terms_accepted":          True,
     }
+
+def accept_current_terms(user_id: int) -> str:
+    user_repository.accept_terms(user_id, CURRENT_TERMS_VERSION)
+    return CURRENT_TERMS_VERSION
 
 
 def initiate_password_reset(email: str) -> dict | None:

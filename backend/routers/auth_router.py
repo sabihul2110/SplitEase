@@ -18,9 +18,14 @@ from services.auth_service import (
     generate_verification_token, complete_email_verification,
 )
 
+from datetime import datetime, timezone
+
 from core.dependencies import get_current_user
 from core.database import get_connection, get_db
-from infrastructure.email_service import send_reset_email, send_verification_email
+from core.config import ADMIN_EMAIL, DEV_AUTO_VERIFY_EMAILS, CURRENT_TERMS_VERSION
+from services.auth_service import accept_current_terms
+from infrastructure.email_service import send_reset_email, send_verification_email, send_admin_new_user_email
+from infrastructure.geolocation import get_ip_location
 from repositories import push_repository
 
 logger = logging.getLogger("splitease.auth")
@@ -82,19 +87,33 @@ def _rate_check(store, lock, ip, window, max_attempts, retry_after):
 #     confirm_password: str
 
 # ── Routes ─────────────────────────────────────────────────────────────────
+def _get_client_ip(request: Request) -> str:
+    # Render (and most PaaS) sit behind a proxy — request.client.host is the
+    # proxy's internal IP, not the real visitor. X-Forwarded-For's first
+    # entry is the original client per convention; fall back to the direct
+    # peer for local dev, where there's no proxy in front at all.
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
 @router.post("/signup", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
 def signup(body: SignupRequest, request: Request):
-    client_ip = request.client.host if request.client else "unknown"
+    client_ip = _get_client_ip(request)
     _rate_check(_verify_attempts, _verify_lock, client_ip, _VERIFY_WINDOW, _VERIFY_MAX, _VERIFY_WINDOW)
 
     if len(body.password) < 8:
         raise HTTPException(400, "Password must be at least 8 characters.")
+    if not body.agreed_to_terms:
+        raise HTTPException(400, "You must agree to the Terms of Service and Privacy Policy to create an account.")
     try:
         result = register_user(
             name=body.name,
             email=body.email,
             password=body.password,
             upi_id=body.upi_id,
+            tos_version=CURRENT_TERMS_VERSION,
         )
     except mysql.connector.IntegrityError:
         raise HTTPException(409, "An account with this email already exists.")
@@ -113,12 +132,29 @@ def signup(body: SignupRequest, request: Request):
                 detail="Account created, but we could not send the verification email. Use 'Resend verification' to try again.",
             )
 
+    # Best-effort admin notification — never lets a Brevo/geolocation
+    # hiccup break the actual signup response. Skipped for your own
+    # DEV_AUTO_VERIFY_EMAILS test accounts, since those aren't real signups.
+    if ADMIN_EMAIL and body.email.strip().lower() not in DEV_AUTO_VERIFY_EMAILS:
+        try:
+            location = get_ip_location(client_ip)
+            send_admin_new_user_email(
+                admin_email=ADMIN_EMAIL,
+                name=result["name"],
+                email=result["email"],
+                signup_time=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+                ip=client_ip,
+                location=location,
+            )
+        except Exception as e:
+            logger.warning("Admin signup notification failed: %s", str(e))
+
     return AuthResponse(**result)
 
 
 @router.post("/login", response_model=AuthResponse)
 def login(body: LoginRequest, request: Request):
-    client_ip = request.client.host if request.client else "unknown"
+    client_ip = _get_client_ip(request)
     _rate_check(_login_attempts, _login_lock, client_ip, _LOGIN_WINDOW, _LOGIN_MAX, _LOGIN_WINDOW)
 
     result = login_user(body.email, body.password)
@@ -148,7 +184,7 @@ def logout(current_user: dict = Depends(get_current_user)):
 def get_me(current_user: dict = Depends(get_current_user)):
     with get_db() as (conn, cur):
         cur.execute(
-            "SELECT user_id, name, email, role, upi_id, email_verified FROM Users WHERE user_id = %s",
+            "SELECT user_id, name, email, role, upi_id, email_verified, tos_version FROM Users WHERE user_id = %s",
             (current_user["user_id"],),
         )
         user = cur.fetchone()
@@ -160,7 +196,17 @@ def get_me(current_user: dict = Depends(get_current_user)):
     # place that returns this field (login_user, register_user) already
     # coerces; this was the one gap.
     user["email_verified"] = bool(user["email_verified"])
+    # NULL (never agreed) or an older version both mean "not agreed to the
+    # current terms" — covers pre-existing accounts and future terms bumps.
+    user["terms_accepted"] = user.pop("tos_version") == CURRENT_TERMS_VERSION
     return user
+
+
+@router.post("/accept-terms", status_code=status.HTTP_200_OK)
+def accept_terms(current_user: dict = Depends(get_current_user)):
+    """Records acceptance of the current Terms/Privacy Policy version."""
+    version = accept_current_terms(current_user["user_id"])
+    return {"terms_accepted": True, "tos_version": version}
 
 
 @router.post("/change-password", status_code=status.HTTP_200_OK)
@@ -191,7 +237,7 @@ async def forgot_password(
     body:             ForgotPasswordRequest,
     request:          Request,
 ):
-    client_ip = request.client.host if request.client else "unknown"
+    client_ip = _get_client_ip(request)
     _rate_check(_forgot_attempts, _forgot_lock, client_ip, _FORGOT_WINDOW, _FORGOT_MAX, _FORGOT_WINDOW)
 
     result = initiate_password_reset(body.email)
@@ -231,7 +277,7 @@ async def resend_verification(
     current_user: dict = Depends(get_current_user),
 ):
     """Re-sends the account verification OTP. Rate-limited per IP."""
-    client_ip = request.client.host if request.client else "unknown"
+    client_ip = _get_client_ip(request)
     _rate_check(_verify_attempts, _verify_lock, client_ip, _VERIFY_WINDOW, _VERIFY_MAX, _VERIFY_WINDOW)
 
     from services.auth_service import generate_verification_token   # import here to avoid circular

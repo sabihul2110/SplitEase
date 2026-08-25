@@ -74,6 +74,10 @@ CREATE TABLE Users (
     email_verified  TINYINT(1)           NOT NULL DEFAULT 0,
     expo_push_token VARCHAR(200)             NULL
         COMMENT 'Expo push token for mobile notifications',
+    tos_accepted_at DATETIME                 NULL
+        COMMENT 'UTC timestamp of when the user accepted the Terms/Privacy Policy at signup',
+    tos_version     VARCHAR(20)              NULL
+        COMMENT 'Version of the Terms/Privacy Policy accepted, matches doc "Last updated" date',
     created_at      TIMESTAMP            NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT pk_users PRIMARY KEY (user_id),
     CONSTRAINT uq_email UNIQUE      (email)

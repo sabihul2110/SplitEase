@@ -26,12 +26,21 @@ def fetch_user_by_email(email: str) -> dict | None:
     conn = get_connection()
     cur  = conn.cursor(dictionary=True)
     cur.execute(
-        "SELECT user_id, name, email, password_hash, role, token_version, email_verified FROM Users WHERE email = %s",
+        "SELECT user_id, name, email, password_hash, role, token_version, email_verified, tos_version "
+        "FROM Users WHERE email = %s",
         (email.strip().lower(),),
     )
     row = cur.fetchone()
     cur.close(); conn.close()
     return row
+
+def accept_terms(user_id: int, tos_version: str) -> None:
+    with get_db() as (conn, cur):
+        cur.execute(
+            "UPDATE Users SET tos_accepted_at = NOW(), tos_version = %s WHERE user_id = %s",
+            (tos_version, user_id),
+        )
+        conn.commit()
 
 
 def fetch_user_by_id(user_id: int) -> dict | None:
@@ -82,14 +91,18 @@ def insert_user_with_auth(
     password_hash: str,
     upi_id: str | None = None,
     role: str = "user",
+    tos_accepted_at: str | None = None,
+    tos_version: str | None = None,
 ) -> int:
     conn = get_connection()
     cur  = conn.cursor()
     try:
         conn.start_transaction()
         cur.execute(
-            "INSERT INTO Users (name, email, upi_id, password_hash, role) VALUES (%s, %s, %s, %s, %s)",
-            (name.strip(), email.strip().lower(), upi_id or None, password_hash, role),
+            "INSERT INTO Users (name, email, upi_id, password_hash, role, tos_accepted_at, tos_version) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s)",
+            (name.strip(), email.strip().lower(), upi_id or None, password_hash, role,
+             tos_accepted_at, tos_version),
         )
         new_id = cur.lastrowid
         conn.commit()

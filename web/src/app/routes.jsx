@@ -16,6 +16,8 @@ import Signup from "../pages/auth/Signup";
 import ForgotPassword from "../pages/auth/ForgotPassword";
 import ResetPassword from "../pages/auth/ResetPassword";
 import VerifyEmail from "../pages/auth/VerifyEmail";
+import AcceptTerms from "../pages/auth/AcceptTerms";
+import Legal from "../pages/legal/Legal";
 
 import Dashboard from "../pages/dashboard/Dashboard";
 import Groups from "../pages/groups/Groups";
@@ -47,6 +49,9 @@ export const routes = [
   { path: "/forgot-password", element: <ForgotPassword /> },
   { path: "/reset-password", element: <ResetPassword /> },
   { path: "/verify-email", element: <VerifyEmail /> },
+  { path: "/accept-terms", element: <AcceptTerms /> },
+  { path: "/terms", element: <Legal doc="terms" /> },
+  { path: "/privacy", element: <Legal doc="privacy" /> },
   { path: "/join/:token", element: <JoinGroup /> },
   { path: "/down", element: <Maintenance reason="down" /> },
   { path: "/maintenance", element: <Maintenance reason="maintenance" /> },
