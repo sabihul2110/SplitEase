@@ -120,22 +120,51 @@ def send_admin_new_user_email(admin_email: str, name: str, email: str, signup_ti
                                ip: str, location: str | None) -> bool:
     """Notifies the admin inbox of a new signup. Best-effort — failures are
     logged, never raised, so a Brevo hiccup can't break someone's signup."""
-    location_row = (
-        f'<tr><td style="padding:6px 0;color:#8892b0;">Approx. location</td>'
-        f'<td style="padding:6px 0;color:#f0f4ff;">{location}</td></tr>'
-        if location else ""
-    )
+    location_row = f"""
+        <tr>
+          <td style="padding:10px 0;border-top:1px solid #1e2438;color:#5b6785;font-size:13px;">Location</td>
+          <td style="padding:10px 0;border-top:1px solid #1e2438;color:#f0f4ff;font-size:14px;text-align:right;">{location}</td>
+        </tr>""" if location else ""
+
     html = f"""
     <div style="font-family:sans-serif;max-width:460px;margin:0 auto;padding:32px 24px;
                 background:#0a0d14;color:#f0f4ff;border-radius:12px;border:1px solid #242a3d;">
-      <h2 style="color:#f0f4ff;margin:0 0 20px;font-size:18px;font-weight:600;">New SplitEase signup</h2>
-      <table style="width:100%;border-collapse:collapse;font-size:14px;">
-        <tr><td style="padding:6px 0;color:#8892b0;">Name</td><td style="padding:6px 0;color:#f0f4ff;">{name}</td></tr>
-        <tr><td style="padding:6px 0;color:#8892b0;">Email</td><td style="padding:6px 0;color:#f0f4ff;">{email}</td></tr>
-        <tr><td style="padding:6px 0;color:#8892b0;">Signed up</td><td style="padding:6px 0;color:#f0f4ff;">{signup_time}</td></tr>
-        <tr><td style="padding:6px 0;color:#8892b0;">IP address</td><td style="padding:6px 0;color:#f0f4ff;">{ip}</td></tr>
+
+      <div style="text-align:center;margin-bottom:22px;">
+        <span style="font-size:22px;font-weight:800;color:#f0f4ff;letter-spacing:-0.5px;">
+          Split<span style="color:#3b82f6;">Ease</span>
+        </span>
+      </div>
+
+      <div style="text-align:center;margin-bottom:24px;">
+        <span style="display:inline-block;background:rgba(59,130,246,0.12);color:#60a5fa;
+                     border:1px solid rgba(59,130,246,0.3);border-radius:999px;
+                     padding:5px 14px;font-size:12px;font-weight:700;letter-spacing:0.04em;
+                     text-transform:uppercase;">
+          New Signup
+        </span>
+      </div>
+
+      <div style="text-align:center;margin-bottom:24px;">
+        <div style="font-size:20px;font-weight:700;color:#f0f4ff;margin-bottom:2px;">{name}</div>
+        <div style="font-size:14px;color:#8892b0;">{email}</div>
+      </div>
+
+      <table style="width:100%;border-collapse:collapse;">
+        <tr>
+          <td style="padding:10px 0;color:#5b6785;font-size:13px;">Signed up</td>
+          <td style="padding:10px 0;color:#f0f4ff;font-size:14px;text-align:right;">{signup_time}</td>
+        </tr>
+        <tr>
+          <td style="padding:10px 0;border-top:1px solid #1e2438;color:#5b6785;font-size:13px;">IP address</td>
+          <td style="padding:10px 0;border-top:1px solid #1e2438;color:#f0f4ff;font-size:14px;text-align:right;">{ip}</td>
+        </tr>
         {location_row}
       </table>
+
+      <p style="color:#4a5578;font-size:12px;margin:24px 0 0;text-align:center;line-height:1.5;">
+        Automated admin notification — SplitEase
+      </p>
     </div>
     """
     return _send_brevo_email(
